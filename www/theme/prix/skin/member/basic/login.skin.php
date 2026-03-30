@@ -3,7 +3,9 @@ if (!defined('_GNUBOARD_')) exit; // 개별 페이지 접근 불가
 
 // add_stylesheet('css 구문', 출력순서); 숫자가 작을 수록 먼저 출력됨
 add_stylesheet('<link rel="stylesheet" href="'.$member_skin_url.'/newstyle.css">', 0);
-include_once(G5_THEME_MSHOP_PATH.'/shop.head.php');
+if (file_exists(G5_THEME_MSHOP_PATH.'/shop.head.php')) {
+	include_once(G5_THEME_MSHOP_PATH.'/shop.head.php');
+}
 ?>
 <form name="flogin" action="<?php echo $login_action_url ?>" onsubmit="return flogin_submit(this);" method="post" id="flogin">
 	<input type="hidden" name="url" value="<?php echo $login_url ?>">
@@ -55,5 +57,7 @@ function flogin_submit(f)
 </script>
 
 <?php
-include_once(G5_THEME_MSHOP_PATH.'/shop.tail.php');
+if (file_exists(G5_THEME_MSHOP_PATH.'/shop.tail.php')) {
+	include_once(G5_THEME_MSHOP_PATH.'/shop.tail.php');
+}
 ?>
