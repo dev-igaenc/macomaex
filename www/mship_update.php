@@ -198,6 +198,7 @@ $SignatureUtil = new INIStdPayUtil();
 
 		$payinfo=sql_fetch("select * from g5_membership_payment where order_no='{$row[order_no]}'"); // 기존 결제 예정 정보
 		$minfo=sql_fetch("select * from g5_membership_manage where no='{$payinfo['membership_parent_no']}'"); // 맴버쉽 정보
+		$charge_credit = (int)$minfo['matching_cnt'];
 		
 		//// Data 상세
 		$detail = array();
@@ -291,6 +292,21 @@ $SignatureUtil = new INIStdPayUtil();
 			$sql.="status='S',";
 			$sql.="membership_parent_no='{$row['membership_parent_no']}'";
 			//echo $sql."<br>";
+			sql_query($sql);
+
+			// 크레딧 원장 기록 (자동결제 충전)
+			$current_credit_after = (int)$minfo['matching_cnt'];
+			$memo = addslashes('자동결제 충전');
+			$sql = "insert into g5_matching_credit_history
+					set uid='{$payinfo['uid']}',
+						tx_type='CHARGE',
+						credit_delta='{$charge_credit}',
+						credit_after='{$current_credit_after}',
+						order_no='{$orderid}',
+						matching_no='',
+						memo='{$memo}',
+						created_at=now()
+					on duplicate key update id=id";
 			sql_query($sql);
 
 			$sql="insert g5_membership_payment set ";
