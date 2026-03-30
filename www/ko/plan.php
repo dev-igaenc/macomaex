@@ -85,6 +85,7 @@ $my_membership=$msinfo_row[0];
 		 if($credit_cnt === 220) $credit_bonus = 20;
 		 else if($credit_cnt === 600) $credit_bonus = 100;
 		 $is_credit_plan = ($credit_cnt > 0);
+		 $display_pay_type = $is_credit_plan ? '1회 결제' : $value['pay_type'];
 		 $plan_desc_items = array();
 		 if($credit_cnt === 100){
 			$plan_desc_items = array(
@@ -137,10 +138,10 @@ $my_membership=$msinfo_row[0];
 							<div class="credit_note empty" aria-hidden="true">&nbsp;</div>
 						<?}?>
 					</div>
-                    <ul class="price_info">
-                        <li>VAT <span><?=$value['vat']?></span></li>
-                        <li><?=$value['pay_type']?></li>
-                    </ul>
+	                    <ul class="price_info">
+	                        <li>VAT <span><?=$value['vat']?></span></li>
+	                        <li><?=$display_pay_type?></li>
+	                    </ul>
 
 					<form name="mobileweb<?= $value['no']?>" method="post" class="mpay">
 							<input type="hidden" name="mtype" value="<?=$value['title']?>">
@@ -185,12 +186,12 @@ $my_membership=$msinfo_row[0];
     <div class="popupInner">
         <a href="javascript:popupClose('')" class="popupClose"><img src="/img/icon/icon_close.svg" alt=""></a>
 
-        <div class="popup_top">
-            <h4 class="popup_top_title">선택한 상품</h4>
+	        <div class="popup_top">
+	            <h4 class="popup_top_title">선택한 상품</h4>
 
-            <div class="popup_top_txt1">스탠다드 9,900원</div>
-			<div class="popup_top_txt2">매월 자동결제 / VAT 10% 별도</div>
-        </div>
+	            <div class="popup_top_txt1">스탠다드 9,900원</div>
+			<div class="popup_top_txt2">1회 결제 / VAT 10% 별도</div>
+	        </div>
 
         <div class="popup_content">
             <table>
