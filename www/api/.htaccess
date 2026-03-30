@@ -1,0 +1,11 @@
+# api 디렉토리 접근 제어
+
+# 설정 파일 직접 접근 차단
+<Files "api_config.php">
+    Require all denied
+</Files>
+
+# .htaccess 자체 접근 차단
+<Files ".htaccess">
+    Require all denied
+</Files>

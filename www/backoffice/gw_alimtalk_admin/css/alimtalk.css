@@ -1,0 +1,3891 @@
+@charset "UTF-8";
+
+/* ===========================
+	RESET | 초기화
+=========================== */
+
+
+
+/* 대체텍스트 and 숨김처리 */
+caption, legend, .hidden { visibility: hidden; overflow: hidden; width: 0; height: 0; font-size: 0px; line-height: 0; text-indent: -9999px; }
+
+table {width:100%; border-collapse:separate; border-spacing:0; table-layout: fixed;}
+th, td {word-break:keep-all; word-wrap:break-word;}
+
+button {
+    overflow: visible;
+    background: none;
+    border:0;
+    outline: 0;
+    cursor: pointer;
+}
+
+button:focus,
+button:hover {
+    outline: none;
+}
+
+/* FORM */
+input { vertical-align: middle; -webkit-box-sizing: border-box; -moz-box-sizing: border-box; box-sizing: border-box; border-radius: 0; outline: none;}
+input[type=text],
+input[type=password],
+input[type=email],
+input[type=tel],
+input[type=number]{
+    display: inline-block;
+    vertical-align: middle;
+    overflow: visible;
+    -webkit-box-sizing: border-box;
+    -moz-box-sizing: border-box;
+    box-sizing: border-box;
+}
+input[type=radio],
+input[type=checkbox] {
+    border:0;
+    padding:0;
+    height:auto;
+    vertical-align: middle;
+    cursor: pointer;
+    -webkit-box-shadow: none;
+    -moz-box-shadow: none;
+    box-shadow: none;
+    -webkit-box-sizing: border-box;
+    box-sizing: border-box;
+    /*  display:none; */
+}
+
+textarea{
+    display: block;
+    width: 100%;
+    vertical-align: middle;
+    overflow-y:auto !important;
+    box-sizing: border-box;
+    -webkit-box-sizing: border-box;
+    -moz-box-sizing: border-box;
+    resize: none;
+}
+
+textarea:focus,
+input[type=text]:focus,
+input[type=password]:focus,
+input[type=email]:focus,
+input[type=tel]:focus,
+input[type=number]:focus { border: 1px solid #ccc; background-color: #fff; outline: none; }
+
+/* select */
+select {
+    vertical-align: middle;
+    border-radius: 0; }
+
+select:focus, input:focus {
+    outline: none;
+}
+
+/* Helper classes */
+.ir {
+    display: block;
+    overflow: hidden;
+    font-size: 0px;
+    line-height: 0;
+    text-indent: -9999px;
+}
+
+.blind {
+    display: block;
+    overflow: hidden;
+    font-size: 0px;
+    line-height: 0;
+    text-indent: -9999px;
+}
+
+.clearfix { *zoom: 1; }
+
+.clearfix:before, .clearfix:after {
+    content: " ";
+    display: block;
+    clear: both;
+}
+
+.nowrap {/* 한줄 효과 */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+
+/* ===============================
+	STYLE.CSS
+=============================== */
+
+/* ------------------------------
+  페이지 NAV snb_nav | info_box
+-------------------------------- */
+
+.snb_nav {
+    width: 100%;
+    margin-bottom: 10px;
+    border-bottom: 1px solid #ebebeb;
+    resize: none;
+}
+
+.snb_nav ul {
+    width: 100%;
+    height: 36px;
+    margin: 0 auto;
+}
+
+.snb_nav ul li {
+    display: block;
+    float: left;
+    width: 250px;
+    padding-left: 8px;
+    height: 36px;
+    line-height: 36px;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.snb_nav ul li.postName {
+    color: #ff6a12;
+}
+
+.snb_nav ul li.postName span {
+    display: inline-block;
+    color: #ff9a22;
+}
+
+.snb_nav ul li.postName a {
+    display: inline-block;
+    height: 28px;
+    line-height: 28px;
+    padding: 0px 10px;
+    color: #fff;
+    font-size: 15px;
+    font-weight: 600;
+    text-align: center;
+    box-sizing: border-box;
+    border-radius: 3px;
+    background: #ff9a22;
+}
+
+.snb_nav ul li.active {
+    position: relative;
+    border-bottom: 2px solid #578cae;
+    height: 37px;
+    color: #333;
+}
+
+/* inpo_box */
+
+.info_box {
+    margin-bottom: 10px;
+}
+
+.info_box p {
+    margin-left: 3px;
+    color: #578cae;
+    font-size: 13px;
+}
+
+.fill-space {
+    margin-top: 25px;
+}
+
+/* ------------------------------
+  ulData
+-------------------------------- */
+
+.ulData .sub_tab .tab_division {
+    height: 47px;
+    margin-top: 10px;
+    margin-bottom: 10px;
+    border-bottom: 1px solid #aeaeae;
+}
+
+.ulData .sub_tab .tab_division li {
+    float: left;
+    width: 200px;
+    height: 47px;
+    line-height: 47px;
+    margin-right: 3px;
+    font-size: 14px;
+    font-weight: bold;
+    text-align: center;
+    cursor: pointer;
+    background-color: #e9e9e9;
+    border: 1px solid #aeaeae;
+}
+
+.ulData .sub_tab .tab_division li.on {
+    background-color: #fff;
+    border-bottom: 1px solid #fff;
+}
+
+
+/* ------------------------------
+  검색 영역 search_wrap
+-------------------------------- */
+
+.search_area {
+    position: relative;
+    margin-top: 10px;
+    padding: 14px 12px;
+    border: 2px solid #f1f1f1;
+}
+
+.todayBtn {
+    width: 52px;
+    height: 28px;
+    line-height: 28px;
+    border-radius: 3px;
+    background-color: #a0c0d7;
+}
+
+.monthBtn {
+    width: 52px;
+    height: 28px;
+    line-height: 28px;
+    border-radius: 3px;
+    background-color: #e9e9e9;
+}
+
+/* ---------------------------
+  파일/이미지 검색 search_file
+-----------------------------*/
+
+.file_search {
+    position: relative;
+    display: inline-block;
+    float: left;
+    width: 100%;
+    vertical-align: middle;
+    overflow: hidden;
+    line-height: 247px;
+    border: 1px solid #ddd;
+    text-align: center;
+    font-size: 13px;
+}
+
+.file_search input.file_upload {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 247px;
+    cursor: pointer;
+    opacity: 0;
+}
+
+.file_search .file_search_text {
+    float: left;
+    margin-right: 0 !important;
+    width: 420px;
+    height: 30px;
+}
+
+.file_search .file_search_input {
+    position: relative;
+    float: left;
+    overflow: hidden;
+}
+
+.file_search .file_search_input .search_button {
+    overflow: hidden;
+    width: 80px;
+}
+
+.file_search .file_search_input .search_hidden {
+    position: absolute;
+    right: 100px;
+    top: 0;
+    cursor: pointer;
+    opacity: 0;
+}
+
+.btn_t1 {
+    display: inline-block;
+    position: relative;
+    height: 30px;
+    line-height: 28px;
+    padding: 0 10px;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 600;
+    vertical-align: middle;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.btn_t1:after {
+    content: '';
+    display: block;
+    position: absolute;
+    top: 0;
+    right: 0;
+    left: 0;
+    bottom: 0;
+}
+
+.btn_gray {
+    border: solid 1px #51565b;
+    background-color: #74797e;
+}
+
+.btn_gray:after {
+    border: solid 1px #8a8f93;
+    border-bottom: solid 1px #64696e;
+}
+
+/* searchFile | 파일검색 */
+
+.searchFile {
+    position: relative;
+    /*  display: inline-block;*/
+    vertical-align: middle;
+}
+
+.searchFile input {
+    width: 300px;
+    height: 40px;
+    padding: 7px;
+    margin-right: 3px;
+    font-size: 13px;
+    border: 1px solid #578cae;
+    background: #fff;
+    overflow: hidden;
+}
+
+.search_hidden {
+    position: absolute;
+    left: 0;
+    top: 0;
+    cursor: pointer;
+    opacity: 0;
+}
+
+.searchFile .searchFile_box {
+    position: relative;
+    float: left;
+    width: 300px;
+    height: 40px;
+    line-height: 23px;
+    padding: 7px;
+    margin: 0 2px;
+    font-size: 13px;
+    color: #757575;
+    text-align: center;
+    border: 1px solid #578cae;
+    background: #fff;
+    overflow: hidden;
+}
+
+.searchFile button {
+    width: 80px;
+    height: 40px;
+    line-height: 40px;
+    font-size: 13px;
+    vertical-align: middle;
+    color: #fff;
+    border: 1px solid #578cae;
+    background: #578cae;
+    transition: all 0.3s;
+}
+
+.searchFile button.deleteBtn {
+    color: #333;
+    border: 1px solid #e8e8e8;
+    background: #e8e8e8;
+}
+
+.alertP {
+    margin-top: 5px;
+    font-size: 12px;
+    color: #cb0000;
+}
+
+.select {
+    position: relative;
+    display: block;
+    width: 100%;
+    font-size: 14px;
+    line-height: 1.42857143;
+    color: #555;
+    background-color: #fff;
+    background-image: none;
+}
+
+.select select {
+    display: inline-block;
+    width: 100%;
+    cursor: pointer;
+    outline: 0;
+    border: 1px solid #ddd;
+    height: 40px;
+    font-size: 14px;
+}
+
+.searchFile_1 {
+    margin-top: 8px;
+    margin-bottom: 8px;
+}
+
+.searchFile_1 .searchFile_box_1 {
+    position: relative;
+    float: left;
+    width: 264px;
+    height: 300px;
+    line-height: 23px;
+    padding: 7px;
+    margin: 0 2px 8px;
+    font-size: 13px;
+    color: #757575;
+    text-align: center;
+    border: 1px solid #578cae;
+    background: #fff;
+    overflow: hidden;
+}
+
+.searchFile_1 input {
+    width: 264px;
+    height: 300px;
+    padding: 7px;
+    margin-right: 3px;
+    font-size: 13px;
+    border: 1px solid #578cae;
+    background: #fff;
+    overflow: hidden;
+}
+
+.searchFile_1 button {
+    width: 80px;
+    height: 40px;
+    line-height: 40px;
+    font-size: 13px;
+    vertical-align: middle;
+    color: #fff;
+    border: 1px solid #578cae;
+    background: #578cae;
+    transition: all 0.3s;
+}
+
+.searchFile_1 button.deleteBtn {
+    color: #333;
+    border: 1px solid #e8e8e8;
+    background: #e8e8e8;
+}
+
+/* searchImg | 이미지검색 */
+
+.searchImg {
+    position: relative;
+    /*  display: inline-block;*/
+    vertical-align: middle;
+}
+
+.searchImg input {
+    width: 275px;
+    height: 40px;
+    padding: 7px;
+    margin-right: 3px;
+    font-size: 13px;
+    border: 1px solid #ddd;
+    background: #fff;
+    overflow: hidden;
+}
+
+.search_hidden {
+    position: absolute;
+    left: 0;
+    top: 0;
+    cursor: pointer;
+    opacity: 0;
+}
+
+.searchImg .searchImg_box {
+    position: relative;
+    float: left;
+    width: 275px;
+    height: 40px;
+    line-height: 23px;
+    padding: 7px;
+    margin: 0 2px;
+    font-size: 13px;
+    color: #757575;
+    text-align: center;
+    border: 1px solid #ddd;
+    background: #fff;
+    overflow: hidden;
+}
+
+.searchImg button {
+    width: 117px;
+    height: 40px;
+    line-height: 40px;
+    font-size: 13px;
+    vertical-align: middle;
+    color: #578cae;
+    border: 1px solid #ddd;
+    transition: all 0.3s;
+}
+
+
+/*
+.select_arrow {
+  position: absolute;
+  top: 14px;
+  right: 15px;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+  border-style: solid;
+  border-width: 8px 5px 0 5px;
+  border-color: #1a1a1a transparent transparent transparent;
+}
+*/
+
+/* ===============================
+	SMART 광고
+=============================== */
+
+/* ------------------------------
+  MART
+-------------------------------- */
+
+.btnRegister {
+    position: relative;
+    margin-bottom: 10px;
+}
+
+.imgRegister {
+    position: absolute;
+    top: 0;
+    right: 0;
+}
+
+/* 상품이미지 등록 */
+
+.regist_box .rg_left {
+    position: relative;
+    float: left;
+    width: 100px;
+    height: 100px;
+    line-height: 100px;
+    border: 1px solid #ddd;
+    text-align: center;
+    font-size: 13px;
+    background: url(../images/img.png);
+}
+
+.regist_box .rg_right {
+    float: left;
+    margin-left: 10px;
+    overflow: hidden;
+}
+
+.regist_box .rg_left input.image_upload {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100px;
+    height: 100px;
+    cursor: pointer;
+    opacity: 0;
+}
+
+.regist_box .file_search img.shop_imgText {
+    position: relative;
+    float: left;
+    width: 100%;
+    height: 216px;
+    text-align: center;
+    background: url(../images/shop_imgText.png);
+}
+
+.item_apply {
+    width: 100%;
+    min-width: 1224px;
+    overflow: hidden;
+}
+
+.item_apply > li {
+    float: left;
+}
+
+.item_apply > li:nth-child(1) {
+    width: 120px;
+}
+
+.item_apply > li:nth-child(2) {
+    width: 250px;
+}
+
+.item_apply > li:nth-child(3) {
+    float: right;
+    width: 800px;
+}
+
+.item_apply > li:nth-child(3) img {
+    width: 50%;
+}
+
+.item_apply .ia_1 {
+    position: relative;
+    float: left;
+    width: 110px;
+    height: 110px;
+    border: 1px solid #ddd;
+    text-align: center;
+    font-size: 13px;
+}
+
+.item_apply .ia_1 img {
+    width: 100px;
+    height: 100px;
+}
+
+.item_apply .ia_1 .event_icon {
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
+.item_apply .ia_1 .event_icon img {
+    width: 50px;
+    height: 50px;
+}
+
+.item_apply .ia_2 {
+    margin-left: 10px;
+    overflow: hidden;
+}
+
+.item_apply .ia_2 ul {
+    padding: 12px 0;
+}
+
+.item_apply .ia_2 li {
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.item_apply .ia_2 li:first-child {
+    margin-bottom: 12px;
+    font-size: 16px;
+}
+
+.item_apply .ia_2 input {
+    padding-left: 3px;
+}
+
+table.itemList {
+    overflow: hidden;
+    width: 1024px;
+}
+
+table.itemList img {
+    width: 90px;
+    height: 90px;
+}
+
+table.itemList tr p {
+    display: block;
+    width: 100%;
+    height: 28px;
+    line-height: 28px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 600;
+    border: 1px solid #e8e8e8;
+    /*  background: #e8e8e8;*/
+}
+
+.skins_btn {
+    display: inline-block;
+    width: 300px;
+    height: 40px;
+    margin-right: 3px;
+    padding: 8px 7px 7px;
+    border: 1px solid #578cae;
+    background: #fff;
+    color: #757575;
+}
+
+.recordButton {
+    width: 80px;
+    height: 40px;
+    line-height: 40px;
+    font-size: 13px;
+    vertical-align: middle;
+    color: #fff;
+    border: 1px solid #578cae;
+    background: #578cae;
+    transition: all 0.3s;
+}
+
+/* event_area 이벤트 아이콘 */
+
+.ia_3.event_area {
+
+    overflow-x: scroll;
+    overflow: hidden;
+}
+
+.event_area li {
+    /*
+    float: left;
+    width: 85px;
+    text-align: center;
+  */
+}
+
+.event_area li img {
+    width: 70%;
+}
+
+/* itemView 검색한 상품 view */
+
+.itemView {
+    position: relative;
+}
+
+.itemView table tbody.serchimglist tr td {
+    padding: 0;
+}
+
+.itemView table tbody tr td > img {
+    /*  width: 60%;*/
+}
+
+.itemView .itemName {
+    margin-bottom: 10px;
+    padding: 0 6px;
+    font-weight: 600;
+    font-size: 14px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.fileView_box {
+    /*  margin-top: 10px;*/
+}
+
+.fileView_box .searchFile {
+    display: inline-block;
+}
+
+/* showList 전단지에 적용된 상품 리스트 */
+.postUp {
+    position: relative;
+    overflow: hidden;
+}
+
+.showList {
+    float: left;
+    width: 1300px;
+    /*  width: 100%;*/
+    min-width: 1024px;
+    margin-top: 10px;
+}
+
+.showList h3 {
+    margin-bottom: 6px;
+    font-size: 20px;
+    font-weight: 600;
+}
+
+table.itemL .divBtn button:first-child {
+    margin-right: 4px;
+}
+
+table.itemL img {
+    width: 100px;
+    height: 100px;
+    cursor: move;
+}
+
+table.itemL span {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+table.itemL span.item {
+    font-size: 14px;
+    font-weight: 600;
+
+}
+
+table.itemL .itemDesc {
+    position: relative;
+}
+
+table.itemL .itemDesc .event_icon {
+    position: absolute;
+    top: 0;
+    left: 15px;
+}
+
+table.itemL .itemDesc .event_icon > img {
+    width: 60px;
+    height: 60px;
+}
+
+.showList .listItem {
+    float: left;
+    width: 650px;
+    overflow: hidden;
+}
+
+/* 추가 2019.10.28 */
+.showList_new {
+    position: relative;
+    width: 100%;
+    min-width: 1324px;
+    margin-top: 10px;
+    overflow: hidden;
+}
+
+.showList_new .listItem {
+    width: 100%;
+}
+
+.showList_new .itemL_new {
+    float: left;
+    overflow: hidden;
+}
+
+.showList_new .categoryTable {
+    position: relative;
+    float: right;
+    margin-left: 10px;
+    overflow: hidden;
+}
+
+.showList_new .categoryTable .post_category {
+    position: relative;
+    width: 644px;
+    height: 825px;
+    margin-left: 10px;
+    padding-bottom: 60px;
+    border: 1px solid #a4acb1;
+    text-align: left;
+}
+
+.showList_new .categoryTable .post_category > p {
+    padding: 12px 12px;
+    font-size: 16px;
+    font-weight: 600;
+    color: #fff;
+    background: #62778b;
+}
+
+.showList_new .categoryTable .post_category p > span {
+    display: inline-block;
+    font-size: 14px;
+    font-weight: bold;
+    color: #ff6a12;
+    margin-left: 12px;
+}
+
+.showList_new .categoryTable .post_category .cg {
+    padding: 0px 8px;
+    overflow: hidden;
+}
+
+.showList_new .categoryTable .post_category .cg .cg_new {
+    position: relative;
+    display: inline-block;
+    margin-top: 10px;
+    vertical-align: middle;
+}
+
+.showList_new .categoryTable .post_category .cg .cg_new input {
+    width: 290px;
+    height: 40px;
+    padding: 7px;
+    margin-right: 3px;
+    font-size: 13px;
+    border: 1px solid #578cae;
+    background: #fff;
+    overflow: hidden;
+}
+
+.showList_new .categoryTable .post_category .cg .cg_new button {
+    width: 80px;
+    height: 40px;
+    line-height: 40px;
+    font-size: 13px;
+    vertical-align: middle;
+    color: #fff;
+    border: 1px solid #578cae;
+    background: #578cae;
+    transition: all 0.3s;
+}
+
+.showList_new .categoryTable .post_category .cg .cg_new button.orderRelocation {
+    width: 140px;
+    height: 40px;
+    line-height: 40px;
+    font-size: 13px;
+    vertical-align: middle;
+    color: #fff;
+    border: 1px solid #a0c0d7;
+    background: #a0c0d7;
+    transition: all 0.3s;
+}
+
+.showList_new .categoryTable .post_category .cg ul.sortable {
+    display: inline-block;
+    float: left;
+    width: 100%;
+    margin-top: 10px;
+}
+
+.showList_new .categoryTable .post_category .cg .sortable li {
+    width: 100%;
+    margin-bottom: 5px;
+}
+
+
+.showList_new .categoryTable .post_category .cg .sortable li input.sortable_hadle {
+    display: inline-block;
+    width: 290px;
+    height: 40px;
+    padding: 10px;
+    border: 1px solid #ddd;
+    font-size: 14px;
+    cursor: pointer;
+    /*  cursor: move;*/
+}
+
+.showList_new .categoryTable .post_category .cg .sortable li > ul.cgBtn_area {
+    float: right;
+    width: 330px;
+    margin-right: 3px;
+}
+
+.showList_new .categoryTable .post_category .cg .sortable li > ul.cgBtn_area li {
+    float: left;
+    width: 80px;
+    margin-right: 2px;
+}
+
+.showList_new .categoryTable .post_category .cg .sortable li > ul.cgBtn_area li:last-child {
+    margin-right: 0;
+}
+
+.showList_new .categoryTable .post_category .cg .sortable li > ul.cgBtn_area .cg_btn {
+    display: inline-block;
+    width: 80px;
+    height: 40px;
+    line-height: 40px;
+    font-size: 13px;
+    vertical-align: middle;
+    color: #fff;
+    border: 1px solid #424652;
+    background: #424652;
+    text-align: center;
+}
+
+.showList_new .categoryTable .post_category .cg .sortable li > ul.cgBtn_area .cg_btn_1 {
+    color: #fff;
+    border: 1px solid #424652;
+    background: #424652;
+}
+
+.showList_new .categoryTable .post_category .cg .sortable li > ul.cgBtn_area .cg_btn_2 {
+    color: #fff;
+    border: 1px solid #94785c;
+    background: #94785c;
+}
+
+.showList_new .categoryTable .post_category .cg .sortable li > ul.cgBtn_area .cg_btn_3 {
+    color: #424652;
+    border: 1px solid #424652;
+    background: #fff;
+}
+
+.showList_new .categoryTable .post_category .cg .sortable li > ul.cgBtn_area .cg_btn_4 {
+    color: #424652;
+    border: 1px solid #e8e8e8;
+    background: #e8e8e8;
+}
+
+/* textWindow */
+
+.showList .textWindow {
+    float: left;
+    margin-top: 10px;
+    overflow: hidden;
+}
+
+.showList .textView {
+    position: relative;
+    width: 400px;
+    height: 580px;
+    margin-left: 10px;
+    padding-bottom: 60px;
+    /* background: #f2f2f2; */
+    border: 1px solid #a4acb1;
+    border-radius: 10px;
+}
+
+.showList .textView > .textTit {
+    width: 100%;
+    height: 45px;
+    font-size: 15px;
+    line-height: 50px;
+    text-align: center;
+    font-weight: 600;
+    background: #a4acb1;
+    border-radius: 8px 8px 0 0;
+}
+
+.showList .textView > div {
+    padding: 8px 8px 0;
+}
+
+.showList .textView > div ul {
+    width: 98%;
+    height: 465px;
+    margin: 0 auto;
+    background: #f2f2f2;
+    border-radius: 5px;
+}
+
+.showList .textView > div ul .liText {
+    width: 98%;
+    height: 465px;
+    padding: 16px 15px 5px;
+}
+
+.showList .textView > div ul .liText textarea {
+    width: 100%;
+    height: 420px;
+    margin: 0 auto;
+    border: none;
+    font-size: 16px;
+    background: #f2f2f2;
+    overflow: auto;
+    resize: both;
+    text-align: left;
+}
+
+.showList .textView > .talkBtn {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    height: 50px;
+}
+
+.showList .textView > .talkBtn a {
+    display: inline-block;
+    width: 49.4%;
+    height: 100%;
+    font-size: 15px;
+    line-height: 50px;
+    font-weight: 600;
+    text-align: center;
+    color: #fff;
+    background: #a0c0d7;
+    transition: all 0.3s;
+}
+
+.showList .textView > .talkBtn a:first-child {
+    border-radius: 0 0 0 10px;
+    border-right: 1px solid #eee;
+    box-sizing: border-box;
+}
+
+.showList .textView > .talkBtn a:last-child {
+    border-radius: 0 0 10px 0;
+}
+
+.text_area {
+    width: 100%;
+    height: 100%;
+    margin: 0 auto;
+    padding: 12px;
+    border: 2px solid #2e2e2e;
+    background: #fff;
+    border-radius: 10px;
+    word-break: break-all;
+}
+
+/* 수정분 | showList 전단지에 적용된 상품 리스트 */
+
+/* 2019.10.28 수정 */
+
+/*
+.showList_new {
+  float: left;
+  width: 560px;
+  min-width: 560px;
+  margin-top: 10px;
+}
+
+.showList_new h3 {
+  margin-bottom: 6px;
+  font-size: 20px;
+  font-weight: 600;
+}
+*/
+
+table.itemL_new .divBtn button:first-child {
+    margin-right: 4px;
+}
+
+/* 상품등록 3개 */
+table.itemL_new img {
+    width: 80px;
+    height: 80px;
+}
+
+table.itemL_new span {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+table.itemL_new span.item {
+    font-size: 14px;
+    font-weight: 600;
+
+}
+
+table.itemL_new .itemDesc {
+    position: relative;
+}
+
+table.itemL_new .itemDesc .btn_x {
+    font-size: 15px;
+    font-weight: 600;
+}
+
+table.itemL_new .itemDesc .event_icon {
+    position: absolute;
+    top: 0;
+    left: 15px;
+}
+
+table.itemL_new .itemDesc .event_icon > img {
+    width: 60px;
+    height: 60px;
+}
+
+table.itemL_new .itemDesc .event_icon > img {
+    width: 60px;
+    height: 60px;
+}
+
+table.itemL_new .itemDesc button {
+    position: absolute;
+    top: 0;
+    right: 0;
+    font-size: 20px;
+    font-weight: 600;
+    color: #ccc;
+}
+
+table.itemL_new .itemDesc button.btn_itemDell {
+    width: 100px;
+    height: 200px;
+    background: #ddd
+}
+
+/*
+상품등록 1개 수정 2020.02.06
+*/
+.showList_new .listItem_lg {
+    width: 600px;
+    background: #ddd;
+}
+
+table.itemL_new_lg {
+    float: left;
+    background: #f1f1f1;
+}
+
+table.itemL_new_lg .chkMove {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 25px;
+    height: 25px;
+}
+
+table.itemL_new_lg img {
+    width: 100%;
+}
+
+table.itemL_new_lg span {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+table.itemL_new_lg span.item_lg {
+    font-size: 14px;
+    font-weight: 600;
+
+}
+
+table.itemL_new_lg .itemDesc_lg {
+    position: relative;
+}
+
+table.itemL_new_lg .itemDesc_lg .item_area {
+    height: 48px;
+    background: #f0001e;
+}
+
+table.itemL_new_lg .itemDesc_lg .left_area {
+    float: left;
+    width: 48%;
+    height: 44px;
+    margin: 2px;
+    padding: 2px 4px;
+    background: #fff;
+}
+
+table.itemL_new_lg .itemDesc_lg .left_area span {
+    display: block;
+    font-size: 15px;
+    font-weight: 600;
+    text-align: left;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+table.itemL_new_lg .itemDesc_lg .right_area {
+    float: left;
+    width: 50%;
+    height: 48px;
+    padding-right: 4px;
+    line-height: 48px;
+    font-size: 32px;
+    color: #fdf004;
+    font-weight: 600;
+    text-align: right;
+    background: #f0001e;
+}
+
+table.itemL_new_lg .itemDesc_lg .right_area span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+table.itemL_new_lg .itemDesc_lg .right_area em {
+    font-size: 16px;
+}
+
+table.itemL_new_lg .itemDesc_lg .btn_x_lg {
+    font-weight: 600;
+}
+
+table.itemL_new_lg .itemDesc .event_icon {
+    position: absolute;
+    top: 0;
+    left: 15px;
+}
+
+table.itemL_new_lg .itemDesc .event_icon > img {
+    width: 60px;
+    height: 60px;
+}
+
+table.itemL_new_lg .itemDesc .event_icon > img {
+    width: 60px;
+    height: 60px;
+}
+
+table.itemL_new .itemDesc button {
+    position: absolute;
+    top: 0;
+    right: 0;
+    font-size: 20px;
+    font-weight: 600;
+    color: #ccc;
+}
+
+table.itemL_new .itemDesc button.btn_itemDell {
+    width: 100px;
+    height: 200px;
+    background: #ddd
+}
+
+.listItem .buttonMove {
+    float: left;
+    margin-left: 10px;
+
+}
+
+.listItem .buttonMove button {
+    width: 80px;
+    height: 40px;
+    line-height: 40px;
+    font-size: 13px;
+    vertical-align: middle;
+    color: #fff;
+    border: 1px solid #578cae;
+    background: #578cae;
+    transition: all 0.3s;
+}
+
+.textWindow {
+    float: left;
+    margin-top: 10px;
+    overflow: hidden;
+}
+
+.textWindow .textView {
+    position: relative;
+    width: 400px;
+    height: 580px;
+    margin-left: 10px;
+    padding-bottom: 60px;
+    background: #f2f2f2;
+    border: 1px solid #a4acb1;
+    border-radius: 10px;
+}
+
+.textWindow .textView > .textTit {
+    width: 100%;
+    height: 45px;
+    font-size: 15px;
+    line-height: 50px;
+    text-align: center;
+    font-weight: 600;
+    background: #a4acb1;
+    border-radius: 8px 8px 0 0;
+}
+
+.textWindow .textView > div {
+    padding: 8px 8px 0;
+}
+
+.textWindow .textView > div ul {
+    width: 98%;
+    height: 465px;
+    margin: 0 auto;
+    background: #f2f2f2;
+    border-radius: 5px;
+}
+
+.textWindow .textView > div ul .liText {
+    width: 98%;
+    height: 465px;
+    padding: 16px 15px 5px;
+}
+
+.textWindow .textView > div ul .liText textarea {
+    width: 100%;
+    height: 420px;
+    margin: 0 auto;
+    border: none;
+    font-size: 16px;
+    background: #f2f2f2;
+    overflow: auto;
+    resize: both;
+    text-align: left;
+}
+
+.textWindow .textView > .talkBtn {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    height: 50px;
+}
+
+.textWindow .textView > .talkBtn a {
+    display: inline-block;
+    width: 49.4%;
+    height: 100%;
+    font-size: 15px;
+    line-height: 50px;
+    font-weight: 600;
+    text-align: center;
+    color: #fff;
+    background: #a0c0d7;
+    transition: all 0.3s;
+}
+
+.textWindow .textView > .talkBtn a:first-child {
+    border-radius: 0 0 0 10px;
+    border-right: 1px solid #eee;
+    box-sizing: border-box;
+}
+
+.textWindow .textView > .talkBtn a:last-child {
+    border-radius: 0 0 10px 0;
+}
+
+.text_area {
+    width: 100%;
+    height: 100%;
+    margin: 0 auto;
+    padding: 12px;
+    border: 2px solid #2e2e2e;
+    background: #fff;
+    border-radius: 10px;
+    word-break: break-all;
+}
+
+/* 종이전단지 등록하기 */
+
+.paperPost_area {
+    float: left;
+    width: 560px;
+}
+
+/*
+.shopMain_img .bannerAD {
+  overflow: hidden;
+  margin-bottom: 4px;
+  border: 1px solid #ddd;
+}
+
+.shopMain_img .bannerAD .bannerIMG {
+  float: left;
+  width: 370px;
+  border-right: 1px solid #ddd;
+}
+
+.shopMain_img .bannerAD .bannerSELECT {
+  position: relative;
+  display: inline-block;
+  margin-top: 25px;
+  font-size: 14px;
+  line-height: 1.42857143;
+  color: #555;
+  background-color: #fff;
+  background-image: none;
+}
+
+.shopMain_img .bannerAD .bannerSELECT select {
+  display: inline-block;
+  float: left;
+  width: 95px;
+  height: 40px;
+  margin-left: 4px;
+  cursor: pointer;
+  outline: 0;
+  border: 1px solid #ddd;
+  height: 40px;
+  font-size: 14px;
+}
+
+.shopMain_img .bannerAD .bannerSELECT .button_banner {
+  float: left;
+  width: 80px;
+  height: 40px;
+  margin-left: 3px;
+  border: 1px solid #d8d8d8;
+  border-radius: 2px;
+  font-size: 13px;
+  line-height: 35px;
+  background: #fff;
+  color: #578cae;
+  text-align: center;
+}
+*/
+
+.paperPost_area .paperPost .thumb {
+    overflow: hidden;
+    margin-bottom: 4px;
+    border: 1px solid #ddd;
+}
+
+.paperPost_area .paperPost .thumb .thumb_img {
+    float: left;
+    width: 64px;
+    border-right: 1px solid #ddd;
+}
+
+.paperPost_area .paperPost .thumb .thumb_desc {
+    float: left;
+    margin-top: 25px;
+    /*  line-height: 80px;*/
+    padding-left: 10px;
+}
+
+.paperPost_area .paperPost .thumb .thumb_desc .thumb_txt {
+    display: inline-block;
+    width: 90px;
+    padding: 6px 0;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+/*
+.paperPost_area .paperPost .thumb .thumb_desc input {
+  width: 200px;
+  height: 40px;
+  padding: 5px;
+  margin: 0 2px;
+  font-size: 13px;
+  border: 1px solid #578cae;
+  background: #fff;
+}
+*/
+
+.paperPost_area .paperPost .thumb .thumb_desc button {
+    margin-left: -2px;
+    margin-right: 1px;
+    width: 80px;
+    height: 40px;
+    font-size: 13px;
+    vertical-align: middle;
+    color: #fff;
+    border: 1px solid #578cae;
+    background: #578cae;
+    transition: all 0.3s;
+}
+
+.paperPost_area .paperPost .thumb .thumb_desc button.button_1 {
+    color: #578cae;
+    border: 1px solid #e8e8e8;
+    background: #e8e8e8;
+    transition: all 0.3s;
+}
+
+.paperPost_area .paperPost .thumb .thumb_desc button.button_2 {
+    color: #fff;
+    border: 1px solid #578cae;
+    background: #578cae;
+    transition: all 0.3s;
+}
+
+.searchFile_new {
+    position: relative;
+    /*  display: inline-block;*/
+    vertical-align: middle;
+}
+
+.searchFile_new input {
+    width: 300px;
+    height: 40px;
+    padding: 7px;
+    margin-right: 3px;
+    font-size: 13px;
+    border: 1px solid #578cae;
+    background: #fff;
+    overflow: hidden;
+}
+
+.search_hidden_new {
+    position: absolute;
+    left: 0;
+    top: 0;
+    cursor: pointer;
+    opacity: 0;
+}
+
+.searchFile_new .searchFile_box_new {
+    position: relative;
+    float: left;
+    width: 300px;
+    height: 40px;
+    line-height: 23px;
+    padding: 7px;
+    margin: 0 2px;
+    font-size: 13px;
+    color: #757575;
+    text-align: center;
+    border: 1px solid #578cae;
+    background: #fff;
+    overflow: hidden;
+}
+
+.searchFile_new button {
+    width: 80px;
+    height: 40px;
+    line-height: 40px;
+    font-size: 13px;
+    vertical-align: middle;
+    color: #fff;
+    border: 1px solid #578cae;
+    background: #578cae;
+    transition: all 0.3s;
+}
+
+.searchFile_new button.deleteBtn {
+    color: #333;
+    border: 1px solid #e8e8e8;
+    background: #e8e8e8;
+}
+
+
+
+/* 전단지 미리보기 | 전단지 전체 등록버튼 | 알림톡 버튼 */
+
+.btnPreview {
+    position: relative;
+}
+
+.btnPreview ul {
+    position: absolute;
+    top: -55px;
+    right: 0;
+    font-weight: 600;
+}
+
+.btnPreview ul li {
+    float: left;
+    margin-right: 6px;
+}
+
+.btnPreview ul li:last-child {
+    margin-right: 0;
+}
+
+.btnPreview ul li button {
+    height: 40px;
+    font-size: 15px;
+}
+
+/* subtab_4 shopMain_img 상점이미지 */
+
+.shopMain_img img {
+    width: 560px;
+    /*  height: 208px;*/
+}
+
+.shopMain_img h4 {
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.shopMain_img .bannerAD {
+    position: relative;
+    margin-top: 10px;
+    margin-bottom: 15px;
+}
+
+.shopMain_img .bannerAD .bannerSELECT select {
+    float: left;
+    width: 300px;
+    height: 40px;
+    line-height: 23px;
+    padding: 7px;
+    margin: 0 2px;
+    font-size: 13px;
+    color: #757575;
+    text-align: center;
+    border: 1px solid #578cae;
+    background: #fff;
+    overflow: hidden;
+}
+
+.shopMain_img .bannerAD .bannerSELECT select {
+    padding: 0px 25px;
+    font-family: inherit;
+    background: url(../images/arrow_down.png) no-repeat 90% 50%;
+    border: 1px solid #aaa;
+    border-radius: 0px;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+}
+
+.shopMain_img .bannerAD .bannerSELECT .button_banner {
+    width: 80px;
+    height: 40px;
+    line-height: 40px;
+    font-size: 13px;
+    vertical-align: middle;
+    color: #fff;
+    border: 1px solid #578cae;
+    background: #578cae;
+    transition: all 0.3s;
+}
+
+.shopMain_img .callback_add {
+    position: relative;
+    margin-top: 10px;
+    margin-bottom: 15px;
+}
+
+.shopMain_img .callback_add .well {
+    min-height: 20px;
+    padding: 19px;
+    background-color: #f9f9f9;
+    border-color: #d9d9d9;
+}
+
+.file label {
+    margin-left: 3px;
+    padding: 5px;
+}
+
+.file .searchFile {
+    position: relative;
+    float: left;
+    width: 300px;
+    height: 28px;
+    line-height: 14px;
+    padding: 7px;
+
+    font-size: 13px;
+    color: #757575;
+    text-align: center;
+    border: 1px solid #d4d4d6;
+    background: #fff;
+    overflow: hidden;
+}
+
+.file button {
+    position: relative;
+    display: inline-block;
+    float: left;
+    margin-left: 2px;
+    width: 100px;
+    height: 28px;
+    background-color: #424652;
+    color: #fff;
+}
+
+.help_block {
+    display: block;
+    margin-top: 5px;
+    color: #adadad;
+}
+/* ------------------------------
+  ulPost | 등록된 전단지 보기
+-------------------------------- */
+
+.ulPost .liPost {
+    width: 100%;
+    height: 40px;
+    padding-right: 40px;
+    font-size: 14px;
+    margin-top: 10px;
+}
+
+.ulPost .liPost ul li {
+    float: left;
+}
+
+.ulPost .liPost a {
+    display: inline-block;
+    width: 200px;
+    height: 36px;
+    line-height: 36px;
+    margin-right: 3px;
+    font-size: 13px;
+    vertical-align: middle;
+    color: #fff;
+    text-align: center;
+    background: #a0c0d7;
+    box-sizing: border-box;
+    transition: all 0.3s;
+}
+
+.ulPost .liPost a.p1 {
+    background: #fff;
+    border: 1px solid #a0c0d7;
+    color: #a0c0d7;
+}
+
+
+
+/* ------------------------------
+  버튼 | 즉시발송 예약발송
+-------------------------------- */
+
+.div_button {
+    padding-top: 10px;
+}
+
+.sendButton {
+    display: inline-block;
+    width: 100%;
+    height: 44px;
+    line-height: 44px;
+    margin-top: 10px;
+    font-size: 16px;
+    text-align: center;
+    color: #fff;
+    border: 1px solid #578cae;
+    background: #578cae;
+    border-radius: 10px;
+}
+
+.sendButtonSNS {
+    display: inline-block;
+    width: 100%;
+    height: 44px;
+    line-height: 44px;
+    margin-top: 10px;
+    font-size: 16px;
+    text-align: center;
+    color: #fff;
+    border: 1px solid #62778b;
+    background: #62778b;
+    border-radius: 10px;
+}
+
+.postButton {
+    display: inline-block;
+    width: 285px;
+    height: 44px;
+    line-height: 44px;
+    margin-top: 10px;
+    font-size: 16px;
+    text-align: center;
+    color: #578cae;
+    border: 1px solid #578cae;
+}
+
+.nowButton,
+.bgButton {
+    display: inline-block;
+    width: 285px;
+    height: 44px;
+    margin: 0 3px;
+    line-height: 44px;
+    font-size: 16px;
+    font-weight: 600;
+    text-align: center;
+    color: #fff;
+    background: #ff6a12;
+}
+
+.resButton,
+.borderButton {
+    display: inline-block;
+    width: 285px;
+    height: 44px;
+    margin: 0 3px;
+    line-height: 44px;
+    font-size: 16px;
+    font-weight: 600;
+    text-align: center;
+    color: #333;
+    background: #fff;
+    border: 1px solid #ff6a12;
+}
+
+.addButton {
+    display: inline-block;
+    width: 560px;
+    height: 44px;
+    line-height: 44px;
+    margin-top: 10px;
+    font-size: 16px;
+    text-align: center;
+    color: #333;
+    border: 1px solid #a0c0d7;
+    background: #a0c0d7;
+}
+
+.ulPlus_btn {
+    font-size: 24px;
+    color: #a0c0d7;
+}
+
+.ulMinus_btn {
+    font-size: 24px;
+    color: #ddd;
+}
+
+.ulVar .overflow_xy {
+    overflow-x: scroll;
+    overflow-y: scroll;
+}
+
+/* ------------------------------
+ 카테고리 관리
+-------------------------------- */
+
+.cnt_box {
+    padding: 20px;
+    border-top: 1px solid #ddd;
+    background-color: #f7f7f7;
+    font-size: 14px;
+}
+
+.ip_basic {
+    height: 32px;
+    line-height: 30px;
+    padding: 0 8px !important;
+    border: solid 1px #d7d6d6;
+    background-color: #fff;
+    color: #666;
+    font-weight: 600;
+    vertical-align: middle;
+}
+
+
+/* ------------------------------
+  billing_wrap
+-------------------------------- */
+
+.totalPrice {
+    position: relative;
+    margin-top: 10px;
+    padding: 14px 12px;
+    border: 2px solid #f1f1f1;
+}
+
+.totalPrice ul li {
+    font-size: 15px;
+}
+
+.totalPrice ul li span {
+    margin-left: 10px;
+}
+
+
+/* ===============================
+	00. 주소록
+================================= */
+
+/* ------------------------------
+  addressMain
+-------------------------------- */
+
+.addressMain {
+    position: relative;
+}
+
+.addressExcel a {
+    display: inline-block;
+    height: 36px;
+    line-height: 36px;
+    color: #578cae;
+}
+
+.addressRegister ul {
+    margin-bottom: 10px;
+}
+
+.addressRegister ul li {
+    float: left;
+    font-size: 13px;
+}
+
+/*
+.addressRegister ul li.liAddressForm {
+  float: right;
+}
+
+.addressRegister ul li.liAddressForm a {
+  display: block;
+  height: 36px;
+  line-height: 36px;
+  color: #578cae;
+}
+*/
+
+.addressRegister ul li.liRegister {
+    /*  float: left;*/
+}
+
+.addressRegister ul .liGroupView {
+    /*  float: left;*/
+}
+
+.addressRegister ul .liGroupView select {
+    width: 110px;
+    height: 36px;
+    margin-right: 4px;
+    font-size: 13px;
+    border: 1px solid #578cae;
+}
+
+.addressRegister ul .liGroupView option {
+    font-size: 13px;
+}
+
+.addressRegister ul .liExcelFile {
+    position: relative;
+    /*  float: left;*/
+}
+
+.addressRegister ul .liExcelFile input {
+    width: 200px;
+    height: 36px;
+    padding: 5px;
+    margin: 0 2px;
+    font-size: 13px;
+    border: 1px solid #578cae;
+    background: #fff;
+}
+
+.addressRegister ul .liExcelFile input.file_excel {
+    position: absolute;
+    right: 0;
+    top: 0;
+    cursor: pointer;
+    opacity: 0;
+}
+
+.addressRegister ul .liExcelFile span {
+    position: relative;
+    float: left;
+    width: 200px;
+    height: 36px;
+    padding: 7px;
+    margin-right: 3px;
+    font-size: 13px;
+    color: #757575;
+    border: 1px solid #578cae;
+    background: #fff;
+    overflow: hidden;
+}
+
+.ulSearch {
+    /*  float: right;*/
+    margin-bottom: 10px;
+    overflow: hidden;
+}
+
+.ulSearch li {
+    float: left;
+}
+
+.ulSearch .liSearch {
+    float: left;
+}
+
+.ulSearch .liSearch select {
+    width: 150px;
+    height: 36px;
+    font-size: 13px;
+    border: 1px solid #aaa;
+}
+
+.ulSearch .liSearch input {
+    width: 316px;
+    height: 36px;
+    padding: 0 5px;
+    color: #888;
+    border: 1px solid #aaa;
+}
+
+.ulSearch .liSearch button {
+    width: 100px;
+    height: 36px;
+    font-size: 13px;
+    vertical-align: middle;
+    color: #fff;
+    border: 1px solid #aaa;
+    background: #ccc;
+}
+
+.ulSearch .liSearch button.eachAdd {
+    width: 130px;
+    background: #424652;
+    border: 1px solid #424652;
+}
+
+.ulSearch .liTotal {
+    float: right;
+    height: 36px;
+    line-height: 36px;
+    font-size: 13px;
+}
+
+.ulKakaotalk table tbody th {
+    height: 40px;
+}
+
+.modifyBtn {
+    width: 100%;
+    font-size: 13px;
+}
+
+/*
+.alrimTalk {
+  position: relative;
+  margin-top: 40px;
+}
+
+.alrimTalk .alrimS {
+  position: absolute;
+  top: 0;
+  right: 0;
+  height: 36px;
+  line-height: 30px;
+}
+*/
+
+.alrimTalk .alrimS a {
+    display: inline-block;
+}
+
+.alrimTalk .alrimS .alrimtalkSend {
+    width: 215px;
+    margin-left: 3px;
+    padding: 2px 12px;
+    background: #333;
+    color: #fff;
+    background: #ff6a12;
+    border: 1px solid #ff6a12;
+    text-align: center;
+    box-sizing: border-box;
+}
+
+.addressModify {
+    position: relative;
+    margin-top: 20px;
+    overflow: hidden;
+}
+
+.addressModify .alrimS {
+    position: absolute;
+    top: 0;
+    right: 0;
+    height: 36px;
+    line-height: 30px;
+}
+
+.addressModify .alrimS a {
+    display: inline-block;
+}
+
+.addressModify .alrimS .alrimtalkSend {
+    width: 215px;
+    margin-left: 3px;
+    padding: 2px 12px;
+    background: #333;
+    color: #fff;
+    background: #ff6a12;
+    border: 1px solid #ff6a12;
+    text-align: center;
+    box-sizing: border-box;
+}
+
+.modifyBtn ul li {
+    float: left;
+    height: 36px;
+    line-height: 36px;
+    color: #578cae;
+}
+
+.modifyBtn ul li button {
+    width: 110px;
+    height: 36px;
+    margin-right: 5px;
+    font-size: 13px;
+    vertical-align: middle;
+    color: #fff;
+    background: #a0c0d7;
+    box-sizing: border-box;
+    transition: all 0.3s;
+}
+
+.modifyBtn ul .liChoice {
+    margin-left: 15px;
+}
+
+.modifyBtn ul li select {
+    width: 150px;
+    height: 36px;
+    margin: 0 3px;
+    font-size: 13px;
+    border: 1px solid #578cae;
+    box-sizing: border-box;
+}
+
+.modifyBtn ul li option {
+    font-size: 13px;
+}
+
+.modifyBtn ul .liDownload {
+    float: right;
+}
+
+.modifyBtn ul .liDownload a {
+    display: block;
+    width: 200px;
+    height: 36px;
+    line-height: 36px;
+    text-align: center;
+    color: #fff;
+    background: #578cae;
+}
+
+.addSelect {
+    margin-left: 5px;
+    padding: 0 12px;
+    height: 28px;
+    font-size: 13px;
+    border: 0;
+    border-top: 1px solid #fff;
+    border-left: 1px solid #fff;
+    box-sizing: border-box;
+    background: #eee;
+    box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+    transition: all 0.3s;
+}
+
+.referBtn {
+    display: inline-block;
+    padding: 0 8px;
+    height: 28px;
+    line-height: 24px;
+    font-size: 13px;
+    border: 0;
+    border-top: 1px solid #fff;
+    border-left: 1px solid #fff;
+    box-sizing: border-box;
+    background: #eee;
+    box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+    transition: all 0.3s;
+    cursor: pointer;
+}
+
+.addressTabel table thead.templateRefer th {
+    padding: 6px 5px;
+}
+
+/* ------------------------------
+   address_entry | 주소록 등록
+-------------------------------- */
+
+.step_wrap {
+    position: relative;
+    margin-top: 30px;
+    clear: both;
+    font-size: 13px;
+}
+
+.step_wrap > p {
+    margin-bottom: 10px;
+    font-size: 14px;
+}
+
+.step_wrap p span.ico_step {
+    display: inline-block;
+    margin-right: 15px;
+    padding-left: 10px;
+    font-size: 16px;
+    color: #578cae;
+    font-weight: 600;
+}
+
+.step1_wrap .group_area {
+    position: relative;
+    padding: 8px 0 8px 10px;
+    border: 1px solid #ddd;
+}
+
+.step1_wrap .group_area .addressRegister ul {
+    margin-bottom: 0px;
+}
+
+.step1_wrap div.group_area select {
+    width: 270px;
+    height: 36px;
+    border: 1px solid #cdcdcd;
+    padding-left: 3px;
+}
+
+.step1_wrap a.btn_addRed {
+    position: absolute;
+    top: 8px;
+    right: 15px;
+    padding: 6px 10px 6px 10px;
+    text-align: center;
+    font-size: 12px;
+    border: 1px solid #bfbfbf;
+}
+
+.step2_wrap {
+    min-width: 1024px;
+}
+
+.step2_wrap input {
+    border: 1px solid #ddd;
+    width: 98%;
+    height: 34px;
+}
+
+/* ------------------------------
+  address_group | 주소록 그룹 관리
+-------------------------------- */
+
+.groupMain {
+    min-width: 800px;
+    margin-top: 20px;
+    /*
+    margin-left: auto;
+    margin-right: auto;
+  */
+    overflow: hidden;
+}
+
+.group_new {
+    width: 100%;
+    /*  height: 320px;*/
+    padding: 10px 10px 0 10px;
+    border: 1px solid #aaa;
+}
+
+.group_list {
+    width: 100%;
+    /*  height: 328px;*/
+    margin-top: 10px;
+    padding: 10px 10px 0 10px;
+    border: 1px solid #aaa;
+}
+
+.group_list .top {
+    font-size: 13px;
+    overflow: hidden;
+}
+
+.group_list .top .total {
+    float: left;
+    line-height: 40px;
+}
+
+.group_list .table {
+    overflow-y: auto;
+    margin-bottom: 10px;
+    /*  height: 218px;*/
+}
+
+.group_list .btn button {
+    width: 84px;
+    height: 40px;
+    font-size: 13px;
+    vertical-align: middle;
+    color: rgb(255, 255, 255);
+    border-width: initial;
+    border-style: none;
+    border-color: initial;
+    border-image: initial;
+    background: rgb(87, 140, 174);
+    transition: all 0.3s ease 0s;
+}
+
+
+/* ------------------------------
+  rejectMain | 수신거부목록
+-------------------------------- */
+
+/*
+.rejectRegister ul li {
+  float: left;
+  font-size: 13px;
+}
+
+.rejectRegister ul .liTotal {
+  height: 36px;
+  line-height: 36px;
+  margin-right: 15px;
+}
+
+.rejectModify {
+  width: 100%;
+  margin-top: 15px;
+}
+
+.rejectModify ul li {
+  float: left;
+  font-size: 13px;
+}
+*/
+
+/* 2019.12.20 수정 */
+.address_reject .ulTop {
+    margin-bottom: 15px;
+}
+
+.address_reject .ulTop li.liSearch {
+    float: left;
+}
+
+.address_reject .ulTop li.liSearch input {
+    width: 316px;
+    height: 36px;
+    padding: 0 5px;
+    color: #888;
+    border: 1px solid #aaa;
+}
+
+.address_reject .ulTop li.liSearch button.ar_searchBtn {
+    width: 100px;
+    height: 36px;
+    font-size: 13px;
+    vertical-align: middle;
+    color: #fff;
+    border: 1px solid #aaa;
+    background: #ccc;
+}
+
+.address_reject .ulTop li.liSearch button.ar_rejectBtn {
+    width: 120px;
+    height: 36px;
+    font-size: 13px;
+    vertical-align: middle;
+    color: #fff;
+    border: 1px solid #578cae;
+    background: #578cae;
+}
+
+/* ===============================
+	charge_form | 충전
+================================= */
+
+.charge_area,
+.refund_area,
+.charge_list,
+.refund_list {
+    width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+    padding-bottom: 20px;
+    overflow: hidden;
+}
+
+.charge_area .pTit,
+.refund_area .pTit,
+.charge_list .pTit .refund_list .pTit {
+    width: 100%;
+    height: 44px;
+    font-size: 18px;
+    line-height: 44px;
+    text-align: center;
+    color: #fff;
+    background: #ccc;
+}
+
+.charge_area ul,
+.refund_area ul,
+.charge_list ul .refund_list ul {
+    padding: 10px 0 13px 27px;
+    color: #535353;
+}
+
+.charge_area ul li,
+.refund_area ul li,
+.charge_list ul li .refund_list ul li {
+    font-size: 13px;
+    line-height: 20px;
+}
+
+input.input_cancel {
+    display: inline-block;
+    width: 162px;
+    height: 40px;
+    margin: 0 3px;
+    line-height: 40px;
+    text-align: center;
+    color: #a0c0d7;
+    border: 1px solid #a0c0d7;
+    background: none;
+    transition: all 0.3s;
+    cursor: pointer;
+}
+
+input.input_ok {
+    display: inline-block;
+    width: 162px;
+    height: 40px;
+    margin: 0 3px;
+    line-height: 40px;
+    text-align: center;
+    color: #fff;
+    border: none;
+    background: #a0c0d7;
+    transition: all 0.3s;
+    cursor: pointer;
+}
+
+
+/* ===============================
+	로그인페이지
+================================= */
+
+#login {
+    background-color: #fbfbfb;
+    overflow: hidden;
+}
+
+.login_pop {
+    position: relative;
+    width: 900px;
+    height: 570px;
+    margin: 70px auto 130px;
+    background: #fff;
+    box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
+}
+
+.login_area {
+    position: relative;
+    float: left;
+    width: 390px;
+    height: 100%;
+    padding: 110px 40px 0 40px;
+    text-align: center;
+    z-index: 1;
+}
+
+.login_area h2 {
+    display: block;
+    margin-bottom: 20px;
+    font-size: 28px;
+    font-weight: 600;
+    text-align: center;
+}
+
+#login .text_wrap {
+    height: 50px;
+    border: 1px solid #dbdbdb;
+    background-color: #fcfcfc;
+    margin: 10px 0 0 0;
+}
+
+#login .text_wrap input {
+    width: 268px;
+    padding: 0 20px 0 20px;
+    height: 48px;
+    border: none;
+    background-color: #fcfcfc;
+    font-size: 14px;
+    color: #333;
+}
+
+#login .btn_b {
+    display: block;
+    width: 100%;
+    font-size: 17px;
+    color: #fff;
+    font-weight: bold;
+    background-color: #fa2828;
+    text-align: center;
+    height: 60px;
+    line-height: 58px;
+    margin: 20px 0 0 0;
+}
+
+.login_shopby {
+    position: relative;
+    float: right;
+    width: 510px;
+    height: 570px;
+    z-index: 1;
+}
+
+/*
+#login .login_pop .shadow {
+    position: absolute;
+    top: -17px;
+    left: -24px;
+}
+*/
+
+
+/* ===============================
+	화면 너비 0~768px
+================================= */
+
+/* ===============================
+	KAKAO 알림톡 STYLE
+=============================== */
+
+/* ------------------------------
+  message_wrap
+-------------------------------- */
+
+.message_wrap {
+    width: 100%;
+    margin-top: 20px;
+    margin-left: auto;
+    margin-right: auto;
+    overflow: hidden;
+}
+
+.left {
+    float: left;
+    width: 600px;
+}
+
+.right {
+    float: left;
+    width: 340px;
+}
+
+.right.replaceSNS {
+    float: left;
+    width: 550px;
+}
+
+.message_view {
+    float: left;
+    width: 303px;
+    height: 564px;
+}
+
+.sns_view, .sms_view {
+    float: left;
+    width: 303px;
+}
+
+.message_write {
+    float: left;
+    margin-right: 0px;
+    margin-bottom: 25px;
+    overflow: hidden;
+}
+
+.message_add {
+    position: relative;
+    /*  margin-top: 30px;*/
+    margin-bottom: 20px;
+}
+
+
+/* ------------------------------
+  message_view | 알림톡 미리보기
+-------------------------------- */
+
+.message_view .talkWindow {
+    position: relative;
+    float: left;
+    width: 100%;
+    height: 470px;
+    padding-bottom: 60px;
+    /*  background: #f2f2f2;*/
+    border: 1px solid #a0c0d7;
+    border-radius: 10px;
+}
+
+.message_view .talkWindow > .talkTit {
+    width: 100%;
+    height: 45px;
+    font-size: 15px;
+    line-height: 50px;
+    text-align: center;
+    background: #fae100;
+    border-radius: 8px 8px 0 0;
+}
+
+.message_view .talkWindow > div {
+    padding: 8px 8px 0;
+}
+
+.message_view .talkWindow > div ul {
+    width: 98%;
+    height: 337px;
+    margin: 0 auto;
+    background: #f2f2f2;
+    border-radius: 5px;
+}
+
+.message_view .talkWindow > div ul .liText {
+    width: 98%;
+    height: 300px;
+    padding: 16px 15px 5px;
+}
+
+.message_view .talkWindow > div ul .liText textarea {
+    width: 100%;
+    height: 300px;
+    margin: 0 auto;
+    border: none;
+    font-size: 13px;
+    background: #f2f2f2;
+}
+
+.message_view .talkWindow > div .pTxtnum {
+    margin-top: 5px;
+    margin-right: 7px;
+    font-size: 14px;
+    text-align: right;
+}
+
+.message_view .talkWindow > .talkBtn a {
+    float: left;
+    display: inline-block;
+    width: 100%;
+    height: 100%;
+    font-size: 14px;
+    line-height: 42px;
+    text-align: center;
+    color: #fff;
+    background: #384750;
+    transition: all 0.3s;
+}
+
+/* ------------------------------
+  sns_view | 대체문자 보내기
+-------------------------------- */
+
+.sns_view .snsWindow {
+    position: relative;
+    float: left;
+    width: 100%;
+    height: 470px;
+    padding-bottom: 60px;
+    /*  background: #f2f2f2;*/
+    border: 1px solid #62778b;
+    border-radius: 10px;
+}
+
+.sms_view .smsWindow {
+    position: relative;
+    float: left;
+    width: 100%;
+    height: 512px;
+    padding-bottom: 60px;
+    /*  background: #f2f2f2;*/
+    border: 1px solid #62778b;
+    border-radius: 10px;
+}
+
+.sns_view .snsWindow > .talkTit,
+.sms_view .smsWindow > .talkTit {
+    width: 100%;
+    height: 45px;
+    font-size: 15px;
+    line-height: 50px;
+    text-align: center;
+    color: #fff;
+    background: #62778b;
+    border-radius: 8px 8px 0 0;
+}
+
+.sns_view .snsWindow > .text > input,
+.sms_view .smsWindow > .text > input {
+    padding: 0 8px;
+    width: 100%;
+    height: 30px;
+    line-height: 30px;
+    font-size: 13px;
+    border: 1px solid #d1d1d1;
+    background: #fff;
+    border-radius: 3px;
+}
+
+.sns_view .snsWindow > div,
+.sms_view .smsWindow > div {
+    padding: 8px 8px 0;
+}
+
+.sns_view .snsWindow > div ul,
+.sms_view .smsWindow > div ul {
+    width: 98%;
+    height: 270px;
+    margin: 0 auto;
+    background: #f2f2f2;
+    border-radius: 5px;
+}
+
+.sns_view .snsWindow > div ul .pName,
+.sms_view .smsWindow > div ul .pName {
+    width: 100%;
+    padding-top: 10px;
+    padding-left: 10px;
+    padding-bottom: 5px;
+    font-size: 13px;
+}
+
+.sns_view .snsWindow > div ul .liText,
+.sms_view .smsWindow > div ul .liText {
+    width: 98%;
+    height: 210px;
+    padding: 0px 10px 0px;
+}
+
+.sns_view .snsWindow > div ul .liText textarea {
+    width: 100%;
+    height: 202px;
+    margin: 0 auto;
+    border: none;
+    font-size: 13px;
+    background: #f2f2f2;
+}
+
+.sms_view .smsWindow > div ul .liText textarea {
+    width: 100%;
+    height: 244px;
+    margin: 0 auto;
+    border: none;
+    font-size: 13px;
+    background: #f2f2f2;
+}
+
+.sns_view .snsWindow > div ul .liRebuff,
+.sms_view .smsWindow > div ul .liRebuff {
+    width: 100%;
+    padding-left: 10px;
+    padding-bottom: 5px;
+    font-size: 13px;
+}
+
+/* LetterEmoji SMS 특수문자 */
+
+ul.ulLetterEmoji {
+    width: 550px;
+    padding: 8px 8px 0;
+    overflow: hidden;
+}
+
+ul.ulLetterEmoji div.letters {
+    display: none;
+    padding: 8px 8px;
+    background: #f2f2f2;
+}
+
+ul.ulLetterEmoji div.letters ul {
+    width: 100%;
+    border-top: 1px solid #ccc;
+    border-left: 1px solid #ccc;
+}
+
+ul.ulLetterEmoji div.letters ul li {
+    float: left;
+}
+
+ul.ulLetterEmoji div.letters .letters_ctrl li {
+    width: 5%;
+}
+
+ul.ulLetterEmoji div.letters .letters_make li {
+    width: 14.28%;
+}
+
+ul.ulLetterEmoji div.letters ul li a {
+    display: block;
+    line-height: 25px;
+    font-size: 11px;
+    text-align: center;
+    color: #636363;
+    border-bottom: 1px solid #ccc;
+    border-right: 1px solid #ccc;
+    box-sizing: border-box;
+}
+
+ul.ulLetterEmoji div.letters .letters_ctrl li a {
+    width: 100%;
+    height: 25px;
+}
+
+.sns_view .snsWindow > .pTxtnum,
+.sms_view .smsWindow > .pTxtnum {
+    margin-top: 8px;
+    margin-right: 7px;
+    margin-bottom: 7px;
+    font-size: 14px;
+    text-align: right;
+}
+
+.sns_view .snsWindow > .sender,
+.sms_view .smsWindow > .sender {
+    margin-top: 8px;
+    margin-left: 10px;
+    margin-bottom: 7px;
+    font-size: 14px;
+    text-align: left;
+}
+
+.sns_view .snsWindow > .talkBtn a,
+.sms_view .smsWindow > .talkBtn a {
+    float: left;
+    display: inline-block;
+    width: 50%;
+    height: 100%;
+    font-size: 14px;
+    line-height: 42px;
+    text-align: center;
+    color: #fff;
+    background: #62778b;
+    transition: all 0.3s;
+}
+
+.sms_view .smsWindow > .talkBtn button {
+    float: left;
+    display: inline-block;
+    width: 100%;
+    height: 100%;
+    font-size: 14px;
+    line-height: 42px;
+    text-align: center;
+    color: #fff;
+    border-radius: 0 0 8px 8px;
+    background: #578cae;
+    transition: all 0.3s;
+}
+
+.sns_view .snsWindow > .talkBtn a:nth-child(1) {
+    border-radius: 0 0 0 8px;
+    color: #1a1a1a;
+    background: #dbe0e9;
+}
+
+.sms_view .smsWindow > .talkBtn a:nth-child(1) {
+    color: #1a1a1a;
+    background: #dbe0e9;
+}
+
+.sns_view .snsWindow > .talkBtn a:nth-child(2) {
+    border-radius: 0 0 8px 0;
+}
+
+
+/* ------------------------------
+  message_write | 메시지 입력
+-------------------------------- */
+
+.message_write > ul,
+.message_link > ul,
+.message_add > ul {
+    width: 100%;
+    margin-bottom: 40px;
+}
+
+.message_write > ul:last-child,
+.message_add > ul:last-child {
+    margin-bottom: 0px;
+}
+
+.message_write > ul > li:first-of-type,
+.message_link > ul > li:first-of-type,
+.message_add > ul > li:first-of-type {
+    margin-bottom: 7px;
+    font-size: 16px;
+    text-indent: 0px;
+    line-height: 20px;
+    font-weight: 600;
+}
+
+
+/* ------------------------------
+  upload_g | 템플릿 불러오기
+-------------------------------- */
+
+.upload_g {
+    position: relative;
+    width: 100%;
+    height: 40px;
+    overflow: hidden;
+}
+
+.upload_g .box_tf {
+    float: left;
+    width: 275px;
+    height: 40px;
+    padding: 30px 11px 0;
+    border: 1px solid #d8d8d8;
+    border-radius: 2px;
+    background: #f0f1f2;
+}
+
+.upload_g input.tf_g {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 40px;
+    border: 0 none;
+    font-size: 14px;
+    line-height: 18px;
+    color: #888;
+    background: transparent;
+}
+
+.upload_g .txt_ft {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    width: 275px;
+    font-size: 14px;
+    color: #888;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+.upload_g .upload_btn {
+    position: relative;
+    float: left;
+    overflow: hidden;
+}
+
+.upload_g .upload_btn .btn_g {
+    position: relative;
+    display: inline-block;
+    float: left;
+    width: 117px;
+    height: 40px;
+    margin-left: 3px;
+    border: 1px solid #d8d8d8;
+    border-radius: 2px;
+    font-size: 13px;
+    line-height: 35px;
+    background: #fff;
+    color: #578cae;
+    text-align: center;
+
+}
+
+.upload_btn2 {
+    padding-top: 10px;
+    position: relative;
+    float: left;
+    overflow: hidden;
+}
+
+.upload_btn2 .btn_g2 {
+    position: relative;
+    display: inline-block;
+    float: left;
+    width: 117px;
+    height: 40px;
+    margin-right: 5px;
+    border: 1px solid #d8d8d8;
+    border-radius: 2px;
+    font-size: 13px;
+    line-height: 35px;
+    background: #fff;
+    color: #578cae;
+    text-align: center;
+}
+
+
+/* ------------------------------
+  ulReservation | 예약발송 날짜
+-------------------------------- */
+
+.ulReservation .liReser {
+    width: 100%;
+    height: 40px;
+    font-size: 14px;
+    margin-top: 10px;
+    margin-bottom: 10px;
+}
+
+.ulReservation .liReser ul li {
+    float: left;
+    line-height: 40px;
+    padding-right: 5px;
+}
+
+.hasDatepicker {
+    width: 215px;
+    height: 36px;
+    line-height: 36px;
+    border: 1px solid #ddd;
+    font-size: 14px;
+    color: #1a1a1a;
+    padding: 10px 20px;
+    line-height: 1.33;
+}
+
+.datePicker a.dateBtn {
+    display: inline-block;
+    height: 34px;
+    line-height: 26px;
+    font-size: 14px;
+    padding: 2px 12px;
+    color: #fff;
+    background-color: #a0c0d7;
+}
+
+.ulReservation .liReser ul li select {
+    width: 80px;
+    height: 36px;
+    line-height: 36px;
+    padding-left: 3px;
+    font-size: 13px;
+    border: 1px solid #ddd;
+    background: #fff;
+}
+
+.resCheckbox input {
+    display: inline-block;
+    opacity: .6;
+    width: 15px;
+    height: 15px;
+    margin-right: 5px;
+    border: none;
+    background: none;
+    zoom: 1;
+}
+
+.explain {
+    margin: 3px 0 0 5px;
+    color: #777;
+    font-size: 12px;
+}
+
+/* ------------------------------
+  ulReplaceSms | 대체문자 발송여부
+-------------------------------- */
+
+.ulReplaceSms li:nth-child(2) {
+    width: 392px;
+    height: 40px;
+    line-height: 40px;
+    background: #f2f2f2;
+    padding: 0 15px;
+    font-size: 14px;
+}
+
+.ulReplaceSms li input {
+    width: 16px;
+    height: 16px;
+    margin: 0 5px;
+}
+
+.ulReplaceSms li label {
+    margin-right: 20px;
+}
+
+/* ------------------------------
+  ulAddress | 주소록 선택
+-------------------------------- */
+
+.ulAddress .liAddr {
+    width: 100%;
+    height: 40px;
+    /*  padding-right: 40px;*/
+    font-size: 14px;
+    margin-top: 10px;
+    margin-bottom: 10px;
+}
+
+.ulAddress .liAddr select {
+    float: left;
+    width: 275px;
+}
+
+.ulAddress .liAddr .btn_s {
+    float: left;
+    width: 117px;
+    height: 40px;
+    margin-left: 3px;
+    border: 1px solid #d8d8d8;
+    border-radius: 2px;
+    font-size: 13px;
+    line-height: 35px;
+    background: #fff;
+    color: #578cae;
+    text-align: center;
+}
+
+/* ulbalance */
+
+.ulbalance {
+    width: 100%;
+    margin-left: 2px;
+}
+
+.ulbalance li {
+    float: left;
+    margin-left: 20px;
+    font-size: 11px;
+}
+
+.ulbalance li:first-child {
+    margin-left: 0;
+}
+
+/* ------------------------------
+  ulExcel | 엑셀양식 다운로드/업로드
+-------------------------------- */
+
+.ulExcel .button_excel {
+    position: relative;
+    width: 200px;
+    height: 32px;
+    line-height: 32px;
+    margin-left: 4px;
+    padding: 0 10px;
+    border-radius: 2px;
+    background: #424652;
+    color: #fff;
+    text-align: center;
+}
+
+.ulExcel .button_excel a {
+    width: 200px;
+    height: 32px;
+    color: #fff;
+}
+
+.ulExcel .excel_p {
+    margin-left: 5px;
+    font-size: 13px;
+}
+
+.ulExcel input {
+    display: inline;
+    margin-left: 5px;
+    width: 200px;
+    height: 32px;
+    border: 1px solid #ddd;
+}
+
+.ulExcel input.uploadFile {
+    position: absolute;
+    top: 124px;
+    left: 0;
+    cursor: pointer;
+    opacity: 0;
+}
+
+.ulExcel .form_control {
+    display: inline;
+    width: 333px;
+    height: 32px;
+    margin-left: 5px;
+}
+
+.ulExcel .bs_box {
+    position: relative;
+    margin-top: 10px;
+    overflow: hidden;
+}
+
+.ulExcel .bs-tooltip {
+    position: relative;
+    display: inline;
+    float: left;
+    margin: 0 7px 3px 0;
+}
+
+.ulExcel .dupMsg {
+    display: inline-block;
+    margin-left: 3px;
+    font-size: 12px !important;
+    cursor: pointer;
+}
+
+
+/* ------------------------------
+  friendTalk | 친구톡
+-------------------------------- */
+
+.message_view .friendTalk {
+    position: relative;
+    float: left;
+    width: 100%;
+    height: 394px;
+    padding-bottom: 60px;
+    /*  background: #f2f2f2;*/
+    border: 1px solid #a0c0d7;
+    border-radius: 10px;
+}
+
+.friendTalk > .letterEmoji {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    height: 38px;
+}
+
+.friendTalk > .letterEmoji a {
+    display: inline-block;
+    width: 49.4%;
+    height: 100%;
+    font-size: 15px;
+    line-height: 38px;
+    text-align: center;
+    color: #fff;
+    background: #a0c0d7;
+    transition: all 0.3s;
+}
+
+.friendTalk > .letterEmoji a:first-child {
+    border-radius: 0 0 0 10px;
+    border-right: 1px solid #eee;
+    box-sizing: border-box;
+}
+
+.friendTalk > .letterEmoji a:last-child {
+    border-radius: 0 0 10px 0;
+}
+
+
+/* ===============================
+	basicModal | 기본 모달창
+=============================== */
+
+.basicModal {
+    display: none;
+    position: fixed;
+    z-index: 1;
+    padding-top: 100px;
+    left: 0;
+    top: 0;
+    width: 100%;
+    min-width: 1224px;
+    height: 100%;
+    overflow: hidden;
+    background: rgb(0, 0, 0);
+    background: rgba(0, 0, 0, 0.4);
+}
+
+.basicModal .basicModal_content {
+    position: relative;
+    background: #fff;
+    margin: 0 auto;
+    width: 50%;
+    min-width: 1224px;
+    border: 1px solid #888;
+    box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
+    -webkit-animation-name: animatetop;
+    -webkit-animation-duration: 0.4s;
+    animation-name: animatetop;
+    animation-duration: 0.4s;
+}
+
+.basicModal .basicModal_content h3 {
+    padding-top: 15px;
+    padding-bottom: 15px;
+    font-size: 16px;
+    font-weight: 600;
+    text-align: center;
+}
+
+.basicModal .basicModal_body {
+    position: relative;
+    width: 100%;
+    padding: 15px;
+}
+
+.basicModal_body .select_body .select_content {
+    margin-top: 10px;
+    margin-bottom: 20px;
+}
+
+.basicModal_body .select_container {
+    position: relative;
+    display: inline-block;
+    zoom: 1;
+    vertical-align: middle;
+    padding-left: 0;
+    padding-right: 0;
+}
+
+.basicModal_body .select_container select {
+    float: left;
+    width: 200px;
+    height: 40px;
+    padding: 8px;
+    border: 1px solid #ddd;
+}
+
+.basicModal_body .select_container > .input {
+    float: left;
+    height: 40px;
+    border: 1px solid #ddd;
+}
+
+.basicModal_body .widget-content {
+    width: 100%;
+    height: 430px;
+    /*  padding: -180px;*/
+    backface-visibility: #f2f2f2;
+    overflow-y: scroll;
+}
+
+.basicModal_body .widget-content table {
+    margin-bottom: 10px;
+    min-width: 1024px;
+}
+
+.basicModal_body .widget-content table img {
+    width: 80px;
+    height: 80px;
+}
+
+.basicModal_body .widget-content-long {
+    width: 100%;
+    height: auto;
+    /*  padding: -180px;*/
+    backface-visibility: #f2f2f2;
+}
+
+.basicModal_body .widget-content-long table {
+    margin-bottom: 10px;
+    min-width: 1024px;
+}
+
+.basicModal_body .widget-content-long table img {
+    width: 80px;
+    height: 80px;
+}
+
+.scrolltbody {
+    border-collapse: collapse;
+    padding: 0 !important;
+}
+
+.closeBt {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+}
+
+.cg_closeBt {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+}
+
+/* ===============================
+	Modal_SMALL | md_card
+=============================== */
+
+.md_card {
+    display: none;
+    position: fixed;
+    z-index: 1;
+    padding-top: 100px;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgb(0, 0, 0);
+    background-color: rgba(0, 0, 0, 0.4);
+}
+
+/* Modal Content */
+
+.modal_content {
+    position: relative;
+    background-color: #fefefe;
+    margin: auto;
+    padding: 20px;
+    border: 1px solid #888;
+    width: 40%;
+    min-width: 680px;
+    -webkit-animation-name: animatetop;
+    -webkit-animation-duration: 0.4s;
+    animation-name: animatetop;
+    animation-duration: 0.4s;
+}
+
+.modal_top {
+    height: 40px;
+}
+
+.modal_top span {
+    float: left;
+    display: inline-block;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.modal_top span > p {
+    float: right;
+    display: inline-block;
+    margin-left: 5px;
+    padding-top: 4px;
+    font-size: 12px;
+    font-weight: 400;
+}
+
+h3.Alert {
+    margin-top: 20px;
+    margin-bottom: 10px;
+    font-size: 20px;
+    font-weight: 600;
+    text-align: center;
+}
+
+h4.Alert {
+    margin-top: 10px;
+    margin-bottom: 10px;
+    font-size: 16px;
+    font-weight: 600;
+    text-align: center;
+}
+
+.modal_body {
+    height: 200px;
+    text-align: center;
+}
+
+
+
+.modal_body .fas {
+    font-size: 84px;
+    text-align: center;
+    color: #ddd;
+}
+
+.modal_body span.mo_input {
+    display: inline-block;
+    margin-right: 10px;
+}
+
+.modal_body span.mo_input > input {
+    width: 200px;
+    height: 36px;
+    border-bottom: 1px solid #ddd;
+}
+
+.modal_body span.mo_input > input:focus {
+    outline: none;
+}
+
+
+/* ===============================
+	#section_change
+=============================== */
+
+.section_change {
+    display: none;
+    z-index: 500;
+    position: fixed;
+    left: 50%;
+    top: 50%;
+    width: 560px;
+    margin-left: -280px;
+    margin-top: -265px;
+    background: #aaa;
+    box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.3);
+    padding: 15px;
+    box-sizing: border-box;
+}
+
+.section_change > div {
+    position: relative;
+    width: 100%;
+    background: #fff;
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+.section_change > div h5 {
+    margin-bottom: 10px;
+    padding-bottom: 10px;
+    font-size: 16px;
+    line-height: 22px;
+    color: #578cae;
+    font-weight: 600;
+    border-bottom: 1px solid #ccc;
+}
+
+.section_change > div table tbody .tr_zipcode td input {
+    width: 108px;
+    margin-right: 3px;
+}
+
+.section_change > div table tbody .tr_zipcode td button {
+    width: 70px;
+    height: 22px;
+    font-size: 13px;
+    color: #fff;
+    border: none;
+    background: #ccc;
+}
+
+.section_change > div .ul_btn {
+    margin-top: 10px;
+    margin-left: 54px;
+}
+
+.section_change > div .ul_btn li {
+    float: left;
+}
+
+.section_change > div .ul_btn li a {
+    display: inline-block;
+    width: 190px;
+    height: 36px;
+    line-height: 36px;
+    text-align: center;
+    color: #fff;
+    background: #578cae;
+    transition: all 0.3s;
+}
+
+.section_change > div .ul_btn li:nth-child(2) a {
+    margin-left: 3px;
+    color: #578cae;
+    border: 1px solid #578cae;
+    box-sizing: border-box;
+    background: #fff;
+}
+
+.section_change > div p {
+    position: absolute;
+    right: 20px;
+    top: 16px;
+    color: #444;
+    font-size: 20px;
+    cursor: pointer;
+}
+
+/* ===============================
+	#itemList_popup 상품리스트 팝업
+=============================== */
+
+.itemList_popup {
+    display: none;
+    position: fixed;
+    z-index: 10001;
+    left: 0;
+    top: 0;
+    width: 100%;
+    min-width: 850px;
+    height: 100%;
+    overflow: hidden;
+    background: rgb(0, 0, 0);
+    background: rgba(0, 0, 0, 0.4);
+}
+
+.itemList_popup .ip_content {
+    position: absolute;
+    top: 0;
+    right: 0;
+    background: #fff;
+    margin: 0 auto;
+    width: 850px;
+    height: auto;
+    border: 1px solid #888;
+    box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
+    -webkit-animation-name: animatetop;
+    -webkit-animation-duration: 0.4s;
+    animation-name: animatetop;
+    animation-duration: 0.4s;
+}
+
+.ip_head h3.ip_title {
+    padding-top: 10px;
+    padding-left: 10px;
+    padding-bottom: 10px;
+    font-size: 16px;
+    font-weight: 600;
+    text-align: left;
+    background: #ddd;
+}
+
+.itemList_popup .ip_body {
+    position: relative;
+    width: 100%;
+    padding: 10px;
+    overflow: hidden;
+}
+
+.itemList_popup .ip_body .ia_apply {
+    float: left;
+    width: 100%;
+    clear: both;
+}
+
+.itemList_popup .ip_body .ia_apply .ia {
+    clear: both;
+}
+
+.itemList_popup .ip_body .ia_apply .ia_1 {
+    position: relative;
+    float: left;
+    width: 80px;
+    height: 80px;
+    border: 1px solid #ddd;
+    text-align: center;
+    font-size: 13px;
+}
+
+.itemList_popup .ip_body .ia_apply .ia_1 .img_box > img {
+    width: 98%;
+    height: 98%;
+}
+
+.itemList_popup .ip_body .ia_apply .ia_1 .event_icon {
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
+.itemList_popup .ip_body .ia_apply .ia_1 .event_icon img {
+    width: 30px;
+    height: 30px;
+}
+
+.itemList_popup .ip_body .ia_apply .ia_2 {
+    display: inline-block;
+    margin-left: 10px;
+    height: 120px;
+    overflow: hidden;
+}
+
+.itemList_popup .ip_body .ia_apply .ia_2 .ia_2ul {
+    float: left;
+}
+
+.itemList_popup .ip_body .ia_apply .ia_2 ul li {
+    margin-bottom: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    text-align: left;
+}
+
+.itemList_popup .ip_body .ia_apply .ia_2 ul li span {
+    margin-left: 5px;
+    font-weight: normal;
+    color: #666;
+}
+
+.itemList_popup .ip_body .ia_apply .ia_2 ul li:first-child {
+    /*  margin-top: 10px;*/
+    font-size: 13px;
+}
+
+.itemList_popup .ip_body .ia_apply .ia_2 ul li > input {
+    width: 200px;
+    height: 24px;
+    padding-left: 5px;
+    font-size: 13px;
+    border: 1px solid #ddd;
+}
+
+.itemList_popup .ip_body .ia_apply .ia_3.event_area {
+    overflow-x: scroll;
+    overflow: hidden;
+    margin-bottom: 10px;
+}
+
+.itemList_popup .ip_body .ia_apply .ia_3.event_area img {
+    width: 50%;
+}
+
+.itemList_popup .ip_body .ia_apply .ia_4 {
+    display: inline-block;
+    margin-left: 2px;
+    width: 110px;
+    height: 80px;
+}
+
+.itemList_popup .ip_body .ia_4 > .pBtn a {
+    display: inline-block;
+    float: left;
+    width: 110px;
+    height: 52px;
+    line-height: 52px;
+    margin-top: 26px;
+    text-align: center;
+    font-size: 16px;
+}
+
+.itemList_popup .ip_body .ia_apply .ia_4_new {
+    position: absolute;
+    top: 93px;
+    left: 10px;
+    font-weight: bold;
+    font-size: 15px;
+}
+
+.itemList_popup .widget_content {
+    width: 100%;
+    height: 293px;
+    backface-visibility: #f2f2f2;
+    overflow-y: scroll;
+}
+
+.itemList_popup .widget_content table {
+    width: 810px;
+    margin-bottom: 2px;
+}
+
+.itemList_popup .widget_content table img {
+    width: 60px;
+    height: 60px;
+}
+
+.itemList_popup .widget_content .itemView {
+    position: relative;
+}
+
+.itemList_popup .widget_content .itemView .itemName {
+    margin-bottom: 10px;
+    padding: 0 4px;
+    font-weight: 600;
+    font-size: 12px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+
+/* ---------------------------------------------
+  cg_skinType | 스킨 추가 모달창 | 2019.11.29 추가
+------------------------------------------------*/
+.cg_itemList_popup  {
+    display: none;
+    position: fixed;
+    z-index: 10010;
+    left: 0;
+    top: 0;
+    width: 100%;
+    min-width: 1024px;
+    height: 100%;
+    overflow: hidden;
+    background: rgb(0, 0, 0);
+    background: rgba(0, 0, 0, 0.4);
+}
+
+.cg_skinType {
+    position: absolute;
+    top: 40%;
+    right: 0;
+    background: #fff;
+    margin: 0 auto;
+    width: 1024px;
+    height: auto;
+    border: 1px solid #888;
+    box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
+    -webkit-animation-name: animatetop;
+    -webkit-animation-duration: 0.4s;
+    animation-name: animatetop;
+    animation-duration: 0.4s;
+}
+
+.cg_skinType_head h3 {
+    padding-top: 15px;
+    padding-left: 10px;
+    padding-bottom: 15px;
+    font-size: 16px;
+    font-weight: 600;
+    text-align: center;
+    background: #ddd;
+}
+
+/* Add Animation */
+
+@-webkit-keyframes animatetop {
+    from {
+        top: -300px;
+        opacity: 0
+    }
+    to {
+        top: 0;
+        opacity: 1
+    }
+}
+
+@keyframes animatetop {
+    from {
+        top: -300px;
+        opacity: 0
+    }
+    to {
+        top: 0;
+        opacity: 1
+    }
+}
+
+.text_center {
+    text-align: center !important;
+    margin-top: 15px;
+}

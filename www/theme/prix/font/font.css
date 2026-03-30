@@ -1,0 +1,41 @@
+/*
+font-weight : 300 -> Light,
+font-weight : 400 -> Regular,
+font-weight : 600 -> Bold,
+*/
+@charset "utf-8";
+
+@font-face {
+	font-family:'0425';
+	font-style:normal;
+	font-weight:300;
+	src:url('0425_l.eot');
+	src:url('0425_l.eot?#iefix') format('embedded-opentype'),
+		url('0425_l.woff') format('woff')
+}
+
+@font-face {
+	font-family:'0425';
+	font-style:normal;
+	font-weight:400;
+	src:url('0425_r.eot');
+	src:url('0425_r.eot?#iefix') format('embedded-opentype'),
+		url('0425_r.woff') format('woff')
+}
+@font-face {
+	font-family:'0425';
+	font-style:normal;
+	font-weight:600;
+	src:url('0425_b.eot');
+	src:url('0425_b.eot?#iefix') format('embedded-opentype'),
+		url('0425_b.woff') format('woff')
+}
+
+@font-face {
+	font-family:'0425_i';
+	font-style:normal;
+	font-weight:400;
+	src:url('0425_i.eot');
+	src:url('0425_i.eot?#iefix') format('embedded-opentype'),
+		url('0425_i.woff') format('woff')
+}

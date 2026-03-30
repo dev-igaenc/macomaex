@@ -1,0 +1,64 @@
+# Dependencies
+/www/vendor/
+/www/node_modules/
+
+# Gnuboard Config & Data
+/www/data/dbconfig.php
+/www/data/db_down/
+/www/data/session/
+/www/data/cache/
+/www/data/log/
+/www/data/tmp/
+/www/data/file/
+/www/data/editor/
+/www/data/member/
+/www/data/member_image/
+/www/data/kodata/
+/www/data/exldata/
+/www/data/live_stats.json
+/www/data/*.jar
+
+# Temporary & Test Files
+/www/test.php
+/www/test[0-9].php
+/www/test[0-9][0-9].php
+/www/data_inpup.php
+/www/data_input.php
+/www/data_input[0-9].php
+# Keep runtime endpoints tracked; ignore backup copies only
+/www/get_set_*.php
+!/www/get_set.php
+!/www/get_set_e.php
+/www/cookie.txt
+
+# Database/Excel Dumps
+/www/*.xls
+/www/*.xlsx
+/www/*.sql
+/www/*.zip
+/www/*.tar.gz
+
+# PG & Certification Keys (Very Important)
+/www/plugin/*/key/
+/www/plugin/*/cert/
+/www/plugin/*/log/
+/www/plugin/okname/
+/www/plugin/kcpcert/
+/www/plugin/inicert/
+
+# Environment & Server Config
+.env
+.env.local
+.env.*.local
+/www/sftp/
+composer.phar
+
+# IDEs & OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Backup files
+*.bak
+*.swp

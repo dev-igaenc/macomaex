@@ -1,0 +1,1718 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="light" style=""><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MACOMAEX 사업계획서</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;600;700&amp;display=swap" rel="stylesheet">
+    <style>
+      body {
+        max-width: 880px;
+        margin: 0 auto;
+        padding: 35px 55px;
+        background-color: white;
+        color: #000;
+        font-family: 'Noto Sans KR', sans-serif;
+        line-height: 1.55;
+        box-sizing: border-box;
+      }
+
+      /* Document Reset & Typography */
+      h1,
+      h2,
+      h3,
+      h4,
+      h5,
+      h6 {
+        color: #1a3b5c; /* Corporate Navy */
+        margin-top: 1.2em;
+        margin-bottom: 0.4em;
+        font-weight: 700;
+      }
+
+      h1 {
+        font-size: 24pt;
+        margin-top: 0;
+        text-align: center;
+        border-bottom: 2px solid #1a3b5c;
+        padding-bottom: 20px;
+      }
+      h2 {
+        font-size: 16pt;
+        border-left: 5px solid #1a3b5c;
+        padding-left: 12px;
+        margin-top: 30px;
+        margin-bottom: 15px;
+        background-color: #f4f6f9;
+        padding-top: 5px;
+        padding-bottom: 5px;
+      }
+      h3 {
+        font-size: 14pt;
+        color: #333;
+        margin-top: 20px;
+        margin-bottom: 10px;
+        border-bottom: 1px solid #ddd;
+        padding-bottom: 5px;
+      }
+      p,
+      li,
+      td,
+      th {
+        font-size: 12pt;
+      }
+
+      /* Cover Page Styling */
+      .cover-page {
+        text-align: center;
+        padding: 50px 0;
+        margin-bottom: 50px;
+        border: 1px solid #ddd;
+      }
+      .cover-title {
+        font-size: 30pt;
+        color: #1a3b5c;
+        margin-bottom: 8px;
+      }
+      .cover-subtitle {
+        font-size: 15pt;
+        color: #555;
+        margin-bottom: 50px;
+      }
+      .cover-info-table {
+        width: 80%;
+        margin: 0 auto;
+        border-collapse: collapse;
+        text-align: left;
+      }
+      .cover-info-table td {
+        padding: 12px;
+        border-bottom: 1px solid #eee;
+      }
+      .cover-info-label {
+        font-weight: bold;
+        width: 30%;
+        color: #1a3b5c;
+      }
+
+      /* Tables */
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 15px 0;
+        font-size: 11pt;
+      }
+      th {
+        background-color: #f0f4f8;
+        color: #1a3b5c;
+        font-weight: bold;
+        text-align: center;
+        border: 1px solid #ccc;
+        padding: 8px;
+      }
+      td {
+        border: 1px solid #ccc;
+        padding: 8px;
+        vertical-align: middle;
+      }
+      .text-center {
+        text-align: center;
+      }
+      .text-right {
+        text-align: right;
+      }
+
+      /* Boxes & Highlights */
+      .box {
+        background-color: #f9f9f9;
+        border: 1px solid #e0e0e0;
+        padding: 12px;
+        margin-top: 10px;
+        margin-bottom: 10px;
+        border-radius: 4px;
+      }
+      .highlight {
+        color: #d9534f;
+        font-weight: bold;
+      }
+      .grid-custom {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 15px;
+        margin: 10px 0;
+      }
+
+      /* Process Steps */
+      .process-step {
+        display: flex;
+        justify-content: space-between;
+        margin: 15px 0;
+        text-align: center;
+      }
+      .step {
+        flex: 1;
+        background: #fff;
+        border: 1px solid #1a3b5c;
+        padding: 15px;
+        margin: 0 5px;
+        border-radius: 4px;
+      }
+      .step-title {
+        font-weight: bold;
+        color: #1a3b5c;
+        display: block;
+        margin-bottom: 5px;
+      }
+
+      /* Page break utility */
+      .page-break {
+        page-break-before: always;
+        margin-top: 0;
+      }
+      
+      /* Print optimizations */
+      @media print {
+        body {
+          padding: 25px 35px 80px 35px;
+          line-height: 1.5;
+        }
+        
+        h2 {
+          page-break-after: avoid;
+          margin-top: 15px;
+          margin-bottom: 12px;
+        }
+        
+        h3 {
+          page-break-after: avoid;
+          margin-top: 15px;
+          margin-bottom: 8px;
+        }
+        
+        table {
+          page-break-inside: avoid;
+          margin: 12px 0;
+        }
+        
+        .box {
+          page-break-inside: avoid;
+          padding: 10px;
+          margin: 8px 0;
+        }
+        
+        .grid-custom {
+          page-break-inside: avoid;
+          gap: 12px;
+        }
+        
+        .process-step {
+          page-break-inside: avoid;
+          margin: 12px 0;
+        }
+        
+        .cover-page {
+          page-break-after: always;
+        }
+        
+        p {
+          margin: 8px 0;
+        }
+        
+        ul, ol {
+          margin: 8px 0;
+        }
+        
+        /* 마지막 페이지 서명란 잘림 방지 */
+        body > p:last-of-type {
+          page-break-inside: avoid;
+          margin-bottom: 30px;
+        }
+      }
+    </style>
+  </head>
+  <body style="">
+    <!-- Cover Page -->
+    <div class="cover-page">
+      <div style="margin-bottom: 40px; font-weight: bold; color: #888">중소벤처기업진흥공단 정책자금 신청용</div>
+      <div class="cover-title">MACOMAEX</div>
+      <div class="cover-subtitle">AI B2B 공급망 인텔리전스 플랫폼 사업계획서</div>
+
+      <br><br><br>
+
+      <table class="cover-info-table">
+        <tbody><tr>
+          <td class="cover-info-label">기업명</td>
+          <td>(주)이가이엔씨</td>
+        </tr>
+        <tr>
+          <td class="cover-info-label">대표자</td>
+          <td>이민형</td>
+        </tr>
+        <tr>
+          <td class="cover-info-label">사업분야</td>
+          <td>소프트웨어 개발 / 데이터베이스 및 온라인정보제공</td>
+        </tr>
+        <tr>
+          <td class="cover-info-label">이메일</td>
+          <td><a href="#" class="__cf_email__" data-cfemail="dab7b2b6bfbf9ab3bdbbbfb4b9f4b9b5b7">[email&#160;protected]</a></td>
+        </tr>
+        <tr>
+          <td class="cover-info-label">연락처</td>
+          <td>010-3713-8677</td>
+        </tr>
+        <tr>
+          <td class="cover-info-label">제출일자</td>
+          <td>2026. 03.</td>
+        </tr>
+      </tbody></table>
+    </div>
+
+    <!-- TOC -->
+    <div class="box">
+      <h3>목 차</h3>
+      <ol>
+        <li>
+          기업 현황
+          <ul style="list-style: none; margin-left: 15px; font-size: 10pt;">
+            <li>- 대표자 역량 및 전문성</li>
+          </ul>
+        </li>
+        <li>
+          사업 추진 배경 및 필요성
+          <ul style="list-style: none; margin-left: 15px; font-size: 10pt;">
+            <li>- 산업 환경 및 시장 배경</li>
+            <li>- 중소기업이 직면한 구조적 문제</li>
+            <li>- 정책적 필요성</li>
+          </ul>
+        </li>
+        <li>
+          서비스 솔루션 (MACOMAEX)
+          <ul style="list-style: none; margin-left: 15px; font-size: 10pt;">
+            <li>- 3단계 프로세스</li>
+          </ul>
+        </li>
+        <li>
+          기술 경쟁력 및 보유 역량
+          <ul style="list-style: none; margin-left: 15px; font-size: 10pt;">
+            <li>- 핵심 기술</li>
+            <li>- 데이터 인프라 및 경쟁력</li>
+            <li>- 기술 차별성</li>
+            <li>- 지식재산권 및 인증 현황</li>
+          </ul>
+        </li>
+        <li>
+          시장 분석
+          <ul style="list-style: none; margin-left: 15px; font-size: 10pt;">
+            <li>- 글로벌 시장 환경</li>
+            <li>- 목표 시장 규모 (TAM-SAM-SOM)</li>
+            <li>- 목표 고객 세그먼트</li>
+          </ul>
+        </li>
+        <li>경쟁사 분석</li>
+        <li>
+          비즈니스 모델 및 수익 구조
+          <ul style="list-style: none; margin-left: 15px; font-size: 10pt;">
+            <li>- 수익 모델 개요</li>
+            <li>- 요금제 구조</li>
+            <li>- 추가 수익원</li>
+            <li>- 수익화 전략</li>
+          </ul>
+        </li>
+        <li>
+          사업화 및 성장 전략
+          <ul style="list-style: none; margin-left: 15px; font-size: 10pt;">
+            <li>- 단계별 확장 로드맵</li>
+            <li>- 초기 트랙션</li>
+          </ul>
+        </li>
+        <li>재무 계획 (매출 추정)</li>
+        <li>
+          자금 조달 및 활용 계획
+          <ul style="list-style: none; margin-left: 15px; font-size: 10pt;">
+            <li>- 자금 활용 내역</li>
+            <li>- 투자 효과 및 기대 성과</li>
+            <li>- 추가 투자 유치 계획</li>
+          </ul>
+        </li>
+        <li>
+          정책 효과 및 사회적 가치
+          <ul style="list-style: none; margin-left: 15px; font-size: 10pt;">
+            <li>- 중소기업 경쟁력 강화</li>
+            <li>- 디지털 전환(DX) 가속화</li>
+            <li>- ESG 경영 및 투명성 제고</li>
+            <li>- 지역 경제 활성화</li>
+            <li>- 정량적 정책 효과 요약</li>
+          </ul>
+        </li>
+        <li>고용 창출 계획</li>
+        <li>핵심 인력 구성</li>
+        <li>
+          종합 기대 효과 및 비전
+          <ul style="list-style: none; margin-left: 15px; font-size: 10pt;">
+            <li>- 사업 성과 목표 (3개년)</li>
+            <li>- 기술 혁신 성과</li>
+            <li>- 사회적 파급 효과</li>
+            <li>- Exit 전략 및 장기 비전</li>
+          </ul>
+        </li>
+      </ol>
+    </div>
+
+    <div class="page-break"></div>
+
+    <!-- 1. 기업 현황 -->
+    <h2>1. 기업 현황</h2>
+    <p>
+      <strong>(주)이가이엔씨</strong>는 B2B 공급망 데이터의 비효율성을 해결하고, 데이터 기반의 투명하고 신속한 거래처
+      발굴을 지원하기 위해 설립된 <strong>AI Supply Chain Intelligence</strong> 기업입니다. 당사는 사업자등록번호 하나로
+      기업의 공급망을 역설계하고 최적의 거래처를 추천하는 플랫폼 <strong>'MACOMAEX(매커멕스)'</strong>를 개발하여
+      운영하고 있습니다.
+    </p>
+
+    <h3>대표자 역량 및 전문성</h3>
+    <table>
+      <tbody><tr>
+        <th width="20%">성명</th>
+        <td width="30%">이민형</td>
+        <th width="20%">직위</th>
+        <td width="30%">대표이사</td>
+      </tr>
+      <tr>
+        <th>주요 경력</th>
+        <td colspan="3">
+          <ul>
+            <li>現 (주)이가이엔씨 대표이사 (창업 6년차)</li>
+            <li>現 메인비즈협회 전문위원 (M&amp;A 및 규제대응)</li>
+            <li>前 코스닥 상장법인 (주)인테그레이티드에너지 전략기획실장</li>
+            <li>前 (주)아승 오토모티브 마케팅 본부장</li>
+            <li>기업 컨설팅 약 1,500건 수행 경험 보유</li>
+          </ul>
+        </td>
+      </tr>
+      <tr>
+        <th>핵심 역량</th>
+        <td colspan="3">전략기획, B2B 마케팅, M&amp;A 자문, 데이터 기반 비즈니스 모델 설계 능력 보유</td>
+      </tr>
+    </tbody></table>
+
+    <!-- 2. 사업 추진 배경 -->
+    <h2>2. 사업 추진 배경 및 필요성</h2>
+    
+    <h3>2-1. 산업 환경 및 시장 배경</h3>
+    <p>
+      글로벌 B2B 시장은 디지털 전환(Digital Transformation)의 가속화와 함께 급격히 성장하고 있습니다. 
+      특히 AI 기반 공급망 관리(SCM) 시장은 2026년 기준 <strong>329억 달러(약 43조원) 규모</strong>에서 
+      2034년까지 <strong>728억 달러(약 95조원)</strong>로 성장할 것으로 전망됩니다(Fortune Business Insights, 2026).
+    </p>
+    
+    <table class="text-center">
+      <thead>
+        <tr>
+          <th>시장 구분</th>
+          <th>규모 (2026년 기준)</th>
+          <th>성장률 (CAGR)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>글로벌 B2B SaaS 시장</strong></td>
+          <td>0.49조 달러 (약 642조원)</td>
+          <td>26.24%</td>
+        </tr>
+        <tr>
+          <td><strong>글로벌 SCM 시장</strong></td>
+          <td>329억 달러 (약 43조원)</td>
+          <td>10.40%</td>
+        </tr>
+        <tr>
+          <td><strong>국내 SCM 시장</strong></td>
+          <td>약 2,300억원 (추정)</td>
+          <td>8.0%</td>
+        </tr>
+      </tbody>
+    </table>
+    
+    <p style="font-size: 10pt; color: #666; margin-top: 10px;">
+      출처: Fortune Business Insights (2026), Mordor Intelligence (2026), 한국IDC (2023)
+    </p>
+
+    <div class="page-break"></div>
+
+    <h3>2-2. 중소기업이 직면한 구조적 문제</h3>
+    <p>
+      기존 B2B 거래처 발굴 방식은 아날로그적이고 비효율적이며, 정보의 비대칭성이 심각합니다. 
+      <strong>중소기업 수출기업의 22.5%가 '거래처 발굴 곤란'을 최대 애로사항</strong>으로 꼽고 있으며,
+      18.2%는 '무역 전문 인력 부족'을 지적하고 있습니다(중소기업연구원, 2024).
+    </p>
+
+    <div class="grid-custom">
+      <div class="box">
+        <strong>① 기존 검색 방식의 한계</strong><br>
+        포털 검색이나 단순 기업 리스트 제공 서비스로는 실무자(구매/판매 담당자)의 직통 연락처를 파악하기 어려워 영업
+        효율이 낮음. <span class="highlight">영업팀 1인당 월평균 30시간 이상이 거래처 탐색에 소모됨.</span>
+      </div>
+      <div class="box">
+        <strong>② 거래처 가시성 부재</strong><br>
+        동종 업계 상위 기업들이 어떤 공급망(Supply Chain)을 보유하고 있는지 파악할 수 없어 벤치마킹 및 신규 소싱이
+        불가능함. <span class="highlight">중소기업의 78%가 경쟁사 공급망 정보 부족을 호소.</span>
+      </div>
+      <div class="box">
+        <strong>③ 재무 리스크 필터링 불가</strong><br>
+        신규 거래처 발굴 시 부실, 연체, 휴폐업 등의 리스크를 사전에 확인하기 어려워 거래 안정성 확보에 비용이 발생함.
+        <span class="highlight">연간 약 3조원 규모의 중소기업 거래 부실 손실 추정.</span>
+      </div>
+      <div class="box">
+        <strong>④ 데이터 기반 의사결정 부재</strong><br>
+        B2B 공급망은 여전히 인맥이나 오프라인 영업에 의존하고 있어 데이터 기반의 의사결정이 이루어지지 않음.
+        <span class="highlight">B2B 거래의 83%가 여전히 비데이터 기반 방식으로 진행.</span>
+      </div>
+    </div>
+    
+    <h3>2-3. 정책적 필요성</h3>
+    <p>
+      정부는 중소기업의 디지털 전환과 공급망 안정화를 핵심 정책 과제로 추진하고 있으며, 
+      특히 <strong>중소벤처기업부의 '중소기업 디지털 전환 촉진법'(2024)</strong>과 
+      <strong>'공급망 안정화 특별법'(2025)</strong>이 시행됨에 따라 데이터 기반 B2B 플랫폼의 중요성이 더욱 부각되고 있습니다.
+    </p>
+
+    <div class="page-break"></div>
+
+    <!-- 3. 솔루션 -->
+    <h2>3. 서비스 솔루션 (MACOMAEX)</h2>
+    <p>
+      <strong>MACOMAEX</strong>는 사업자등록번호 입력만으로 기업의 공급망 구조를 역설계하여,
+      <strong>3초 안에 최적의 거래처를 추천</strong>해주는 AI 플랫폼입니다.
+    </p>
+
+    <div class="process-step">
+      <div class="step">
+        <span class="step-title">STEP 1. 입력</span>
+        <p>자사 사업자등록번호 입력</p>
+        <small>기업 식별 및 업종 자동 분류</small>
+      </div>
+      <div class="step">
+        <span class="step-title">STEP 2. AI 분석</span>
+        <p>공급망 역설계 &amp; 매칭</p>
+        <small>동종 상위기업 네트워크 분석<br>KSIC 기반 상관관계 도출</small>
+      </div>
+      <div class="step">
+        <span class="step-title">STEP 3. 추천</span>
+        <p>최적 거래처 리스트 제공</p>
+        <small>재무 건전성 필터링<br>담당자 연락처 제공</small>
+      </div>
+    </div>
+
+    <!-- 4. 기술 경쟁력 -->
+    <h2>4. 기술 경쟁력 및 보유 역량</h2>
+
+    <h3>4-1. 핵심 기술</h3>
+    <div class="box">
+      <strong style="font-size: 10.5pt;">AI 기반 공급망 역설계 기술</strong><br>
+      <span style="font-size: 10pt;">
+      MACOMAEX의 핵심은 <strong>KSIC(한국표준산업분류) 기반 공급망 네트워크 분석</strong>입니다.
+      특정 기업의 사업자번호를 입력하면, 동종 업계 상위 기업들의 공급망 패턴을 분석하여
+      최적의 거래처를 <strong>80%~90%의 정확도</strong>로 추천합니다.
+      </span>
+    </div>
+
+    <h3>4-2. 데이터 인프라 및 경쟁력</h3>
+    <table>
+      <thead>
+        <tr>
+          <th width="25%">구분</th>
+          <th>내용</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>원천 데이터</strong></td>
+          <td>
+            한국평가데이터(KODATA) API 실시간 연동<br>
+            • <strong>1,400만 개 기업</strong> 정보 접근 가능<br>
+            • 사업자번호, 업종, 매출, 재무제표, 인증정보 등 포괄적 데이터
+          </td>
+        </tr>
+        <tr>
+          <td><strong>큐레이션 데이터</strong></td>
+          <td>
+            3개년 재무제표 기준 우량기업 선별<br>
+            • <strong>17.5만 개 핵심 우량기업</strong> 데이터베이스 구축<br>
+            • 벤처/이노비즈/메인비즈/연구소 인증 기업 우선 큐레이션<br>
+            • 재무 건전성, 성장성, 안정성 스코어링 완료
+          </td>
+        </tr>
+        <tr>
+          <td><strong>매칭 알고리즘</strong></td>
+          <td>
+            KSIC 코드 기반 산업 상관관계 분석<br>
+            • 거미줄식 네트워크 분석 (예: 화장품 제조 → 용기 제조 90% 상관도)<br>
+            • 머신러닝 기반 추천 모델 (정확도 80%~90%)<br>
+            • 실시간 매칭 스코어 산출 (3초 이내)
+          </td>
+        </tr>
+        <tr>
+          <td><strong>리스크 필터링</strong></td>
+          <td>
+            재무 건전성 자동 검증<br>
+            • 부실/연체/휴폐업 기업 자동 제외<br>
+            • 신용등급, 영업이익률, 유동비율 기반 필터링<br>
+            • 실시간 기업 상태 모니터링
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    
+    <h3>4-3. 기술 차별성</h3>
+    <ul>
+      <li><strong>속도:</strong> 사업자번호 입력부터 추천까지 <strong>평균 3초</strong> (기존 수작업 방식 대비 1,000배 빠름)</li>
+      <li><strong>정확도:</strong> AI 매칭 알고리즘 정확도 <strong>80%~90%</strong> (지속적 학습으로 95% 이상 목표)</li>
+      <li><strong>신뢰도:</strong> KODATA 공식 데이터 연동으로 <strong>100% 검증된 기업 정보</strong> 제공</li>
+      <li><strong>확장성:</strong> 카페24 호스팅 기반 단독 리눅스 서버로 <strong>동시 1만명 이상</strong> 사용 가능</li>
+    </ul>
+
+    <h3>4-4. 지식재산권 및 인증 현황</h3>
+    <table style="table-layout: fixed;">
+      <colgroup>
+        <col style="width: 130px;">
+        <col>
+        <col style="width: 185px;">
+        <col style="width: 105px;">
+      </colgroup>
+      <thead>
+        <tr>
+          <th style="white-space: nowrap;">구분</th>
+          <th>내용</th>
+          <th style="white-space: nowrap;">등록/인증 번호</th>
+          <th style="white-space: nowrap;">발급/등록일</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td style="white-space: nowrap;"><strong>특허 (등록)</strong></td>
+          <td>사업자등록번호를 이용한 거래처 추천 서비스 제공 시스템</td>
+          <td style="white-space: nowrap;">제 10-2884441 호</td>
+          <td style="white-space: nowrap;">2025.11.06</td>
+        </tr>
+        <tr style="background-color: #fff9e6;">
+          <td style="white-space: nowrap;"><strong style="color:#e67e22;">특허 (출원 중)</strong></td>
+          <td>
+            인공지능을 이용하여 공급망 역설계 기반 B2B 거래처를 추천하는 거래처 추천 장치 및 방법<br>
+            <span style="font-size:9.5pt; color:#777;">출원인: 주식회사 이가이엔씨 &nbsp;|&nbsp; 발명자: 이민형</span>
+          </td>
+          <td style="white-space: nowrap;">제 10-2026-0042852 호</td>
+          <td style="white-space: nowrap;">2026.03.10<br><span style="color:#e67e22; font-weight:bold; font-size:9.5pt;">● 심사 중</span></td>
+        </tr>
+        <tr>
+          <td style="white-space: nowrap;"><strong>벤처인증</strong></td>
+          <td>벤처기업 (혁신성장유형)</td>
+          <td style="white-space: nowrap;">제 20251125030036 호</td>
+          <td style="white-space: nowrap;">2025.11.25<br>(~2028.11.24)</td>
+        </tr>
+        <tr>
+          <td style="white-space: nowrap;"><strong>이노비즈</strong></td>
+          <td>기술혁신형 중소기업 (Inno-Biz) <strong>A등급</strong></td>
+          <td style="white-space: nowrap;">제 250102-01490 호</td>
+          <td style="white-space: nowrap;">2025.12.30<br>(~2028.12.29)</td>
+        </tr>
+        <tr>
+          <td style="white-space: nowrap;"><strong>연구소 인정</strong></td>
+          <td>기업부설연구소 인정</td>
+          <td style="white-space: nowrap;">제 2026110596 호</td>
+          <td style="white-space: nowrap;">2026.02.03</td>
+        </tr>
+      </tbody>
+    </table>
+    
+    <div class="box">
+      <strong style="font-size: 10.5pt;">정부 인증의 의미</strong><br>
+      <span style="font-size: 10pt;">
+      상위 <strong>10% 기술력 (이노비즈 A등급)</strong>, 혁신성장 잠재력, 연구개발 역량을 
+      정부로부터 공식 인정받았습니다. 이는 기술 신뢰성과 사업 안정성을 입증하는 핵심 지표입니다.
+      </span>
+    </div>
+
+    <div class="page-break"></div>
+
+    <!-- 5. 시장 분석 -->
+    <h2>5. 시장 분석</h2>
+    
+    <h3>5-1. 글로벌 시장 환경</h3>
+    <p>
+      AI 기반 B2B 플랫폼 시장은 전 세계적으로 빠르게 성장하고 있습니다. 
+      특히 <strong>글로벌 B2B SaaS 시장은 2026년 0.49조 달러에서 연평균 26.24%로 성장</strong>하여 
+      2031년에는 1.58조 달러에 달할 것으로 전망됩니다. 
+      국내 시장 또한 클라우드 전환, AI 도입 확산에 힘입어 급성장 중입니다.
+    </p>
+    
+    <div class="box">
+      <strong>시장 성장 동인 (Market Drivers)</strong>
+      <ul style="margin-top: 10px;">
+        <li>✓ 기업의 디지털 전환(DX) 가속화 및 클라우드 기반 SaaS 수요 증가</li>
+        <li>✓ AI/빅데이터 기술의 발전으로 인한 공급망 지능화 트렌드</li>
+        <li>✓ 팬데믹 이후 비대면 B2B 거래 정착 및 온라인 매칭 수요 급증</li>
+        <li>✓ 중소기업의 경쟁력 강화를 위한 정부 정책 지원 확대</li>
+        <li>✓ ESG 경영 확산에 따른 투명한 공급망 관리 니즈 증대</li>
+      </ul>
+    </div>
+
+    <h3>5-2. 목표 시장 규모 (TAM-SAM-SOM)</h3>
+    <p>국내 B2B 거래 시장의 디지털 전환 수요와 맞물려, 데이터 기반 거래처 탐색 시장은 급격히 성장하고 있습니다.</p>
+
+    <table class="text-center">
+      <thead>
+        <tr>
+          <th>시장 구분</th>
+          <th>규모 (추정)</th>
+          <th>산출 근거</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>TAM</strong><br>(전체 시장)</td>
+          <td>8,000억 원</td>
+          <td class="text-right">국내 제조/유통기업 약 40만 개 × 연 200만 원</td>
+        </tr>
+        <tr>
+          <td><strong>SAM</strong><br>(유효 시장)</td>
+          <td>4,000억 원</td>
+          <td class="text-right">TAM의 50% (제조·도소매 중심 공략 가능 시장)</td>
+        </tr>
+        <tr>
+          <td><strong>SOM</strong><br>(수익 시장)</td>
+          <td>50억 원</td>
+          <td class="text-right">초기 고객 2,500~3,000개 기업 확보 기준 (점유율 1.25%)</td>
+        </tr>
+      </tbody>
+    </table>
+    
+    <h3>5-3. 목표 고객 세그먼트</h3>
+    <div class="grid-custom">
+      <div class="box">
+        <strong style="font-size: 10.5pt;">1차 타겟: 제조업</strong><br>
+        <span style="font-size: 10pt;">
+        국내 제조기업 약 <strong>12만개사</strong><br>
+        원자재 조달, 부품 소싱, OEM/ODM 파트너 발굴 수요가 높은 산업군
+        </span>
+      </div>
+      <div class="box">
+        <strong style="font-size: 10.5pt;">2차 타겟: 도소매/유통업</strong><br>
+        <span style="font-size: 10pt;">
+        국내 도소매기업 약 <strong>28만개사</strong><br>
+        상품 공급처 다변화 및 신규 공급망 확보 필요성이 높은 산업군
+        </span>
+      </div>
+    </div>
+    
+    <div class="box">
+      <strong style="font-size: 10.5pt;">초기 집중 산업: 화장품 제조업</strong><br>
+      <span style="font-size: 10pt;">
+      화장품 제조업은 <strong>공급망이 명확하고 데이터화가 용이</strong>하여 초기 시장 공략에 최적입니다.
+      국내 화장품 제조기업 약 2만개, OEM/ODM 생태계 활성화, K-뷰티 수출 증가 등으로 
+      거래처 발굴 수요가 지속적으로 증가하고 있습니다.
+      </span>
+    </div>
+
+    <div class="page-break"></div>
+
+    <!-- 6. 경쟁사 분석 -->
+    <h2>6. 경쟁사 분석</h2>
+    <p>
+      기존 글로벌/국내 경쟁 플랫폼 대비 <strong>'실거래 성사 지원'</strong> 및
+      <strong>'국내 기업 데이터 특화'</strong> 측면에서 확실한 우위를 점하고 있습니다.
+    </p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>구분</th>
+          <th>MACOMAEX (자사)</th>
+          <th>TradeKorea / Tradegood</th>
+          <th>BizVibe / B2match</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>핵심 가치</strong></td>
+          <td><strong>실거래 성사 (계약 집중)</strong></td>
+          <td>단순 리드(Lead) 제공</td>
+          <td>네트워킹/매칭 행사 중심</td>
+        </tr>
+        <tr>
+          <td><strong>데이터 특화</strong></td>
+          <td><strong>국내 제조/유통 특화 (KODATA)</strong></td>
+          <td>수출입 기업 위주</td>
+          <td>글로벌 범용 데이터</td>
+        </tr>
+        <tr>
+          <td><strong>추천 방식</strong></td>
+          <td><strong>AI 정량적 점수 기반 추천</strong></td>
+          <td>키워드 검색 결과 나열</td>
+          <td>단순 필터링</td>
+        </tr>
+        <tr>
+          <td><strong>신뢰도 검증</strong></td>
+          <td><strong>재무 리스크 자동 필터링</strong></td>
+          <td>기본 정보만 제공</td>
+          <td>사용자 입력 정보 의존</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="page-break"></div>
+
+    <!-- 7. 수익 모델 -->
+    <h2>7. 비즈니스 모델 및 수익 구조</h2>
+    
+    <h3>7-1. 수익 모델 개요</h3>
+    <p>
+      MACOMAEX는 <strong>크레딧 기반 SaaS 모델</strong>을 채택하여 기업 규모와 사용량에 따라 
+      유연한 가격 정책을 제공합니다. 일반 매칭(10 크레딧)과 TM 서포트 매칭(30 크레딧)의 
+      2가지 옵션을 제공하여 고객의 선택권을 보장합니다.
+    </p>
+    
+    <h3>7-2. 요금제 구조</h3>
+    <table class="text-center">
+      <thead>
+        <tr>
+          <th>플랜</th>
+          <th>가격</th>
+          <th>크레딧</th>
+          <th>매칭 횟수</th>
+          <th>타겟 고객</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Starter</strong></td>
+          <td>10,000원</td>
+          <td>100 크레딧</td>
+          <td>10회</td>
+          <td>소규모 스타트업</td>
+        </tr>
+        <tr>
+          <td><strong>Professional</strong></td>
+          <td>20,000원</td>
+          <td>220 크레딧 (+10%)</td>
+          <td>22회</td>
+          <td>중소기업 (추천)</td>
+        </tr>
+        <tr>
+          <td><strong>Business</strong></td>
+          <td>50,000원</td>
+          <td>600 크레딧 (+20%)</td>
+          <td>60회</td>
+          <td>제조/유통 기업</td>
+        </tr>
+        <tr>
+          <td><strong>Enterprise</strong></td>
+          <td>100,000원</td>
+          <td>1,300 크레딧 (+30%)</td>
+          <td>130회</td>
+          <td>대기업 구매팀</td>
+        </tr>
+      </tbody>
+    </table>
+    
+    <h3>7-3. 추가 수익원</h3>
+    <ul>
+      <li>
+        <strong>TM 서포트 매칭 (프리미엄 서비스):</strong> 전문 상담원이 직접 피매칭 기업에 연락하여 
+        회신을 유도하는 서비스. 일반 매칭 대비 <strong>응답률 3배 향상</strong>, 크레딧 30개 차감.
+      </li>
+      <li>
+        <strong>기업 데이터 분석 리포트:</strong> 특정 산업군의 공급망 구조, 거래 트렌드 등을 
+        분석한 맞춤형 리포트 제공 (별도 견적).
+      </li>
+      <li>
+        <strong>API 연동 서비스:</strong> 대기업 ERP/구매시스템과 MACOMAEX 플랫폼 연동을 통한 
+        B2B 라이선스 수익 모델.
+      </li>
+      <li>
+        <strong>광고 및 프로모션:</strong> 플랫폼 내 우량 기업 프로필 상단 노출, 
+        배너 광고 등의 마케팅 상품 판매.
+      </li>
+    </ul>
+    
+    <h3>7-4. 수익화 전략</h3>
+    <p>
+      초기에는 <strong>프리미엄(Freemium) 모델</strong>로 신규 가입 시 30 크레딧(3회 매칭)을 무료 제공하여 
+      서비스 체험 기회를 제공합니다. 체험 후 실제 거래 성사를 경험한 고객의 유료 전환율은 
+      <strong>약 35%</strong>로 측정되고 있습니다.
+    </p>
+    
+    <div class="box">
+      <strong>고객 생애 가치 (LTV) 추정</strong><br>
+      평균 고객 유지 기간: 24개월<br>
+      월평균 구매액: 30,000원<br>
+      <strong>→ LTV: 약 72만원 (24개월 × 30,000원)</strong>
+    </div>
+
+    <div class="page-break"></div>
+
+    <!-- 8. 사업화 전략 -->
+    <h2>8. 사업화 및 성장 전략</h2>
+
+    <h3>단계별 확장 로드맵</h3>
+    <ol>
+      <li><strong>1단계 (시장 진입):</strong> 제조·도소매 업종 초기 공략 및 레퍼런스 확보.</li>
+      <li>
+        <strong>2단계 (특화 시장):</strong> 공급망 연계가 뚜렷한 <strong>화장품 제조업</strong> 특화 서비스 고도화.
+      </li>
+      <li><strong>3단계 (카테고리 확장):</strong> 가구, 식품, 전자부품 등 연관 산업으로 순차 확장.</li>
+      <li><strong>4단계 (플랫폼 완성):</strong> 전 업종을 아우르는 B2B 데이터 플랫폼 구축 및 M&amp;A/IPO 추진.</li>
+    </ol>
+
+    <h3>초기 트랙션 (Early Traction)</h3>
+    <ul>
+      <li>현재 <strong>60개 이상 기업 가입</strong> 및 플랫폼 이용 중</li>
+      <li>누적 매칭 요청 <strong>150건 이상</strong> 달성</li>
+      <li>사용자 평균 만족도 <strong>4.5점 / 5.0점</strong></li>
+    </ul>
+
+    <!-- 9. 매출 계획 -->
+    <h2>9. 재무 계획 (매출 추정)</h2>
+    
+    <h3>9-1. 통합 매출 계획 (컨설팅 + 플랫폼)</h3>
+    <p>
+      (주)이가이엔씨는 기존 컨설팅 사업을 영위해 왔으나, <strong>MACOMAEX 플랫폼 사업에 역량을 집중</strong>하기 위해 
+      컨설팅 매출을 단계적으로 축소하고 플랫폼 중심의 사업 구조로 전환합니다.
+    </p>
+    
+    <table class="text-center">
+      <thead>
+        <tr>
+          <th>구분</th>
+          <th>1차년도 (2026)</th>
+          <th>2차년도 (2027)</th>
+          <th>3차년도 (2028)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr style="background-color: #f9f9f9;">
+          <td><strong>① 기존 컨설팅 매출</strong></td>
+          <td>5.0억원</td>
+          <td>3.0억원</td>
+          <td>2.0억원</td>
+        </tr>
+        <tr style="background-color: #f0f4f8;">
+          <td><strong>② MACOMAEX 플랫폼 매출</strong></td>
+          <td>1.2억원</td>
+          <td>4.5억원</td>
+          <td>13.5억원</td>
+        </tr>
+        <tr style="background-color: #e3f2fd; font-weight: bold;">
+          <td><strong>통합 매출 (①+②)</strong></td>
+          <td>6.2억원</td>
+          <td>7.5억원</td>
+          <td>15.5억원</td>
+        </tr>
+        <tr>
+          <td><strong>플랫폼 매출 비중</strong></td>
+          <td>19%</td>
+          <td>60%</td>
+          <td>87%</td>
+        </tr>
+        <tr>
+          <td><strong>전년 대비 성장률</strong></td>
+          <td>+24%</td>
+          <td>+21%</td>
+          <td>+107%</td>
+        </tr>
+      </tbody>
+    </table>
+    
+    <div class="box" style="margin-top: 15px;">
+      <strong>💡 사업 전환 전략 (Pivot Strategy)</strong>
+      <ul style="margin-top: 10px; font-size: 11pt;">
+        <li>
+          <strong>컨설팅 매출 축소 이유:</strong> MACOMAEX 플랫폼의 개발·운영·마케팅에 대표이사 및 핵심 인력의 
+          시간과 역량을 집중 투입하기 위해 컨설팅 프로젝트 수주를 선별적으로 축소합니다.
+        </li>
+        <li>
+          <strong>1차년도 (2026):</strong> 기존 컨설팅 5억원 유지하면서 플랫폼 1.2억원 추가 → 총 6.2억원 (안정적 전환)
+        </li>
+        <li>
+          <strong>2차년도 (2027):</strong> 컨설팅 3억원으로 축소, 플랫폼 4.5억원으로 성장 → 총 7.5억원 (플랫폼이 주력 사업으로 전환)
+        </li>
+        <li>
+          <strong>3차년도 (2028):</strong> 컨설팅 2억원 최소화, 플랫폼 13.5억원 주력 → 총 15.5억원 (플랫폼 중심 완성)
+        </li>
+      </ul>
+      <p style="font-size: 10pt; color: #666; margin-top: 10px;">
+        * 컨설팅은 기존 고객 유지 및 플랫폼 초기 운영비 충당 목적으로 최소 규모 유지<br>
+        * 플랫폼 매출이 안정화되는 3차년도부터는 컨설팅을 거의 중단하고 플랫폼에 100% 집중
+      </p>
+    </div>
+    
+    <div class="box" style="margin-top: 15px; background-color: #fff; border: 2px solid #1a3b5c;">
+      <strong style="color: #1a3b5c;">📊 매출 구조 전환 시각화</strong>
+      <table class="text-center" style="margin-top: 10px; font-size: 10pt;">
+        <thead>
+          <tr>
+            <th width="25%">연도</th>
+            <th width="25%">컨설팅</th>
+            <th width="25%">플랫폼</th>
+            <th width="25%">비고</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>2026</strong></td>
+            <td style="background: linear-gradient(to right, #1a3b5c 0%, #1a3b5c 81%, #f0f4f8 81%); color: white; font-weight: bold;">5.0억 (81%)</td>
+            <td style="background: linear-gradient(to right, #4CAF50 0%, #4CAF50 19%, #f0f4f8 19%); font-weight: bold;">1.2억 (19%)</td>
+            <td>초기 전환</td>
+          </tr>
+          <tr>
+            <td><strong>2027</strong></td>
+            <td style="background: linear-gradient(to right, #1a3b5c 0%, #1a3b5c 40%, #f0f4f8 40%); color: white; font-weight: bold;">3.0억 (40%)</td>
+            <td style="background: linear-gradient(to right, #4CAF50 0%, #4CAF50 60%, #f0f4f8 60%); font-weight: bold;">4.5억 (60%)</td>
+            <td>주력 전환</td>
+          </tr>
+          <tr>
+            <td><strong>2028</strong></td>
+            <td style="background: linear-gradient(to right, #1a3b5c 0%, #1a3b5c 13%, #f0f4f8 13%); color: white; font-weight: bold;">2.0억 (13%)</td>
+            <td style="background: linear-gradient(to right, #4CAF50 0%, #4CAF50 87%, #f0f4f8 87%); font-weight: bold;">13.5억 (87%)</td>
+            <td>플랫폼 완성</td>
+          </tr>
+        </tbody>
+      </table>
+      <p style="font-size: 9pt; color: #666; margin-top: 10px; text-align: center;">
+        ■ 컨설팅 사업 (점진적 축소)  &nbsp;&nbsp;  ■ MACOMAEX 플랫폼 (집중 성장)
+      </p>
+    </div>
+    
+    <h3>9-2. MACOMAEX 플랫폼 매출 상세</h3>
+    <p>시장 진입 초기에는 유저 확보에 집중하고, 2차년도부터 본격적인 스케일업을 통해 매출을 극대화할 계획입니다.</p>
+
+    <table class="text-center">
+      <thead>
+        <tr>
+          <th>구분</th>
+          <th>1차년도 (2026)</th>
+          <th>2차년도 (2027)</th>
+          <th>3차년도 (2028)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>예상 매출 (ARR)</strong></td>
+          <td>1.2억 원</td>
+          <td>4.5억 원</td>
+          <td>13.5억 원</td>
+        </tr>
+        <tr>
+          <td><strong>월평균 매출 (MRR)</strong></td>
+          <td>600만원 → 1,000만원</td>
+          <td>2,500만원 → 3,750만원</td>
+          <td>8,750만원 → 1.125억원</td>
+        </tr>
+        <tr>
+          <td><strong>유료 고객 수</strong></td>
+          <td>200개사 → 330개사</td>
+          <td>830개사 → 1,250개사</td>
+          <td>2,500개사 → 3,000개사</td>
+        </tr>
+        <tr>
+          <td><strong>평균 객단가 (ARPU)</strong></td>
+          <td>월 30,000원</td>
+          <td>월 35,000원</td>
+          <td>월 40,000원</td>
+        </tr>
+        <tr>
+          <td><strong>영업이익률</strong></td>
+          <td>-30% (투자 집중)</td>
+          <td>5% (손익분기 근접)</td>
+          <td>20% (수익 개선)</td>
+        </tr>
+        <tr>
+          <td><strong>영업이익 금액</strong></td>
+          <td>-3,600만원</td>
+          <td>+2,250만원</td>
+          <td>+2.7억원</td>
+        </tr>
+        <tr>
+          <td><strong>MRR 성장률 (MoM)</strong></td>
+          <td>평균 12%</td>
+          <td>평균 10%</td>
+          <td>평균 8%</td>
+        </tr>
+      </tbody>
+    </table>
+    
+    <div class="box" style="margin-top: 15px;">
+      <strong>매출 산출 근거</strong>
+      <table style="margin-top: 10px; font-size: 11pt;">
+        <thead>
+          <tr>
+            <th width="10%">연도</th>
+            <th width="18%">시작 유료 고객</th>
+            <th width="12%">MoM 성장률</th>
+            <th width="18%">연말 유료 고객</th>
+            <th width="14%">ARPU</th>
+            <th width="14%">연 매출 (ARR)</th>
+            <th width="14%">영업이익</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>2026</strong></td>
+            <td>200개사</td>
+            <td>월 12%</td>
+            <td>330개사</td>
+            <td>월 30,000원</td>
+            <td>1.2억원</td>
+            <td style="color:#c0392b;">-3,600만원<br><span style="font-size:9pt;">(-30%)</span></td>
+          </tr>
+          <tr>
+            <td><strong>2027</strong></td>
+            <td>830개사</td>
+            <td>월 10%</td>
+            <td>1,250개사</td>
+            <td>월 35,000원</td>
+            <td>4.5억원</td>
+            <td style="color:#27ae60;">+2,250만원<br><span style="font-size:9pt;">(+5%)</span></td>
+          </tr>
+          <tr>
+            <td><strong>2028</strong></td>
+            <td>2,500개사</td>
+            <td>월 8%</td>
+            <td>3,000개사</td>
+            <td>월 40,000원</td>
+            <td>13.5억원</td>
+            <td style="color:#27ae60;">+2.7억원<br><span style="font-size:9pt;">(+20%)</span></td>
+          </tr>
+          <tr style="background-color:#f0f7ff;">
+            <td><strong>2029</strong></td>
+            <td>3,000개사</td>
+            <td>월 6%</td>
+            <td>5,500개사</td>
+            <td>월 45,000원</td>
+            <td>27.0억원</td>
+            <td style="color:#27ae60;">+7.6억원<br><span style="font-size:9pt;">(+28%)</span></td>
+          </tr>
+          <tr style="background-color:#f0f7ff;">
+            <td><strong>2030</strong></td>
+            <td>5,500개사</td>
+            <td>월 5%</td>
+            <td>8,500개사</td>
+            <td>월 50,000원</td>
+            <td>45.9억원</td>
+            <td style="color:#27ae60;">+15.1억원<br><span style="font-size:9pt;">(+33%)</span></td>
+          </tr>
+        </tbody>
+      </table>
+      <div style="background-color:#f9f9f9; border-left: 3px solid #1a3b5c; padding: 10px; margin-top: 10px; font-size: 10pt;">
+        <strong>📌 2029~2030년 추정 근거</strong>
+        <ul style="margin-top: 6px; margin-bottom: 0;">
+          <li><strong>2029년:</strong> 3차년도 연말 3,000개 고객 기반으로 신규 산업군(가구·식품·전자부품) 확장 → MoM 6%로 둔화, ARPU 45,000원(업셀링·TM 서비스 확대), 연말 5,500개 고객, YoY +100% 성장 → 매출 27.0억원. 규모의 경제 실현으로 고정비 희석, 영업이익률 28% 달성.</li>
+          <li><strong>2030년:</strong> 5,500개 고객 기반으로 API 연동·데이터 리포트 등 추가 수익원 활성화 → MoM 5% 안정 성장, ARPU 50,000원(Enterprise 비중 확대), 연말 8,500개 고객, YoY +70% 성장 → 매출 45.9억원. 플랫폼 성숙기 진입으로 영업이익률 33% 달성.</li>
+        </ul>
+        <p style="margin-top: 8px; margin-bottom: 0; color: #666;">
+          * MoM(월간 성장률) 단계적 둔화: 12% → 10% → 8% → 6% → 5% (SaaS 성숙기 업계 표준 반영)<br>
+          * ARPU 상승 근거: 프리미엄 플랜 전환율 증가 + TM 서포트·API 라이선스 등 부가 수익 확대<br>
+          * 출처: NxCode SaaS 재무모델 (2025), StepPay B2B SaaS 벤치마크 (2025)
+        </p>
+      </div>
+    </div>
+
+    <div class="page-break"></div>
+
+    <!-- 10. 자금 활용 계획 -->
+    <h2>10. 자금 조달 및 활용 계획</h2>
+    <p>본 정책자금을 통해 확보된 <strong>1.8억 원</strong>의 자금은 다음과 같이 투명하게 집행할 예정입니다.</p>
+
+    <h3>10-1. 자금 활용 내역</h3>
+    <table>
+      <thead>
+        <tr>
+          <th width="20%">항목</th>
+          <th width="10%">비중</th>
+          <th width="15%">금액</th>
+          <th width="55%">세부 내용</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>기술 고도화</strong></td>
+          <td class="text-center">35%</td>
+          <td class="text-right">6,300만원</td>
+          <td>
+            AI 알고리즘 개발비 2,500만원 / 서버 인프라 2,000만원 / AWS 클라우드 1,200만원 / 보안 인증 600만원
+          </td>
+        </tr>
+        <tr>
+          <td><strong>인력 채용</strong></td>
+          <td class="text-center">35%</td>
+          <td class="text-right">6,300만원</td>
+          <td>
+            <strong>신규 2명 (6개월 인건비)</strong> AI 엔지니어 3,000만원 / 백엔드 개발자 2,700만원 / 채용비 600만원
+          </td>
+        </tr>
+        <tr>
+          <td><strong>마케팅·영업</strong></td>
+          <td class="text-center">20%</td>
+          <td class="text-right">3,600만원</td>
+          <td>
+            디지털 광고 1,800만원 / 타겟 영업 1,000만원 / 전시회 600만원 / 콘텐츠 제작 200만원
+          </td>
+        </tr>
+        <tr>
+          <td><strong>UI/UX·운영</strong></td>
+          <td class="text-center">10%</td>
+          <td class="text-right">1,800만원</td>
+          <td>
+            리디자인 1,000만원 / 모바일 최적화 500만원 / QA 테스트 300만원
+          </td>
+        </tr>
+        <tr style="background-color: #f0f4f8; font-weight: bold;">
+          <td>합계</td>
+          <td class="text-center">100%</td>
+          <td class="text-right">1.8억원</td>
+          <td></td>
+        </tr>
+      </tbody>
+    </table>
+    
+    <div class="box" style="margin-top: 15px;">
+      <strong style="font-size: 10.5pt;">💡 인력 채용 비용 산출 근거</strong><br>
+      <span style="font-size: 10pt;">
+      신규 채용 2명에 대한 6개월 인건비를 책정하였습니다 (AI 엔지니어 월 500만원, 백엔드 개발자 월 450만원).
+      정책자금으로 초기 안정화 기간을 확보한 후, 추가 매출 발생 시 자체 수익으로 인건비를 충당할 계획입니다. 
+      B2B 영업 전문가는 성과급 구조로 별도 채용 예정이며, 본 예산에는 미포함되었습니다.
+      </span>
+    </div>
+    
+    <h3>10-2. 투자 효과 및 기대 성과</h3>
+    <div class="box">
+      <strong>정책자금 투입 시 예상 성과 (12개월 기준)</strong>
+      <ul style="margin-top: 10px;">
+        <li>• <strong>플랫폼 누적 사용 기업:</strong> 60개사 → <strong>800개사</strong> (+1,233%)</li>
+        <li>• <strong>유료 고객 수:</strong> 30개사 → <strong>330개사</strong> (+1,000%)</li>
+        <li>• <strong>누적 거래 매칭 건수:</strong> 150건 → <strong>3,000건</strong> (+1,900%)</li>
+        <li>• <strong>MRR 성장:</strong> 월 600만원 → <strong>월 1,000만원</strong> (+67%)</li>
+        <li>• <strong>AI 매칭 정확도:</strong> 80%~90% → <strong>95%</strong> 향상</li>
+        <li>• <strong>고객 만족도:</strong> 4.5점 → <strong>4.8점</strong> (5점 만점) 개선</li>
+        <li>• <strong>신규 고용 창출:</strong> <strong>7명 이상</strong></li>
+      </ul>
+    </div>
+    
+    <h3>10-3. 추가 투자 유치 계획</h3>
+    <p>
+      본 정책자금을 통해 트랙션을 확보한 후, <strong>2026년 하반기 Pre-A 라운드</strong>를 통해 
+      추가 2~3억원의 민간 투자를 유치할 계획입니다. 이를 통해 서비스 고도화 및 시장 확대를 가속화하겠습니다.
+    </p>
+
+    <h3>10-4. 정책자금 상환 계획</h3>
+    <div style="background-color: #e8f0fa; border: 3px solid #c0392b; border-radius: 6px; padding: 18px; margin-top: 10px;">
+      <p style="font-size: 11pt; color: #1a3b5c; font-weight: bold; margin-bottom: 10px; border-bottom: 1px solid #1a3b5c; padding-bottom: 6px;">
+        📋 정책자금 상환 계획 (중진공 창업기반자금)
+      </p>
+      <p style="font-size: 11pt; margin-bottom: 12px;">
+        본 상환 계획은 MACOMAEX 플랫폼의 예상 매출 성장 계획을 기반으로 중진공 창업기반자금 
+        <strong>1.8억원</strong>에 대한 상환 가능성을 설명하기 위해 작성되었습니다. 
+        대출 조건은 <strong>2년 거치 후 3년 분할 상환</strong>을 기준으로 합니다.
+      </p>
+
+      <strong style="font-size: 11pt; color: #1a3b5c;">① 대출 조건</strong>
+      <table style="margin-top: 8px; margin-bottom: 14px; font-size: 11pt;">
+        <tbody>
+          <tr>
+            <th width="35%" style="background-color: #1a3b5c; color: white;">대출 금액</th>
+            <td><strong>180,000,000원 (1.8억원)</strong></td>
+          </tr>
+          <tr>
+            <th style="background-color: #1a3b5c; color: white;">거치 기간</th>
+            <td>2년 (이자만 납부)</td>
+          </tr>
+          <tr>
+            <th style="background-color: #1a3b5c; color: white;">상환 기간</th>
+            <td>3년 (원금 분할 상환)</td>
+          </tr>
+          <tr>
+            <th style="background-color: #1a3b5c; color: white;">총 대출 기간</th>
+            <td>5년</td>
+          </tr>
+          <tr>
+            <th style="background-color: #1a3b5c; color: white;">예상 연간 원금 상환액</th>
+            <td><strong>약 60,000,000원 (연)</strong></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <strong style="font-size: 11pt; color: #1a3b5c;">② 매출 성장 계획 기반 상환 스케줄</strong>
+      <table class="text-center" style="margin-top: 8px; margin-bottom: 14px; font-size: 11pt;">
+        <thead>
+          <tr>
+            <th style="background-color: #1a3b5c; color: white;">연도</th>
+            <th style="background-color: #1a3b5c; color: white;">예상 매출 (플랫폼)</th>
+            <th style="background-color: #1a3b5c; color: white;">영업이익</th>
+            <th style="background-color: #1a3b5c; color: white;">상환 내용</th>
+            <th style="background-color: #1a3b5c; color: white;">상환 금액</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>2026년</strong></td>
+            <td>1.2억원</td>
+            <td style="color: #c0392b;">-3,600만원 (-30%)</td>
+            <td>거치기간 (이자만 납부)</td>
+            <td style="color: #888;">—</td>
+          </tr>
+          <tr>
+            <td><strong>2027년</strong></td>
+            <td>4.5억원</td>
+            <td style="color: #27ae60;">+2,250만원 (5%)</td>
+            <td>거치기간 (이자만 납부)</td>
+            <td style="color: #888;">—</td>
+          </tr>
+          <tr style="background-color: #dce8f8; font-weight: bold;">
+            <td><strong>2028년</strong></td>
+            <td>13.5억원</td>
+            <td style="color: #27ae60;">+2.7억원 (20%)</td>
+            <td>원금 분할 상환 시작</td>
+            <td><strong>60,000,000원</strong></td>
+          </tr>
+          <tr style="background-color: #dce8f8; font-weight: bold;">
+            <td><strong>2029년</strong></td>
+            <td>27.0억원</td>
+            <td style="color: #27ae60;">+7.6억원 (28%)</td>
+            <td>원금 분할 상환</td>
+            <td><strong>60,000,000원</strong></td>
+          </tr>
+          <tr style="background-color: #dce8f8; font-weight: bold;">
+            <td><strong>2030년</strong></td>
+            <td>45.9억원</td>
+            <td style="color: #27ae60;">+15.1억원 (33%)</td>
+            <td>원금 분할 상환 완료</td>
+            <td><strong>60,000,000원</strong></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <strong style="font-size: 11pt; color: #1a3b5c;">③ 상환 재원 계획</strong>
+      <p style="font-size: 11pt; margin-top: 8px; margin-bottom: 6px;">
+        MACOMAEX 플랫폼은 기업 간 거래처 추천 서비스로 다음과 같은 수익 구조를 기반으로 안정적인 현금흐름을 확보합니다.
+      </p>
+      <ul style="font-size: 11pt; margin-top: 6px; margin-bottom: 0;">
+        <li>• <strong>매칭 요청 크레딧 판매 수익</strong> — 구독형 SaaS 기반 월간 반복 매출(MRR)</li>
+        <li>• <strong>거래 매칭 지원 서비스(TM) 수익</strong> — 프리미엄 서비스 업셀링</li>
+        <li>• <strong>거래 성사 기반 수수료 수익</strong> — 향후 성사 연동 수익 모델 추가</li>
+        <li>• <strong>기존 컨설팅 매출</strong> — 2028년까지 연 2억원 이상 유지로 상환 재원 보완</li>
+      </ul>
+      <div style="background-color:#d4e4f7; border-left: 3px solid #1a3b5c; padding: 10px; margin-top: 10px; border-radius: 4px; font-size: 10pt; color: #1a3b5c;">
+        <strong>📌 2029~2030년 매출 추정 근거</strong>
+        <ul style="margin-top: 6px; margin-bottom: 8px;">
+          <li><strong>2029년 27.0억원:</strong> 전년도 연말 3,000개 고객 기반, 신규 산업군 확장 및 업셀링 강화로 MoM 6% 성장 유지 → 연말 5,500개 고객, ARPU 45,000원(TM 서비스·Enterprise 비중 확대), YoY +100%</li>
+          <li><strong>2030년 45.9억원:</strong> 5,500개 고객 기반, API 연동·데이터 리포트 등 부가 수익원 활성화로 MoM 5% 안정 성장 → 연말 8,500개 고객, ARPU 50,000원, YoY +70%</li>
+        </ul>
+        <strong>📌 상환 여력 분석</strong>
+        <table class="text-center" style="margin-top: 8px; font-size: 10pt;">
+          <thead>
+            <tr>
+              <th style="background-color:#1a3b5c; color:white;">연도</th>
+              <th style="background-color:#1a3b5c; color:white;">영업이익</th>
+              <th style="background-color:#1a3b5c; color:white;">연간 상환액</th>
+              <th style="background-color:#1a3b5c; color:white;">상환 부담 비율</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>2028년</td>
+              <td>+2.7억원</td>
+              <td>6,000만원</td>
+              <td><strong>22%</strong></td>
+            </tr>
+            <tr>
+              <td>2029년</td>
+              <td>+7.6억원</td>
+              <td>6,000만원</td>
+              <td><strong style="color:#27ae60;">8%</strong></td>
+            </tr>
+            <tr>
+              <td>2030년</td>
+              <td>+15.1억원</td>
+              <td>6,000만원</td>
+              <td><strong style="color:#27ae60;">4%</strong></td>
+            </tr>
+          </tbody>
+        </table>
+        <p style="margin-top: 8px; margin-bottom: 0;">
+          ※ 상환 부담 비율이 2028년 22% → 2029년 8% → 2030년 4%로 급격히 감소하여 <strong>충분한 상환 여력</strong>이 확보됩니다.
+        </p>
+      </div>
+    </div>
+
+    <div class="page-break"></div>
+
+    <!-- 11. 정책 효과 -->
+    <h2>11. 정책 효과 및 사회적 가치</h2>
+    
+    <h3>11-1. 중소기업 경쟁력 강화</h3>
+    <div class="box">
+      <strong>1. 정보 비대칭 해소</strong><br>
+      대기업 대비 정보력이 부족한 중소기업에게 데이터 기반의 <strong>동등한 거래 기회</strong>를 제공합니다.
+      MACOMAEX를 통해 중소기업도 대기업과 동일한 수준의 공급망 정보에 접근할 수 있습니다.
+      <ul style="margin-top: 10px;">
+        <li>• 거래처 발굴 시간 <strong>70% 단축</strong> (월 30시간 → 9시간)</li>
+        <li>• 거래처 발굴 비용 <strong>60% 절감</strong> (연 1,200만원 → 480만원)</li>
+        <li>• 신규 거래처 발굴 성공률 <strong>3배 향상</strong></li>
+      </ul>
+    </div>
+    
+    <div class="box">
+      <strong>2. 공급망 안정화 및 다변화</strong><br>
+      특정 거래처 의존도를 낮추고 대체 공급망을 확보하여 <strong>국가 산업 공급망 안정성</strong>에 기여합니다.
+      <ul style="margin-top: 10px;">
+        <li>• 평균 거래처 의존도 <strong>65% → 45%</strong> 감소</li>
+        <li>• 공급망 리스크 대응 능력 <strong>50% 향상</strong></li>
+        <li>• 거래 부실로 인한 손실 <strong>연간 약 500억원 예방</strong> 효과</li>
+      </ul>
+    </div>
+    
+    <h3>11-2. 디지털 전환(DX) 가속화</h3>
+    <div class="box">
+      <strong>3. B2B 거래의 디지털화</strong><br>
+      낙후된 B2B 거래 관행을 데이터/AI 기술로 혁신하여 <strong>산업 전반의 디지털 전환</strong>을 촉진합니다.
+      <ul style="margin-top: 10px;">
+        <li>• B2B 거래의 데이터화율 <strong>17% → 45%</strong> 향상 기여</li>
+        <li>• 중소기업의 AI/빅데이터 활용 역량 강화</li>
+        <li>• 정부의 '중소기업 디지털 전환 촉진법' 실질적 이행 지원</li>
+      </ul>
+    </div>
+    
+    <h3>11-3. ESG 경영 및 투명성 제고</h3>
+    <div class="box">
+      <strong>4. 공급망 투명성 확보</strong><br>
+      ESG 경영 확산에 따라 요구되는 <strong>투명한 공급망 관리</strong>를 지원합니다.
+      <ul style="margin-top: 10px;">
+        <li>• 공급망 추적 가능성(Traceability) 향상</li>
+        <li>• 재무 건전성 검증을 통한 건전한 B2B 생태계 조성</li>
+        <li>• 불공정 거래 및 부당 관행 방지</li>
+      </ul>
+    </div>
+    
+    <h3>11-4. 지역 경제 활성화</h3>
+    <div class="box">
+      <strong>5. 지역 중소기업 연결망 구축</strong><br>
+      수도권과 지방 기업 간 거래 기회를 확대하여 <strong>지역 경제 균형 발전</strong>에 기여합니다.
+      <ul style="margin-top: 10px;">
+        <li>• 지역 우량 기업 발굴 및 전국 단위 거래 기회 제공</li>
+        <li>• 지역별 산업 클러스터 연결 강화</li>
+        <li>• 지역 경제 자립도 향상</li>
+      </ul>
+    </div>
+    
+    <h3>11-5. 정량적 정책 효과 요약</h3>
+    <table class="text-center">
+      <thead>
+        <tr>
+          <th>항목</th>
+          <th>현재</th>
+          <th>목표 (3년 후)</th>
+          <th>개선율</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>중소기업 거래처 발굴 시간</td>
+          <td>월 30시간</td>
+          <td>월 9시간</td>
+          <td><strong>-70%</strong></td>
+        </tr>
+        <tr>
+          <td>거래처 발굴 비용</td>
+          <td>연 1,200만원</td>
+          <td>연 480만원</td>
+          <td><strong>-60%</strong></td>
+        </tr>
+        <tr>
+          <td>신규 거래 성사율</td>
+          <td>12%</td>
+          <td>36%</td>
+          <td><strong>+300%</strong></td>
+        </tr>
+        <tr>
+          <td>플랫폼 누적 사용 기업</td>
+          <td>60개사</td>
+          <td>7,000개사</td>
+          <td><strong>+11,567%</strong></td>
+        </tr>
+        <tr>
+          <td>누적 거래 매칭 건수</td>
+          <td>150건</td>
+          <td>30,000건</td>
+          <td><strong>+19,900%</strong></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="page-break"></div>
+
+    <!-- 12. 고용 창출 -->
+    <h2>12. 고용 창출 계획</h2>
+    <p>
+      사업 확장에 따라 양질의 일자리를 창출하며, 특히 데이터 분석 및 AI 개발 분야의 전문 인력을 적극 채용하겠습니다.
+    </p>
+    
+    <h3>단계별 채용 계획</h3>
+    <table>
+      <thead>
+        <tr>
+          <th width="15%">시기</th>
+          <th width="25%">직군</th>
+          <th width="20%">인원</th>
+          <th>자금 출처</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>1단계<br>(0~6개월)</strong></td>
+          <td>
+            • AI 알고리즘 엔지니어<br>
+            • 백엔드 개발자
+          </td>
+          <td class="text-center">2명</td>
+          <td><strong>정책자금</strong> (6개월 인건비 포함)</td>
+        </tr>
+        <tr>
+          <td><strong>2단계<br>(6~12개월)</strong></td>
+          <td>
+            • B2B 영업 전문가<br>
+            • CS/고객지원 매니저<br>
+            • 데이터 분석가
+          </td>
+          <td class="text-center">3명</td>
+          <td>서비스 매출로 충당</td>
+        </tr>
+        <tr>
+          <td><strong>3단계<br>(12개월 이후)</strong></td>
+          <td>
+            • 프론트엔드 개발자<br>
+            • 마케팅 기획자
+          </td>
+          <td class="text-center">2명</td>
+          <td>추가 투자 유치 후 확대</td>
+        </tr>
+        <tr style="background-color: #f0f4f8; font-weight: bold;">
+          <td colspan="2">총 신규 고용 계획 (1년 내)</td>
+          <td class="text-center">7명</td>
+          <td></td>
+        </tr>
+      </tbody>
+    </table>
+    
+    <div class="box">
+      <strong>고용의 질적 효과</strong>
+      <ul style="margin-top: 10px;">
+        <li>• <strong>청년 일자리 창출:</strong> AI/데이터 분야 전문 인력 양성 및 경력 개발 기회 제공</li>
+        <li>• <strong>평균 연봉:</strong> 약 5,000만원 (업계 중상위권 수준 제공)</li>
+        <li>• <strong>근무 환경:</strong> 유연근무제, 재택근무 지원, 스톡옵션 부여</li>
+        <li>• <strong>경력 개발:</strong> 최신 AI/빅데이터 기술 습득 기회, 외부 교육 지원</li>
+      </ul>
+    </div>
+
+    <!-- 13. 팀 구성 -->
+    <h2>13. 핵심 인력 구성</h2>
+    <p>B2B 비즈니스, 데이터 기술, 전략 기획 분야의 전문가들로 구성된 최적의 팀입니다.</p>
+    <table>
+      <thead>
+        <tr>
+          <th width="20%">성명</th>
+          <th width="20%">직책</th>
+          <th>담당 역할 및 전문성</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>이민형</strong></td>
+          <td>대표이사</td>
+          <td>사업 총괄, 전략 수립, 자금 조달 (전 상장사 전략실장)</td>
+        </tr>
+        <tr>
+          <td><strong>조상일</strong></td>
+          <td>전무이사 (CTO)</td>
+          <td>플랫폼 기술 총괄, 아키텍처 설계, AI 엔진 개발 리드</td>
+        </tr>
+        <tr>
+          <td><strong>김전호</strong></td>
+          <td>개발이사</td>
+          <td>프론트엔드/백엔드 개발 총괄 및 배포 관리</td>
+        </tr>
+        <tr>
+          <td><strong>장평강</strong></td>
+          <td>팀장</td>
+          <td>DB 설계 및 AI 데이터 연동 최적화</td>
+        </tr>
+        <tr>
+          <td><strong>김한슬</strong></td>
+          <td>주임</td>
+          <td>마케팅 전략 수립, 브랜딩, 사용자 경험(UX) 개선</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="page-break"></div>
+
+    <!-- 14. 기대 효과 -->
+    <h2>14. 종합 기대 효과 및 비전</h2>
+    
+    <h3>14-1. 사업 성과 목표 (3개년)</h3>
+    <table class="text-center">
+      <thead>
+        <tr>
+          <th>구분</th>
+          <th>1차년도 (2026)</th>
+          <th>2차년도 (2027)</th>
+          <th>3차년도 (2028)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>매출 (ARR)</strong></td>
+          <td>1.2억원</td>
+          <td>4.5억원</td>
+          <td>13.5억원</td>
+        </tr>
+        <tr>
+          <td><strong>유료 고객 수</strong></td>
+          <td>330개사</td>
+          <td>1,250개사</td>
+          <td>3,000개사</td>
+        </tr>
+        <tr>
+          <td><strong>가입 기업 수 (누적)</strong></td>
+          <td>800개사</td>
+          <td>3,000개사</td>
+          <td>7,000개사</td>
+        </tr>
+        <tr>
+          <td><strong>누적 매칭 건수</strong></td>
+          <td>3,000건</td>
+          <td>12,000건</td>
+          <td>30,000건</td>
+        </tr>
+        <tr>
+          <td><strong>거래 성사율</strong></td>
+          <td>22%</td>
+          <td>28%</td>
+          <td>35%</td>
+        </tr>
+        <tr>
+          <td><strong>고용 인원</strong></td>
+          <td>12명</td>
+          <td>20명</td>
+          <td>30명</td>
+        </tr>
+      </tbody>
+    </table>
+    
+    <h3>14-2. 기술 혁신 성과</h3>
+    <ul>
+      <li><strong>AI 알고리즘 고도화:</strong> 매칭 정확도 80%~90% → 92% → 95% 단계적 향상</li>
+      <li><strong>데이터 확장:</strong> 17.5만개 → 30만개 → 50만개 기업 데이터 큐레이션</li>
+      <li><strong>산업 확장:</strong> 화장품 → 가구/식품 → 전자부품/섬유 → 전 산업군</li>
+      <li><strong>기능 고도화:</strong> 기본 매칭 → 공급망 분석 → 시장 인사이트 리포트</li>
+      <li><strong>특허 추가 출원:</strong> AI 매칭 알고리즘, 공급망 역설계 기술 등 3건 이상</li>
+    </ul>
+    
+    <h3>14-3. 사회적 파급 효과</h3>
+    <div class="box">
+      <strong>중소기업 생태계 강화</strong>
+      <ul style="margin-top: 10px;">
+        <li>• 3년 내 약 <strong>7,000개 중소기업</strong>에 최적의 거래처 발굴 기회 제공</li>
+        <li>• 중소기업의 거래처 발굴 비용 <strong>총 420억원 절감</strong> 효과 (기업당 연 600만원 절감 기준)</li>
+        <li>• <strong>30,000건 이상</strong>의 신규 B2B 거래 창출</li>
+        <li>• 공급망 리스크로 인한 손실 <strong>연간 300억원 예방</strong></li>
+      </ul>
+    </div>
+    
+    <div class="box">
+      <strong>국가 경제 기여</strong>
+      <ul style="margin-top: 10px;">
+        <li>• 국내 B2B 거래 디지털화율 <strong>17% → 45%</strong> 향상 기여</li>
+        <li>• AI/빅데이터 기반 산업 혁신 사례 창출</li>
+        <li>• 정부의 '디지털 뉴딜' 및 'K-데이터 육성' 정책 실질적 이행</li>
+        <li>• 데이터 경제 활성화 및 AI 산업 생태계 확장</li>
+      </ul>
+    </div>
+    
+    <div class="page-break"></div>
+
+    <h3>14-4. Exit 전략 및 장기 비전</h3>
+    <p>
+      MACOMAEX는 3년 내 <strong>국내 B2B 매칭 플랫폼 1위</strong>를 목표로 하며, 
+      이후 다음과 같은 성장 시나리오를 계획하고 있습니다.
+    </p>
+    
+    <div class="grid-custom">
+      <div class="box">
+        <strong style="font-size: 10.5pt;">시나리오 1: 전략적 M&amp;A</strong><br>
+        <span style="font-size: 10pt;">
+        • ERP/SaaS 기업 (SAP, Oracle 등)<br>
+        • B2B 커머스 플랫폼<br>
+        • 대형 유통 플랫폼<br>
+        예상 기업가치: <strong>300~500억원</strong>
+        </span>
+      </div>
+      <div class="box">
+        <strong style="font-size: 10.5pt;">시나리오 2: IPO (기업공개)</strong><br>
+        <span style="font-size: 10pt;">
+        • 코스닥 상장 추진<br>
+        • 글로벌 시장 진출 (동남아, 일본)<br>
+        • 플랫폼 확장 (AI 분석, 무역 금융)<br>
+        예상 시가총액: <strong>600~800억원</strong>
+        </span>
+      </div>
+    </div>
+    
+    <h3>14-5. 최종 비전</h3>
+    <div class="box" style="background-color: #f0f4f8; border: 2px solid #1a3b5c; padding: 20px;">
+      <p style="text-align: center; font-size: 13pt; font-weight: bold; color: #1a3b5c; margin-bottom: 15px;">
+        "모든 기업이 최적의 파트너를 3초 안에 찾는 세상"
+      </p>
+      <p style="text-align: center; line-height: 1.8;">
+        <strong>MACOMAEX</strong>는 단순한 기업 검색 도구가 아닙니다.<br>
+        기업의 성장을 가속화하고, 숨겨진 비즈니스 기회를 발굴하며,<br>
+        <strong>대한민국 B2B 거래의 새로운 표준</strong>을 제시할 것입니다.<br><br>
+        본 지원사업을 통해 기술적 완성도를 높이고 시장에 성공적으로 안착하여,<br>
+        <strong>국가 경제와 중소기업 생태계 활성화</strong>에 기여하겠습니다.
+      </p>
+    </div>
+    
+    <br><br><br>
+    <p style="text-align: right; font-weight: bold; padding-bottom: 40px;">
+      (주)이가이엔씨 대표이사 이민형
+    </p>
+  
+<script>
+  (function () {
+    function decodeCfEmail(encoded) {
+      if (!encoded || encoded.length < 4) return "";
+      var key = parseInt(encoded.slice(0, 2), 16);
+      var email = "";
+
+      for (var i = 2; i < encoded.length; i += 2) {
+        email += String.fromCharCode(parseInt(encoded.slice(i, i + 2), 16) ^ key);
+      }
+
+      return email;
+    }
+
+    var protectedEmails = document.querySelectorAll("a.__cf_email__");
+
+    protectedEmails.forEach(function (anchor) {
+      var encoded = anchor.getAttribute("data-cfemail");
+      var decoded = decodeCfEmail(encoded);
+      if (!decoded) return;
+
+      anchor.setAttribute("href", "mailto:" + decoded);
+
+      anchor.addEventListener("click", function () {
+        if (anchor.textContent && anchor.textContent.indexOf("[email") !== -1) {
+          anchor.textContent = decoded;
+        }
+      });
+    });
+  })();
+</script>
+</body></html>

@@ -1,0 +1,25 @@
+<?
+include_once("./_common.php");
+
+$board['bo_10']="12";
+$board['bo_9']="4";
+$board['bo_5'] = "ETC";
+$board['bo_subject'] = "환불규정";
+$board['bo_4'] = '';
+
+include_once(G5_THEME_PATH.'/head.php');
+?>
+<div class="etc_clause clauseArea no"><div class="etc_clause_in">
+	<p class="logo"><img src="/img/logo.svg" alt="<?php echo $config['cf_title']; ?>"></p>
+	<!-- <div class="txt"> <span>개인정보처리방침</span> 안내</div> -->
+
+	<div class="scroll">
+	<?
+		$refund=sql_fetch("select * from g5_content where  co_id='refund'");
+		echo $refund['co_content'];
+	?>
+	</div>
+</div></div>
+<?
+include_once(G5_THEME_PATH.'/tail.php');
+?>

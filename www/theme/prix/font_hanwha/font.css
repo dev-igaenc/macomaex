@@ -1,0 +1,41 @@
+/*
+font-weight : 300 -> Light,
+font-weight : 400 -> Regular,
+font-weight : 600 -> Bold,
+*/
+@charset "utf-8";
+
+@font-face {
+	font-family: "HanwhaGothic";
+	font-style: normal;
+	font-weight: 100;
+	src: url("/theme/prix/font_hanwha/HanwhaGothicEL.woff2") format("woff2");
+}
+
+@font-face {
+	font-family: "HanwhaGothic";
+	font-style: normal;
+	font-weight: 400;
+	src: url("/theme/prix/font_hanwha/HanwhaGothicL.woff2") format("woff2");
+}
+
+@font-face {
+	font-family: "HanwhaGothic";
+	font-style: normal;
+	font-weight: 700;
+	src: url("/theme/prix/font_hanwha/HanwhaGothicR.woff2") format("woff2");
+}
+
+@font-face {
+	font-family: "HanwhaGothic";
+	font-style: normal;
+	font-weight: 900;
+	src: url("/theme/prix/font_hanwha/HanwhaGothicB.woff2") format("woff2");
+}
+
+@font-face {
+	font-family: "Hanwha";
+	font-style: normal;
+	font-weight: 100;
+	src: url("/theme/prix/font_hanwha/HanwhaL.woff2") format("woff2");
+}
