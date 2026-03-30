@@ -3,7 +3,6 @@
 /www/node_modules/
 
 # Gnuboard Config & Data
-/www/data/dbconfig.php
 /www/data/db_down/
 /www/data/session/
 /www/data/cache/
@@ -50,7 +49,7 @@
 .env
 .env.local
 .env.*.local
-/www/sftp/
+/www/sftp/*.jar
 composer.phar
 
 # IDEs & OS files
