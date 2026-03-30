@@ -1,926 +1,1315 @@
-<?
+<?php
+// ============================================================
+// matching_list.php
+// ============================================================
+
 include_once("./_common.php");
 
-$board['bo_10']="3"; // 1뎁스
-$board['bo_9']="1"; // 2뎁스
-//$board['bo_8']="1"; // 3뎁스
-//$board['bo_7']="1"; // 4뎁스
-// $board['bo_5'] = ""; // 1뎁스 제목
-// $board['bo_6'] = ""; // 1뎁스 설명
+// ----------------------------------------------------------
+// 1. 게시판 설정
+// ----------------------------------------------------------
+$board['bo_10'] = "3"; // 1뎁스
+$board['bo_9']  = "1"; // 2뎁스
+// $board['bo_8']       = "1"; // 3뎁스
+// $board['bo_7']       = "1"; // 4뎁스
+// $board['bo_5']       = "";  // 1뎁스 제목
+// $board['bo_6']       = "";  // 1뎁스 설명
 // $board['bo_subject'] = "";  // 2뎁스 제목
-//$board['bo_4'] = $config['cf_title']."의 혜택을 확인하세요.";  // 2뎁스 설명
+// $board['bo_4']       = $config['cf_title']."의 혜택을 확인하세요."; // 2뎁스 설명
 
+// ----------------------------------------------------------
+// 2. CSS / 헤더
+// ----------------------------------------------------------
+add_stylesheet('<link rel="stylesheet" href="'.G5_THEME_URL.'/css/pages/matching_list.css?ver='.G5_CSS_VER.'">', 200);
 include_once(G5_THEME_PATH.'/head.php');
 
-if(!$cominfo && $comnum){
+// ----------------------------------------------------------
+// 3. 카테고리 정의
+// ----------------------------------------------------------
+$list_categories = [
+    ['slug' => 'metal', 'label' => '금속·소재', 'large_category_cd' => 1, 'sub' => [
+        ['slug' => 'metal_steel',      'label' => '1차 철강·비철',   'code' => 'C241'],
+        ['slug' => 'metal_nonferrous', 'label' => '1차 비철금속',   'code' => 'C242'],
+        ['slug' => 'metal_casting',    'label' => '금속 주조',      'code' => 'C243'],
+        ['slug' => 'metal_structural', 'label' => '구조용 금속',    'code' => 'C251'],
+        ['slug' => 'metal_machining',  'label' => '금속 가공·부품',  'code' => 'C259'],
+    ]],
+    ['slug' => 'chemical', 'label' => '화학·케미컬·원료', 'large_category_cd' => 2, 'sub' => [
+        ['slug' => 'chem_basic',       'label' => '기초 화학원료',        'code' => 'C201'],
+        ['slug' => 'chem_plastic_raw', 'label' => '합성수지·플라스틱 원료', 'code' => 'C202'],
+        ['slug' => 'chem_agri',        'label' => '농업용 화학제품',      'code' => 'C203'],
+        ['slug' => 'chem_indus',       'label' => '산업용 화학제품',      'code' => 'C204'],
+        ['slug' => 'chem_fiber',       'label' => '화학섬유',           'code' => 'C205'],
+        ['slug' => 'chem_rubber',      'label' => '고무제품',           'code' => 'C221'],
+        ['slug' => 'chem_plastic',     'label' => '플라스틱 제품',       'code' => 'C222'],
+    ]],
+    ['slug' => 'electronics', 'label' => '전자·전기·반도체', 'large_category_cd' => 3, 'sub' => [
+        ['slug' => 'elec_semi',      'label' => '반도체',         'code' => 'C261'],
+        ['slug' => 'elec_parts',     'label' => '전자부품',       'code' => 'C262'],
+        ['slug' => 'elec_it',        'label' => '컴퓨터·IT기기',   'code' => 'C263'],
+        ['slug' => 'elec_comm',      'label' => '통신·방송장비',   'code' => 'C264'],
+        ['slug' => 'elec_av',        'label' => '영상·음향기기',   'code' => 'C265'],
+        ['slug' => 'elec_measure',   'label' => '정밀측정·제어기기', 'code' => 'C272'],
+        ['slug' => 'elec_imaging',   'label' => '광학·이미징기기',  'code' => 'C273'],
+    ]],
+    ['slug' => 'machinery', 'label' => '기계·설비·산업장비', 'large_category_cd' => 4, 'sub' => [
+        ['slug' => 'mach_control',   'label' => '산업용 전동·제어장치', 'code' => 'C281'],
+        ['slug' => 'mach_battery',   'label' => '배터리·축전지',      'code' => 'C282'],
+        ['slug' => 'mach_cable',     'label' => '전선·케이블',        'code' => 'C283'],
+        ['slug' => 'mach_light',     'label' => '조명·광원장치',      'code' => 'C284'],
+        ['slug' => 'mach_appliance', 'label' => '가전·생활기기',      'code' => 'C285'],
+        ['slug' => 'mach_electric',  'label' => '산업용 전기장비',     'code' => 'C289'],
+        ['slug' => 'mach_general',   'label' => '일반 산업기계',      'code' => 'C291'],
+        ['slug' => 'mach_special',   'label' => '특수 산업기계',      'code' => 'C292'],
+    ]],
+    ['slug' => 'auto', 'label' => '자동차·모빌리티', 'large_category_cd' => 5, 'sub' => [
+        ['slug' => 'auto_finish',    'label' => '완성차·엔진',      'code' => 'C301'],
+        ['slug' => 'auto_body',      'label' => '차체·특장차',      'code' => 'C302'],
+        ['slug' => 'auto_parts',     'label' => '자동차 부품',      'code' => 'C303'],
+        ['slug' => 'auto_reman',     'label' => '재생·재제조 부품',  'code' => 'C304'],
+    ]],
+    ['slug' => 'food', 'label' => '식자재·식품 B2B', 'large_category_cd' => 6, 'sub' => [
+        ['slug' => 'food_meat',      'label' => '육류 가공',      'code' => 'C101'],
+        ['slug' => 'food_sea',       'label' => '수산물 가공',    'code' => 'C102'],
+        ['slug' => 'food_agri',      'label' => '농산물 가공',    'code' => 'C103'],
+        ['slug' => 'food_oil',       'label' => '유지·식용유',    'code' => 'C104'],
+        ['slug' => 'food_dairy',     'label' => '낙농·빙과',      'code' => 'C105'],
+        ['slug' => 'food_grain',     'label' => '곡물·전분',      'code' => 'C106'],
+        ['slug' => 'food_processed', 'label' => '가공식품',       'code' => 'C107'],
+        ['slug' => 'food_feed',      'label' => '사료·동물식품',   'code' => 'C108'],
+    ]],
+    ['slug' => 'medical', 'label' => '의료·헬스케어', 'large_category_cd' => 7, 'sub' => [
+        ['slug' => 'med_material',   'label' => '의약 원료',     'code' => 'C211'],
+        ['slug' => 'med_pharma',     'label' => '의약품',       'code' => 'C212'],
+        ['slug' => 'med_consumable', 'label' => '의료 소모품',    'code' => 'C213'],
+        ['slug' => 'med_device',     'label' => '의료기기',      'code' => 'C271'],
+    ]],
+    ['slug' => 'packaging', 'label' => '포장재·소모성 자재', 'large_category_cd' => 8, 'sub' => [
+        ['slug' => 'pack_pulp',      'label' => '펄프·종이 원지',  'code' => 'C171'],
+        ['slug' => 'pack_box',       'label' => '골판지·포장재',   'code' => 'C172'],
+        ['slug' => 'pack_paper',     'label' => '종이 가공제품',   'code' => 'C179'],
+    ]],
+];
 
-		if($comnum) {
-			$comnum=str_replace("-","",$comnum);
+// ----------------------------------------------------------
+// 4. 요청 파라미터 처리
+// ----------------------------------------------------------
+$current_cat  = isset($_GET['cat'])     ? $_GET['cat']     : 'all';
+$current_type = (isset($_GET['type']) && $_GET['type'] === 'seller') ? 'seller' : 'buyer';
+$current_sort = isset($_GET['sort']) ? $_GET['sort'] : 'rank';
+if (!in_array($current_sort, ['rank', 'grow', 'profit', 'stable'], true)) $current_sort = 'rank';
+$mq = '';
+if (isset($_GET['section'])) $mq .= 'section=' . urlencode($_GET['section']) . '&';
+$mq .= 'type=' . urlencode($current_type) . '&';
+$mq .= 'sort=' . urlencode($current_sort) . '&';
 
-			//오늘 검색 로그에서 있으면 API말고 로그에서 가져오기
-			$log_chk=sql_fetch("select * from company_api_log where c_bizno='{$comnum}' and DATE(c_datetime)='".date("Y-m-d")."'");
-			if(!$log_chk[c_content]){
-				//사용자 토큰 받기
-				$TOKEN_URL = "https://218.55.37.214:6059/enpinfo?userid=igaenconl&process=S&bzno={$comnum}&pidagryn=Y&jmno=ig001&format=XML&Length=10000";
-				//----------curl 변수 세팅----------
-				 $agent = 'Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.0)'; //cURL 옵션에 넣을 Agent 정보
-				 $cookie_nm = './cookie.txt'; 
-				//----------curl 옵션 세팅----------
-				 $ch = curl_init();  //curl 형태 초기화
-				 curl_setopt ($ch, CURLOPT_URL,$TOKEN_URL); //접속할 URL 주소 
-				 curl_setopt ($ch, CURLOPT_SSL_VERIFYPEER, FALSE); 
-				 curl_setopt ($ch, CURLOPT_SSLVERSION,1); 
-				 curl_setopt ($ch, CURLOPT_HEADER, 0); 
-				 curl_setopt ($ch, CURLOPT_FOLLOWLOCATION, 1);
-				 curl_setopt ($ch, CURLOPT_COOKIEJAR, $cookie_nm);
-				 curl_setopt ($ch, CURLOPT_COOKIEFILE, $cookie_nm); 
-				 curl_setopt ($ch, CURLOPT_USERAGENT, $agent); 
-				 curl_setopt ($ch, CURLOPT_TIMEOUT, 30); 
-				 curl_setopt ($ch, CURLOPT_RETURNTRANSFER, 1);
+// 사업자번호 처리
+$input_comnum = !empty($_POST['comnum']) ? $_POST['comnum'] : (!empty($_GET['comnum']) ? $_GET['comnum'] : '');
+$input_comnum = preg_replace('/[^0-9]/', '', $input_comnum);
+$has_comnum   = (strlen($input_comnum) === 10);
+$bzno         = $input_comnum;
 
-				//----------curl 실행----------
-				 $html_ori = curl_exec($ch);  //cURL 함수 실행 후 XML을 String으로 리턴
-				 //print_r($html_ori);
-				 //echo $html_ori;
-				  $xml=simplexml_load_string($html_ori, null, LIBXML_NOCDATA) or die("Error: Cannot create object");
-				  $json = json_encode($xml, JSON_UNESCAPED_UNICODE);
-				  $header = $xml -> HEADER;
-				  if($header->errcd!="00") {
-					  $error=$header->errctt;
-					  echo "500|".$header->errcd."|".$error;
-					  exit;
-				  }
-				 $arr = $xml -> CONTENTS ;
-				//print_r($xml);
-				//print_r($arr);
-				
-				foreach($arr as $row){
-					$bzc_cd=$row->ENPintr0000->bzc_cd;
-					$kedcd=$row->ENPintr0000->kedcd;
-				}
-				//API 로그에 기록
-				sql_fetch("insert company_api_log set c_bizno='{$comnum}', c_kedcd='{$kedcd}', c_content='{$json}', c_datetime=now(), c_ip='{$_SERVER["REMOTE_ADDR"]}'");
-				$cominfo=$json;
-			}else{
-				//DB에 있으면 DB값 가져옴
-				$json=$log_chk[c_content];
-				$cominfo=$json;
-			}
-		}
+// ----------------------------------------------------------
+// 5. 멤버십 정보 조회
+// ----------------------------------------------------------
+$today  = date("Y-m-d");
+$msinfo = [];
+
+if ($member['mb_id']) {
+    $msinfo_row = getUserMembership();
+    // 멤버십 없으면 무료 플랜으로 설정
+    $msinfo = $msinfo_row[0] ?: ['membership_parent_no' => $membership[0]['no']];
 }
 
+$free_limit   = 9;
+// 더보기 권한: 비회원은 기존 제한 유지, 로그인 회원은 멤버십/결제 여부와 무관하게 허용
+$can_load_more = !empty($member['mb_id']);
+$page_size = $free_limit;
+$offset_req = isset($_GET['offset']) ? (int)$_GET['offset'] : 0;
+if ($offset_req < 0) $offset_req = 0;
+$show_count_req = $page_size;
 
+// ----------------------------------------------------------
+// 7. 카드 데이터 빌드
+// ----------------------------------------------------------
 
-$cominfo=stripslashes($cominfo);
-$data=json_decode($cominfo);
-// print_r($data->CONTENTS);
- //
-//ENPintr0000 기업일반
-//ENPsthr0001 주주현황상세
-//ENPcust0001 (구매처)
-//ENPsupp0001(판매처)
-//ENPfsdt0001 재무제표
-//ENPkbad0000
-//
-$KEDCD=$data->CONTENTS->ENPintr0000->kedcd;
-$enp_nm=$data->CONTENTS->ENPintr0000->enp_nm_trd;//회사명
-if(!$enp_nm) $enp_nm=$data->CONTENTS->ENPintr0000->enp_nm;
-$bzno=$data->CONTENTS->ENPintr0000->bzno; //사업자번호
-$reper_name=$data->CONTENTS->ENPintr0000->reper_name; //대표자명
-$loc_addra=$data->CONTENTS->ENPintr0000->loc_addra;//주소
-$mpd=$data->CONTENTS->ENPintr0000->mpd;//주생산품
-$enp_typ=$data->CONTENTS->ENPintr0000->enp_typ;//기업유형
-$enp_fcd=$data->CONTENTS->ENPintr0000->enp_fcd;//기업형태
-$bzc_nm=$data->CONTENTS->ENPintr0000->bzc_nm;//업종명
-
-if(!$KEDCD) goto_url("/");
-
-//구매처
-foreach($data->CONTENTS->ENPcust0001 as $key => $value){
-	if (strpos($key,"cust_nm")>-1 && strlen($value)) $cust_nm[]=$value;
+// 점수 계산 헬퍼 (NULL 방어 포함)
+function calc_score_avg($val) {
+    return ($val !== null && $val !== '') ? number_format($val, 1) : '-';
 }
-if(count($cust_nm)==0) $cust_txt="-";
-else if(count($cust_nm)==1) $cust_txt=$cust_nm[0];
-else $cust_txt=$cust_nm[0]." 외 ".(count($cust_nm)-1)."개";
-//판매처
-foreach($data->CONTENTS->ENPsupp0001 as $key => $value){
-	if (strpos($key,"supp_nm")>-1 && strlen($value)) $supp_nm[]=$value;
-}
-if(count($supp_nm)==0) $supp_txt="-";
-else if(count($supp_nm)==1) $supp_txt=$cust_nm[0];
-else $supp_txt=$supp_nm[0]." 외 ".(count($supp_nm)-1)."개";
 
-//print_r($data->CONTENTS->ENPsthr0001);
-// 매출액
-$fs_val9=$kedcd=$data->CONTENTS->ENPfsdt0001->fs_val9; //최근결산년_매출액
-$take=$fs_val9*1000;
+function format_badge_percent($value) {
+    if ($value === null || $value === '') return '';
+    $str = trim((string)$value);
+    if ($str === '') return '';
+    if (!is_numeric($str)) return $str;
 
-$kedcd=$data->CONTENTS->ENPintr0000->kedcd;
-//exit;
-//기업가치 순자산가치법 자산-부채 (데이터 단위 천원)
-$asset=$data->CONTENTS->ENPfsdt0001->fs_val3;
-$liab=$data->CONTENTS->ENPfsdt0001->fs_val6;
-$capital=$data->CONTENTS->ENPfsdt0001->fs_val7; //자본금
-$E_VAL=$capital*1000;
-//$E_VAL=($asset-$liab)*1000;
-//echo $asset-$liab."";
-function addh_bzno($bz){
-	if(!$bz) return false;
-	$bz=str_replace("-","",$bz);
-	$bz1=substr($bz,0,3);
-	$bz2=substr($bz,3,2);
-	$bz3=substr($bz,5);
-	return $bz1."-".$bz2."-".$bz3;
+    $num = (float)$str;
+    if ($num == (int)$num) return (string)((int)$num);
+    return rtrim(rtrim(number_format($num, 2, '.', ''), '0'), '.');
 }
-if($bzno) $bzno_c=addh_bzno($bzno);
+
+// PD_NM 문자열을 태그 배열로 변환
+function parse_pd_nm($pd_nm) {
+    if (empty($pd_nm)) return [];
+    $tags = explode(',', $pd_nm);
+    $result = [];
+    foreach ($tags as $t) {
+        $trimmed = trim($t);
+        if ($trimmed) {
+            $result[] = str_replace(' 외', '', $trimmed);
+        }
+    }
+    return $result;
+}
+
+function get_target_codes_by_category($list_categories, $current_cat) {
+    if (empty($current_cat) || $current_cat === 'all') return [];
+    $target_codes = [];
+    foreach ($list_categories as $lg) {
+        if ($lg['slug'] === $current_cat) {
+            foreach ($lg['sub'] as $sub) {
+                if (!empty($sub['code'])) $target_codes[] = $sub['code'];
+            }
+            break;
+        }
+        foreach ($lg['sub'] as $sub) {
+            if ($sub['slug'] === $current_cat) {
+                if (!empty($sub['code'])) $target_codes[] = $sub['code'];
+                break 2;
+            }
+        }
+    }
+    return $target_codes;
+}
+
+function build_company_where_clause($target_codes, $restrict_cg_prefix = false) {
+    $where_clause = "WHERE A.KEDCD != '' AND A.ENP_NM != ''";
+    if ($restrict_cg_prefix) {
+        $where_clause .= " AND (A.BZC_CD LIKE 'C%' OR A.BZC_CD LIKE 'G%')";
+    }
+    if (!empty($target_codes)) {
+        $code_conds = [];
+        foreach ($target_codes as $tc) {
+            $code_conds[] = "A.BZC_CD LIKE '" . sql_real_escape_string($tc) . "%'";
+        }
+        $where_clause .= " AND (" . implode(" OR ", $code_conds) . ")";
+    }
+    return $where_clause;
+}
+
+function build_company_order_clause($sort_key) {
+    switch ($sort_key) {
+        case 'grow':
+            return "
+                CASE WHEN S.growth_score_5 IS NULL OR S.growth_score_5 = '' THEN 1 ELSE 0 END ASC,
+                CAST(S.growth_score_5 AS DECIMAL(10,4)) DESC,
+                CASE WHEN S.final_total_score_5 IS NULL OR S.final_total_score_5 = '' THEN 1 ELSE 0 END ASC,
+                CAST(S.final_total_score_5 AS DECIMAL(10,4)) DESC,
+                A.ENP_NM ASC
+            ";
+        case 'profit':
+            return "
+                CASE WHEN S.profit_score_5 IS NULL OR S.profit_score_5 = '' THEN 1 ELSE 0 END ASC,
+                CAST(S.profit_score_5 AS DECIMAL(10,4)) DESC,
+                CASE WHEN S.final_total_score_5 IS NULL OR S.final_total_score_5 = '' THEN 1 ELSE 0 END ASC,
+                CAST(S.final_total_score_5 AS DECIMAL(10,4)) DESC,
+                A.ENP_NM ASC
+            ";
+        case 'stable':
+            return "
+                CASE WHEN S.stability_score_5 IS NULL OR S.stability_score_5 = '' THEN 1 ELSE 0 END ASC,
+                CAST(S.stability_score_5 AS DECIMAL(10,4)) DESC,
+                CASE WHEN S.final_total_score_5 IS NULL OR S.final_total_score_5 = '' THEN 1 ELSE 0 END ASC,
+                CAST(S.final_total_score_5 AS DECIMAL(10,4)) DESC,
+                A.ENP_NM ASC
+            ";
+        case 'rank':
+        default:
+            return "
+                CASE WHEN S.final_total_score_5 IS NULL OR S.final_total_score_5 = '' THEN 1 ELSE 0 END ASC,
+                CAST(S.final_total_score_5 AS DECIMAL(10,4)) DESC,
+                A.ENP_NM ASC
+            ";
+    }
+}
+
+function get_seller_codes_by_category($list_categories, $current_cat, $seller_category_code_map) {
+    // 전체보기: 현재 등록된 판매 코드셋 전체를 합산
+    if (empty($current_cat) || $current_cat === 'all') {
+        $all = [];
+        foreach ($seller_category_code_map as $codes) {
+            $all = array_merge($all, $codes);
+        }
+        return array_values(array_unique($all));
+    }
+
+    // 하위 카테고리 직접 선택
+    if (isset($seller_category_code_map[$current_cat])) {
+        return array_values(array_unique($seller_category_code_map[$current_cat]));
+    }
+
+    // 대분류 선택: 하위 카테고리 판매 코드셋을 합산
+    foreach ($list_categories as $lg) {
+        if ($lg['slug'] === $current_cat) {
+            $merged = [];
+            foreach ($lg['sub'] as $sub) {
+                $sub_slug = $sub['slug'] ?? '';
+                if ($sub_slug && isset($seller_category_code_map[$sub_slug])) {
+                    $merged = array_merge($merged, $seller_category_code_map[$sub_slug]);
+                }
+            }
+            return array_values(array_unique($merged));
+        }
+    }
+
+    return [];
+}
+
+function resolve_where_clause_for_general_list($query_type, $current_cat, $list_categories, $seller_category_code_map) {
+    if ($query_type === 'seller') {
+        $seller_codes = get_seller_codes_by_category($list_categories, $current_cat, $seller_category_code_map);
+        if (empty($seller_codes)) return "WHERE 1=0";
+        return build_company_where_clause($seller_codes, false);
+    }
+
+    $buyer_codes = get_target_codes_by_category($list_categories, $current_cat);
+    return build_company_where_clause($buyer_codes, false);
+}
+
+function fetch_general_cards_by_where($where_clause, $query_type, $show_count_req, $sort_key = 'rank', $offset = 0) {
+    $cards = [];
+
+    $count_row = sql_fetch("
+        SELECT COUNT(*) AS cnt
+        FROM company A
+        {$where_clause}
+    ");
+    $cards_total_count = (int)($count_row['cnt'] ?? 0);
+
+    $order_clause = build_company_order_clause($sort_key);
+
+    $sql_list = "
+        SELECT A.KEDCD, A.ENP_NM, A.LOC_ADDRA, A.BZC_CD, A.PD_NM, A.VENP_YN, B.k_code_name,
+            S.growth_score_5, S.profit_score_5, S.stability_score_5, S.final_total_score_5,
+            S.badge_growth, S.badge_stability, S.badge_venture
+        FROM   company A
+        LEFT JOIN kssc B ON A.BZC_CD = B.k_code
+        LEFT JOIN company_score_final_dedup S ON A.KEDCD = S.KEDCD
+        {$where_clause}
+        ORDER BY {$order_clause}
+        LIMIT " . (int)$offset . ", " . (int)$show_count_req . "
+    ";
+
+    $res_list = sql_query($sql_list);
+    while ($row = sql_fetch_array($res_list)) {
+        $cards[] = [
+            'type'    => $query_type,
+            'title'   => $row['ENP_NM'],
+            'tags'    => parse_pd_nm($row['PD_NM']),
+            'score'   => calc_score_avg($row['final_total_score_5']),
+            'grow'    => $row['growth_score_5'],
+            'profit'  => $row['profit_score_5'],
+            'stable'  => $row['stability_score_5'],
+            'company' => $row['ENP_NM'],
+            'kedcd'   => $row['KEDCD'],
+            'venp_yn' => $row['VENP_YN'],
+            'badge_growth' => $row['badge_growth'],
+            'badge_stability' => $row['badge_stability'],
+            'badge_venture' => $row['badge_venture'],
+        ];
+    }
+
+    return [
+        'cards' => $cards,
+        'total_count' => $cards_total_count,
+    ];
+}
+
+$seller_category_code_map = include __DIR__ . "/matching_seller_category_codes.php";
+
+$cards = [];
+$cards_total_count = 0;
+
+if (!$has_comnum) {
+    // 7-1. 사업자번호 미입력: 탭/카테고리 기준 기업 조회
+    $query_type = ($current_type === 'seller') ? 'seller' : 'buyer';
+    $where_clause = resolve_where_clause_for_general_list($query_type, $current_cat, $list_categories, $seller_category_code_map);
+    $general_result = fetch_general_cards_by_where($where_clause, $query_type, $show_count_req, $current_sort, $offset_req);
+    $cards = $general_result['cards'];
+    $cards_total_count = (int)$general_result['total_count'];
+} else {
+    // 7-2. 사업자번호 입력: 매칭 추천 기업 조회
+    $tmp_cnt       = 9999999;
+    $cust_sub_rank = [];
+    $supp_sub_rank = [];
+    $REC_KEDCD     = [];
+
+    // 7-2-1. 사업자번호로 기업 API 조회 (당일 로그 캐시 우선)
+    $comnum = str_replace('-', '', $bzno);
+    $cominfo = '';
+
+    $log_chk = sql_fetch("
+        SELECT * FROM company_api_log
+        WHERE  c_bizno = '{$comnum}'
+          AND  DATE(c_datetime) = '" . date("Y-m-d") . "'
+    ");
+
+    if (empty($log_chk['c_content'])) {
+        // 외부 API 호출
+        $TOKEN_URL = "https://218.55.37.214:6059/enpinfo?userid=igaenconl&process=S&bzno={$comnum}&pidagryn=Y&jmno=ig001&format=XML&Length=10000";
+        $cookie_nm = './cookie.txt';
+
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL,            $TOKEN_URL);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_SSLVERSION,     1);
+        curl_setopt($ch, CURLOPT_HEADER,         0);
+        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);
+        curl_setopt($ch, CURLOPT_COOKIEJAR,      $cookie_nm);
+        curl_setopt($ch, CURLOPT_COOKIEFILE,     $cookie_nm);
+        curl_setopt($ch, CURLOPT_USERAGENT,      'Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.0)');
+        curl_setopt($ch, CURLOPT_TIMEOUT,        30);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+        $html_ori = curl_exec($ch);
+        curl_close($ch);
+
+        if ($html_ori) {
+            $xml = @simplexml_load_string($html_ori, null, LIBXML_NOCDATA);
+            if ($xml && (string)$xml->HEADER->errcd === "00") {
+                $json  = json_encode($xml, JSON_UNESCAPED_UNICODE);
+                $kedcd = '';
+                foreach ($xml->CONTENTS as $row) {
+                    $kedcd = (string)$row->ENPintr0000->kedcd;
+                }
+                sql_query("
+                    INSERT INTO company_api_log
+                    SET c_bizno    = '{$comnum}',
+                        c_kedcd    = '{$kedcd}',
+                        c_content  = '" . addslashes($json) . "',
+                        c_datetime = NOW(),
+                        c_ip       = '{$_SERVER['REMOTE_ADDR']}'
+                ");
+                $cominfo = $json;
+            }
+        }
+    } else {
+        $cominfo = $log_chk['c_content'];
+    }
+
+    // 7-2-2. company 테이블 기본 정보 조회 (없으면 API 결과로 보강)
+    $com = sql_fetch("SELECT * FROM company WHERE BZNO = '{$bzno}'");
+
+    if (empty($com['BZC_CD']) && !empty($cominfo)) {
+        $arr = json_decode($cominfo, true);
+        if (!empty($arr['CONTENTS'])) {
+            $contents = $arr['CONTENTS'];
+            $node     = isset($contents['ENPintr0000']) ? $contents['ENPintr0000'] : ($contents[0]['ENPintr0000'] ?? []);
+            if (!empty($node['bzc_cd']))  $com['BZC_CD'] = $node['bzc_cd'];
+            if (!empty($node['kedcd']))   $com['KEDCD']  = $node['kedcd'];
+        }
+    }
+
+    // 7-2-3. 동종업계 매출 랭크 기반 추천 기업 조회
+    if ($com['BZC_CD']) {
+        // 내 회사의 동종업계 순위 확인
+        $rank_row = sql_fetch("
+            SELECT KEDCD, ENP_NM, SALES, rank
+            FROM (
+                SELECT
+                    KEDCD, ENP_NM, SALES,
+                    @rank := IF(@prev = SALES, @rank, @rank + 1) AS rank,
+                    @prev := SALES
+                FROM company, (SELECT @rank := 0, @prev := NULL) AS vars
+                WHERE BZC_CD = '{$com['BZC_CD']}'
+                ORDER BY SALES DESC
+            ) AS ranked
+            WHERE KEDCD = '{$com['KEDCD']}'
+        ");
+
+        if ($rank_row['rank']) {
+            $top30 = ROUND($rank_row['rank'] * 0.3);
+            $top50 = ROUND($rank_row['rank'] * 0.5);
+
+            // 상위 30~50% 구간이 너무 좁으면 상위 1~20위로 대체
+            if (($top50 - $top30) < 6) {
+                $sql_rec = "
+                    SELECT KEDCD, ENP_NM, SALES, rank
+                    FROM (
+                        SELECT
+                            KEDCD, ENP_NM, SALES,
+                            @rank := IF(@prev = SALES, @rank, @rank + 1) AS rank,
+                            @prev := SALES
+                        FROM company, (SELECT @rank := 0, @prev := NULL) AS vars
+                        WHERE BZC_CD = '{$com['BZC_CD']}'
+                        ORDER BY SALES DESC
+                    ) AS ranked
+                    WHERE rank != {$rank_row['rank']} AND rank BETWEEN 1 AND 20
+                    ORDER BY RAND()
+                    LIMIT 15
+                ";
+            } else {
+                $sql_rec = "
+                    SELECT KEDCD, ENP_NM, SALES, rank
+                    FROM (
+                        SELECT
+                            KEDCD, ENP_NM, SALES,
+                            @rank := IF(@prev = SALES, @rank, @rank + 1) AS rank,
+                            @prev := SALES
+                        FROM company, (SELECT @rank := 0, @prev := NULL) AS vars
+                        WHERE BZC_CD = '{$com['BZC_CD']}'
+                        ORDER BY SALES DESC
+                    ) AS ranked
+                    WHERE rank BETWEEN {$top30} AND {$top50}
+                    ORDER BY RAND()
+                    LIMIT 15
+                ";
+            }
+
+            $rec_res = sql_query($sql_rec);
+            while ($r = sql_fetch_array($rec_res)) {
+                $REC_KEDCD[] = $r['KEDCD'];
+            }
+
+            // 7-2-4. 추천 기업의 거래처(구매처/공급처) 조회 및 업종 내 랭크 계산
+            if (!empty($REC_KEDCD)) {
+                $REC        = implode("','", $REC_KEDCD);
+                $client_res = sql_query("
+                    SELECT A.*, B.BZC_CD, B.LOC_ADDRA, B.PD_NM, B.VENP_YN, C.k_code_name,
+                           S.growth_score_5, S.profit_score_5, S.stability_score_5, S.final_total_score_5,
+                           MAX(S.badge_growth) AS badge_growth,
+                           MAX(S.badge_stability) AS badge_stability,
+                           MAX(S.badge_venture) AS badge_venture
+                    FROM   company_client A
+                    LEFT JOIN company B ON A.TXPL_KEDCD = B.KEDCD
+                    LEFT JOIN kssc C    ON B.BZC_CD = C.k_code
+                    LEFT JOIN company_score_final_dedup S ON A.TXPL_KEDCD = S.KEDCD
+                    WHERE  A.KEDCD IN ('{$REC}')
+                      AND  A.TXPL_KEDCD != ''
+                    GROUP BY A.TXPL_KEDCD, S.growth_score_5, S.profit_score_5, S.stability_score_5, S.final_total_score_5
+                    ORDER BY B.BZC_CD DESC
+                ");
+
+                while ($row = sql_fetch_array($client_res)) {
+                    // 거래처의 업종 내 매출 순위 계산
+                    if ($row['BZC_CD'] && $row['TXPL_KEDCD']) {
+                        $tx_rank = sql_fetch("
+                            SELECT KEDCD, ENP_NM, SALES, rank
+                            FROM (
+                                SELECT
+                                    KEDCD, ENP_NM, SALES,
+                                    @vRank := IF(@group = BZC_CD,
+                                                 IF(@prev_value = SALES, @vRank, @vRank + 1),
+                                                 1) AS rank,
+                                    @prev_value := SALES,
+                                    @group := BZC_CD
+                                FROM company, (SELECT @vRank := 0, @prev_value := NULL, @group := NULL) AS vars
+                                WHERE BZC_CD = '{$row['BZC_CD']}'
+                                ORDER BY BZC_CD, SALES DESC
+                            ) AS ranked
+                            WHERE KEDCD = '{$row['TXPL_KEDCD']}'
+                        ");
+                        $row['TXPL_RANK'] = $tx_rank['rank'];
+                    }
+
+                    // 구매처 (TXPL_CCD=1) / 공급처 (TXPL_CCD=2) 분류
+                    if ($row['TXPL_CCD'] == 1) {
+                        if (!$row['TXPL_RANK']) { $row['TXPL_RANK'] = $tmp_cnt++; }
+                        if ($row['LOC_ADDRA'])  { $cust_sub_rank[] = $row; }
+                    }
+                    if ($row['TXPL_CCD'] == 2) {
+                        if (!$row['TXPL_RANK']) { $row['TXPL_RANK'] = $tmp_cnt++; }
+                        if ($row['LOC_ADDRA'])  { $supp_sub_rank[] = $row; }
+                    }
+                }
+            }
+        }
+    }
+
+    // 7-2-5. 거래처 배열 → 카드 배열로 변환
+    $map_cards = function($rows, $type) {
+        $out = [];
+        foreach ($rows as $row) {
+            if (empty($row['TXPL_KEDCD']) || empty($row['TXPL_NM'])) continue;
+            $out[] = [
+                'type'    => $type,
+                'title'   => $row['TXPL_NM'],
+                'tags'    => parse_pd_nm($row['PD_NM']),
+                'score'   => calc_score_avg($row['final_total_score_5']),
+                'grow'    => $row['growth_score_5'],
+                'profit'  => $row['profit_score_5'],
+                'stable'  => $row['stability_score_5'],
+                'company' => $row['TXPL_NM'],
+                'kedcd'   => $row['TXPL_KEDCD'],
+                'venp_yn' => $row['VENP_YN'],
+                'badge_growth' => $row['badge_growth'],
+                'badge_stability' => $row['badge_stability'],
+                'badge_venture' => $row['badge_venture'],
+            ];
+        }
+        return $out;
+    };
+
+    $dynamic_cards = array_merge(
+        $map_cards($cust_sub_rank, 'buyer'),
+        $map_cards($supp_sub_rank, 'seller')
+    );
+    if (!empty($dynamic_cards)) {
+        $cards = $dynamic_cards;
+    }
+    $cards_total_count = count($cards);
+}
+
+$buyer_loaded_count = 0;
+$seller_loaded_count = 0;
+foreach ($cards as $card_item) {
+    if (($card_item['type'] ?? 'buyer') === 'seller') $seller_loaded_count++;
+    else $buyer_loaded_count++;
+}
+
+$buyer_total_count = $buyer_loaded_count;
+$seller_total_count = $seller_loaded_count;
+if (!$has_comnum) {
+    if ($current_type === 'seller') {
+        $buyer_total_count = 0;
+        $seller_total_count = $cards_total_count;
+    } else {
+        $buyer_total_count = $cards_total_count;
+        $seller_total_count = 0;
+    }
+}
+
+// ----------------------------------------------------------
+// 8. 사이드바: 현재 열린 그룹 탐색
+// ----------------------------------------------------------
+$open_group_slug = null;
+
+foreach ($list_categories as $lg) {
+    // 8-1. 현재 카테고리가 대분류 슬러그와 일치하는 경우
+    if ($current_cat === $lg['slug']) {
+        $open_group_slug = $lg['slug'];
+        break;
+    }
+    
+    // 8-2. 현재 카테고리가 중분류(sub) 슬러그 중 하나와 일치하는 경우
+    foreach ($lg['sub'] as $sub) {
+        if ($current_cat === $sub['slug']) {
+            $open_group_slug = $lg['slug']; // 부모 대분류의 슬러그를 저장
+            break 2;
+        }
+    }
+}
+
+// 만약 아무것도 선택되지 않은 'all' 상태라면 첫 번째 그룹을 열어두거나 null 유지
+if (!$open_group_slug && $current_cat === 'all') {
+}
 ?>
-<style>
-.progress_wrap{width:100%; height:100%; background-color: rgba(0,0,0,0.7); text-align:center; position: fixed; left:0; top:0; z-index:9999; display: flex; align-items: center; justify-content: center;}
-.progress_wrap .progress {width:40rem; padding:5rem 5rem; background-color:#fff; font-size:1.8rem; line-height:1.4; color: #333 ;border:1px solid #ccc; border-radius:0.5rem;}
 
-.progress_wrap #progressbar{width:100%; height:4rem; margin-top:2rem; background-color: #eee; position: relative; overflow: hidden;}
-.progress_wrap #progressbar:before{content: ""; width: 0; height: 100%; background-color: var(--point); display: inline-block; position:absolute; left: 0; top:0px; box-sizing: border-box;
-	animation: progressMove 4s ease-in-out infinite;
-}
-.searchCompanyListLoad .length {display:none;}
-@media only screen and (max-width : 840px){
-	.progress_wrap .progress {width:calc(100% - 4rem); font-size:2.4rem;}
-}
-
-@keyframes progressMove {
-	0%{
-		width: 0;
-		left: 0;
-	}
-	50%{
-		width: 100%;
-		left: 0;
-	}
-	100% {
-		width: 100%;
-		left: 100%;
-	}
-}
-</style>
-
-<link rel="stylesheet" href="https://code.jquery.com/ui/1.14.1/themes/base/jquery-ui.css">
-<div class="progress_wrap">
-	<div class="progress ">
-		<p class="mtitl">잠시 기다려주세요</p>
-		<p class="stitl">추천 거래처 검색 중....</p>
-		<div id="progressbar"></div>
-	</div>
-</div>
-<!--
- <script>
-    $( ".progress_wrap #progressbar" ).progressbar({
-      value: 20
-    });
-	$(".progress_wrap .stitl").text("기본 기업 정보 검색중...");
- </script>
- -->
-<?
-ob_get_flush();
-flush();
-$tmp_cnt=9999999;
-if($KEDCD){
-
-	$com=sql_fetch("SELECT * from company where BZNO='$bzno'");
-	if($com['BZC_CD']){
-			$sql="
-				SELECT KEDCD, ENP_NM, SALES, rank
-				FROM (
-					SELECT
-						KEDCD,
-						ENP_NM,
-						SALES,
-						@rank := IF(@prev = SALES, @rank, @rank + 1) AS rank,
-						@prev := SALES
-					FROM company,
-						 (SELECT @rank := 0, @prev := NULL) AS vars
-					WHERE BZC_CD = '{$com['BZC_CD']}'
-					ORDER BY SALES DESC
-				) AS ranked
-				WHERE KEDCD = '{$com['KEDCD']}'
-			";
-			$result=sql_fetch($sql);
-			//echo $sql;
-			$total_cnt=sql_fetch("SELECT count(*) AS cnt FROM company WHERE BZC_CD = '{$com['BZC_CD']}'");
-			//echo $sql;
-			//print_r($result);
-			if($result['rank']){
-				$top30=ROUND($result['rank']*0.3);
-				$top50=ROUND($result['rank']*0.5);
-				//echo "<br>상위 30~50% 구간 ".$top30." ~ ".$top50."<br>";
-
-			if(($top50-$top30)<6) {
-				//구간이 너무 작으면 처리(상위권 업체)
-				//구간에서 랜덤 5개 추출
-				$sql="
-					SELECT KEDCD, ENP_NM, SALES, rank
-					FROM (
-						SELECT
-							KEDCD,
-							ENP_NM,
-							SALES,
-							@rank := IF(@prev = SALES, @rank, @rank + 1) AS rank,
-							@prev := SALES
-						FROM company,
-							 (SELECT @rank := 0, @prev := NULL) AS vars
-						WHERE BZC_CD = '{$com['BZC_CD']}'
-						ORDER BY SALES DESC
-					) AS ranked
-					WHERE rank != {$result['rank']} AND rank BETWEEN 1 AND 20
-					ORDER BY RAND()
-					LIMIT 15
-				";
-			}else{
-				//일반적인 업체
-				//구간에서 랜덤 5개 추출
-				$sql="
-					SELECT KEDCD, ENP_NM, SALES, rank
-					FROM (
-						SELECT
-							KEDCD,
-							ENP_NM,
-							SALES,
-							@rank := IF(@prev = SALES, @rank, @rank + 1) AS rank,
-							@prev := SALES
-						FROM company,
-							 (SELECT @rank := 0, @prev := NULL) AS vars
-						WHERE BZC_CD = '{$com['BZC_CD']}'
-						ORDER BY SALES DESC
-					) AS ranked
-					WHERE rank BETWEEN {$top30} AND {$top50}
-					ORDER BY RAND()
-					LIMIT 15
-				";
-			}
-			//echo $sql;
-			$result=sql_query($sql);
-?>
-	<!--
- <script>
-    $( ".progress_wrap #progressbar" ).progressbar({
-      value: 60
-    });
-	$(".progress_wrap .stitl").text("내 동종업계 기업 검색 중....");
-  </script>
-  -->
-<?
-ob_get_flush();
-flush();
-			for ($i=0; $row=sql_fetch_array($result); $i++) {
-				//echo $row['rank']." ".$row['ENP_NM']."<br>";
-				$REC_KEDCD[]=$row['KEDCD'];
-			}
-			$REC=implode("','",$REC_KEDCD);
-?>
-	<!--
- <script>
-    $( ".progress_wrap #progressbar" ).progressbar({
-      value: 80
-    });
-	$(".progress_wrap .stitl").text("거래처 동종 업계 순위 집계중...");
-  </script>
-  -->
-<?
-ob_get_flush();
-flush();
-			//$sql="SELECT * from company_client where KEDCD in ('{$REC}') and TXPL_KEDCD != '' group by TXPL_KEDCD order by TX_BZC_CD DESC";
-			$sql="SELECT A.*, B.BZC_CD, B.LOC_ADDRA, C.k_code_name from company_client A left join company B on A.TXPL_KEDCD=B.KEDCD left join kssc C on B.BZC_CD=C.k_code WHERE A.KEDCD in ('{$REC}') and TXPL_KEDCD != '' group by TXPL_KEDCD order BY B.BZC_CD DESC";
-			//echo $sql;
-			$result=sql_query($sql);
-			for ($i=0; $row=sql_fetch_array($result); $i++) {
-				$REC_TXPL_KEDCD[]=$row['TXPL_KEDCD'];
-				if($row['BZC_CD'] && $row['TXPL_KEDCD']){
-					//랭크 쿼리
-					$r_query="SELECT KEDCD, ENP_NM, SALES, rank
-					FROM (
-						SELECT
-							KEDCD,
-							ENP_NM,
-							SALES,
-							@vRank := IF(@group = BZC_CD,
-										 IF(@prev_value = SALES, @vRank, @vRank + 1),
-										 1) AS rank,
-							@prev_value := SALES,
-							@group := BZC_CD
-						FROM company,
-							 (SELECT @vRank := 0, @prev_value := NULL, @group := NULL) AS vars
-						WHERE BZC_CD = '{$row['BZC_CD']}'
-						ORDER BY BZC_CD, SALES DESC
-					) AS ranked
-					WHERE KEDCD = '{$row['TXPL_KEDCD']}'";
-
-					//echo $r_query."<br>";
-					$TX_rank=sql_fetch($r_query);
-					$row['TXPL_RANK']=$TX_rank['rank'];
-
-				}else{
-					//$row['TXPL_RANK']="";
-				}
-
-				if($row['TXPL_CCD']==1) {
-					$cust_sub[]=$row;
-
-					if(!$row['TXPL_RANK']) {
-						$row['TXPL_RANK']=$tmp_cnt;
-						$tmp_cnt++;
-					}
-					if($row['LOC_ADDRA']) $cust_sub_rank[]=$row;
-				}
-				if($row['TXPL_CCD']==2) {
-					$supp_sub[]=$row;
-
-					if(!$row['TXPL_RANK']) {
-						$row['TXPL_RANK']=$tmp_cnt;
-						$tmp_cnt++;
-					}
-					if($row['LOC_ADDRA']) $supp_sub_rank[$row['TXPL_RANK']]=$row;
-				}
-			}
-
-			}
-	}
-}
-?>
- <script>
-	/*
-    $( ".progress_wrap #progressbar" ).progressbar({
-      value: 100
-    });
-	*/
-	$( ".progress_wrap").fadeOut(300);
-  </script>
-<?
-ob_get_flush();
-flush();
-
-$C_RANK = array_column($cust_sub_rank, 'TXPL_RANK');
-$S_RANK = array_column($supp_sub_rank, 'TXPL_RANK');
-//array_multisort($C_RANK, SORT_ASC, $cust_sub_rank);
-//array_multisort($S_RANK, SORT_ASC, $supp_sub_rank);
-//ksort($cust_sub_rank);
-//ksort($supp_sub_rank);
-//print_r($cust_sub_rank);
-$cust_cnt=count($cust_sub_rank); //구매거래처 수
-$supp_cnt=count($supp_sub_rank); //판매거래처 수
-
-//맴버쉽 정보 (마스터는 최고 맴버쉽 getUserMembership)
-$today = date("Y-m-d");
-if($member['mb_id']) {
-	$msinfo_row = getUserMembership();
-	//맴버쉽이 없는 경우 무료로
-	if(!$msinfo_row[0]) $msinfo['membership_parent_no']=$membership[0]['no'];
-	else $msinfo=$msinfo_row[0];
-}
-
-?>
-
-<style>
-	#pageTop,
-	#sVisual{display: none}
-	.matching-list .matching-item:nth-child(n+7) {display:none; }
-</style>
-<div id="sub-visual"><div class="inConts">
-	<h2>사업자번호 입력만으로,<br />맞춤형 기업 매칭을 경험하세요.</h2>
-
-	<div search shadow>
-		<form action="/ko/matching_list.php" method="POST" id="match">
-			<input type="hidden" name="cominfo" id="cominfo">
-		</form>
-		<input type="text" name="comnum" id="comnum" class="comnum_chk" placeholder="법인 사업자번호를 입력하세요" maxlength="12">
-		<button type="submit" id="sub_submit"><img src="/images/icon_search.svg" alt="search"></button>
-	</div>
-</div></div>
-
-<div class="my-company-area">
-	<dl class="h4-title">
-		<dt><span><img src="/images/icon_myCompany.png" alt="company"></span><strong>내 회사 정보</strong></dt>
-		<dd><a href="/bbs/write.php?bo_table=Contact" btn shadow>데이터제보/오류알리기</a></dd>
-	</dl>
-	<div class="long-info" shadow>
-		<dl>
-			<dt>기업명</dt>
-			<dd><?=$enp_nm?></dd>
-		</dl>
-		<dl>
-			<dt>대표자</dt>
-			<dd><?=$reper_name?></dd>
-		</dl>
-		<dl>
-			<dt>사업자번호</dt>
-			<dd><?=$bzno_c?></dd>
-		</dl>
-		<dl>
-			<dt>기업유형</dt>
-			<dd>
-					<?if($enp_typt[$enp_typ]){?><?=$enp_typt[$enp_typ]?><?}?>
-					<?if($enp_fcdt[$enp_fcd]){?> / <?=$enp_fcdt[$enp_fcd]?><?}?>
-			</dd>
-		</dl>
-		<dl>
-			<dt>종목</dt>
-			<dd><?=$bzc_nm?></dd>
-		</dl>
-
-		<dl>
-			<dt>자본금</dt>
-			<dd><?=number_format($E_VAL)?> 원</dd>
-		</dl>
-		<dl>
-			<dt>직전연도 매출액</dt>
-			<dd><?=number_format($take)?> 원</dd>
-		</dl>
-		<dl c2>
-			<dt>주소(도로명)</dt>
-			<dd><?=$loc_addra?></dd>
-		</dl>
-	</div>
-
-	<dl class="h4-title">
-		<dt><span><img src="/images/icon_data.png" alt="data"></span><strong><span class="point">기업데이터 기반</span> 추천거래처</strong></dt>
-	</dl>
-
-	<div class="matching-tab" d2>
-		<a href="javascript:void(0);" class="active">구매 거래처<!-- <span>23</span> --></a><!-- 활성화 -->
-		<a href="javascript:void(0);">판매 거래처<!-- <span>12</span> --></a>
-	</div>
-
-	<div class="column-list full">
-		<div class="column-list-re" buy>
-			<div class="matching-list">
-				<?
-				$cpoint = current($cust_sub_rank);
-				$spoint = current($supp_sub_rank);
-				for($i=0;$i<$cust_cnt;$i++){
-				?>
-				<div class="matching-item">
-					<p class="name"><strong><?=$cpoint[TXPL_NM]?></strong></p>
-					<div class="info-area">
-						<dl>
-							<dt>소<i></i>재<i></i>지</dt>
-							<dd><?=$cpoint['LOC_ADDRA']?></dd>
-						</dl>
-						<dl>
-							<dt>동종<i></i>업계<i></i>순위</dt>
-							<dd><?if($cpoint['TXPL_RANK']<9999999){?><?=$cpoint['TXPL_RANK']?> 위<?}?></dd>
-						</dl>
-						<dl>
-							<dt>종<i></i>목</dt>
-							<dd><?=$cpoint['k_code_name']?></dd>
-						</dl>
-					</div>
-					<div class="btn-detail">
-						<a href="javascript:void(0);" kedcd="<?=$cpoint[TXPL_KEDCD]?>" class="detail_view">상세보기</a>
-					</div>
-				</div>
-				<?
-				$cpoint = next($cust_sub_rank);
-				}
-				?>
-			</div>
-
-			<?if($cust_cnt>0){?>
-			<a href="javascript:;" class="searchCompanyListLoad">더보기 <span class="length">(<?=$cust_cnt?>)</span></a>
-			<?}?>
-
-		</div>
-
-		<div class="column-list-re" sell>
-			<div class="matching-list">
-				<?
-				for($i=0;$i<$supp_cnt;$i++){
-				?>
-				<div class="matching-item">
-					<p class="name"><strong><?=$spoint[TXPL_NM]?></strong></p>
-					<div class="info-area">
-						<dl>
-							<dt>소<i></i>재<i></i>지</dt>
-							<dd><?=$spoint['LOC_ADDRA']?></dd>
-						</dl>
-						<dl>
-							<dt>동종<i></i>업계<i></i>순위</dt>
-							<dd><?if($spoint['TXPL_RANK']<9999999){?><?=$spoint['TXPL_RANK']?> 위<?}?></dd>
-						</dl>
-						<dl>
-							<dt>종<i></i>목</dt>
-							<dd><?=$spoint['k_code_name']?></dd>
-						</dl>
-					</div>
-					<div class="btn-detail">
-						<a href="javascript:void(0);" kedcd="<?=$spoint[TXPL_KEDCD]?>" class="detail_view">상세보기</a>
-					</div>
-				</div>
-				<?
-				$spoint = next($supp_sub_rank);
-				}
-				?>
-			</div>
-			<?if($supp_cnt>0){?>
-			<a href="javascript:;" class="searchCompanyListLoad">더보기 <span class="length">(<?=$supp_cnt?>)</span></a>
-			<?}?>
-		</div>
-	</div>
-</div>
-
-<!--[s] 상세보기 팝업 -->
-<div id="company-view-lay" class="layer-base layer-main company-view"><div class="layer-in new">
-</div></div>
-<!--[e] 상세보기 팝업 -->
-
-<div class="popup popup_submit">
-    <div class="popupInner">
-        <a href="javascript:popupClose('')" class="popupClose"><img src="/img/icon/icon_close.svg" alt=""></a>
-
-        <div class="popup_top">
-            <h4 class="popup_top_title">매칭요청</h4>
-
-            <div class="popup_top_macthing_length">남은 매칭 <span class="point">가능 수 <b class="length"><?=$msinfo['matching_able_cnt']?></b>개</span></div>
-        </div>
-
-        <div class="popup_content">
-            <table>
-                <tbody>
-                    <tr>
-                        <th>보내는 사람</th>
-                        <td><?=$member['mb_name']?> <?=$member['mb_6']?> <?=$member['mb_7']?></td>
-                    </tr>
-                    <tr>
-                        <th>받는 사람</th>
-                        <td id="recv"><?=$com['ENP_NM']?> 신규 거래처 담당자</td>
-                    </tr>
-                </tbody>
-            </table>
-			<input type="hidden" name="type" value="matching">
-			<input type="hidden" name="kedcd" value="" id="kedcd">
-			<input type="hidden" name="typ" value="accept">
-            <textarea name="match_content" id="match_content" placeholder="저희는 ㅇㅇ을 제조/유통하는 전문 업체로서, 매칭 수락시 담당자분께
-거래에 관한 구체적인 내용을 제안 드리도록 하겠습니다."></textarea>
-
-            <p class="popup_textarea_tip">* 거래에 관하여 구체적인 내용을 적어주시면 매칭확률이 높아집니다.</p>
-        </div>
-
-        <div class="popup_btns">
-            <button type="submit" onclick="popupSubmit()">매칭요청</button>
+<!-- =========================================================
+     모바일 전용: 업종별 카테고리 Swiper (대분류)
+     ========================================================= -->
+<div class="list-cat-swiper-wrap">
+    <div class="list-cat-swiper swiper">
+        <div class="swiper-wrapper">
+            <div class="swiper-slide">
+                <a href="?<?php echo $mq; ?>cat=all"
+                   class="<?php echo ($current_cat === 'all' || $current_cat === '') ? 'on' : ''; ?>">
+                    전체
+                </a>
+            </div>
+            <?php foreach ($list_categories as $lg): ?>
+            <div class="swiper-slide">
+                <a href="?<?php echo $mq; ?>cat=<?php echo urlencode($lg['slug']); ?>"
+                   class="<?php echo ($current_cat === $lg['slug']) ? 'on' : ''; ?>">
+                    <?php echo htmlspecialchars($lg['label']); ?>
+                </a>
+            </div>
+            <?php endforeach; ?>
         </div>
     </div>
 </div>
 
-<script type="text/javascript" src="/build/jquery-equal-height.js"></script>
+<!-- =========================================================
+     본문 레이아웃
+     ========================================================= -->
+     <div class="list-body">
+    <div class="inner">
+
+        <aside class="list-sidebar">
+
+            <a href="?cat=all&type=ai" class="list-sidebar_ai <?php echo $has_comnum ? 'on' : ''; ?>">
+                <span class="list-sidebar_ai_icon">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M12 2L13.8 7.2L19.2 7.5L14.6 10.8L16.2 16L12 12.9L7.8 16L9.4 10.8L4.8 7.5L10.2 7.2Z" fill="currentColor"/>
+                    </svg>
+                </span>
+                <span>AI 추천받기</span>
+            </a>
+
+            <h2 class="list-sidebar_title">업종별</h2>
+
+            <nav class="list-sidebar_nav">
+                <a href="?<?php echo $mq; ?>cat=all"
+                   class="<?php echo ($current_cat === 'all' || $current_cat === '') ? 'on' : ''; ?>">
+                    전체보기
+                </a>
+
+                <?php foreach ($list_categories as $lg):
+                    // 수정된 로직: 현재 카테고리가 본인이거나 하위 카테고리인 경우 그룹을 엽니다.
+                    $is_open          = ($open_group_slug === $lg['slug']);
+                    $is_current_group = ($current_cat    === $lg['slug']);
+                ?>
+                <div class="list-sidebar_group <?php echo $is_open ? 'is-open' : ''; ?>"
+                     data-group="<?php echo htmlspecialchars($lg['slug']); ?>">
+
+                    <div class="list-sidebar_group_header <?php echo $is_current_group ? 'on' : ''; ?>"
+                         role="button"
+                         tabindex="0"
+                         aria-expanded="<?php echo $is_open ? 'true' : 'false'; ?>"
+                         aria-controls="sidebar-body-<?php echo htmlspecialchars($lg['slug']); ?>">
+                        <a href="?<?php echo $mq; ?>cat=<?php echo urlencode($lg['slug']); ?>"
+                           class="list-sidebar_group_title list-sidebar_group_title_link">
+                            <?php echo htmlspecialchars($lg['label']); ?>
+                        </a>
+                        <span class="list-sidebar_group_toggle" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M9 18l6-6-6-6"/>
+                            </svg>
+                        </span>
+                    </div>
+
+                    <div class="list-sidebar_group_body"
+                         id="sidebar-body-<?php echo htmlspecialchars($lg['slug']); ?>">
+                        <?php foreach ($lg['sub'] as $sub): ?>
+                        <a href="?<?php echo $mq; ?>cat=<?php echo urlencode($sub['slug']); ?>"
+                           class="list-sidebar_sub <?php echo ($current_cat === $sub['slug']) ? 'on' : ''; ?>">
+                            <?php echo htmlspecialchars($sub['label']); ?>
+                        </a>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+                <?php endforeach; ?>
+            </nav>
+        </aside>
+
+        <main class="list-main">
+
+            <div class="list-top">
+                <div class="list-type-wrap">
+                    <div class="list-type-switch" role="group" aria-label="구매하기/판매하기">
+                        <span class="list-type-slider" aria-hidden="true"></span>
+                        <button type="button" class="list-type-btn on" data-type="buyer">구매하기</button>
+                        <button type="button" class="list-type-btn"    data-type="seller">판매하기</button>
+                    </div>
+                    <p class="list-count">
+                        <?php if (!empty($_GET['comnum'])): ?>
+                        <span class="list-search-query">
+                            사업자번호 <?php echo htmlspecialchars($_GET['comnum']); ?> 검색 ·&nbsp;
+                        </span>
+                        <?php endif; ?>
+                        <strong><?php echo (int)$cards_total_count; ?></strong>개의 기업
+                    </p>
+                </div>
+                <div class="list-sort">
+                    <label for="sortSelect">정렬</label>
+                    <select id="sortSelect" aria-label="정렬 기준">
+                        <option value="rank" <?php echo $current_sort === 'rank' ? 'selected' : ''; ?>>랭킹순</option>
+                        <option value="grow" <?php echo $current_sort === 'grow' ? 'selected' : ''; ?>>성장성순</option>
+                        <option value="profit" <?php echo $current_sort === 'profit' ? 'selected' : ''; ?>>수익성순</option>
+                        <option value="stable" <?php echo $current_sort === 'stable' ? 'selected' : ''; ?>>재무안정순</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="list-grid">
+                <?php if (empty($cards)): ?>
+                    <div style="grid-column: 1/-1; padding: 100px 0; text-align: center; color: #888;">
+                        해당 카테고리에 등록된 기업이 없습니다.
+                    </div>
+                <?php else: ?>
+                    <?php foreach ($cards as $idx => $c):
+                        $scoreValue = (float)$c['score'];
+                        $starFull   = floor($scoreValue);
+                        $starPart   = $scoreValue - $starFull;
+                    ?>
+                    <a href="#"
+                    class="mCompanyCard detail_view"
+                    data-type="<?php echo htmlspecialchars($c['type'] ?? 'buyer'); ?>"
+                    data-rank="<?php echo (int)$idx; ?>"
+                    data-total="<?php echo $scoreValue; ?>"
+                    data-grow="<?php echo ($c['grow'] !== null && $c['grow'] !== '') ? (float)$c['grow'] : ''; ?>"
+                    data-profit="<?php echo ($c['profit'] !== null && $c['profit'] !== '') ? (float)$c['profit'] : ''; ?>"
+                    data-stable="<?php echo ($c['stable'] !== null && $c['stable'] !== '') ? (float)$c['stable'] : ''; ?>"
+                    kedcd="<?php echo htmlspecialchars($c['kedcd'] ?? ''); ?>"
+                    style="text-decoration:none;color:inherit;">
+
+                        <div class="mCompanyCard_content">
+                            <div class="mCompanyCard_venture_slot">
+                                <?php
+                                $has_badge = false;
+                                $badge_growth = format_badge_percent($c['badge_growth'] ?? null);
+                                $badge_stability = format_badge_percent($c['badge_stability'] ?? null);
+                                $badge_venture = strtoupper(trim((string)($c['badge_venture'] ?? '')));
+
+                                if ($badge_growth !== '') {
+                                    $has_badge = true;
+                                    echo '<span class="mCompanyCard_badge mCompanyCard_badge_growth_top" style="font-size:11px;font-weight:500;padding:3px 8px;border-radius:4px;background:#dbeafe;color:#1e40af;">성장TOP' . htmlspecialchars($badge_growth) . '%</span>';
+                                }
+                                if ($badge_stability !== '') {
+                                    $has_badge = true;
+                                    echo '<span class="mCompanyCard_badge mCompanyCard_badge_stability_top" style="font-size:11px;font-weight:500;padding:3px 8px;border-radius:4px;background:#ede9fe;color:#5b21b6;">재무안정TOP' . htmlspecialchars($badge_stability) . '%</span>';
+                                }
+                                if ($badge_venture === 'Y') {
+                                    $has_badge = true;
+                                    echo '<span class="mCompanyCard_badge mCompanyCard_badge_venture" style="font-size:11px;font-weight:500;padding:3px 8px;border-radius:4px;background:#10b981;color:#fff;">벤처인증</span>';
+                                }
+                                if (!$has_badge) {
+                                    echo '<span class="mCompanyCard_badge mCompanyCard_badge_pending" style="font-size:11px;font-weight:500;padding:3px 8px;border-radius:4px;background:#f3f4f6;color:#9ca3af;">뱃지 준비중</span>';
+                                }
+                                ?>
+                            </div>
+                            <h3 class="mCompanyCard_title"><?php echo htmlspecialchars($c['title']); ?></h3>
+
+                            <p class="mCompanyCard_desc">
+                                <?php 
+                                $allTags = $c['tags']; 
+                                $totalCount = count($allTags);
+                                $showNum = 2; 
+                                
+                                if ($totalCount > 0):
+                                    $displayTags = array_slice($allTags, 0, $showNum);
+                                    $restCount = $totalCount - $showNum;
+
+                                    foreach ($displayTags as $t): 
+                                ?>
+                                    <span class="mCompanyCard_desc_tag"><?php echo htmlspecialchars($t); ?></span>
+                                <?php 
+                                    endforeach; 
+
+                                    if ($restCount > 0): 
+                                ?>
+                                    <span class="mCompanyCard_desc_more">+<?php echo $restCount; ?></span>
+                                <?php 
+                                    endif; 
+                                endif; 
+                                ?>
+                            </p>
+
+                            <div class="mCompanyCard_rating">
+                                <div class="mCompanyCard_rating_left">
+                                    <span class="mCompanyCard_rating_label">종합</span>
+                                    <span class="mCompanyCard_rating_score"><?php echo $c['score']; ?></span>
+                                    <div class="mCompanyCard_rating_stars">
+                                        <?php for ($i = 1; $i <= 5; $i++):
+                                            if ($i <= $starFull): ?>
+                                        <svg viewBox="0 0 24 24" fill="#ffc107"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                                        <?php elseif ($i == $starFull + 1 && $starPart > 0): ?>
+                                        <span class="star-partial">
+                                            <svg viewBox="0 0 24 24" fill="#ffc107" style="position:absolute; left:0; top:0; clip-path: inset(0 <?php echo (1 - $starPart) * 100; ?>% 0 0);"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                                            <svg viewBox="0 0 24 24" fill="#e0e0e0" style="position:absolute; left:0; top:0;"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                                        </span>
+                                        <?php else: ?>
+                                        <svg viewBox="0 0 24 24" fill="#e0e0e0"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                                        <?php endif; endfor; ?>
+                                    </div>
+                                </div>
+                                <div class="mCompanyCard_rating_right">
+                                    <?php foreach (['grow' => '성장성', 'profit' => '수익성', 'stable' => '재무안정'] as $key => $label): ?>
+                                    <div class="mCompanyCard_rating_bar">
+                                        <span class="mCompanyCard_rating_bar_label"><?php echo $label; ?></span>
+                                        <div class="mCompanyCard_rating_bar_chart">
+                                            <div class="mCompanyCard_rating_bar_fill" style="width:<?php echo ($c[$key] !== null ? ($c[$key] / 5 * 100) : 0); ?>%;"></div>
+                                        </div>
+                                        <span class="mCompanyCard_rating_bar_count"><?php echo ($c[$key] !== null ? number_format($c[$key], 1) : '-'); ?></span>
+                                    </div>
+                                    <?php endforeach; ?>
+                                </div>
+                            </div>
+                        </div>
+                    </a>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+            </div>
+
+            <div class="list-more-wrap">
+                <button type="button" id="listMoreBtn" class="list-more-btn">더보기</button>
+            </div>
+        </main>
+    </div>
+</div>
+
+
+
+<!-- =========================================================
+     레이어: 기업 상세보기
+     ========================================================= -->
+<div id="company-view-lay" class="layer-base layer-main company-view">
+    <div class="layer-in new"></div>
+</div>
+
+<!-- =========================================================
+     팝업: 매칭 요청
+     ========================================================= -->
+<?php
+$company_detail_popup_variant = 'advanced';
+include_once(G5_THEME_PATH . '/partials/company-detail-matching-popup.php');
+?>
+
+<!-- =========================================================
+     JavaScript
+     ========================================================= -->
+<script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
 <script>
-$(window).on('load', function(event) {
-	equal_height();
-});
-$(window).resize(function(event) {
-	equal_height();
-});
+// ----------------------------------------------------------
+// Swiper: 모바일 카테고리 탭
+// ----------------------------------------------------------
+(function () {
+    var catEl = document.querySelector('.list-cat-swiper');
+    if (!catEl) return;
+    new Swiper('.list-cat-swiper', {
+        slidesPerView: 'auto',
+        spaceBetween: 8,
+        freeMode: true,
+        grabCursor: true,
+        resistanceRatio: 0.85
+    });
+})();
 
-$("button#sub_submit").click(function(){
-	event.preventDefault();
-	comnum=$(this).prev().val();
-	if(comnum.length!=12){
-		jAlert("사업자등록번호를 확인해 주세요.","알림",function(){
-			$("#comnum").focus();
-		})
-			return false;
-	}
+// ----------------------------------------------------------
+// 사이드바 대분류 아코디언
+// ----------------------------------------------------------
+(function () {
+    var groups = document.querySelectorAll('.list-sidebar_group');
+    if (!groups.length) return;
 
-	$.post( "../get_set.php", {
-		type: 'main_comp_chk',
-		comnum:comnum
-	})
-	.done(function(jqXHR) {
-			jqXHR=jqXHR.split("|");
-			if(jqXHR[0]==1000){
-				//완료시
-				//jAlert(jqXHR[1],"알림");
-				$("#cominfo").val(jqXHR[1]);
-				$("#match").submit();
-				equal_height();
-			}else{
-				//오류시
-				if(jqXHR[1]=="02") jAlert("검색 결과가 없습니다.","알림");
-				else jAlert("검색에 오류가 있습니다.","알림");
-			}
+    function openOnlyThis(targetGroup) {
+        groups.forEach(function (g) {
+            var isThis = (g === targetGroup);
+            g.classList.toggle('is-open', isThis);
+            var h = g.querySelector('.list-sidebar_group_header');
+            if (h) h.setAttribute('aria-expanded', isThis ? 'true' : 'false');
+        });
+    }
 
-	});
-})
-function equal_height(){
-	/*
-	$(".column-list").jQueryEqualHeight(".matching-item dl:eq(2)");
-	$(".column-list").jQueryEqualHeight(".matching-item dl:eq(1)");
-	$(".column-list").jQueryEqualHeight(".matching-item dl:eq(0)");
-	//$(".column-list").jQueryEqualHeight(".matching-item .info-area");
-	$(".column-list").jQueryEqualHeight(".matching-item .name");
-	$(".column-list").jQueryEqualHeight(".matching-item");
-	*/
-}
-function setMatchingItemHeights() {
-	const leftItems = document.querySelectorAll('.column-list-re:first-of-type .matching-item');
-	const rightItems = document.querySelectorAll('.column-list-re:last-of-type .matching-item');
-	const count = Math.min(leftItems.length, rightItems.length);
+    groups.forEach(function (group) {
+        var header = group.querySelector('.list-sidebar_group_header');
+        if (!header) return;
 
-	for (let i = 0; i < count; i++) {
-		// 높이를 리셋 (리사이즈 시 기존 높이를 초기화해야 정확한 높이 계산 가능)
-		leftItems[i].style.height = 'auto';
-		rightItems[i].style.height = 'auto';
+        header.addEventListener('click', function (e) {
+            var toggleEl = e.target.closest('.list-sidebar_group_toggle');
+            var linkEl = header.querySelector('.list-sidebar_group_title_link');
 
-		const leftHeight = leftItems[i].offsetHeight;
-		const rightHeight = rightItems[i].offsetHeight;
-		const maxHeight = Math.max(leftHeight, rightHeight);
+            if (toggleEl) {
+                if (group.classList.contains('is-open')) {
+                    group.classList.remove('is-open');
+                    header.setAttribute('aria-expanded', 'false');
+                } else {
+                    openOnlyThis(group);
+                }
+                return;
+            }
 
-		leftItems[i].style.height = maxHeight + 'px';
-		rightItems[i].style.height = maxHeight + 'px';
-	}
-}
-function debounce(func, wait) {
-	let timeout;
-	return function () {
-		clearTimeout(timeout);
-		timeout = setTimeout(func, wait);
-	};
-}
-// 페이지 로드 시 실행
-//window.addEventListener('load', setMatchingItemHeights);
-// 창 크기 변경 시 실행
-//window.addEventListener('resize', debounce(setMatchingItemHeights, 100));
+            if (linkEl && linkEl.href) {
+                location.href = linkEl.href;
+            }
+        });
 
-//사업자번호
-	$('.comnum_chk').on('keyup', function(){
-        var num = $(this).val();
-        num.trim();  // 스페이스바 제거
-        this.value = AutoHypen(num) ;
+        header.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') {
+                var linkEl = header.querySelector('.list-sidebar_group_title_link');
+                if (linkEl && linkEl.href) {
+                    e.preventDefault();
+                    location.href = linkEl.href;
+                }
+            } else if (e.key === ' ') {
+                e.preventDefault();
+                var toggleEl = header.querySelector('.list-sidebar_group_toggle');
+                if (toggleEl) toggleEl.click();
+            }
+        });
+    });
+})();
+
+// ----------------------------------------------------------
+// 구매하기/판매하기 탭 스위치
+// ----------------------------------------------------------
+(function () {
+    var wrap = document.querySelector('.list-type-switch');
+    if (!wrap) return;
+
+    var slider      = wrap.querySelector('.list-type-slider');
+    var btns        = wrap.querySelectorAll('.list-type-btn');
+    var moreBtn     = document.getElementById('listMoreBtn');
+    var sortSelect  = document.getElementById('sortSelect');
+    var grid        = document.querySelector('.list-grid');
+    var pageSize    = <?php echo (int)$free_limit; ?>;
+    var canLoadMore = <?php echo $can_load_more ? 'true' : 'false'; ?>;
+    var isServerPaged = <?php echo !$has_comnum ? 'true' : 'false'; ?>;
+    var totalByType = {
+        buyer: <?php echo (int)$buyer_total_count; ?>,
+        seller: <?php echo (int)$seller_total_count; ?>
+    };
+    var showCount   = { buyer: pageSize, seller: pageSize };
+    var currentType = <?php echo json_encode($current_type === 'seller' ? 'seller' : 'buyer'); ?>;
+    var isLoadingMore = false;
+
+    function updateSlider() {
+        var active = wrap.querySelector('.list-type-btn.on');
+        if (!slider || !active) return;
+        var wrapRect = wrap.getBoundingClientRect();
+        var btnRect  = active.getBoundingClientRect();
+        slider.style.width = btnRect.width + 'px';
+        slider.style.left  = (btnRect.left - wrapRect.left) + 'px';
+    }
+
+    function renderType(type) {
+        currentType = type;
+        var cards   = document.querySelectorAll('.list-grid .mCompanyCard');
+        var matched = [];
+
+        cards.forEach(function (card) {
+            if (card.getAttribute('data-type') === type) matched.push(card);
+            card.style.display = 'none';
+        });
+
+        var visibleCount = isServerPaged ? matched.length : Math.min(showCount[type], matched.length);
+        for (var i = 0; i < visibleCount; i++) matched[i].style.display = '';
+
+        var countEl = document.querySelector('.list-count strong');
+        if (countEl) {
+            var totalCountForType = totalByType[type] || 0;
+            countEl.textContent = totalCountForType;
+        }
+
+        if (moreBtn) {
+            var totalCountForType = totalByType[type] || 0;
+            var shouldShowMoreBtn = totalCountForType > visibleCount;
+            moreBtn.style.display = shouldShowMoreBtn ? '' : 'none';
+        }
+    }
+
+    function getScore(card, key) {
+        var raw = card.getAttribute('data-' + key);
+        if (raw === null || raw === '') return null;
+        var n = parseFloat(raw);
+        return isNaN(n) ? null : n;
+    }
+
+    function sortCards(key) {
+        if (!grid) return;
+
+        var cards  = Array.from(grid.querySelectorAll('.mCompanyCard'));
+        var buyers = [];
+        var sellers = [];
+
+        cards.forEach(function (card) {
+            (card.getAttribute('data-type') === 'seller' ? sellers : buyers).push(card);
+        });
+
+        var cmp;
+        if (key === 'rank') {
+            cmp = function (a, b) {
+                var av = getScore(a, 'total');
+                var bv = getScore(b, 'total');
+                if (av === null && bv === null) return (parseInt(a.getAttribute('data-rank'), 10) || 0) - (parseInt(b.getAttribute('data-rank'), 10) || 0);
+                if (av === null) return 1;
+                if (bv === null) return -1;
+                if (bv === av) return (parseInt(a.getAttribute('data-rank'), 10) || 0) - (parseInt(b.getAttribute('data-rank'), 10) || 0);
+                return bv - av;
+            };
+        } else {
+            cmp = function (a, b) {
+                var av = getScore(a, key);
+                var bv = getScore(b, key);
+                if (av === null && bv === null) return (parseInt(a.getAttribute('data-rank'), 10) || 0) - (parseInt(b.getAttribute('data-rank'), 10) || 0);
+                if (av === null) return 1;
+                if (bv === null) return -1;
+                if (bv === av) return (parseInt(a.getAttribute('data-rank'), 10) || 0) - (parseInt(b.getAttribute('data-rank'), 10) || 0);
+                return bv - av;
+            };
+        }
+
+        buyers.sort(cmp);
+        sellers.sort(cmp);
+
+        grid.innerHTML = '';
+        buyers.concat(sellers).forEach(function (card) {
+            grid.appendChild(card);
+        });
+    }
+
+    function fetchAndReplaceGrid(url, preserveScroll) {
+        var prevScrollY = window.scrollY || window.pageYOffset || 0;
+        isLoadingMore = true;
+        if (moreBtn) moreBtn.disabled = true;
+
+        return fetch(url.toString(), { credentials: 'same-origin' })
+            .then(function (res) { return res.text(); })
+            .then(function (html) {
+                var doc = new DOMParser().parseFromString(html, 'text/html');
+                var nextGrid = doc.querySelector('.list-grid');
+                if (!nextGrid) throw new Error('list-grid not found');
+
+                grid.innerHTML = nextGrid.innerHTML;
+                if (!isServerPaged) {
+                    sortCards(sortSelect ? (sortSelect.value || 'rank') : 'rank');
+                }
+                renderType(currentType);
+                if (preserveScroll) window.scrollTo(0, prevScrollY);
+                history.replaceState({ type: currentType }, '', url.toString());
+            })
+            .catch(function () {
+                location.href = url.toString();
+            })
+            .finally(function () {
+                isLoadingMore = false;
+                if (moreBtn) moreBtn.disabled = false;
+            });
+    }
+
+    function fetchAndAppendGrid(url, preserveScroll) {
+        var prevScrollY = window.scrollY || window.pageYOffset || 0;
+        isLoadingMore = true;
+        if (moreBtn) moreBtn.disabled = true;
+
+        return fetch(url.toString(), { credentials: 'same-origin' })
+            .then(function (res) { return res.text(); })
+            .then(function (html) {
+                var doc = new DOMParser().parseFromString(html, 'text/html');
+                var nextGrid = doc.querySelector('.list-grid');
+                if (!nextGrid) throw new Error('list-grid not found');
+
+                var nodes = Array.from(nextGrid.querySelectorAll('.mCompanyCard'));
+                if (!nodes.length) return;
+                nodes.forEach(function (card) { grid.appendChild(card); });
+
+                if (!isServerPaged) {
+                    sortCards(sortSelect ? (sortSelect.value || 'rank') : 'rank');
+                }
+                renderType(currentType);
+                if (preserveScroll) window.scrollTo(0, prevScrollY);
+                history.replaceState({ type: currentType }, '', url.toString());
+            })
+            .catch(function () {
+                location.href = url.toString();
+            })
+            .finally(function () {
+                isLoadingMore = false;
+                if (moreBtn) moreBtn.disabled = false;
+            });
+    }
+
+    function setType(type) {
+        if (isServerPaged && type !== currentType) {
+            var moveUrl = new URL(location.href);
+            moveUrl.searchParams.set('type', type);
+            moveUrl.searchParams.delete('offset');
+            location.href = moveUrl.toString();
+            return;
+        }
+
+        btns.forEach(function (b) {
+            var isActive = b.getAttribute('data-type') === type;
+            b.classList.toggle('on', isActive);
+            b.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+        });
+        updateSlider();
+        renderType(type);
+
+        var url = new URL(location.href);
+        url.searchParams.set('type', type);
+        history.replaceState({ type: type }, '', url);
+    }
+
+    // 초기화
+    btns.forEach(function (btn) {
+        btn.setAttribute('aria-pressed', btn.classList.contains('on') ? 'true' : 'false');
+        btn.addEventListener('click', function () {
+            setType(btn.getAttribute('data-type'));
+        });
     });
 
-function AutoHypen(companyNum){
-      companyNum = companyNum.replace(/[^0-9]/g, '');
-      var tempNum = '';
+    var urlType = new URLSearchParams(location.search).get('type');
+    setType(urlType === 'seller' ? 'seller' : 'buyer');
 
-      if(companyNum.length < 4){
-        return companyNum;
-      }
-      else if(companyNum.length < 6){
-        tempNum += companyNum.substr(0,3);
-        tempNum += '-';
-        tempNum += companyNum.substr(3,2);
-        return tempNum;
-      }
-      else if(companyNum.length < 11){
-        tempNum += companyNum.substr(0,3);
-        tempNum += '-';
-        tempNum += companyNum.substr(3,2);
-        tempNum += '-';
-        tempNum += companyNum.substr(5);
-        return tempNum;
-      }
-      else{
-        tempNum += companyNum.substr(0,3);
-        tempNum += '-';
-        tempNum += companyNum.substr(3,2);
-        tempNum += '-';
-        tempNum += companyNum.substr(5);
-        return tempNum;
-      }
+    if (sortSelect) {
+        sortSelect.addEventListener('change', function () {
+            if (isServerPaged) {
+                if (isLoadingMore) return;
+                var selectedSort = sortSelect.value || 'rank';
+                var url = new URL(location.href);
+                url.searchParams.set('sort', selectedSort);
+                url.searchParams.set('offset', 0);
+                fetchAndReplaceGrid(url, true);
+                return;
+            }
+            showCount[currentType] = pageSize;
+            sortCards(sortSelect.value || 'rank');
+            renderType(currentType);
+        });
+        if (!isServerPaged) sortCards(sortSelect.value || 'rank');
+        renderType(currentType);
     }
 
+    if (moreBtn) {
+        moreBtn.addEventListener('click', function () {
+            if (!canLoadMore) {
+                jAlert("로그인 후 이용하세요.", "알림", function () {
+                    location.href = "/bbs/login.php?url=" + encodeURIComponent(location.pathname + location.search);
+                });
+                return;
+            }
+            if (isServerPaged) {
+                if (isLoadingMore) return;
+                var currentShown = document.querySelectorAll('.list-grid .mCompanyCard[data-type="' + currentType + '"]').length;
+                if (currentShown >= (totalByType[currentType] || 0)) {
+                    renderType(currentType);
+                    return;
+                }
 
-//상세보기
-$(".detail_view").click(function(){
-	event.preventDefault();
-	var kedcd=$(this).attr("kedcd");
-	$.post( "../get_set.php", {
-		type: 'view_chk'
-	})
-	.done(function(jqXHR) {
-		jqXHR=jqXHR.split("|");
-		if(jqXHR[0]==500){
-			//if(jqXHR[1]) jAlert(jqXHR[1],"알림");
+                var url = new URL(location.href);
+                url.searchParams.set('offset', currentShown);
+                url.searchParams.set('sort', sortSelect ? (sortSelect.value || 'rank') : 'rank');
+                fetchAndAppendGrid(url, true);
+                return;
+            }
+            showCount[currentType] += pageSize;
+            renderType(currentType);
+        });
+    }
 
-			if(jqXHR[1]=="로그인 후 이용하세요."){
-				jAlert(jqXHR[1],"알림",function(){
-				location.href="/bbs/login.php?url=/ko/matching_list.php?comnum=<?=$bzno?>";
-				});
-			}else if(jqXHR[1]=="거래처 오픈 회수를 초과했습니다."){
-				jAlert(jqXHR[1],"알림",function(){
-				location.href="/ko/plan.php";
-				});
-			}else{
-				jAlert(jqXHR[1],"알림");
-			}
+    window.addEventListener('resize', updateSlider);
+})();
 
-		}else{
+// ----------------------------------------------------------
+// 매칭 메시지 템플릿
+// ----------------------------------------------------------
+var matchingMessageTemplates = {
+    distributor: [
+        { title: '신규 제품 소싱', body: '판매 가능한 신규 제품을 공급할 제조사를 찾고 있습니다. 테스트 거래 후 지속적인 거래를 희망합니다.' },
+        { title: '제조 파트너 발굴', body: '안정적인 제품 공급이 가능한 제조사를 찾고 있습니다. 협의를 통해 장기 거래를 검토하고자 합니다.' },
+        { title: 'OEM/ODM 생산 협력', body: '자체 브랜드 제품 생산을 위해 OEM 또는 ODM 협력 가능한 제조사를 찾고 있습니다.' },
+        { title: '신규 상품 발굴', body: '판매 경쟁력 있는 신규 제품을 발굴하기 위해 협력 가능한 제조 파트너를 찾고 있습니다.' },
+        { title: '안정적인 공급처 확보', body: '지속적으로 제품 공급이 가능한 제조사를 찾고 있습니다. 상호 협의를 통해 거래 조건을 논의하고자 합니다.' }
+    ],
+    manufacturer: [
+        { title: '유통 파트너 발굴', body: '자사 제품의 판매 확대를 위해 유통 및 판매 협력 가능한 기업을 찾고 있습니다. 안정적이고 장기적인 거래 파트너를 희망합니다.' },
+        { title: '신규 판매 채널 확보', body: '제품 판매처를 확대하기 위해 협업 가능한 유통사를 찾고 있습니다. 상호 협의를 통해 거래 조건을 논의하고자 합니다.' },
+        { title: '수출/해외 유통 협력', body: '자사 제품의 해외 시장 진출을 위해 유통 및 판매 협력 가능한 파트너를 찾고 있습니다.' },
+        { title: '신규 브랜드 유통 협력', body: '신제품 출시와 함께 판매 확대가 가능한 유통사를 찾고 있습니다. 초기 협의 후 장기적인 거래를 희망합니다.' },
+        { title: '안정적인 판매 파트너 확보', body: '지속적인 제품 공급이 가능한 유통 및 판매 파트너를 찾고 있습니다. 안정적인 거래 관계 구축을 희망합니다.' }
+    ]
+};
 
-			//상세보기
-			$.post( "../get_set.php",{type:'detail_view',kedcd:kedcd})
-			.done(function(jqXHR) {
-				jqXHR=jqXHR.split("|");
-				if(jqXHR[0]==500){
-					jAlert("거래처 오픈 회수를 초과했습니다.","알림");
-					return false;
-				}else{
-					$("#company-view-lay .layer-in").html(jqXHR[0]);
-					popFancy('#company-view-lay');
-				}
-			});
-
-
-		}
-	});
-})
-/*
-$(".detail_view").click(function(){
-	kedcd=$(this).attr("kedcd");
-	$.post( "../get_set.php",{type:'detail_view',kedcd:kedcd})
-	.done(function(jqXHR) {
-		jqXHR=jqXHR.split("|");
-		if(jqXHR[0]==500){
-			jAlert("거래처 오픈 회수를 초과했습니다.","알림");
-			return false;
-		}else{
-			$("#company-view-lay .layer-in").html(jqXHR[0]);
-			popFancy('#company-view-lay');
-		}
-	});
-})
-*/
-	//URL복사 처리
-    function copyUrl(cd) {
-		var currentHost = location.host; // 현재 호스트 가져오기
-		var currentUrl = "https://" + currentHost + "/ko/company_view.php?cd=" + cd;
-		if (navigator.clipboard) {
-			// 최신 브라우저
-			navigator.clipboard.writeText(currentUrl).then(function() {
-				alert('URL이 복사되었습니다');
-			}).catch(function(err) {
-				console.error('URL 복사에 실패했습니다: ', err);
-			});
-		} else {
-			// fallback for old browsers
-			const textArea = document.createElement("textarea");
-			textArea.value = currentUrl;
-			document.body.appendChild(textArea);
-			textArea.select();
-			try {
-				document.execCommand('copy');
-				alert('URL이 복사되었습니다');
-			} catch (err) {
-				console.error('URL 복사에 실패했습니다: ', err);
-			}
-			document.body.removeChild(textArea);
-		}
+function getCurrentBizRole() {
+    var selected = $('input[name="biz_role_ui"]:checked').val();
+    return selected === 'manufacturer' ? 'manufacturer' : 'distributor';
 }
 
-	//북마크 처리
-	$("body").on("click",".star_btn",function(){
-		$this=$(this);
-		kedcd=$(this).attr("kedcd");
-		chk=!($(this).hasClass("active"));
-		if(kedcd){
-			$.post( "../get_set.php", {
-				type: 'favorite',
-				kedcd:kedcd,
-				chk: chk
-			})
-			.done(function(jqXHR) {
-				if(jqXHR==500){
-					if(chk) $this.removeClass("active");
-					else $this.addClass("active");
-				}else{
-					if(chk) $("button.star_btn[kedcd='"+kedcd+"']").addClass("active");
-					else $("button.star_btn[kedcd='"+kedcd+"']").removeClass("active");
-				}
-			});
-		}
-	})
-
-
-    const html = document.querySelector("html")
-    const popupAll = document.querySelectorAll(".popup")
-
-	$("body").on("click","#popup_open",function(){
-		kedcd = $(this).attr("kedcd");
-		$.post( "../get_set.php",{type:'matching_num_chk',kedcd:kedcd})
-		.done(function(jqXHR) {
-			jqXHR=jqXHR.split("|");
-			if(jqXHR[0]==500){
-				jAlert("매칭 가능 횟수가 없습니다.","알림");
-				return false;
-			}else if(jqXHR[0]==501){
-				jAlert("로그인 후 이용하세요.","알림",function(){
-					location.href="/bbs/login.php?url=/ko/matching_list.php?comnum=<?=$bzno?>";
-				});
-				return false;
-			}else{
-				$("button.is-close").click();
-				$(".popup_top_macthing_length .length").text(jqXHR[1]);
-				$(".popup_content #kedcd").val(kedcd);
-				$("#recv").html(jqXHR[2]);
-				popupAll.forEach((e)=>{e.classList.remove("open")})
-				let popupName = document.querySelector(".popup");
-				if(popupName){
-					html.classList.add("hide")
-					popupName.classList.add("open")
-				}
-			}
-		});
-    })
-
-    function popupClose(selector){
-
-       popupAll.forEach((e)=>{e.classList.remove("open")})
-        html.classList.remove("hide")
+function renderMatchingTemplateCards() {
+    var role = getCurrentBizRole();
+    var rows = matchingMessageTemplates[role] || [];
+    var html = '';
+    for (var i = 0; i < rows.length; i++) {
+        var n = i + 1;
+        html += ''
+            + '<div class="req-tpl-card" data-idx="' + i + '">'
+            + '  <div class="req-tpl-head">'
+            + '    <input type="checkbox" class="reqTplChk" value="' + i + '" id="reqTplChk_' + i + '">'
+            + '    <h6>' + n + '. ' + rows[i].title + '</h6>'
+            + '  </div>'
+            + '  <p>' + rows[i].body + '</p>'
+            + '</div>';
     }
+    $('#reqTplGrid').html(html);
+}
 
-    function popupSubmit(selector){
+function updateMatchingMessageContent() {
+    var role = getCurrentBizRole();
+    var rows = matchingMessageTemplates[role] || [];
+    var selectedTexts = [];
+    $('.reqTplChk:checked').each(function () {
+        var idx = parseInt($(this).val(), 10);
+        if (!isNaN(idx) && rows[idx]) selectedTexts.push(rows[idx].body);
+    });
+    var extra = $.trim($('#match_content_extra').val() || '');
+    var merged = selectedTexts.join("\n\n");
+    if (extra) merged = merged ? (merged + "\n\n" + extra) : extra;
+    $('#match_content').val(merged);
+}
 
-       popupAll.forEach((e)=>{e.classList.remove("open")})
-		Formdata=$(".popup_content input, textarea").serialize();
-		if(Formdata){
-			$.post( "../get_set.php?"+Formdata)
-			.done(function(jqXHR) {
-				if(jqXHR==500){
-					jAlert("요청에 문제가 있습니다.","알림");
-					return false;
-				}else{
-					jAlert("매칭이 요청되었습니다.","알림",function(){
-						popupClose('');
-					});
-				}
-			});
-		}
-        html.classList.remove("hide")
+// ----------------------------------------------------------
+// 요청 방식 선택 (기본/TM)
+// ----------------------------------------------------------
+$('body').on('click', '.requestTypeBtn', function () {
+    var value = $(this).data('value') === 'TM' ? 'TM' : 'BASIC';
+    $('#request_type').val(value);
+
+    $('.requestTypeBtn').removeClass('is-active').css({
+        borderColor: '#d9dce3',
+        background: '#fff',
+        color: '#333'
+    });
+    $(this).addClass('is-active').css({
+        borderColor: '#3856ff',
+        background: '#3856ff',
+        color: '#fff'
+    });
+
+    if (value === 'TM') {
+        $('#requestTypeDesc').text('TM 요청은 1건당 30크레딧이 차감되며, 24시간 동안 상대 기업 응답이 없으면 운영팀이 오프라인 연락을 지원합니다.');
+    } else {
+        $('#requestTypeDesc').text('기본 요청은 상대 기업에 매칭 요청만 전달되며 1건당 10크레딧이 차감됩니다.');
     }
+});
 
-$("#CompanyListTable a").click(function(){
-	event.preventDefault();
-	var href=$(this).attr("href");
-	$.post( "../get_set.php", {
-		type: 'view_chk'
-	})
-	.done(function(jqXHR) {
-		jqXHR=jqXHR.split("|");
-		if(jqXHR[0]==500){
-			if(jqXHR[1]) jAlert(jqXHR[1],"알림");
-			/*
-			if(jqXHR[1]=="로그인 후 이용하세요."){
-				jAlert(jqXHR[1],"알림",function(){
-				location.href="/bbs/login.php?url=/ko/matching_list.php";
-				});
-			}else{
-				jAlert(jqXHR[1],"알림");
-			}
-			*/
-		}else{
-			location.href=href;
-		}
-	});
-})
+$('body').on('change', 'input[name="biz_role_ui"]', function () {
+    renderMatchingTemplateCards();
+    updateMatchingMessageContent();
+});
 
-//텝클릭
-$(".matching-tab a").click(function(){
-	idx=$(this).index();
-	$(".matching-tab a").removeClass("active");
-	$(this).addClass("active");
-	$(".column-list .column-list-re").hide();
-	$(".column-list .column-list-re:eq("+idx+")").show();
-})
-$(".matching-tab a:eq(0)").click();
+$('body').on('click', '.req-tpl-card', function (e) {
+    if ($(e.target).is('input')) return;
+    var $chk = $(this).find('.reqTplChk');
+    $chk.prop('checked', !$chk.prop('checked')).trigger('change');
+});
 
-vtotal=<?=$cust_cnt;?>;
-vtotal2=<?=$supp_cnt?>;
+$('body').on('change', '.reqTplChk', function () {
+    $(this).closest('.req-tpl-card').toggleClass('is-on', $(this).is(':checked'));
+    updateMatchingMessageContent();
+});
 
-v_len=$(".column-list .column-list-re:eq(0) .matching-item:visible").length;
-v_len2=$(".column-list .column-list-re:eq(1) .matching-item:visible").length;
+$('body').on('input', '#match_content_extra', function () {
+    updateMatchingMessageContent();
+});
 
-$(".column-list .column-list-re:eq(0) .searchCompanyListLoad .length").text("("+(vtotal-v_len)+")");
-$(".column-list .column-list-re:eq(1) .searchCompanyListLoad .length").text("("+(vtotal2-v_len2)+")");
-
-<?if($msinfo['membership_parent_no']>1 and $msinfo){?>
-$(".searchCompanyListLoad").click(function(){
-	idx=$(this).parent().index();
-	if(idx==0) v_len=$(".column-list-re:eq(0) .matching-item:visible").length;
-	else v_len=$(".column-list-re:eq(1) .matching-item:visible").length;
-	add=v_len+6;
-	$(".column-list-re:eq("+idx+") .matching-item:lt("+add+")").show();
-	v_len=$(".column-list-re:eq("+idx+") .matching-item:visible").length;
-	if(idx==0) {
-		$(".column-list-re:eq("+idx+") .searchCompanyListLoad .length").text("("+(vtotal-v_len)+")");
-		if((vtotal-v_len)==0) $(this).hide();
-	}else{ 
-		$(".column-list-re:eq("+idx+") .searchCompanyListLoad .length").text("("+(vtotal2-v_len)+")");
-		if((vtotal2-v_len)==0) $(this).hide();
-	}
-})
-<?}else{?>
-$(".searchCompanyListLoad").click(function(){
-	jAlert("맴버쉽 요금제를 가입하면 서비스를 이용하실 수 있습니다.","알림",function(){
-		location.href="/ko/plan.php";
-	});
-})
-<?}?>
+if (window.CompanyDetailActions && typeof window.CompanyDetailActions.init === 'function') {
+    window.CompanyDetailActions.init({
+        getSetUrl: '/get_set.php',
+        popupSelector: '.popup_submit',
+        requestTypeSelector: '#request_type',
+        receiverNameSelector: '#recv',
+        planUrl: '/ko/plan.php',
+        loginUrl: function () {
+            return '/bbs/login.php?url=' + encodeURIComponent(location.pathname + location.search);
+        },
+        beforeSubmit: function () {
+            updateMatchingMessageContent();
+            if (!$.trim($('#match_content').val())) {
+                if (typeof jAlert === 'function') jAlert('매칭 메시지 선택(선택) 또는 추가 요청사항(선택) 중 1개 이상 입력해 주세요.', '알림');
+                else alert('매칭 메시지 선택(선택) 또는 추가 요청사항(선택) 중 1개 이상 입력해 주세요.');
+                return false;
+            }
+            return true;
+        },
+        onPopupReady: function (kedcd, parts) {
+            $('#match_content_extra').val('');
+            renderMatchingTemplateCards();
+            updateMatchingMessageContent();
+            if (parts && parts[2]) $('#recv').text(parts[2]);
+        }
+    });
+}
 </script>
-<?
-include_once(G5_THEME_PATH.'/tail.php');
-?>
+
+<?php include_once(G5_THEME_PATH.'/tail.php'); ?>
