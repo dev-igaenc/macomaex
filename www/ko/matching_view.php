@@ -395,15 +395,20 @@ function Encrypt( str , key ){
 			})
 			.done(function(jqXHR) {
 				jqXHR=jqXHR.split("|");
-				if(jqXHR[0]==500){
-					if(jqXHR[1]=="맴버쉽에 가입하시면 사용가능합니다."){
-						jAlert(jqXHR[1],"알림",function(){
+				if(jqXHR[0]=="500"){
+					var openMsg = jqXHR[1] ? jqXHR[1] : "요청에 문제가 있습니다.";
+					if(jqXHR[2]=="PLAN" || openMsg.indexOf("매칭 가능 크레딧이 부족합니다") === 0){
+						jAlert(openMsg,"알림",function(){
 							location.href="/ko/plan.php";
 						});
+					}else if(jqXHR[0]=="501" || openMsg.indexOf("로그인 후 이용하세요.") === 0){
+						jAlert("로그인 후 이용하세요.","알림",function(){
+							location.href="/bbs/login.php?url="+encodeURIComponent(location.pathname + location.search);
+						});
 					}else{
-						jAlert(jqXHR[1],"알림",function(){ });
+						jAlert(openMsg,"알림",function(){ });
 					}
-				}else if(jqXHR[0]==1000){
+				}else if(jqXHR[0]=="1000"){
 						//매칭창 열기
 						$(".popup_top_macthing_length .length").text(jqXHR[1]);//매칭수 넣기
 						popupAll.forEach((e)=>{e.classList.remove("open")})
@@ -447,13 +452,24 @@ function Encrypt( str , key ){
 		if(Formdata){
 			$.post( "../get_set.php?"+Formdata)
 			.done(function(jqXHR) {
-				if(jqXHR==500){
-					jAlert("요청에 문제가 있습니다.","알림",function(){
-					});
-				}else{
+				var parts = (jqXHR + "").split("|");
+				if(parts[0] == "1000"){
 					jAlert("매칭이 요청되었습니다.","알림",function(){
 						location.reload();
 					});
+				}else{
+					var msg = parts[1] ? parts[1] : "요청에 문제가 있습니다.";
+					if(parts[2]=="PLAN" || msg.indexOf("매칭 가능 크레딧이 부족합니다") === 0){
+						jAlert(msg,"알림",function(){
+							location.href="/ko/plan.php";
+						});
+					}else if(parts[0] == "501" || msg.indexOf("로그인 후 이용하세요.") === 0){
+						jAlert("로그인 후 이용하세요.","알림",function(){
+							location.href="/bbs/login.php?url="+encodeURIComponent(location.pathname + location.search);
+						});
+					}else{
+						jAlert(msg,"알림",function(){});
+					}
 				}
 			});
 		}
