@@ -6,6 +6,15 @@ $board['bo_9']="1"; // 2뎁스
 
 include_once(G5_THEME_PATH.'/head.php');
 $membership_list=get_membership();
+$credit_membership_list = array();
+foreach($membership_list as $tmp_membership){
+	if(strpos((string)$tmp_membership['title_en'], 'CREDIT_') === 0){
+		$credit_membership_list[] = $tmp_membership;
+	}
+}
+if(count($credit_membership_list) > 0){
+	$membership_list = $credit_membership_list;
+}
 
 /*결제모듈*/
 require_once('libs/INIStdPayUtil.php');
@@ -22,12 +31,43 @@ $my_membership=$msinfo_row[0];
 /*결제모듈*/
 ?>
 <style>
-	.planList > li:nth-of-type(1) .plan_body .plan_payment{opacity: 0; pointer-events: none;}
+	.planList > li:nth-of-type(1) .plan_body .plan_payment{opacity: 1; pointer-events: auto;}
+	.planList > li .plan_body .plan_payment.is_disabled{background-color:#9ea4aa; pointer-events:none;}
 </style>
 <div id="plan">
 	<input type="hidden" name="coupon_chk" id="coupon_chk" value="false">
 	<input type="hidden" name="coupon_pop" id="coupon_pop" value="false">
     <ul class="planList">
+		<li class="bxShadow2">
+			<div class="plan_head">
+				<p class="kr">30 크레딧</p>
+				<p class="en">CREDIT_30</p>
+			</div>
+			<div class="plan_body new">
+				<div class="plan_content">
+					<div class="plan_money">
+						<div class="price">무료</div>
+						<div class="credit_note">회원가입 시 기본 제공</div>
+					</div>
+					<ul class="price_info">
+						<li>VAT <span>없음</span></li>
+						<li>1회 지급</li>
+					</ul>
+					<?if(!$member['mb_id']){?>
+						<a href="/bbs/register.php" class="plan_payment">회원가입</a>
+					<?}else{?>
+						<span class="plan_payment is_disabled">가입 시 제공 완료</span>
+					<?}?>
+				</div>
+				<div class="plan_desc">
+					<ul>
+						<li>신규 회원가입 시 30 크레딧 지급</li>
+						<li>기본 지급 크레딧은 환불 불가</li>
+						<li>매칭 요청 시 크레딧 차감</li>
+					</ul>
+				</div>
+			</div>
+		</li>
 	<?foreach($membership_list as $value){
 		 $value['pay_type']=str_replace("[","<span>",$value['pay_type']);
 		 $value['pay_type']=str_replace("]","</span>",$value['pay_type']);
@@ -35,6 +75,36 @@ $my_membership=$msinfo_row[0];
 		 $value['desc']=str_replace("<li>[","<li class='under'><span>",$value['desc']);
 		 $value['desc']=str_replace("]","</span>",$value['desc']);
 		 $value['desc']=str_replace("]\n</li>","</span></li>",$value['desc']);
+		 $credit_cnt = isset($value['matching_cnt']) ? (int)$value['matching_cnt'] : 0;
+		 if($credit_cnt < 1){
+		 	if(strpos((string)$value['title'], '스탠다드') !== false) $credit_cnt = 100;
+		 	else if(strpos((string)$value['title'], '프리미엄+') !== false) $credit_cnt = 600;
+		 	else if(strpos((string)$value['title'], '프리미엄') !== false) $credit_cnt = 220;
+		 }
+		 $credit_bonus = 0;
+		 if($credit_cnt === 220) $credit_bonus = 20;
+		 else if($credit_cnt === 600) $credit_bonus = 100;
+		 $is_credit_plan = ($credit_cnt > 0);
+		 $plan_desc_items = array();
+		 if($credit_cnt === 100){
+			$plan_desc_items = array(
+				'100크레딧 충전',
+				'기본 요청 1건 10크레딧 차감',
+				'TM 요청 1건 30크레딧 차감'
+			);
+		 } else if($credit_cnt === 220){
+			$plan_desc_items = array(
+				'200크레딧 + 20크레딧 추가 지급',
+				'기본 요청 1건 10크레딧 차감',
+				'TM 요청 1건 30크레딧 차감'
+			);
+		 } else if($credit_cnt === 600){
+			$plan_desc_items = array(
+				'500크레딧 + 100크레딧 추가 지급',
+				'기본 요청 1건 10크레딧 차감',
+				'TM 요청 1건 30크레딧 차감'
+			);
+		 }
 	?>
         <li class="bxShadow2">
             <div class="plan_head">
@@ -44,22 +114,27 @@ $my_membership=$msinfo_row[0];
             <div class="plan_body new">
                 <div class="plan_content">
 					<div class="plan_money">
-						<?if($value['price_origin']>-1){?>
-							<? if($value['price_origin'] != "0" && $value['price_origin'] != "프리"){?>
+						<?if(!$is_credit_plan && $value['price_origin']>-1){?>
+							<? if($value['price_origin'] != "0" && $value['price_origin'] != "프리" && is_numeric($value['price_origin'])){?>
 								<div class="price_origin">정상가 <?=number_format($value['price_origin'])?></div>
 							<?}else{?>
-								<div class="price"><?=number_format($value['price_origin'])?></div>
+								<div class="price"><?=$value['price_origin']?></div>
 							<?}?>
 						<?}?>
 
 						<?if($value['price_sale']>-1){?>
-							<div class="price_sale <? if($value['price_origin'] != "0" && $value['price_origin'] != "프리"){?>price<?}?>">
-								<?=number_format($value['price_sale'])?>
+							<div class="price_sale <? if($is_credit_plan || ($value['price_origin'] != "0" && $value['price_origin'] != "프리")){?>price<?}?><?if($credit_bonus > 0){?> has_bonus<?}?>">
+								<?=(is_numeric($value['price_sale']) ? number_format($value['price_sale']) : $value['price_sale'])?>
 
-								<?if($value['sale']){?>
+								<?if($credit_bonus > 0){?>
+									<p class="sale bonus_replace"><strong>+<?=number_format($credit_bonus)?></strong></p>
+								<?}else if(!$is_credit_plan && $value['sale'] && is_numeric($value['sale'])){?>
 									<p class="sale"><strong><?=number_format($value['sale'])?></strong>%</p>
 								<?}?>
 							</div>
+						<?}?>
+						<?if($credit_cnt > 0){?>
+							<div class="credit_note empty" aria-hidden="true">&nbsp;</div>
 						<?}?>
 					</div>
                     <ul class="price_info">
@@ -67,7 +142,7 @@ $my_membership=$msinfo_row[0];
                         <li><?=$value['pay_type']?></li>
                     </ul>
 
-					<form name="mobileweb<?= $value[no]?>" method="post" class="mpay">
+					<form name="mobileweb<?= $value['no']?>" method="post" class="mpay">
 							<input type="hidden" name="mtype" value="<?=$value['title']?>">
 							<input type="hidden" name="authtype" value="D">
 							<input type="hidden" name="mid" value="<?php echo $mid ?>">
@@ -81,17 +156,23 @@ $my_membership=$msinfo_row[0];
 							<input type="hidden" name="buyeremail" value="<?=$member['mb_email']?>">
 							<input type="hidden" name="returnurl" value="https://macomaex.com/ko/INIbill_mo_return.php">
 							<input type="hidden" name="carduse" value="">
-							<?if($my_membership[membership_parent_no]==$value[no]){?>
-							<a class="plan_payment_use">맴버쉽 이용중</a>
-							<?}else{?>
-							<a mtype="<?=$value['title']?>" idx="<?= $value[no]?>" class="plan_payment">결제하기</a>
-							<?}?>
+							<a mtype="<?=$value['title']?>" idx="<?= $value['no']?>" class="plan_payment">충전하기</a>
 					</form>
 
                 </div>
                 <div class="plan_desc">
                     <ul>
-                        <?=$value['desc']?>
+						<?if(count($plan_desc_items) > 0){?>
+							<?foreach($plan_desc_items as $desc_idx => $desc_item){?>
+								<?if($desc_idx === 0){?>
+									<li class="under"><span><?=$desc_item?></span></li>
+								<?}else{?>
+									<li><?=$desc_item?></li>
+								<?}?>
+							<?}?>
+						<?}else{?>
+							<?=$value['desc']?>
+						<?}?>
                     </ul>
                 </div>
             </div>
@@ -228,6 +309,28 @@ $("body").on("click",".plan_payment",function () {
 		return false;
 	}
 
+	// 크레딧 일반결제(STDPAY) 주문 생성 후 결제창 호출
+	$.post( "../get_set.php", {
+		type: 'membership_credit_pay',
+		idx:idx,
+		mtype:mtype,
+		orderid:orderid,
+		mid:mid
+	})
+	.done(function(jqXHR) {
+		jqXHR=jqXHR.split("|");
+		if(jqXHR[0]==1000){
+			var payOrderNo = jqXHR[1];
+			window.open("/ko/credit_pay.php?orderid="+encodeURIComponent(payOrderNo), 'pyWin', 'width=520px,height=760px');
+		}else{
+			if(jqXHR[1]=="02") jAlert("검색 결과가 없습니다.","알림");
+			else jAlert(jqXHR[1],"알림");
+		}
+	});
+	return false;
+
+	/*
+	기존 정기결제(빌링) 플로우는 보존한다.
 	$.post( "../get_set.php", {
 		type: 'membership_pay',
 		idx:idx,
@@ -282,6 +385,7 @@ $("body").on("click",".plan_payment",function () {
 				else jAlert(jqXHR[1],"알림");
 			}
 	});
+	*/
 
 })
 <?}else{?>
