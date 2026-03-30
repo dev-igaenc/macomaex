@@ -16,69 +16,215 @@ include_once(G5_LIB_PATH.'/popular.lib.php');
 //header (){Authorization: '[ ACCES TOKEN KEY ]'}
 ?>
 
-	<!-- 상단 시작 { -->
-	<div id="hd">
-		<div id="hd_h1"><?php echo $g5['title'] ?></div>
+<!-- 상단 시작 { -->
+<div id="hd">
+	<div id="hd_h1"><?php echo $g5['title'] ?></div>
 
-		<svg xmlns="http://www.w3.org/2000/svg" style="position:absolute;width:0;height:0;">
-		  <defs>
-			<symbol id="cat-iso-5" viewBox="0 0 48 48">
-			  <circle fill="#e9f5ff" cx="24" cy="24" r="14"></circle>
-			  <rect x="20" y="10" width="8" height="8" rx="2" fill="#455a64"></rect>
-			  <rect x="21" y="11" width="6" height="6" rx="1.5" fill="#607d8b"></rect>
-			  <path d="M18 18 H30 L31.5 24 C32 26 31.6 28.2 30.5 30 L27 35 C26 36.5 25 37 24 37 C23 37 22 36.5 21 35 L17.5 30 C16.4 28.2 16 26 16.5 24 Z" fill="#37474f"></path>
-			  <path d="M18.5 25 H29.5 C30 27.2 29.6 29 28.7 30.3 L26 33.6 C25.3 34.5 24.6 35 24 35 C23.4 35 22.7 34.5 22 33.6 L19.3 30.3 C18.4 29 18 27.2 18.5 25 Z" fill="#26a69a"></path>
-			  <path d="M19.5 26.2 C21.2 25.3 22.8 25 24 25 C25.2 25 26.8 25.3 28.5 26.2 L28 27.4 C26.6 26.8 25.3 26.5 24 26.5 C22.7 26.5 21.4 26.8 20 27.4 Z" fill="#4db6ac"></path>
-			  <circle cx="21" cy="23" r="1.2" fill="#b2ebf2"></circle>
-			  <circle cx="26.5" cy="25.5" r="1" fill="#b2ebf2"></circle>
-			  <circle cx="23.4" cy="21.2" r="0.9" fill="#b2ebf2"></circle>
-			  <path d="M22 19.5 C23 18.8 23.9 18.5 25 18.5 C25.6 18.5 26.2 18.6 26.8 18.8" fill="none" stroke="#ffffff" stroke-width="1.2" stroke-linecap="round" opacity="0.7"></path>
-			</symbol>
-			<symbol id="cat-iso-6" viewBox="0 0 48 48"><circle fill="#edf2f7" cx="24" cy="24" r="14"></circle><rect fill="#78909c" x="10" y="30" width="28" height="4" rx="1.2"></rect><path fill="#607d8b" d="M12 26 L36 26 L34 30 L14 30 Z"></path><circle fill="#546e7a" cx="20" cy="22" r="6.5"></circle><circle fill="#cfd8dc" cx="20" cy="22" r="2.4"></circle><rect fill="#90a4ae" x="19.4" y="12.5" width="1.2" height="3.8" rx="0.6"></rect><rect fill="#90a4ae" x="19.4" y="27.7" width="1.2" height="3.8" rx="0.6"></rect><rect fill="#90a4ae" x="10.5" y="21.4" width="3.8" height="1.2" rx="0.6"></rect><rect fill="#90a4ae" x="25.7" y="21.4" width="3.8" height="1.2" rx="0.6"></rect><path fill="#90a4ae" d="M13.7 16.6 L14.6 15.7 L17.3 18.4 L16.4 19.3 Z"></path><path fill="#90a4ae" d="M23.6 26.5 L24.5 25.6 L27.2 28.3 L26.3 29.2 Z"></path><path fill="#90a4ae" d="M23.6 17.5 L26.3 14.8 L27.2 15.7 L24.5 18.4 Z"></path><path fill="#90a4ae" d="M13.7 27.4 L16.4 24.7 L17.3 25.6 L14.6 28.3 Z"></path><circle fill="#455a64" cx="31.5" cy="27.5" r="4.2"></circle><circle fill="#b0bec5" cx="31.5" cy="27.5" r="1.5"></circle><path fill="#5f6f7a" d="M30 19 L35.5 13.5 L37.2 15.2 L31.7 20.7 Z"></path></symbol>
-			<symbol id="cat-iso-7" viewBox="0 0 48 48">
-			  <circle cx="24" cy="24" r="14" fill="#ECEFF1"></circle>
-			  <path d="M14 20 L32 16 L36 22 L18 26 Z" fill="#B0BEC5"></path>
-			  <path d="M14 20 L14 28 L18 34 L18 26 Z" fill="#90A4AE"></path>
-			  <path d="M18 26 L36 22 L36 30 L18 34 Z" fill="#78909C"></path>
-			  <path d="M15.5 20.8 L31.5 17.4 L34.2 21.4 L18.2 24.8 Z" fill="#CFD8DC"></path>
-			  <circle cx="19.5" cy="23.5" r="0.9" fill="#ECEFF1"></circle>
-			  <circle cx="25.5" cy="22.3" r="0.9" fill="#ECEFF1"></circle>
-			  <circle cx="30.8" cy="21.3" r="0.9" fill="#ECEFF1"></circle>
-			  <circle cx="21.2" cy="28.4" r="0.9" fill="#ECEFF1"></circle>
-			  <circle cx="27.5" cy="26.9" r="0.9" fill="#ECEFF1"></circle>
-			  <path d="M19 30 H33" stroke="#B0BEC5" stroke-width="0.8" stroke-linecap="round" opacity="0.8"></path>
-			  <path d="M19.5 31.6 H31.5" stroke="#B0BEC5" stroke-width="0.7" stroke-linecap="round" opacity="0.7"></path>
-			</symbol>
-			<symbol id="cat-iso-8" viewBox="0 0 48 48"><path fill="#66bb6a" d="M24 12 Q20 16 24 20 Q28 16 24 12"></path><path fill="#4caf50" d="M20 20 Q24 24 28 20 Q24 28 20 20"></path><path fill="#81c784" d="M22 18 L26 18 L26 22 L22 22 Z"></path><path fill="#43a047" d="M18 24 L30 24 L30 32 L18 32 Z"></path><path fill="#388e3c" d="M18 24 L18 32 L16 34 L16 26 Z"></path><path fill="#66bb6a" d="M30 24 L30 32 L32 34 L32 26 Z"></path></symbol>
-			<symbol id="icon-magic-wand" viewBox="0 0 24 24"><path fill="currentColor" d="M16.8 2.2l1.1 2.3 2.3 1.1-2.3 1.1-1.1 2.3-1.1-2.3-2.3-1.1 2.3-1.1 1.1-2.3zm3.2 2.8.6 1.1 1.1.6-1.1.6-.6 1.1-.6-1.1-1.1-.6 1.1-.6.6-1.1zM7.4 17.4 16.1 8.7l2.6 2.6-8.7 8.7-2.6-2.6zm-1 2.4 1.3 1.3-3.1 1 .8-2.9z"></path></symbol>
-		  </defs>
-		</svg>
+	<svg xmlns="http://www.w3.org/2000/svg" style="position:absolute;width:0;height:0;">
+	  <defs>
+		<!-- 건설 - 망치 -->
+		<symbol id="cat-iso-1" viewBox="0 0 48 48"><path fill="#e53935" d="M20 8 L28 8 L28 16 L20 16 Z"></path><path fill="#c62828" d="M20 8 L20 16 L16 20 L16 12 Z"></path><path fill="#ef5350" d="M28 8 L28 16 L32 20 L32 12 Z"></path><path fill="#ff9800" d="M12 20 L20 20 L20 28 L12 28 Z"></path><path fill="#ff6f00" d="M12 20 L12 28 L8 32 L8 24 Z"></path><path fill="#ffb74d" d="M20 20 L20 28 L24 32 L24 24 Z"></path></symbol>
+		<!-- 의류 - 티셔츠 -->
+		<symbol id="cat-iso-2" viewBox="0 0 48 48"><path fill="#ec407a" d="M18 8 L22 8 L22 12 L18 12 Z"></path><path fill="#ad1457" d="M18 8 L18 12 L14 16 L14 10 Z"></path><path fill="#f48fb1" d="M22 8 L22 12 L26 16 L26 10 Z"></path><path fill="#ab47bc" d="M14 16 L34 16 L34 40 L14 40 Z"></path><path fill="#7b1fa2" d="M14 16 L14 40 L10 44 L10 20 Z"></path><path fill="#ba68c8" d="M34 16 L34 40 L38 44 L38 20 Z"></path></symbol>
+		<!-- 화장품 - 립스틱 -->
+		<symbol id="cat-iso-3" viewBox="0 0 48 48"><path fill="#e91e63" d="M20 8 L28 8 L28 12 L20 12 Z"></path><path fill="#c2185b" d="M20 8 L20 12 L18 14 L18 10 Z"></path><path fill="#f06292" d="M28 8 L28 12 L30 14 L30 10 Z"></path><path fill="#26a69a" d="M18 14 L30 14 L30 36 L18 36 Z"></path><path fill="#00897b" d="M18 14 L18 36 L16 38 L16 16 Z"></path><path fill="#4db6ac" d="M30 14 L30 36 L32 38 L32 16 Z"></path><path fill="#ff6f00" d="M22 36 L26 36 L26 40 L22 40 Z"></path></symbol>
+		<!-- 식자재·식품 B2B - 식품/원재료 -->
+		<symbol id="cat-iso-4" viewBox="0 0 48 48"><circle fill="#ffb74d" cx="24" cy="22" r="11"></circle><path fill="#ffa726" d="M24 11 Q21 14 24 17 Q27 14 24 11"></path><path fill="#ffe082" d="M18 22 Q20 18 24 20 Q28 18 30 22 Q28 26 24 24 Q20 26 18 22"></path><path fill="#8bc34a" d="M22 12 Q23 10 25 10 Q24 12 24 14 Q23 13 22 12"></path></symbol>
+		<!-- 화학·케미컬·원료 - 라운드 플라스크/버블 -->
+		<symbol id="cat-iso-5" viewBox="0 0 48 48">
+		  <!-- 배경 원 -->
+		  <circle fill="#e9f5ff" cx="24" cy="24" r="14"></circle>
+		  <!-- 목 부분 -->
+		  <rect x="20" y="10" width="8" height="8" rx="2" fill="#455a64"></rect>
+		  <rect x="21" y="11" width="6" height="6" rx="1.5" fill="#607d8b"></rect>
+		  <!-- 플라스크 몸통 -->
+		  <path d="M18 18 H30 L31.5 24 C32 26 31.6 28.2 30.5 30 L27 35 C26 36.5 25 37 24 37 C23 37 22 36.5 21 35 L17.5 30 C16.4 28.2 16 26 16.5 24 Z" fill="#37474f"></path>
+		  <!-- 액체 -->
+		  <path d="M18.5 25 H29.5 C30 27.2 29.6 29 28.7 30.3 L26 33.6 C25.3 34.5 24.6 35 24 35 C23.4 35 22.7 34.5 22 33.6 L19.3 30.3 C18.4 29 18 27.2 18.5 25 Z" fill="#26a69a"></path>
+		  <!-- 액체 하이라이트 -->
+		  <path d="M19.5 26.2 C21.2 25.3 22.8 25 24 25 C25.2 25 26.8 25.3 28.5 26.2 L28 27.4 C26.6 26.8 25.3 26.5 24 26.5 C22.7 26.5 21.4 26.8 20 27.4 Z" fill="#4db6ac"></path>
+		  <!-- 기포 -->
+		  <circle cx="21" cy="23" r="1.2" fill="#b2ebf2"></circle>
+		  <circle cx="26.5" cy="25.5" r="1" fill="#b2ebf2"></circle>
+		  <circle cx="23.4" cy="21.2" r="0.9" fill="#b2ebf2"></circle>
+		  <!-- 반사 하이라이트 -->
+		  <path d="M22 19.5 C23 18.8 23.9 18.5 25 18.5 C25.6 18.5 26.2 18.6 26.8 18.8" fill="none" stroke="#ffffff" stroke-width="1.2" stroke-linecap="round" opacity="0.7"></path>
+		</symbol>
+		<!-- 기계·설비·산업장비 - 산업 기어/설비암 -->
+		<symbol id="cat-iso-6" viewBox="0 0 48 48"><circle fill="#edf2f7" cx="24" cy="24" r="14"></circle><rect fill="#78909c" x="10" y="30" width="28" height="4" rx="1.2"></rect><path fill="#607d8b" d="M12 26 L36 26 L34 30 L14 30 Z"></path><circle fill="#546e7a" cx="20" cy="22" r="6.5"></circle><circle fill="#cfd8dc" cx="20" cy="22" r="2.4"></circle><rect fill="#90a4ae" x="19.4" y="12.5" width="1.2" height="3.8" rx="0.6"></rect><rect fill="#90a4ae" x="19.4" y="27.7" width="1.2" height="3.8" rx="0.6"></rect><rect fill="#90a4ae" x="10.5" y="21.4" width="3.8" height="1.2" rx="0.6"></rect><rect fill="#90a4ae" x="25.7" y="21.4" width="3.8" height="1.2" rx="0.6"></rect><path fill="#90a4ae" d="M13.7 16.6 L14.6 15.7 L17.3 18.4 L16.4 19.3 Z"></path><path fill="#90a4ae" d="M23.6 26.5 L24.5 25.6 L27.2 28.3 L26.3 29.2 Z"></path><path fill="#90a4ae" d="M23.6 17.5 L26.3 14.8 L27.2 15.7 L24.5 18.4 Z"></path><path fill="#90a4ae" d="M13.7 27.4 L16.4 24.7 L17.3 25.6 L14.6 28.3 Z"></path><circle fill="#455a64" cx="31.5" cy="27.5" r="4.2"></circle><circle fill="#b0bec5" cx="31.5" cy="27.5" r="1.5"></circle><path fill="#5f6f7a" d="M30 19 L35.5 13.5 L37.2 15.2 L31.7 20.7 Z"></path></symbol>
+		<!-- 금속·소재 - 메탈 블록/플레이트 -->
+		<symbol id="cat-iso-7" viewBox="0 0 48 48">
+		  <!-- 차가운 메탈 배경 -->
+		  <circle cx="24" cy="24" r="14" fill="#ECEFF1"></circle>
+		  <!-- 메탈 플레이트(원근감) -->
+		  <path d="M14 20 L32 16 L36 22 L18 26 Z" fill="#B0BEC5"></path>
+		  <path d="M14 20 L14 28 L18 34 L18 26 Z" fill="#90A4AE"></path>
+		  <path d="M18 26 L36 22 L36 30 L18 34 Z" fill="#78909C"></path>
+		  <!-- 상단 빛 반사 -->
+		  <path d="M15.5 20.8 L31.5 17.4 L34.2 21.4 L18.2 24.8 Z" fill="#CFD8DC"></path>
+		  <!-- 리벳(볼트) -->
+		  <circle cx="19.5" cy="23.5" r="0.9" fill="#ECEFF1"></circle>
+		  <circle cx="25.5" cy="22.3" r="0.9" fill="#ECEFF1"></circle>
+		  <circle cx="30.8" cy="21.3" r="0.9" fill="#ECEFF1"></circle>
+		  <circle cx="21.2" cy="28.4" r="0.9" fill="#ECEFF1"></circle>
+		  <circle cx="27.5" cy="26.9" r="0.9" fill="#ECEFF1"></circle>
+		  <!-- 메탈 브러시 느낌의 라인 -->
+		  <path d="M19 30 H33" stroke="#B0BEC5" stroke-width="0.8" stroke-linecap="round" opacity="0.8"></path>
+		  <path d="M19.5 31.6 H31.5" stroke="#B0BEC5" stroke-width="0.7" stroke-linecap="round" opacity="0.7"></path>
+		</symbol>
+		<!-- 농축수산 - 농작물/물고기 -->
+		<symbol id="cat-iso-8" viewBox="0 0 48 48"><path fill="#66bb6a" d="M24 12 Q20 16 24 20 Q28 16 24 12"></path><path fill="#4caf50" d="M20 20 Q24 24 28 20 Q24 28 20 20"></path><path fill="#81c784" d="M22 18 L26 18 L26 22 L22 22 Z"></path><path fill="#43a047" d="M18 24 L30 24 L30 32 L18 32 Z"></path><path fill="#388e3c" d="M18 24 L18 32 L16 34 L16 26 Z"></path><path fill="#66bb6a" d="M30 24 L30 32 L32 34 L32 26 Z"></path></symbol>
+		<!-- 에너지·환경 - 태양 -->
+		<symbol id="cat-iso-9" viewBox="0 0 48 48"><circle fill="#ffc107" cx="24" cy="24" r="8"></circle><path fill="#ff9800" d="M24 8 L26 8 L26 12 L24 12 Z"></path><path fill="#ff9800" d="M24 36 L26 36 L26 40 L24 40 Z"></path><path fill="#ff9800" d="M8 24 L12 24 L12 26 L8 26 Z"></path><path fill="#ff9800" d="M36 24 L40 24 L40 26 L36 26 Z"></path><path fill="#ff9800" d="M14 14 L16 16 L13 19 L11 17 Z"></path><path fill="#ff9800" d="M34 14 L36 16 L35 19 L33 17 Z"></path><path fill="#ff9800" d="M14 34 L16 32 L19 35 L17 37 Z"></path><path fill="#ff9800" d="M34 34 L32 32 L29 35 L31 37 Z"></path></symbol>
+		<!-- 전자·전기·반도체 - 칩/전기 -->
+		<symbol id="cat-iso-10" viewBox="0 0 48 48"><circle fill="#eaf2ff" cx="24" cy="24" r="14"></circle><rect fill="#1e88e5" x="16" y="16" width="16" height="16" rx="2"></rect><rect fill="#90caf9" x="20" y="20" width="8" height="8" rx="1.2"></rect><path fill="#42a5f5" d="M14 19 H16 V21 H14 Z M14 23 H16 V25 H14 Z M14 27 H16 V29 H14 Z M32 19 H34 V21 H32 Z M32 23 H34 V25 H32 Z M32 27 H34 V29 H32 Z M19 14 H21 V16 H19 Z M23 14 H25 V16 H23 Z M27 14 H29 V16 H27 Z M19 32 H21 V34 H19 Z M23 32 H25 V34 H23 Z M27 32 H29 V34 H27 Z"></path><path fill="#ffd54f" d="M24 18 L27.5 23 H24.8 L27 29 L21 24.5 H23.8 L22 18 Z"></path></symbol>
+		<!-- 자동차·모빌리티 - 자동차 -->
+		<symbol id="cat-iso-11" viewBox="0 0 48 48"><rect fill="#e1f5fe" x="8" y="20" width="32" height="12" rx="4"></rect><path fill="#29b6f6" d="M14 18 L34 18 L38 22 L10 22 Z"></path><circle fill="#37474f" cx="16" cy="30" r="3.5"></circle><circle fill="#37474f" cx="32" cy="30" r="3.5"></circle><rect fill="#ffffff" x="16" y="19" width="8" height="4" rx="1"></rect><rect fill="#ffffff" x="24" y="19" width="8" height="4" rx="1"></rect></symbol>
+		<!-- 포장재·소모성 자재 - 상자/패키징 -->
+		<symbol id="cat-iso-12" viewBox="0 0 48 48"><path fill="#ede7f6" d="M10 16 L38 16 L38 34 L10 34 Z"></path><path fill="#d1c4e9" d="M10 16 L24 10 L38 16 L24 22 Z"></path><path fill="#b39ddb" d="M24 22 L38 16 L38 34 L24 40 Z"></path><path fill="#9575cd" d="M24 22 L10 16 L10 34 L24 40 Z"></path><path fill="#7e57c2" d="M20 18 L24 20 L28 18 L24 16 Z"></path></symbol>
+		<!-- 반도체 - 칩 -->
+		<symbol id="cat-iso-13" viewBox="0 0 48 48"><path fill="#29b6f6" d="M16 16 L32 16 L32 32 L16 32 Z"></path><path fill="#0288d1" d="M16 16 L16 32 L14 34 L14 18 Z"></path><path fill="#4fc3f7" d="M32 16 L32 32 L34 34 L34 18 Z"></path><path fill="#01579b" d="M18 18 L30 18 L30 30 L18 30 Z"></path><path fill="#0277bd" d="M20 20 L28 20 L28 28 L20 28 Z"></path></symbol>
+		<!-- IT·소프트웨어 - 컴퓨터 -->
+		<symbol id="cat-iso-14" viewBox="0 0 48 48"><path fill="#42a5f5" d="M10 12 L38 12 L38 28 L10 28 Z"></path><path fill="#1976d2" d="M10 12 L10 28 L8 30 L8 14 Z"></path><path fill="#64b5f6" d="M38 12 L38 28 L40 30 L40 14 Z"></path><path fill="#1565c0" d="M12 14 L36 14 L36 26 L12 26 Z"></path><path fill="#1e88e5" d="M14 16 L34 16 L34 24 L14 24 Z"></path><path fill="#90caf9" d="M18 28 L30 28 L30 30 L18 30 Z"></path></symbol>
+		<!-- 통신 - 신호/안테나 -->
+		<symbol id="cat-iso-15" viewBox="0 0 48 48"><path fill="#5c6bc0" d="M24 8 L26 8 L26 40 L24 40 Z"></path><path fill="#3f51b5" d="M18 16 L20 16 L20 40 L18 40 Z"></path><path fill="#7986cb" d="M30 16 L32 16 L32 40 L30 40 Z"></path><path fill="#3949ab" d="M12 24 L14 24 L14 40 L12 40 Z"></path><path fill="#5c6bc0" d="M36 24 L38 24 L38 40 L36 40 Z"></path></symbol>
+		<!-- 토목 - 다리 -->
+		<symbol id="cat-iso-16" viewBox="0 0 48 48"><path fill="#78909c" d="M8 28 L40 28 L40 32 L8 32 Z"></path><path fill="#546e7a" d="M8 28 L8 32 L6 34 L6 30 Z"></path><path fill="#90a4ae" d="M40 28 L40 32 L42 34 L42 30 Z"></path><path fill="#607d8b" d="M12 20 L16 20 L16 28 L12 28 Z"></path><path fill="#455a64" d="M32 20 L36 20 L36 28 L32 28 Z"></path><path fill="#78909c" d="M20 16 L28 16 L28 28 L20 28 Z"></path></symbol>
+		<!-- 의료·헬스케어 - 십자가/케어 -->
+		<symbol id="cat-iso-17" viewBox="0 0 48 48"><circle fill="#ffebee" cx="24" cy="24" r="14"></circle><circle fill="#e53935" cx="24" cy="24" r="9"></circle><path fill="#ffffff" d="M23 18 L25 18 L25 22 L29 22 L29 24 L25 24 L25 28 L23 28 L23 24 L19 24 L19 22 L23 22 Z"></path></symbol>
+		<!-- 인력 - 사람 -->
+		<symbol id="cat-iso-18" viewBox="0 0 48 48"><circle fill="#66bb6a" cx="24" cy="16" r="6"></circle><path fill="#4caf50" d="M16 28 Q16 24 20 24 L28 24 Q32 24 32 28 L32 36 L16 36 Z"></path><path fill="#43a047" d="M18 30 L30 30 L30 36 L18 36 Z"></path></symbol>
+		<!-- 연구·기술 - 현미경/전구 -->
+		<symbol id="cat-iso-19" viewBox="0 0 48 48"><circle fill="#ab47bc" cx="24" cy="20" r="8" opacity="0.3"></circle><path fill="#9c27b0" d="M20 12 L28 12 L28 16 L20 16 Z"></path><path fill="#ba68c8" d="M22 16 L26 16 L26 24 L22 24 Z"></path><path fill="#7b1fa2" d="M18 24 L30 24 L30 28 L18 28 Z"></path><path fill="#ce93d8" d="M24 28 L24 32 L22 34 L26 34 Z"></path></symbol>
+		<!-- 공통 아이콘 - 요술봉 -->
+		<symbol id="icon-magic-wand" viewBox="0 0 24 24"><path fill="currentColor" d="M16.8 2.2l1.1 2.3 2.3 1.1-2.3 1.1-1.1 2.3-1.1-2.3-2.3-1.1 2.3-1.1 1.1-2.3zm3.2 2.8.6 1.1 1.1.6-1.1.6-.6 1.1-.6-1.1-1.1-.6 1.1-.6.6-1.1zM7.4 17.4 16.1 8.7l2.6 2.6-8.7 8.7-2.6-2.6zm-1 2.4 1.3 1.3-3.1 1 .8-2.9z"></path></symbol>
+		<!-- 전체보기 - 그리드 (4칸) -->
+		<symbol id="cat-iso-all" viewBox="0 0 48 48"><path fill="#2196f3" d="M8 8 L26 8 L26 26 L8 26 Z"></path><path fill="#ffc107" d="M28 8 L46 8 L46 26 L28 26 Z"></path><path fill="#4caf50" d="M8 28 L26 28 L26 46 L8 46 Z"></path><path fill="#e53935" d="M28 28 L46 28 L46 46 L28 46 Z"></path></symbol>
+	  </defs>
+	</svg>
 
-		<?php if(defined('_INDEX_')) { // index에서만 실행
-			include G5_BBS_PATH.'/newwin.inc.php'; // 팝업레이어
-		} ?>
+	<?php if(defined('_INDEX_')) { // index에서만 실행
+		include G5_BBS_PATH.'/newwin.inc.php'; // 팝업레이어
+	} ?>
 
 	<div id="header" class="hh"><!-- class="hh" --><p class="gnbBg"></p><div class="inConts">
 		<h1><a href="<?php echo G5_URL ?>/index.php">
 			<img src="/img/logo.svg" alt="<?php echo $config['cf_title']; ?>">
 		</a></h1>
 
+		<?php if(defined('_INDEX_')) { ?>
 		<div id="pcMenu">
 			<ul id="list">
 				<script type="text/javascript">globalNavigationBar();</script>
 				<?php // include(G5_THEME_PATH.'/menu.php'); ?>
-                <!-- </li> -->
-                <!-- <li>
-                    <a href="<?=$link_1101?>"><span>마이페이지</span></a>
-                    <ul class="gnbSub d2">
-                        <li><a href="<?=$link_1101?>"><span>매칭 히스토리</span></a></li>
-                        <li><a href="<?=$link_1102?>"><span>관심기업</span></a></li>
-                        <li><a href="<?=$link_1103?>"><span>회원정보수정</span></a>
-                        <li><a href="<?=$link_1104?>"><span>결제정보</span></a>
-                    </li></ul>
-                </li> -->
 			</ul>
 		</div>
+		<?php } else { ?>
+	<div id="hd_search">
+			<div class="mVisual_searchWrap bxShadow">
+				<form action="/ko/matching_list.php" method="POST" id="match_hd">
+					<input type="hidden" name="cominfo" id="cominfo_hd">
+					<input type="text" name="comnum" id="comnum_hd" class="comnum_chk" placeholder="사업자등록번호를 입력해보세요" maxlength="12" value="<?php echo isset($_REQUEST['comnum']) ? htmlspecialchars($_REQUEST['comnum']) : ''; ?>">
+					<button type="button" id="hd_submit" class="search_btn" aria-label="AI 추천받기">
+						<span class="sparkle"><svg viewBox="0 0 24 24"><use href="#icon-magic-wand"></use></svg></span>
+						<span>AI 추천받기</span>
+					</button>
+				</form>
+			</div>
+		</div>
+		<style>
+
+            /* 1. 헤더 레이아웃: 로고와 메뉴를 양 끝으로, 검색창을 중앙으로 */
+			#header h1 { 
+				flex: 1 !important; 
+				display: flex !important; 
+				align-items: center !important; 
+			}
+
+			#header .right-utill { 
+				flex: 1 !important; 
+				display: flex !important; 
+				justify-content: flex-end !important; 
+				align-items: center !important; 
+			}
+
+			#header .inConts #hd_search { 
+				flex: 0 1 auto !important; 
+				display: flex !important; 
+				justify-content: center !important; 
+				align-items: center !important; 
+				width: 100% !important;
+				max-width: 500px !important;
+				margin: 0 40px !important; 
+			}
+
+			/* 2. 검색바 배경 및 테두리 (Glassmorphism 효과) */
+			#hd_search .mVisual_searchWrap { 
+                width: 100% !important;
+                max-width: none !important;
+				margin-bottom: 0; 
+				background: rgba(245, 245, 245, 0.9); /* 배경 투명도 */
+				border-radius: 30px; /* 둥글기 */
+				border: 1px solid #ddd;
+				box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05); /* 그림자 */
+			}
+
+			/* 3. 입력창 (텍스트 입력 부분) */
+			#hd_search .mVisual_searchWrap input { 
+				height: 44px; /* 높이 조절 */
+				padding: 0 140px 0 20px; /* 우측 버튼 공간 확보 */
+				font-size: 14px; /* 글자 크기 */
+				background: transparent;
+			}
+
+			/* 4. [AI 추천받기] 버튼 스타일 */
+			#hd_search .mVisual_searchWrap .search_btn { 
+				height: 34px; /* 버튼 높이 */
+				padding: 0 15px; 
+				font-size: 13px; /* 버튼 글자 크기 */
+				border-radius: 20px; 
+				right: 5px; 
+				background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%); /* 버튼 색상 */
+				color: #fff;
+			}
+
+			/* 5. 버튼 내 아이콘 크기 */
+			#hd_search .mVisual_searchWrap .search_btn svg {
+				width: 14px;
+				height: 14px;
+				fill: #fff;
+			}
+
+			/* 6. 아이콘 흔들림/빛남 애니메이션 (모든 페이지 공통 적용을 위해 head에 추가) */
+			@keyframes wandWiggle {
+				0%, 100% { transform: rotate(-10deg) translateY(0); }
+				35% { transform: rotate(4deg) translateY(-1px); }
+				70% { transform: rotate(-2deg) translateY(0); }
+			}
+			@keyframes wandGlow {
+				0%, 100% { filter: drop-shadow(0 0 2px rgba(255,255,255,0.45)); }
+				50% { filter: drop-shadow(0 0 6px rgba(255,255,255,0.95)); }
+			}
+			#hd_search .search_btn .sparkle {
+				width: 16px;
+				height: 16px;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				animation: wandWiggle 1.6s ease-in-out infinite;
+			}
+			#hd_search .search_btn svg {
+				animation: wandGlow 1.6s ease-in-out infinite;
+			}
+
+			#header .inConts { justify-content: space-between; }
+
+			/* 반응형: 태블릿/모바일에서는 헤더 검색창 숨김 */
+			@media (max-width: 1024px) {
+				#hd_search { display: none; }
+			}
+		</style>
+		<?php } ?>
 
 		<div class="right-utill">
             <?php if (!$is_member) {  ?>
@@ -181,7 +327,16 @@ include_once(G5_LIB_PATH.'/popular.lib.php');
 
 
 		<?php if($depth_1 == 3){ ?>
-			<div id="sVisual" class="bg_<?=$depth_1?>">
+			<div id="sVisual" class="bg_<?=$depth_1?>" style="display: none;">
+
+			<?php if (!empty($sub_visual_video)) { ?>
+    <video class="svisual-video" autoplay muted loop playsinline preload="metadata">
+        <source src="<?= $sub_visual_video ?>" type="video/mp4">
+    </video>
+<?php } ?>
+<h2>
+
+
 				<h2>
 					<strong data-aos="fade-down"><?=$gr_subject?></strong>
 					<span data-aos="fade-up" data-aos-delay="100"><?=$gr_text?></span>
@@ -197,6 +352,12 @@ include_once(G5_LIB_PATH.'/popular.lib.php');
 			</div>
 		<?php }else{ ?>
 			<div id="sVisual" class="bg_<?=$depth_1?>">
+			<?php if (!empty($sub_visual_video)) { ?>
+    <video class="svisual-video" autoplay muted loop playsinline preload="metadata">
+        <source src="<?= $sub_visual_video ?>" type="video/mp4">
+    </video>
+<?php } ?>
+<h2>
 				<h2>
 					<strong data-aos="fade-down"><?=$gr_subject?></strong>
 					<span data-aos="fade-up" data-aos-delay="100"><?=$gr_text?></span>
@@ -238,184 +399,192 @@ include_once(G5_LIB_PATH.'/popular.lib.php');
                     </script>
                 </div>
             </div>
-			</div>
-			<div id="container">
-		<?php } ?>
-	<div class="modal_verify_overlay" id="modal_verify_overlay" aria-hidden="true">
-	    <div class="modal_verify" role="dialog" aria-labelledby="modal_verify_company" aria-modal="true">
-	        <button type="button" class="modal_verify_close" id="modal_verify_btn_close" aria-label="닫기">×</button>
-	        <div class="modal_verify_icon" aria-hidden="true">
-	            <svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"></path></svg>
-	        </div>
-	        <h2 class="modal_verify_company" id="modal_verify_company"></h2>
-	        <p class="modal_verify_text">귀사는 <strong id="modal_verify_bzc"></strong><br class="modal_verify_br_pc"><strong id="modal_verify_type"></strong>으로 확인되었습니다.</p>
-	        <p class="modal_verify_text2">본 서비스는 귀사와 동일·유사 업종의<br class="modal_verify_br_pc">실제 거래 데이터를 분석해<br class="modal_verify_br_pc">적합한 거래처를 추천해드립니다.</p>
-	        <hr class="modal_verify_hr">
-	        <p class="modal_verify_guide">추천 결과를 확인해보세요.</p>
-	        <button type="button" class="modal_verify_btn" id="modal_verify_btn_ai">
-	            <span class="sparkle" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-magic-wand"></use></svg></span>
-	            거래처 확인하기
-	        </button>
-	    </div>
-	</div>
+		</div>
+		<div id="container">
+	<?php } ?>
 
-	<div class="modal_verify_overlay" id="modal_ai_guide_overlay" aria-hidden="true">
-	    <div class="modal_verify" role="dialog" aria-labelledby="modal_ai_guide_title" aria-modal="true">
-	        <button type="button" class="modal_verify_close" id="modal_ai_guide_btn_close" aria-label="닫기">×</button>
-	        <div class="modal_verify_icon" aria-hidden="true">
-	            <svg viewBox="0 0 24 24"><path d="M12 17v-5M12 8h.01M4 12a8 8 0 1 0 16 0 8 8 0 1 0-16 0z"></path></svg>
-	        </div>
-	        <h2 class="modal_verify_company" id="modal_ai_guide_title">AI 추천 안내</h2>
-	        <p class="modal_verify_text" id="modal_ai_guide_text">사업자 번호를 입력하고 AI 추천받기를 눌러주세요.</p>
-	        <p class="modal_verify_text2" id="modal_ai_guide_text2">AI 분석을 통해 업종/거래 데이터를 기반으로 적합한 거래처 판매처를 추천해드립니다.</p>
-	        <button type="button" class="modal_verify_btn" id="modal_ai_guide_btn_ok">확인했어요</button>
-	    </div>
-	</div>
+<!-- 사업자 확인 모달 (돋보기 클릭 후 표시) -->
+<div class="modal_verify_overlay" id="modal_verify_overlay" aria-hidden="true">
+    <div class="modal_verify" role="dialog" aria-labelledby="modal_verify_company" aria-modal="true">
+        <button type="button" class="modal_verify_close" id="modal_verify_btn_close" aria-label="닫기">×</button>
+        <div class="modal_verify_icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"></path></svg>
+        </div>
+        <h2 class="modal_verify_company" id="modal_verify_company"></h2>
+        <p class="modal_verify_text">귀사는 <strong id="modal_verify_bzc"></strong><br class="modal_verify_br_pc"><strong id="modal_verify_type"></strong>으로 확인되었습니다.</p>
+        <p class="modal_verify_text2">본 서비스는 귀사와 동일·유사 업종의<br class="modal_verify_br_pc">실제 거래 데이터를 분석해<br class="modal_verify_br_pc">적합한 거래처를 추천해드립니다.</p>
+        <hr class="modal_verify_hr">
+        <p class="modal_verify_guide">추천 결과를 확인해보세요.</p>
+        <button type="button" class="modal_verify_btn" id="modal_verify_btn_ai">
+            <span class="sparkle" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-magic-wand"></use></svg></span>
+            거래처 확인하기
+        </button>
+    </div>
+</div>
 
-		<script>
-	function openAiGuideModal(opts) {
-		var overlay = document.getElementById("modal_ai_guide_overlay");
-		var titleEl = document.getElementById("modal_ai_guide_title");
-		var textEl = document.getElementById("modal_ai_guide_text");
-		var text2El = document.getElementById("modal_ai_guide_text2");
-		if (!overlay) return;
-		opts = opts || {};
-		if (titleEl) titleEl.textContent = opts.title || "AI 추천 안내";
-		if (textEl) textEl.textContent = opts.text || "사업자 번호를 입력하고 AI 추천받기를 눌러주세요.";
-		if (text2El) text2El.textContent = opts.text2 || "AI 분석을 통해 업종/거래 데이터를 기반으로 적합한 거래처 판매처를 추천해드립니다.";
-		overlay.classList.add("is_open");
-		overlay.setAttribute("aria-hidden", "false");
-	}
+<!-- 사업자 미입력 안내 모달 -->
+<div class="modal_verify_overlay" id="modal_ai_guide_overlay" aria-hidden="true">
+    <div class="modal_verify" role="dialog" aria-labelledby="modal_ai_guide_title" aria-modal="true">
+        <button type="button" class="modal_verify_close" id="modal_ai_guide_btn_close" aria-label="닫기">×</button>
+        <div class="modal_verify_icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M12 17v-5M12 8h.01M4 12a8 8 0 1 0 16 0 8 8 0 1 0-16 0z"></path></svg>
+        </div>
+        <h2 class="modal_verify_company" id="modal_ai_guide_title">AI 추천 안내</h2>
+        <p class="modal_verify_text" id="modal_ai_guide_text">사업자 번호를 입력하고 AI 추천받기를 눌러주세요.</p>
+        <p class="modal_verify_text2" id="modal_ai_guide_text2">AI 분석을 통해 업종/거래 데이터를 기반으로 적합한 거래처 판매처를 추천해드립니다.</p>
+        <button type="button" class="modal_verify_btn" id="modal_ai_guide_btn_ok">확인했어요</button>
+    </div>
+</div>
 
-	function closeAiGuideModal() {
-		var overlay = document.getElementById("modal_ai_guide_overlay");
-		if (!overlay) return;
+	<script>
+// 모달 열기/닫기 함수들
+function openAiGuideModal(opts) {
+	var overlay = document.getElementById("modal_ai_guide_overlay");
+	var titleEl = document.getElementById("modal_ai_guide_title");
+	var textEl = document.getElementById("modal_ai_guide_text");
+	var text2El = document.getElementById("modal_ai_guide_text2");
+	if (!overlay) return;
+	opts = opts || {};
+	if (titleEl) titleEl.textContent = opts.title || "AI 추천 안내";
+	if (textEl) textEl.textContent = opts.text || "사업자 번호를 입력하고 AI 추천받기를 눌러주세요.";
+	if (text2El) text2El.textContent = opts.text2 || "AI 분석을 통해 업종/거래 데이터를 기반으로 적합한 거래처 판매처를 추천해드립니다.";
+	overlay.classList.add("is_open");
+	overlay.setAttribute("aria-hidden", "false");
+}
+
+function closeAiGuideModal() {
+	var overlay = document.getElementById("modal_ai_guide_overlay");
+	if (!overlay) return;
+	overlay.classList.remove("is_open");
+	overlay.setAttribute("aria-hidden", "true");
+}
+
+function closeVerifyModal() {
+	var overlay = document.getElementById("modal_verify_overlay");
+	if (overlay && overlay.classList.contains("is_open")) {
 		overlay.classList.remove("is_open");
 		overlay.setAttribute("aria-hidden", "true");
 	}
+}
 
-	function closeVerifyModal() {
-		var overlay = document.getElementById("modal_verify_overlay");
-		if (overlay && overlay.classList.contains("is_open")) {
-			overlay.classList.remove("is_open");
-			overlay.setAttribute("aria-hidden", "true");
-		}
+function requestMainCompCheck(comnum, $form, opts) {
+	opts = opts || {};
+
+	var overlay = opts.overlay || null;
+	var btn = opts.button || null;
+	var originalHtml = opts.originalHtml || "";
+
+	function restoreButton() {
+		if (!btn) return;
+		btn.disabled = false;
+		if (originalHtml) btn.innerHTML = originalHtml;
 	}
 
-	function requestMainCompCheck(comnum, $form, opts) {
-		opts = opts || {};
-
-		var overlay = opts.overlay || null;
-		var btn = opts.button || null;
-		var originalHtml = opts.originalHtml || "";
-
-		function restoreButton() {
-			if (!btn) return;
-			btn.disabled = false;
-			if (originalHtml) btn.innerHTML = originalHtml;
-		}
-
-		$.post("<?php echo G5_URL; ?>/get_set.php", { type: "main_comp_chk", comnum: comnum }, function(res) {
-			try {
-				var parts = (res + "").split("|");
-				if (parts[0] === "1000") {
-					if (overlay) {
-						overlay.classList.remove("is_open");
-						overlay.setAttribute("aria-hidden", "true");
-					}
-					if ($form && $form.length) {
-						$form.find("input[name='cominfo']").val(parts[1] || "");
-						$form.submit();
-					}
-				} else {
-					alert("기업 정보를 분석하는 중 오류가 발생했습니다.\n" + (parts[2] || parts[1] || "다시 시도해 주세요."));
-					restoreButton();
+	$.post("<?php echo G5_URL; ?>/get_set.php", { type: "main_comp_chk", comnum: comnum }, function(res) {
+		try {
+			var parts = (res + "").split("|");
+			if (parts[0] === "1000") {
+				if (overlay) {
+					overlay.classList.remove("is_open");
+					overlay.setAttribute("aria-hidden", "true");
 				}
-			} catch (e) {
-				console.error("main_comp_chk parse error:", e);
+				if ($form && $form.length) {
+					$form.find("input[name='cominfo']").val(parts[1] || "");
+					$form.submit();
+				}
+			} else {
+				alert("기업 정보를 분석하는 중 오류가 발생했습니다.\n" + (parts[2] || parts[1] || "다시 시도해 주세요."));
 				restoreButton();
 			}
-		}).fail(function() {
-			alert("서버 통신 중 오류가 발생했습니다.");
+		} catch (e) {
+			console.error("main_comp_chk parse error:", e);
 			restoreButton();
-		});
+		}
+	}).fail(function() {
+		alert("서버 통신 중 오류가 발생했습니다.");
+		restoreButton();
+	});
+}
+
+// 공통 검색 처리 로직
+$(document).on("click", "#main_submit, #hd_submit, #sub_submit", function(e){
+	e.preventDefault();
+	var $this = $(this);
+	
+	// 현재 클릭된 버튼의 컨텍스트에 맞는 input과 form 찾기
+	var $input, $form;
+	if ($this.attr('id') === 'hd_submit') {
+		$input = $("#comnum_hd");
+		$form = $("#match_hd");
+	} else if ($this.attr('id') === 'main_submit') {
+		$input = $("#comnum");
+		$form = $("#match");
+	} else {
+		// sub_submit 등 기타 (sVisual 내)
+		$input = $this.siblings("input[name='comnum']").length ? $this.siblings("input[name='comnum']") : $("#comnum");
+		$form = $this.closest("form").length ? $this.closest("form") : $("#match");
 	}
 
-	$(document).on("click", "#main_submit, #hd_submit, #sub_submit", function(e){
-		e.preventDefault();
-		var $this = $(this);
-		var $input;
-		var $form;
+	$(".comnum_chk").blur();
+	var comnum = $input.val();
+	var comnumDigits = (comnum || "").replace(/[^0-9]/g, "");
 
-		if ($this.attr("id") === "hd_submit") {
-			$input = $("#comnum_hd");
-			$form = $("#match_hd");
-		} else if ($this.attr("id") === "main_submit") {
-			$input = $("#comnum");
-			$form = $("#match");
-		} else {
-			$input = $this.siblings("input[name='comnum']").length ? $this.siblings("input[name='comnum']") : $("#comnum");
-			$form = $this.closest("form").length ? $this.closest("form") : $("#match");
-		}
+	if (comnumDigits.length === 0) {
+		openAiGuideModal({
+			title: "AI 추천 안내",
+			text: "사업자 번호를 입력해 주세요.",
+			text2: "사업자 번호를 입력하고 AI 추천받기를 누르면 AI 분석을 통해 거래처 판매처를 추천해드립니다."
+		});
+		return false;
+	}
 
-		$(".comnum_chk").blur();
-		var comnum = $input.val();
-		var comnumDigits = (comnum || "").replace(/[^0-9]/g, "");
+	if (comnumDigits.length != 10) {
+		openAiGuideModal({
+			title: "사업자 번호 재확인",
+			text: "입력하신 사업자 번호 형식이 올바르지 않습니다.",
+			text2: "사업자 번호를 다시 확인한 뒤 AI 추천받기를 눌러주세요."
+		});
+		return false;
+	}
 
-		if (comnumDigits.length === 0) {
-			openAiGuideModal({
-				title: "AI 추천 안내",
-				text: "사업자 번호를 입력해 주세요.",
-				text2: "사업자 번호를 입력하고 AI 추천받기를 누르면 AI 분석을 통해 거래처 판매처를 추천해드립니다."
-			});
-			return false;
-		}
+	// 전역 변수로 현재 사용중인 input/form 정보 저장 (모달 버튼 클릭 시 사용)
+	window.currentSearchInput = $input;
+	window.currentSearchForm = $form;
 
-		if (comnumDigits.length !== 10) {
-			openAiGuideModal({
-				title: "사업자 번호 재확인",
-				text: "입력하신 사업자 번호 형식이 올바르지 않습니다.",
-				text2: "사업자 번호를 다시 확인한 뒤 AI 추천받기를 눌러주세요."
-			});
-			return false;
-		}
-
-		window.currentSearchInput = $input;
-		window.currentSearchForm = $form;
-
+	// 1단계: DB에서 기업명 조회하여 모달 띄우기
 		$.post("<?php echo G5_URL; ?>/get_company_name.php", { comnum: comnumDigits }, function(res) {
 			try {
 				var data = JSON.parse(res);
-				if (data.result === "success") {
+				if (data.result === 'success') {
 					var overlay = document.getElementById("modal_verify_overlay");
-					var companyEl = document.getElementById("modal_verify_company");
-					var bzcEl = document.getElementById("modal_verify_bzc");
-					var typeEl = document.getElementById("modal_verify_type");
-					var cominfoVal = data.cominfo ? data.cominfo : "";
+				var companyEl = document.getElementById("modal_verify_company");
+				var bzcEl = document.getElementById("modal_verify_bzc");
+				var typeEl = document.getElementById("modal_verify_type");
+				var cominfoVal = data.cominfo ? data.cominfo : "";
 
-					if ($form && $form.length) {
-						$form.find("input[name='cominfo']").val(cominfoVal);
-					}
-
-					if (companyEl) companyEl.textContent = data.name;
-					if (bzcEl) bzcEl.textContent = data.bzc_name;
-					if (typeEl) typeEl.textContent = data.enp_type;
-
-					if (overlay) {
-						overlay.classList.add("is_open");
-						overlay.setAttribute("aria-hidden", "false");
-					}
-				} else {
-					if ($form && $form.length) {
-						$form.find("input[name='cominfo']").val("");
-					}
-					openAiGuideModal({
-						title: "기업 정보 없음",
-						text: "입력하신 사업자 번호로 등록된 기업 정보를 찾지 못했습니다.",
-						text2: "사업자 번호를 다시 확인해 주세요."
-					});
+				if ($form && $form.length) {
+					$form.find("input[name='cominfo']").val(cominfoVal);
 				}
-			} catch (e) {
+
+				if (companyEl) companyEl.textContent = data.name;
+				if (bzcEl) bzcEl.textContent = data.bzc_name;
+				if (typeEl) typeEl.textContent = data.enp_type;
+
+				if (overlay) {
+					overlay.classList.add("is_open");
+					overlay.setAttribute("aria-hidden", "false");
+				}
+			} else {
+				if ($form && $form.length) {
+					$form.find("input[name='cominfo']").val("");
+				}
+				openAiGuideModal({
+					title: "기업 정보 없음",
+					text: "입력하신 사업자 번호로 등록된 기업 정보를 찾지 못했습니다.",
+					text2: "사업자 번호를 다시 확인해 주세요."
+				});
+				}
+			} catch(e) {
 				console.error("Lookup error:", e);
 				requestMainCompCheck(comnumDigits, $form);
 			}
@@ -424,30 +593,31 @@ include_once(G5_LIB_PATH.'/popular.lib.php');
 		});
 	});
 
-	$(document).on("click", "#modal_verify_btn_ai", function() {
-		var btn = this;
-		var overlay = document.getElementById("modal_verify_overlay");
-		var $input = window.currentSearchInput;
-		var $form = window.currentSearchForm;
+// 모달 내부 버튼 이벤트
+$(document).on("click", "#modal_verify_btn_ai", function() {
+	var btn = this;
+	var overlay = document.getElementById("modal_verify_overlay");
+	var $input = window.currentSearchInput;
+	var $form = window.currentSearchForm;
 
-		if (!$input || !$form) return;
+	if (!$input || !$form) return;
 
-		var comnum = $input.val();
-		var existingCominfo = ($form && $form.length) ? $form.find("input[name='cominfo']").val() : "";
+	var comnum = $input.val();
+	var existingCominfo = ($form && $form.length) ? $form.find("input[name='cominfo']").val() : "";
 
-		if (comnum.replace(/[^0-9]/g, "").length === 10) {
-			if (existingCominfo) {
-				if (overlay) {
-					overlay.classList.remove("is_open");
-					overlay.setAttribute("aria-hidden", "true");
-				}
-				$form.submit();
-				return;
+	if (comnum.replace(/[^0-9]/g, "").length === 10) {
+		if (existingCominfo) {
+			if (overlay) {
+				overlay.classList.remove("is_open");
+				overlay.setAttribute("aria-hidden", "true");
 			}
+			$form.submit();
+			return;
+		}
 
-			var originalHtml = btn.innerHTML;
-			btn.disabled = true;
-			btn.innerHTML = '<span class="sparkle" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-magic-wand"></use></svg></span> 분석 중...';
+		var originalHtml = btn.innerHTML;
+		btn.disabled = true;
+		btn.innerHTML = '<span class="sparkle" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-magic-wand"></use></svg></span> 분석 중...';
 
 			requestMainCompCheck(comnum, $form, {
 				overlay: overlay,
@@ -459,48 +629,49 @@ include_once(G5_LIB_PATH.'/popular.lib.php');
 		}
 	});
 
-	$(document).on("click", "#modal_verify_overlay", function(e) {
-		if (e.target === this) closeVerifyModal();
-	});
-	$(document).on("click", "#modal_verify_btn_close", function() {
-		closeVerifyModal();
-	});
-	$(document).on("click", "#modal_ai_guide_overlay", function(e) {
-		if (e.target === this) {
-			closeAiGuideModal();
-			if (window.currentSearchInput) window.currentSearchInput.focus();
-		}
-	});
-	$(document).on("click", "#modal_ai_guide_btn_close, #modal_ai_guide_btn_ok", function() {
+// 모달 닫기 이벤트들
+$(document).on("click", "#modal_verify_overlay", function(e) {
+	if (e.target === this) closeVerifyModal();
+});
+$(document).on("click", "#modal_verify_btn_close", function() {
+	closeVerifyModal();
+});
+$(document).on("click", "#modal_ai_guide_overlay", function(e) {
+	if (e.target === this) {
 		closeAiGuideModal();
 		if (window.currentSearchInput) window.currentSearchInput.focus();
-	});
-
-	$(document).on("keydown", function(e) {
-		if (e.key === "Escape") {
-			closeVerifyModal();
-			closeAiGuideModal();
-		}
-	});
-
-	$(document).on("keyup", ".comnum_chk", function(){
-		var num = $(this).val();
-		num.trim();
-		this.value = AutoHypen(num);
-	});
-
-	function AutoHypen(companyNum){
-		companyNum = companyNum.replace(/[^0-9]/g, '');
-		var tempNum = '';
-
-		if(companyNum.length < 4){
-			return companyNum;
-		} else if(companyNum.length < 6){
-			tempNum += companyNum.substr(0,3) + '-' + companyNum.substr(3,2);
-			return tempNum;
-		} else {
-			tempNum += companyNum.substr(0,3) + '-' + companyNum.substr(3,2) + '-' + companyNum.substr(5);
-			return tempNum;
-		}
 	}
-	</script>
+});
+$(document).on("click", "#modal_ai_guide_btn_close, #modal_ai_guide_btn_ok", function() {
+	closeAiGuideModal();
+	if (window.currentSearchInput) window.currentSearchInput.focus();
+});
+
+$(document).on("keydown", function(e) {
+	if (e.key === "Escape") {
+		closeVerifyModal();
+		closeAiGuideModal();
+	}
+});
+
+// 사업자번호 하이픈 자동 입력
+$(document).on('keyup', '.comnum_chk', function(){
+	var num = $(this).val();
+	num.trim();
+	this.value = AutoHypen(num);
+});
+
+function AutoHypen(companyNum){
+	companyNum = companyNum.replace(/[^0-9]/g, '');
+	var tempNum = '';
+	if(companyNum.length < 4){
+		return companyNum;
+	} else if(companyNum.length < 6){
+		tempNum += companyNum.substr(0,3) + '-' + companyNum.substr(3,2);
+		return tempNum;
+	} else {
+		tempNum += companyNum.substr(0,3) + '-' + companyNum.substr(3,2) + '-' + companyNum.substr(5);
+		return tempNum;
+	}
+}
+</script>
