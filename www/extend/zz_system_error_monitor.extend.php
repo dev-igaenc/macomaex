@@ -3,6 +3,55 @@ if (!defined('_GNUBOARD_')) {
     exit;
 }
 
+if (!function_exists('system_error_env')) {
+    function system_error_env($key, $default = '')
+    {
+        $key = trim((string)$key);
+        if ($key === '') {
+            return $default;
+        }
+
+        if (function_exists('macomaex_env')) {
+            return macomaex_env($key, $default);
+        }
+
+        $value = getenv($key);
+        if ($value !== false && $value !== null) {
+            return $value;
+        }
+
+        if (isset($_ENV[$key])) {
+            return $_ENV[$key];
+        }
+
+        if (isset($_SERVER[$key])) {
+            return $_SERVER[$key];
+        }
+
+        return $default;
+    }
+}
+
+if (!function_exists('system_error_env_bool')) {
+    function system_error_env_bool($key, $default = null)
+    {
+        $value = system_error_env($key, null);
+        if ($value === null || $value === '') {
+            return $default;
+        }
+
+        $value = strtolower(trim((string)$value));
+        if (in_array($value, array('1', 'true', 'y', 'yes', 'on'), true)) {
+            return true;
+        }
+        if (in_array($value, array('0', 'false', 'n', 'no', 'off'), true)) {
+            return false;
+        }
+
+        return $default;
+    }
+}
+
 if (!function_exists('system_error_monitor_enabled')) {
     function system_error_monitor_enabled()
     {
@@ -147,14 +196,15 @@ if (!function_exists('system_error_fallback_file_log')) {
 if (!function_exists('system_error_slack_enabled')) {
     function system_error_slack_enabled()
     {
-        if (defined('G5_SYSTEM_ERROR_SLACK_USE') && !G5_SYSTEM_ERROR_SLACK_USE) {
+        $env_use = system_error_env_bool('SYSTEM_ERROR_SLACK_USE', null);
+        if ($env_use === false) {
+            return false;
+        }
+        if ($env_use === null && defined('G5_SYSTEM_ERROR_SLACK_USE') && !G5_SYSTEM_ERROR_SLACK_USE) {
             return false;
         }
 
-        $webhook = '';
-        if (defined('_system_error_slack_webhook')) {
-            $webhook = trim((string)_system_error_slack_webhook);
-        }
+        $webhook = system_error_slack_webhook();
 
         return ($webhook !== '');
     }
@@ -163,8 +213,17 @@ if (!function_exists('system_error_slack_enabled')) {
 if (!function_exists('system_error_slack_webhook')) {
     function system_error_slack_webhook()
     {
+        $webhook = trim((string)system_error_env('SYSTEM_ERROR_SLACK_WEBHOOK', ''));
+        if ($webhook !== '') {
+            return $webhook;
+        }
         if (defined('_system_error_slack_webhook')) {
             return trim((string)_system_error_slack_webhook);
+        }
+
+        $webhook = trim((string)system_error_env('TM_OVERDUE_SLACK_WEBHOOK', ''));
+        if ($webhook !== '') {
+            return $webhook;
         }
         if (defined('_tm_overdue_slack_webhook')) {
             return trim((string)_tm_overdue_slack_webhook);
@@ -178,7 +237,10 @@ if (!function_exists('system_error_slack_min_interval')) {
     function system_error_slack_min_interval()
     {
         $interval = 300;
-        if (defined('_system_error_slack_min_interval')) {
+        $env_interval = system_error_env('SYSTEM_ERROR_SLACK_MIN_INTERVAL', '');
+        if ($env_interval !== '') {
+            $interval = (int)$env_interval;
+        } else if (defined('_system_error_slack_min_interval')) {
             $interval = (int)_system_error_slack_min_interval;
         }
         if ($interval < 0) {
