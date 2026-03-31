@@ -717,6 +717,35 @@ unset($amenu);
 		}
     }
 
+// 결제 하위에 크레딧 모니터링 메뉴를 코드로 보강
+if (isset($menu) && is_array($menu)) {
+	foreach ($menu as $menu_key => $menu_rows) {
+		if (!isset($menu_rows[0][1]) || trim((string)$menu_rows[0][1]) !== '결제') {
+			continue;
+		}
+
+		$credit_menu_link = G5_ADMIN_URL . '/credit_monitor.list.php';
+		$already_exists = false;
+		foreach ($menu_rows as $menu_row) {
+			if (isset($menu_row[2]) && trim((string)$menu_row[2]) === $credit_menu_link) {
+				$already_exists = true;
+				break;
+			}
+		}
+
+		if (!$already_exists) {
+			$menu[$menu_key][] = array(
+				'700200',
+				'크레딧 모니터링',
+				$credit_menu_link,
+				'credit_monitor',
+				1
+			);
+		}
+		break;
+	}
+}
+
 
 if (isset($menu) && $menu) {
     $menu = run_replace('admin_menu', $menu);

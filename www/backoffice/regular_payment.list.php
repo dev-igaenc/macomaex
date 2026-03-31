@@ -4,7 +4,7 @@
 
 	include_once (G5_ADMIN_PATH.'/admin.head.php');
 
-$g5['title'] = '정기결제 관리';
+$g5['title'] = '결제 관리';
 
 
 /*
@@ -75,8 +75,8 @@ $rnumber=($total_count-($page-1)*$rows)+1;
 <a href="?sfl=status&stx=C" class="btn btn-sm btn-danger" title="7일이내 취소 환불된 맴버쉽">취소환불</a>
 <a href="?sfl=status&stx=T" class="btn btn-sm btn-warning" title="7일이후 사용건수 있는경우 만료 후 정지될 맴버쉽">만료정지</a-->
 <a href="?sfl=status&stx=S" class="btn btn-sm btn-primary" title="정상유지 맴버쉽">결제완료</a>
-<a href="?sfl=status&stx=E" class="btn btn-sm btn-secondary text-light" title="기간이 지난 맴버쉽">구독종료</a>
-<a href="?sfl=status&stx=C" class="btn btn-sm btn-danger" title="7일이내 취소 환불된 맴버쉽">구독취소</a>
+<a href="?sfl=status&stx=E" class="btn btn-sm btn-secondary text-light" title="기간이 지난 맴버쉽">이용종료</a>
+<a href="?sfl=status&stx=C" class="btn btn-sm btn-danger" title="취소/환불된 결제">취소완료</a>
 <a href="?sfl=status&stx=T" class="btn btn-sm btn-warning" title="7일이후 사용건수 있는경우 만료 후 정지될 맴버쉽">취소예정</a>
   <script>
   $( function() {
@@ -119,12 +119,24 @@ $rnumber=($total_count-($page-1)*$rows)+1;
     <?php for ($i=0; $row=sql_fetch_array($result); $i++) {
 			$membershipInfo	= getMembership($row['membership_parent_no']);
 			$paymentInfo			= getPaymentInfo($row['order_no']);
+			$is_credit_goods = (isset($membershipInfo['title_en']) && strpos($membershipInfo['title_en'], 'CREDIT_') === 0) ? 1 : 0;
+			$refundInfo = sql_fetch("select id from g5_matching_credit_history where order_no='{$row['order_no']}' and tx_type='REFUND' order by id desc limit 1");
+			$is_refunded = $refundInfo['id'] ? 1 : 0;
+			$status_text = $ms_status_text[$row['status']];
+			$status_btn_class = "btn-primary";
+			if($row['status']=="C") $status_btn_class = "btn-danger";
+			else if($row['status']=="E") $status_btn_class = "btn-secondary";
+			else if($row['status']=="T") $status_btn_class = "btn-warning";
+
+			if($is_refunded){
+				$status_text = "환불완료";
+				$status_btn_class = "btn-dark";
+			}
 			$timestamp = strtotime("+1 days", strtotime($row['date_end']." 00:00:00"));
 			$duedate=date("Y-m-d", $timestamp);
 			$pay_cnt=sql_fetch("select count(*) as cnt from  g5_membership_status_history where uid='{$row['uid']}'");
 
-			//if($pay_cnt['cnt']>1 && $ms_status_text[$row['status']]=="결제완료") $ms_status_text[$row['status']]="결제완료";
-			if($pay_cnt['cnt']==1 && $ms_status_text[$row['status']]=="결제완료") $ms_status_text[$row['status']]="첫결제";
+			if($pay_cnt['cnt']==1 && $status_text=="결제완료") $status_text="첫결제";
 			
 	?>
     <tr>
@@ -150,15 +162,17 @@ $rnumber=($total_count-($page-1)*$rows)+1;
 			<?}?>
 		</td>
 		<td class="td_center td_mng" title="열람 <?=$row['open_able_cnt']?> / <?=$row['open_cnt']?><br>매칭 <?=$row['matching_able_cnt']?> / <?=$row['matching_cnt']?>">			<!--//상태(S:유지, C:취소, E:종료)-->
-			<span class="btn btn-sm <?if($row['status']=="S"){?>btn-primary<?}?><?if($row['status']=="C"){?>btn-danger<?}?><?if($row['status']=="E"){?>btn-secondary<?}?><?if($row['status']=="T"){?>btn-warning<?}?>">
-				<?=$ms_status_text[$row['status']]?>
+			<span class="btn btn-sm <?=$status_btn_class?>">
+				<?=$status_text?>
 			</span>
 			<?if($row['coupon']){?><p  class="btn btn-sm bg-dark text-light">쿠폰사용</p><?}?>
 		</td>
 		<td class="td_center"><?=$membershipInfo['title']?></td>
         <td class="td_mng td_mng_l">
-			<?if($row['status']=="S" or $row['status']=="T"){?>
-			<a class="btn btn-danger text-light pay_cancel" oid="<?=$row['order_no']?>">결제취소</a><br>
+			<?if($is_refunded){?>
+			<span class="btn btn-sm btn-secondary">환불완료</span><br>
+			<?}else if($row['status']=="S" or $row['status']=="T"){?>
+			<a class="btn btn-danger text-light pay_cancel" oid="<?=$row['order_no']?>" is_credit="<?=$is_credit_goods?>">결제취소</a><br>
 			<?}?>
             <a href="./regular_payment.view.php?no=<?=$row['no']?>&amp;<?=$qstr?>" class="btn btn_03">확인</a>
             <a href="./regular_payment.list_update.php?w=d&amp;no=<?php echo $row['no']; ?>&amp;<?=$qstr?>" onclick="return delete_confirm(this);" class="btn btn_02"><span class="sound_only"><?php echo htmlspecialchars2($row['title']); ?> </span>삭제</a>
@@ -177,8 +191,12 @@ $rnumber=($total_count-($page-1)*$rows)+1;
 <script>
 $(".pay_cancel").click(function(){
 	oid=$(this).attr("oid");
+	isCredit=$(this).attr("is_credit");
 	if(oid){
-		if(confirm("결제 취소시 멤버십도 종료됩니다.\n정말 결제 취소하시겠습니까?")){
+		msg = (isCredit=="1")
+			? "결제 취소(환불) 시 충전 크레딧이 회수됩니다.\n정말 결제 취소하시겠습니까?"
+			: "결제 취소시 멤버십도 종료됩니다.\n정말 결제 취소하시겠습니까?";
+		if(confirm(msg)){
 				$.post( "./admin_ajax.php", {
 					type: 'pay_cancel',
 					oid:oid
