@@ -280,6 +280,50 @@ if ($w == '') {
     // 회원가입 포인트 부여
     insert_point($mb_id, $config['cf_register_point'], '회원가입 축하', '@member', $mb_id, '회원가입');
 
+    // 기본 가입 크레딧 지급
+    $signup_bonus = (defined('_new_member_signup_credit') && (int)_new_member_signup_credit > 0)
+        ? (int)_new_member_signup_credit
+        : 30;
+    if ($signup_bonus > 0) {
+        $membership_status = sql_fetch("select * from g5_membership_status where uid='{$mb_id}'");
+        if ($membership_status['uid']) {
+            sql_query("update g5_membership_status set
+                matching_able_cnt = matching_able_cnt + {$signup_bonus},
+                matching_cnt = matching_cnt + {$signup_bonus}
+                where uid='{$mb_id}'");
+            $signup_bonus_after = (int)$membership_status['matching_able_cnt'] + $signup_bonus;
+        } else {
+            $signup_bonus_after = $signup_bonus;
+            sql_query("insert into g5_membership_status set
+                uid='{$mb_id}',
+                order_no='',
+                date_begin=now(),
+                date_end='9999-12-31 23:59:59',
+                month='0',
+                open_able_cnt='0',
+                open_cnt='0',
+                matching_able_cnt='{$signup_bonus_after}',
+                matching_cnt='{$signup_bonus_after}',
+                expert_consulting_able_cnt='0',
+                expert_consulting_cnt='0',
+                selected_able_cnt='0',
+                selected_cnt='0',
+                regdate=now(),
+                status='S'");
+        }
+
+        $bonus_memo = addslashes('회원가입 기본 크레딧 지급');
+        sql_query("insert into g5_matching_credit_history set
+            uid='{$mb_id}',
+            tx_type='BONUS',
+            credit_delta='{$signup_bonus}',
+            credit_after='{$signup_bonus_after}',
+            order_no='',
+            matching_no='',
+            memo='{$bonus_memo}',
+            created_at=now()");
+    }
+
     // 추천인에게 포인트 부여
     if ($config['cf_use_recommend'] && $mb_recommend)
         insert_point($mb_recommend, $config['cf_recommend_point'], $mb_id.'의 추천인', '@member', $mb_recommend, $mb_id.' 추천');
