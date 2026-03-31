@@ -3,6 +3,86 @@ include_once('./_common.php');
 
 if ($is_admin != 'super') exit;
 
+$type = isset($_REQUEST['type']) ? trim((string)$_REQUEST['type']) : (isset($type) ? trim((string)$type) : '');
+
+if (!function_exists('admin_ajax_audit_shutdown')) {
+	function admin_ajax_audit_shutdown() {
+		global $type;
+		global $admin_ajax_audit_started_at;
+
+		if (!$type || !function_exists('admin_audit_log')) {
+			return;
+		}
+
+		$response = '';
+		if (function_exists('ob_get_contents')) {
+			$buffer = ob_get_contents();
+			if ($buffer !== false && $buffer !== null) {
+				$response = trim((string)$buffer);
+			}
+		}
+
+		$result = 'SUCCESS';
+		$message = '';
+		if ($response === '500' || preg_match('/^500\|/u', $response)) {
+			$result = 'FAIL';
+			$parts = explode('|', $response, 2);
+			$message = isset($parts[1]) ? trim($parts[1]) : '요청 실패';
+		} else if ($response === '') {
+			$result = 'INFO';
+			$message = '응답 본문 없음';
+		} else if (preg_match('/^1000\|/u', $response)) {
+			$parts = explode('|', $response, 2);
+			$message = isset($parts[1]) ? trim($parts[1]) : '';
+		}
+
+		$read_only_types = array('com_link', 'comp_search');
+		if (in_array($type, $read_only_types) && $result !== 'FAIL') {
+			return;
+		}
+
+		$target = '';
+		if (isset($_REQUEST['oid']) && $_REQUEST['oid'] !== '') {
+			$target = 'order_no:' . preg_replace('/[^0-9A-Za-z_\-]/', '', (string)$_REQUEST['oid']);
+		} else if (isset($_REQUEST['KEDCD']) && $_REQUEST['KEDCD'] !== '') {
+			$target = 'KEDCD:' . preg_replace('/[^0-9A-Za-z_\-]/', '', (string)$_REQUEST['KEDCD']);
+		} else if (isset($_REQUEST['idx']) && $_REQUEST['idx'] !== '') {
+			$target = 'idx:' . (int)$_REQUEST['idx'];
+		}
+
+		$payload = array(
+			'elapsed_ms' => (int)round((microtime(true) - (float)$admin_ajax_audit_started_at) * 1000)
+		);
+
+		$params = array();
+		$param_keys = array('type', 'oid', 'idx', 'S_NO', 'KEDCD', 'mb_no', 'board_name');
+		foreach ($param_keys as $param_key) {
+			if (!isset($_REQUEST[$param_key]) || $_REQUEST[$param_key] === '') {
+				continue;
+			}
+			$params[$param_key] = function_exists('admin_audit_cut')
+				? admin_audit_cut((string)$_REQUEST[$param_key], 120)
+				: substr((string)$_REQUEST[$param_key], 0, 120);
+		}
+		if (!empty($params)) {
+			$payload['params'] = $params;
+		}
+		if ($result === 'FAIL') {
+			$payload['response'] = function_exists('admin_audit_cut')
+				? admin_audit_cut(strip_tags($response), 500)
+				: substr(strip_tags($response), 0, 500);
+		}
+
+		admin_audit_log('admin_ajax:' . $type, $target, $result, $message, $payload);
+	}
+}
+
+$admin_ajax_audit_started_at = microtime(true);
+if ($type && function_exists('admin_audit_log')) {
+	ob_start();
+	register_shutdown_function('admin_ajax_audit_shutdown');
+}
+
 if (!function_exists('membership_refund_lock_name')) {
 	function membership_refund_lock_name($order_no) {
 		$order_no = preg_replace('/[^0-9A-Za-z_\-]/', '', (string)$order_no);
