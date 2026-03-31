@@ -184,19 +184,38 @@ switch ($type) {
 		if($result) echo "1000";
 		else echo "500";
         break;
-
     case "matching_admchk": //매칭 관리자체크
 
 		if(!$idx) {echo "500"; exit;}
-		$ret="";
-		if($chk=="연락완료") {
-			$ret="연락필요";
-			$sql="update g5_matching set adm_chk='' where no='{$idx}'";
+		$matching = sql_fetch("select
+				A.no,
+				IFNULL(TRIM(A.adm_chk), '') as adm_chk,
+				UPPER(TRIM(IFNULL((select request_type from g5_matching_credit_history where matching_no=A.no and tx_type='USE' order by id desc limit 1), ''))) as request_type
+			from g5_matching A
+			where A.no='{$idx}'
+			limit 1");
+		if(!$matching['no']) {echo "500"; exit;}
+
+		$current_chk = trim((string)$matching['adm_chk']);
+		if(!$current_chk) $current_chk = trim((string)$chk);
+
+		$st_need = '연락필요';
+		$st_prog = '진행중';
+		$st_done = '연락완료';
+
+		$is_tm_request = ($matching['request_type'] === 'TM');
+		$ret = $st_need;
+		if($is_tm_request){
+			if($current_chk == $st_need) $ret = $st_prog;
+			else if($current_chk == $st_prog) $ret = $st_done;
+			else if($current_chk == $st_done) $ret = $st_done;
+			else $ret = $st_need;
 		}else{
-			$ret="연락완료";
-			$sql="update g5_matching set adm_chk='연락완료' where no='{$idx}'";
+			if($current_chk == $st_done) $ret = $st_need;
+			else $ret = $st_done;
 		}
-		$result=sql_query($sql);
+
+		$result=sql_query("update g5_matching set adm_chk='{$ret}' where no='{$idx}'");
 		if($result) echo $ret;
 		else echo "500";
         break;
@@ -231,13 +250,13 @@ switch ($type) {
 			echo '<button type="button" class="btn btn-warning cl_btn"><i class="fa fa-times" aria-hidden="true"></i></button>';
 			 for ($i=0; $row=sql_fetch_array($result); $i++) {
 ?>
-		<dl>
-			<dt><?if($row[ENP_NM_TRD]){?><?=$row[ENP_NM_TRD]?><?}else{?><?=$row[ENP_NM]?><?}?></dt>
-			<dd>/ 사업자번호:<?=$row[BZNO]?></dd>
-			<dd class="bn1"><button type="button" class="btn btn-info link_sel" link_data="/ko/matching_view.php?cd=<?=$row[KEDCD]?>">선택</button></dd>
-			<dd class="bn2"><a type="button" class="btn btn-info text-light" href="/ko/matching_view.php?cd=<?=$row[KEDCD]?>" target="_blank">새창열기</a></dd>
-		</dl>
-<?
+			<dl>
+				<dt><?php if($row[ENP_NM_TRD]){?><?=$row[ENP_NM_TRD]?><?php }else{?><?=$row[ENP_NM]?><?php }?></dt>
+				<dd>/ 사업자번호:<?=$row[BZNO]?></dd>
+				<dd class="bn1"><button type="button" class="btn btn-info link_sel" link_data="/ko/matching_view.php?cd=<?=$row[KEDCD]?>">선택</button></dd>
+				<dd class="bn2"><a type="button" class="btn btn-info text-light" href="/ko/matching_view.php?cd=<?=$row[KEDCD]?>" target="_blank">새창열기</a></dd>
+			</dl>
+	<?php
 			 }
 		}else{
 			echo "500";
@@ -566,22 +585,22 @@ switch ($type) {
 		$sql = " select *,(select k_code_name from kssc where k_code=KSIC9_BZC_CD) as BZC_NAME, (select mb_8 from g5_member where mb_company=KEDCD) as M_TEL from company where ENP_NM like '%".$sr_txt."%' or  BZNO like '%".$sr_txt."%' ";
 		$result = sql_query($sql);
 ?>
-		<table class="mb_data">
-			<tr class="title"><td>회사명</td><td width="150">사업자번호</td><td width="68">선택</td></tr>
-			 <?for ($i = 0; $row = sql_fetch_array($result); $i++) {?>
-			<tr>
-				<td class="mb_id text-left p-3">
-					<span class="btn-sm btn-secondary"><?=$row['ENP_NM']?></span><br><br>
-					주소: <?=$row['LOC_ADDRA']?> <?=$row['LOC_ADDRB']?><br>
-					종목: <?=$row['BZC_NAME']?><br>
-					담당자: <?if($row['M_TEL']){?><?=$row['M_TEL']?><?}else{?><span class="text-danger">미등록</span><?}?><br>
-				</td>
-				<td><?=$row['BZNO']?></td>
-				<td><button type="button" id="id_slect" class="btn-info btn btn-sm" CINFO="<?=$row['KEDCD']?>|<?=$row['ENP_NM']?>|<?=$row['BZNO']?>|<?=$row['LOC_ADDRA']?> <?=$row['LOC_ADDRB']?>|<?=$row['BZC_NAME']?>">등록</button></td>
-			</tr>
-			<?}?>
-		</table>
-<?
+			<table class="mb_data">
+				<tr class="title"><td>회사명</td><td width="150">사업자번호</td><td width="68">선택</td></tr>
+				 <?php for ($i = 0; $row = sql_fetch_array($result); $i++) {?>
+				<tr>
+					<td class="mb_id text-left p-3">
+						<span class="btn-sm btn-secondary"><?=$row['ENP_NM']?></span><br><br>
+						주소: <?=$row['LOC_ADDRA']?> <?=$row['LOC_ADDRB']?><br>
+						종목: <?=$row['BZC_NAME']?><br>
+						담당자: <?php if($row['M_TEL']){?><?=$row['M_TEL']?><?php }else{?><span class="text-danger">미등록</span><?php }?><br>
+					</td>
+					<td><?=$row['BZNO']?></td>
+					<td><button type="button" id="id_slect" class="btn-info btn btn-sm" CINFO="<?=$row['KEDCD']?>|<?=$row['ENP_NM']?>|<?=$row['BZNO']?>|<?=$row['LOC_ADDRA']?> <?=$row['LOC_ADDRB']?>|<?=$row['BZC_NAME']?>">등록</button></td>
+				</tr>
+				<?php }?>
+			</table>
+	<?php
         break;
 
     case "add_seleted": //셀렉티드 관리자 추가
