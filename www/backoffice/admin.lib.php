@@ -358,6 +358,136 @@ function auth_check($auth, $attr, $return = false)
 
 }
 
+if (!function_exists('admin_audit_cut')) {
+    function admin_audit_cut($text, $max_len = 255)
+    {
+        $text = trim((string)$text);
+        $max_len = (int)$max_len;
+        if ($max_len < 1) {
+            return $text;
+        }
+
+        if (function_exists('mb_substr')) {
+            return mb_substr($text, 0, $max_len, 'UTF-8');
+        }
+
+        return substr($text, 0, $max_len);
+    }
+}
+
+if (!function_exists('admin_audit_table_name')) {
+    function admin_audit_table_name()
+    {
+        global $g5;
+
+        if (isset($g5['admin_audit_table']) && $g5['admin_audit_table']) {
+            return $g5['admin_audit_table'];
+        }
+
+        $prefix = defined('G5_TABLE_PREFIX') ? G5_TABLE_PREFIX : 'g5_';
+        return $prefix . 'admin_audit_log';
+    }
+}
+
+if (!function_exists('admin_audit_table_exists')) {
+    function admin_audit_table_exists()
+    {
+        static $table_exists = null;
+        if ($table_exists !== null) {
+            return $table_exists;
+        }
+
+        $table = admin_audit_table_name();
+        $table_exists = (bool)sql_query(" DESCRIBE {$table} ", false);
+
+        return $table_exists;
+    }
+}
+
+if (!function_exists('admin_audit_ensure_table')) {
+    function admin_audit_ensure_table()
+    {
+        // 운영 DB 보호를 위해 감사로그 테이블 자동 생성은 하지 않습니다.
+        return admin_audit_table_exists();
+    }
+}
+
+if (!function_exists('admin_audit_log')) {
+    function admin_audit_log($action, $target = '', $result = 'SUCCESS', $message = '', $payload = array())
+    {
+        global $member;
+
+        $action = admin_audit_cut($action, 120);
+        if ($action === '') {
+            return false;
+        }
+
+        if (!isset($member['mb_id']) || !$member['mb_id']) {
+            return false;
+        }
+
+        if (!admin_audit_ensure_table()) {
+            return false;
+        }
+        $table = admin_audit_table_name();
+
+        $result = strtoupper(admin_audit_cut($result, 10));
+        if (!in_array($result, array('SUCCESS', 'FAIL', 'INFO'))) {
+            $result = 'INFO';
+        }
+
+        if (!is_array($payload)) {
+            $payload = array('value' => $payload);
+        }
+
+        $payload_text = '';
+        if (!empty($payload)) {
+            $json_flags = 0;
+            if (defined('JSON_UNESCAPED_UNICODE')) {
+                $json_flags |= JSON_UNESCAPED_UNICODE;
+            }
+            if (defined('JSON_UNESCAPED_SLASHES')) {
+                $json_flags |= JSON_UNESCAPED_SLASHES;
+            }
+
+            $payload_text = json_encode($payload, $json_flags);
+            if ($payload_text === false) {
+                $payload_text = print_r($payload, true);
+            }
+        }
+
+        $sql_data = array(
+            'mb_id' => sql_real_escape_string(admin_audit_cut($member['mb_id'], 20)),
+            'mb_name' => sql_real_escape_string(admin_audit_cut(isset($member['mb_name']) ? $member['mb_name'] : '', 100)),
+            'mb_level' => (int)(isset($member['mb_level']) ? $member['mb_level'] : 0),
+            'al_ip' => sql_real_escape_string(admin_audit_cut(isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : '', 45)),
+            'al_method' => sql_real_escape_string(admin_audit_cut(isset($_SERVER['REQUEST_METHOD']) ? $_SERVER['REQUEST_METHOD'] : '', 10)),
+            'al_uri' => sql_real_escape_string(admin_audit_cut(isset($_SERVER['REQUEST_URI']) ? $_SERVER['REQUEST_URI'] : '', 255)),
+            'al_action' => sql_real_escape_string($action),
+            'al_target' => sql_real_escape_string(admin_audit_cut($target, 120)),
+            'al_result' => sql_real_escape_string($result),
+            'al_message' => sql_real_escape_string(admin_audit_cut($message, 255)),
+            'al_payload' => sql_real_escape_string(admin_audit_cut($payload_text, 10000))
+        );
+
+        $sql = " insert into {$table} set
+                    al_datetime = '" . G5_TIME_YMDHIS . "',
+                    mb_id = '{$sql_data['mb_id']}',
+                    mb_name = '{$sql_data['mb_name']}',
+                    mb_level = '{$sql_data['mb_level']}',
+                    al_ip = '{$sql_data['al_ip']}',
+                    al_method = '{$sql_data['al_method']}',
+                    al_uri = '{$sql_data['al_uri']}',
+                    al_action = '{$sql_data['al_action']}',
+                    al_target = '{$sql_data['al_target']}',
+                    al_result = '{$sql_data['al_result']}',
+                    al_message = '{$sql_data['al_message']}',
+                    al_payload = '{$sql_data['al_payload']}' ";
+
+        return sql_query($sql, false);
+    }
+}
+
 
 // 작업아이콘 출력
 function icon($act, $link = '', $target = '_parent')
@@ -716,6 +846,35 @@ unset($amenu);
 			if($key2)  {  $menu[$row['me_gr']][]=$tmp; }
 		}
     }
+
+// 결제 하위에 크레딧 모니터링 메뉴를 코드로 보강
+if (isset($menu) && is_array($menu)) {
+	foreach ($menu as $menu_key => $menu_rows) {
+		if (!isset($menu_rows[0][1]) || trim((string)$menu_rows[0][1]) !== '결제') {
+			continue;
+		}
+
+		$credit_menu_link = G5_ADMIN_URL . '/credit_monitor.list.php';
+		$already_exists = false;
+		foreach ($menu_rows as $menu_row) {
+			if (isset($menu_row[2]) && trim((string)$menu_row[2]) === $credit_menu_link) {
+				$already_exists = true;
+				break;
+			}
+		}
+
+		if (!$already_exists) {
+			$menu[$menu_key][] = array(
+				'700200',
+				'크레딧 모니터링',
+				$credit_menu_link,
+				'credit_monitor',
+				1
+			);
+		}
+		break;
+	}
+}
 
 
 if (isset($menu) && $menu) {

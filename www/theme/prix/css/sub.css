@@ -232,8 +232,47 @@ html.hide{overflow: hidden;}
 .planList > li .plan_body.new .plan_money .price_origin{padding-right:6rem; font-weight: 500; font-size:2rem; line-height:1; color: #666; position: relative;}
 .planList > li .plan_body.new .plan_money .price_origin:before{content: ""; width:18.4rem; height:2.9rem; margin:-0.2rem 0 0 -12.2rem; background: url("/theme/prix/img/sub/arr_price_sale.png") no-repeat center center / cover; position:absolute; left: 50%; top:50%;}
 .planList > li .plan_body.new .plan_money .price_sale{margin-top:1rem; padding-left:2rem; position: relative; display: flex; align-items: center; justify-content: center; gap:1rem;}
+.planList > li .plan_body.new .plan_money .price_sale.has_bonus{padding-right:6.2rem;}
+.planList > li .plan_body.new .plan_money .credit_amount{margin-top:0.8rem; font-size:1.9rem; line-height:1; color:#111; font-weight:700;}
+.planList > li .plan_body.new .plan_money .credit_note{margin-top:0.8rem; font-size:1.4rem; line-height:1.4; color:#666; font-weight:500;}
+.planList > li .plan_body.new .plan_money .credit_note.empty{visibility:hidden;}
 .planList > li .plan_body.new .plan_money .sale{width:6.6rem; height:5rem; padding-bottom:0.5rem; background: url("/theme/prix/img/sub/bg_price_sale.png") no-repeat center center / cover; font-size:1.2rem; line-height:1; color: #fff; display: flex; align-items: center; justify-content: center;}
 .planList > li .plan_body.new .plan_money .sale>strong{font-weight: bold; font-size:1.9rem;}
+.planList > li .plan_body.new .plan_money .sale.bonus_replace{
+	position:absolute;
+	right:0;
+	top:50%;
+	transform:translateY(-50%);
+	width:auto;
+	min-width:5.2rem;
+	height:2.8rem;
+	padding:0 0.9rem 0 1.1rem;
+	display:flex;
+	align-items:center;
+	justify-content:center;
+	border-radius:0.7rem;
+	background-image:linear-gradient(135deg, #4f63e8 0%, #3149dd 100%) !important;
+	background-color:transparent !important;
+	box-shadow:0 0.4rem 0.9rem rgba(49,73,221,0.22);
+	letter-spacing:-0.02em;
+}
+.planList > li .plan_body.new .plan_money .sale.bonus_replace:before{
+	content:"";
+	position:absolute;
+	left:-0.8rem;
+	top:0;
+	width:0;
+	height:0;
+	border-top:1.4rem solid transparent;
+	border-bottom:1.4rem solid transparent;
+	border-right:0.8rem solid #4f63e8;
+}
+.planList > li .plan_body.new .plan_money .sale.bonus_replace>strong{font-size:1.3rem; font-weight:800;}
+.planList > li:nth-of-type(4) .plan_body.new .plan_money .sale.bonus_replace{
+	background-image:linear-gradient(135deg, #7e42ea 0%, #6c2fdf 100%) !important;
+	box-shadow:0 0.4rem 0.9rem rgba(108,47,223,0.24);
+}
+.planList > li:nth-of-type(4) .plan_body.new .plan_money .sale.bonus_replace:before{border-right-color:#7e42ea;}
 
 .planList > li:nth-of-type(3) .plan_body.new .plan_money .price_origin:before{background-image: url("/theme/prix/img/sub/arr_price_sale2.png");}
 .planList > li:nth-of-type(3) .plan_body.new .plan_money .sale{background-image: url("/theme/prix/img/sub/bg_price_sale2.png");}
@@ -579,6 +618,5 @@ html.hide{overflow: hidden;}
 }
 
 .blur {
-	blur(0.3rem);
 	filter: blur(0.3rem);
 }

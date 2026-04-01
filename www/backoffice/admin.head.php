@@ -284,6 +284,20 @@ if (!empty($_COOKIE['g5_admin_btn_gnb'])) {
             <?php
                 $jj++;
             }     //end foreach
+				if ($is_admin == 'super') {
+					$audit_current_class = '';
+					if (isset($_SERVER['SCRIPT_NAME']) && basename((string)$_SERVER['SCRIPT_NAME']) === 'audit_log_list.php') {
+						$audit_current_class = ' current-page';
+					}
+					$error_current_class = '';
+					if (isset($_SERVER['SCRIPT_NAME']) && basename((string)$_SERVER['SCRIPT_NAME']) === 'system_error_list.php') {
+						$error_current_class = ' current-page';
+					}
+            ?>
+                  <li class="<?=$audit_current_class?>"><a href="<?=G5_ADMIN_URL?>/audit_log_list.php"><i class="fa fa-list-alt"></i> 감사로그</a></li>
+                  <li class="<?=$error_current_class?>"><a href="<?=G5_ADMIN_URL?>/system_error_list.php"><i class="fa fa-bug"></i> 시스템에러</a></li>
+            <?php
+				}
             ?>
                 </ul>
               </div>
@@ -296,9 +310,15 @@ if (!empty($_COOKIE['g5_admin_btn_gnb'])) {
               <a data-toggle="tooltip" data-placement="top" title="홈페이지 바로가기" href="/" target="_blank">
 				<span class="glyphicon glyphicon-home" aria-hidden="true"></span>
               </a>
+              <?php if ((int)$member['mb_level'] === 20) { ?>
+              <a data-toggle="tooltip" data-placement="top" title="감사로그" href="<?php echo G5_ADMIN_URL ?>/audit_log_list.php">
+                <span class="glyphicon glyphicon-list-alt" aria-hidden="true"></span>
+              </a>
+              <?php } else { ?>
               <a data-toggle="tooltip" data-placement="top">
                 &ensp;
               </a>
+              <?php } ?>
               <a data-toggle="tooltip" data-placement="top" title="Settings" href="<?php echo G5_ADMIN_URL ?>/admin_form.php?w=u&amp;mb_id=<?php echo $member['mb_id'] ?>">
                 <span class="glyphicon glyphicon-cog" aria-hidden="true"></span>
               </a>

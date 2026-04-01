@@ -42,48 +42,57 @@ if($com['BZNO']) {
 }
 
 
- if($com[ext_1]=="API 입력") {
+if($com['ext_1']=="API 입력") {
 	//updateKODATA($com['BZNO']);
  }
 if($com['BZC_CD']) $kssc=sql_fetch("SELECT * from kssc where k_code='{$com['BZC_CD']}'");
 if($com['KSIC9_BZC_CD']) $kssc_9=sql_fetch("SELECT * from kssc_9 where k_code='{$com['KSIC9_BZC_CD']}'");
 elseif($com['BZC_CD']) $kssc_9=sql_fetch("SELECT * from kssc_9 where k_code='{$com['BZC_CD']}'");
 
-//맴버쉽 정보 가져오기
-$minfo=getUserMembership();
-$minfo[0]['no'];
+// 비상장 주식가치 최초 조회 크레딧/언락 상태
+$unlisted_credit_cost = (defined('_unlisted_value_credit_cost') && (int)_unlisted_value_credit_cost > 0) ? (int)_unlisted_value_credit_cost : 20;
+$unlisted_service_code = 'UNLISTED_VALUE';
+$unlisted_unlocked = false;
+$unlisted_unlock_token = uniqid('', true);
+set_session('ss_unlisted_value_token', $unlisted_unlock_token);
+if($member['mb_id'] && $cd){
+	$uid_sql = sql_real_escape_string(trim((string)$member['mb_id']));
+	$service_code_sql = sql_real_escape_string($unlisted_service_code);
+	$unlisted_once_key = hash('sha256', $unlisted_service_code.':'.$member['mb_id'].':'.$cd);
+	$unlisted_once_key_sql = sql_real_escape_string($unlisted_once_key);
+	$unlock_row = sql_fetch("select id from g5_matching_credit_history where uid='{$uid_sql}' and tx_type='USE' and service_code='{$service_code_sql}' and once_key='{$unlisted_once_key_sql}' limit 1");
+	if($unlock_row['id']) $unlisted_unlocked = true;
+}
 
-	//주식정보
-	#당기순이익(3년간) 단위 천원
-	$s_query="select * from company_financial where KEDCD='{$cd}' order by ACCT_DT DESC  limit 3";
-	$result=sql_query($s_query);
-	for ($i=0; $row=sql_fetch_array($result); $i++) {
-		//echo $row[ACCT_DT]." ".$row[FUNDTOTAL]."<br>";
-		$year=substr($row[ACCT_DT],0,4);
-		$PROFIT[$year]=$row[TERMNETPROFIT];
-		$FTOTAL[]=$row[FUNDTOTAL];
-		$SALESY[$year]=$row[SALES];
-	}
-$m_chk=false;
-if($minfo[1]['title']=="프리미엄" or $minfo[1]['title']=="프리미엄+"){
-	$m_chk=true;
-	//if(1){ //임시 처리
-	#주식수
-	$sto_info=sql_fetch("select * from company_stock where KEDCD='{$cd}' order by STD_DT DESC limit 1");
+// 주식정보
+#당기순이익(3년간) 단위 천원
+$PROFIT=array();
+$FTOTAL=array();
+$SALESY=array();
+$svps = 0;
+$warn_text = '';
+$s_query="select * from company_financial where KEDCD='{$cd}' order by ACCT_DT DESC  limit 3";
+$result=sql_query($s_query);
+for ($i=0; $row=sql_fetch_array($result); $i++) {
+	$year=substr($row['ACCT_DT'],0,4);
+	$PROFIT[$year]=$row['TERMNETPROFIT'];
+	$FTOTAL[]=$row['FUNDTOTAL'];
+	$SALESY[$year]=$row['SALES'];
+}
 
-	if(count($PROFIT)>1 && $sto_info[ISS_STK_CN]){  //3년도 정보가 있어야 구함
+#주식수
+$sto_info=sql_fetch("select * from company_stock where KEDCD='{$cd}' order by STD_DT DESC limit 1");
 
-
+if($unlisted_unlocked && count($PROFIT)>1 && $sto_info['ISS_STK_CN']){  //3년도 정보가 있어야 구함
 	#자산가치 자본총계(천원) / 총주식
-	$asset_value = ($FTOTAL[0]*1000) / $sto_info[ISS_STK_CN];
-	//echo "#자산가치 : 자본총계(천원) / 총주식 : ($FTOTAL[0]*1000) / {$sto_info[ISS_STK_CN]} = ".$asset_value."<br>";
+	$asset_value = ($FTOTAL[0]*1000) / $sto_info['ISS_STK_CN'];
 	#주당순이익 구하기 당기순이익/주식수
 	foreach($PROFIT as $key=>$value){
-		$EPS[$key]=($value*1000)/$sto_info[ISS_STK_CN];
-		//echo "#주당순이익 : ({$value}*1000)/{$sto_info[ISS_STK_CN]}=".$EPS[$key]."<br>";
+		$EPS[$key]=($value*1000)/$sto_info['ISS_STK_CN'];
 	}
 	#수익가치
 	$pv_total=0;
+	$x=0;
 	foreach($EPS as $key=>$value){
 		$x++;
 
@@ -92,32 +101,16 @@ if($minfo[1]['title']=="프리미엄" or $minfo[1]['title']=="프리미엄+"){
 		if($x==3) $PV[$key]=$value*1;
 		$pv_total=$pv_total+$PV[$key];
 	}
-	//echo "#수익가치:".$pv_total."<br>";
 	#주당순손익액
 	$pv2= $pv_total / 6;
-	//echo "#주당순손익액:".$pv2."<br>";
 	# 1주당 순손익가치 (환원율 10%)
 	$pv2= ($pv_total / 6)/0.1;
-	//echo "1주당 순손익가치 (환원율 10%):".$pv2."<br>";
 	#주당 주식가치 (자산가치*2 + 수익가치*3)/5
-
-
 	$com_av=$asset_value*0.8;
 	$svps=(($asset_value*2)+($pv2*3))/5;
 	if($svps<$com_av) $svps=$com_av;
-
-	/*
-	1) #주당 주식가치
-	2) #자산가치 * 0.8
-	3) 1)과 2) 중 더 큰 값 = 비상장주식가치
-	*/
-	//echo "#주당 주식가치 (자산가치*2 + 수익가치*3)/5=".$svps."<br>";
-	//echo "#주당 주식가치 (($asset_value*2)+($pv2*3))/5=".$svps."<br>";
-
-
-	}else{
-		$warn_text="직전 3개년도 재무정보 또는 주식정보가 정확하지 않아서 확인이 어렵습니다.";
-	}
+}else if($unlisted_unlocked){
+	$warn_text="직전 3개년도 재무정보 또는 주식정보가 정확하지 않아서 확인이 어렵습니다.";
 }
 
 if($com['HPAGE_URL']) {
@@ -129,6 +122,25 @@ if($com['HPAGE_URL']) {
 <style>
 	#pageTop,
 	#sVisual{display: none}
+	.company-view .ca-info-my-be .ju>.btns .btn-copy{
+		display:flex;
+		align-items:baseline;
+		gap:0.8rem;
+		white-space:nowrap;
+	}
+	.company-view .ca-info-my-be .ju>.btns .btn-copy .main{
+		font-weight:600;
+		font-size:3rem;
+		line-height:1.3;
+		margin:0;
+	}
+	.company-view .ca-info-my-be .ju>.btns .btn-copy em{
+		font-style:normal;
+		font-weight:500;
+		font-size:1.8rem;
+		line-height:1;
+		opacity:0.92;
+	}
 </style>
 <div id="sub-visual"><div class="inConts">
 	<h2>사업자번호 입력만으로,<br />맞춤형 기업 매칭을 경험하세요.</h2>
@@ -168,7 +180,7 @@ if($com['HPAGE_URL']) {
 
 				<dl>
 					<dt>법인(주민)번호</dt>
-					<dd><span><?=substr($com[CONO_PID],0,6)?>-<?=substr($com[CONO_PID],6,7)?></span></dd>
+					<dd><span><?=substr($com['CONO_PID'],0,6)?>-<?=substr($com['CONO_PID'],6,7)?></span></dd>
 				</dl>
 				<dl>
 					<dt>사업자번호</dt>
@@ -243,16 +255,16 @@ if($SALESY[$yearsm]){?>
 					</dd>
 				</dl>
 				<dl>
-				<?if($com[LOC_RDNM_ADDRA]){?>
+				<?if($com['LOC_RDNM_ADDRA']){?>
 					<dt>주소(도로명)</dt>
-					<dd><a href="https://map.kakao.com/?q=<?=$com[LOC_RDNM_ADDRA]?> <?=$com[LOC_RDNM_ADDRB]?>" target="_blank"><?=$com[LOC_RDNM_ADDRA]?><br /><?=$com[LOC_RDNM_ADDRB]?></a>
+					<dd><a href="https://map.kakao.com/?q=<?=$com['LOC_RDNM_ADDRA']?> <?=$com['LOC_RDNM_ADDRB']?>" target="_blank"><?=$com['LOC_RDNM_ADDRA']?><br /><?=$com['LOC_RDNM_ADDRB']?></a>
 					</dd>
 				<?}?>
 				</dl>
 				<dl>
-				<?if($com[LOC_ADDRA]){?>
+				<?if($com['LOC_ADDRA']){?>
 					<dt>주소</dt>
-					<dd><a href="https://map.kakao.com/?q=<?=$com[LOC_ADDRA]?> <?=$com[LOC_ADDRB]?>" target="_blank"><?=$com[LOC_ADDRA]?><br /><?=$com[LOC_ADDRB]?></a>
+					<dd><a href="https://map.kakao.com/?q=<?=$com['LOC_ADDRA']?> <?=$com['LOC_ADDRB']?>" target="_blank"><?=$com['LOC_ADDRA']?><br /><?=$com['LOC_ADDRB']?></a>
 					</dd>
 				<?}?>
 				</dl>
@@ -262,19 +274,22 @@ if($SALESY[$yearsm]){?>
 
 	<!--[s] 비상장사일 때 -->
 	<div class="ca-info-my-be">
-<?if($svps or $warn_text){?>
-		<div class="ca-info-my-re" front shadow <?if(!$m_chk){?>chk="false"<?}?>>
+<?if($unlisted_unlocked){?>
+		<div class="ca-info-my-re" front shadow chk="<?if($unlisted_unlocked){?>true<?}else{?>false<?}?>" data-unlocked="<?if($unlisted_unlocked){?>1<?}else{?>0<?}?>" data-kedcd="<?=$cd?>" data-credit-cost="<?=$unlisted_credit_cost?>" data-token="<?=$unlisted_unlock_token?>" data-warn="<?if($warn_text){?>1<?}else{?>0<?}?>">
 			<p class="title">우리회사 비상장주식 가치</p>
 			<div class="ju">
 				<a href="javascript:void(0);" class="blurs" data-text="(클릭시공개)" shadow><strong>12,129원/주</strong></a>
 				<a href="javascript:void(0);" class="btns">
 					<span><img src="/images/icon_search.png" alt="search"></span>
-					<strong>평가 결과 보기</strong>
+					<span class="btn-copy">
+						<span class="main">평가 결과 보기</span>
+						<?if(!$unlisted_unlocked){?><em>(<?=$unlisted_credit_cost?> 크레딧)</em><?}?>
+					</span>
 					<span><img src="/images/btn_arr2.png" alt="arr"></span>
 				</a>
 			</div>
 			<p class="text">
-				본 수치는 KoData 재무 데이터를 기반으로 산출된 추정값으로, 기업의 고유 특성이나 정보 갱신 주기에 따라 변동 가능성이 있습니다. 정확한 평가가 필요하신 경우, 전문가와의 상담을 권장드립니다.
+				본 수치는 KoData 재무 데이터를 기반으로 산출된 추정값으로, 기업의 고유 특성이나 정보 갱신 주기에 따라 변동 가능성이 있습니다. 가치 공개는 최초 1회만 <?=$unlisted_credit_cost?>크레딧이 사용되며, 이후 재조회는 무료입니다.
 			</p>
 		</div>
 		<div class="ca-info-my-re" back shadow>
@@ -290,11 +305,14 @@ if($SALESY[$yearsm]){?>
 					</strong>
 					<?/*<p>직전년도 매출액 <?=number_format($SALESY[$yearsm]*1000)?>원</p>*/?>
 				</div>
-				<a href="javascript:void(0);" class="btns">
-					<span><img src="/images/icon_search.png" alt="search"></span>
-					<strong>평가 결과 보기</strong>
-					<span><img src="/images/btn_arr2.png" alt="arr"></span>
-				</a>
+					<a href="javascript:void(0);" class="btns">
+						<span><img src="/images/icon_search.png" alt="search"></span>
+						<span class="btn-copy">
+							<span class="main">평가 결과 보기</span>
+							<?if(!$unlisted_unlocked){?><em>(<?=$unlisted_credit_cost?> 크레딧)</em><?}?>
+						</span>
+						<span><img src="/images/btn_arr2.png" alt="arr"></span>
+					</a>
 			</div>
 			<p class="tit">정밀한 평가와 전략적 접근이 필요하다면?</p>
 			<p class="text">
@@ -302,33 +320,37 @@ if($SALESY[$yearsm]){?>
 			</p>
 		</div>
 <?}else{?>
-		<div class="ca-info-my-re" front shadow  chk="false">
+		<div class="ca-info-my-re" front shadow chk="false" data-unlocked="0" data-kedcd="<?=$cd?>" data-credit-cost="<?=$unlisted_credit_cost?>" data-token="<?=$unlisted_unlock_token?>" data-warn="1">
 			<p class="title">우리회사 비상장주식 가치</p>
 			<div class="ju">
 				<a href="javascript:void(0);" class="blurs" data-text="(클릭시공개)" shadow><strong>12,129원/주</strong></a>
 				<a href="javascript:void(0);" class="btns">
 					<span><img src="/images/icon_search.png" alt="search"></span>
-					<strong>평가 결과 보기</strong>
+					<span class="btn-copy">
+						<span class="main">평가 결과 보기</span>
+						<em>(<?=$unlisted_credit_cost?> 크레딧)</em>
+					</span>
 					<span><img src="/images/btn_arr2.png" alt="arr"></span>
 				</a>
 			</div>
 			<p class="text">
-				본 수치는 KoData 재무 데이터를 기반으로 산출된 추정값으로, 기업의 고유 특성이나 정보 갱신 주기에 따라 변동 가능성이 있습니다. 정확한 평가가 필요하신 경우, 전문가와의 상담을 권장드립니다.
+				본 수치는 KoData 재무 데이터를 기반으로 산출된 추정값으로, 기업의 고유 특성이나 정보 갱신 주기에 따라 변동 가능성이 있습니다. 가치 공개는 최초 1회만 <?=$unlisted_credit_cost?>크레딧이 사용되며, 이후 재조회는 무료입니다.
 			</p>
 		</div>
 		<div class="ca-info-my-re" back shadow>
 			<p class="title">우리회사 비상장주식 가치</p>
 			<div class="ju">
-				<div class="blurs" shadow>
-					<strong>
-					1,234,567/주
-
-					</strong>
-					<p>직전년도 매출액 100,000,000원</p>
-				</div>
-				<a href="javascript:void(0);" class="btns">
-					<span><img src="/images/icon_search.png" alt="search"></span>
-					<strong>평가 결과 보기</strong>
+					<div class="blurs" shadow>
+						<strong>
+						가치 공개 후 확인 가능
+						</strong>
+					</div>
+					<a href="javascript:void(0);" class="btns">
+						<span><img src="/images/icon_search.png" alt="search"></span>
+						<span class="btn-copy">
+						<span class="main">평가 결과 보기</span>
+						<em>(<?=$unlisted_credit_cost?> 크레딧)</em>
+					</span>
 					<span><img src="/images/btn_arr2.png" alt="arr"></span>
 				</a>
 			</div>
@@ -415,46 +437,119 @@ function AutoHypen(companyNum){
       }
     }
 
-	//	비상장
-	$("body").on("click", ".ca-info-my-be .ca-info-my-re[front]", function(){ //
-		chk=$(this).attr("chk");
-		if(chk=="false") {
-			<?if($warn_text){?>
-				jAlert("<?=$warn_text?>","알림");
-			<?}else{?>
-			jAlert("맴버쉽을 업그레이드 하세요.","알림",function(){
-				location.href='/ko/plan.php';
-			});
-			<?}?>
+	function toggleUnlistedCard($front){
+		var $box = $front.closest(".ca-info-my-be");
+		if(!$box.length) $box = $front.closest(".ca-info-my");
+		if(!$box.length) return;
+		if(!$box.hasClass("active")) $box.addClass("active");
+		else $box.removeClass("active");
+	}
+
+	function applyUnlistedReveal($front, svpsRaw, warnEncoded){
+		var $box = $front.closest(".ca-info-my-be");
+		if(!$box.length) $box = $front.closest(".ca-info-my");
+		if(!$box.length) return;
+
+		var warnText = "";
+		if(warnEncoded){
+			try{
+				warnText = decodeURIComponent(String(warnEncoded));
+			}catch(e){
+				warnText = String(warnEncoded);
+			}
+		}
+
+		var $strong = $box.find(".ca-info-my-re[back] .blurs strong").first();
+		if($strong.length){
+			if(warnText){
+				$strong.text(warnText);
+			}else{
+				var svpsInt = parseInt(svpsRaw, 10);
+				if(!isNaN(svpsInt)) $strong.text(svpsInt.toLocaleString() + " / 주");
+				else $strong.text("가치 공개 후 확인 가능");
+			}
+		}
+
+		$front.attr("chk","true");
+		$front.attr("data-unlocked","1");
+		$front.data("unlocked", 1);
+		$box.find(".ca-info-my-re[front]").attr("data-unlocked","1").data("unlocked", 1);
+		$box.find(".btn-copy em").remove();
+	}
+
+	$("body").on("click", ".ca-info-my-be .ca-info-my-re[front], .ca-info-my .ca-info-my-re[front]", function(){
+		var $front = $(this);
+		var unlocked = String($front.data("unlocked")) === "1";
+		var kedcd = $front.data("kedcd");
+		var unlockToken = String($front.data("token") || "");
+		var creditCost = parseInt($front.data("credit-cost"), 10);
+		if(!creditCost || creditCost < 1) creditCost = <?= (int)$unlisted_credit_cost ?>;
+
+		if(unlocked){
+			toggleUnlistedCard($front);
 			return false;
 		}
 
-		if(!$(this).closest(".ca-info-my-be").hasClass("active")){
-			$(this).closest(".ca-info-my-be").addClass("active")
-		}else{
-			$(this).closest(".ca-info-my-be").removeClass("active");
-		}
-	});
-
-	//상장
-	$("body").on("click", ".ca-info-my .ca-info-my-re[front]", function(){ //
-		chk=$(this).attr("chk");
-		if(chk=="false") {
-			<?if($warn_text){?>
-				jAlert("<?=$warn_text?>","알림");
-			<?}else{?>
-			jAlert("맴버쉽을 업그레이드 하세요.","알림",function(){
-				location.href='/ko/plan.php';
-			});
-			<?}?>
+		if(!kedcd){
+			jAlert("회사 정보를 확인할 수 없어 처리하지 못했습니다.","알림");
 			return false;
 		}
 
-		if(!$(this).closest(".ca-info-my").hasClass("active")){
-			$(this).closest(".ca-info-my").addClass("active")
-		}else{
-			$(this).closest(".ca-info-my").removeClass("active");
-		}
+		var unlockAction = function(){
+			$.post("../get_set.php", {type:'unlisted_value_unlock', kedcd:kedcd, unlock_token:unlockToken}, function(data){
+				var jqXHR = (data || "").split("|");
+				if(jqXHR[0] == "1000"){
+					applyUnlistedReveal($front, jqXHR[4], jqXHR[5]);
+					if(jqXHR[1] == "charged"){
+						jAlert("가치 공개로 " + creditCost + "크레딧이 사용되었습니다.","알림",function(){
+							toggleUnlistedCard($front);
+						});
+					}else{
+						toggleUnlistedCard($front);
+					}
+				}else{
+					var msg = jqXHR[1] ? jqXHR[1] : "처리 중 오류가 발생했습니다.";
+					if(jqXHR[2] == "PLAN"){
+						jAlert(msg,"알림",function(){ location.href='/ko/plan.php'; });
+					}else{
+						jAlert(msg,"알림");
+					}
+				}
+			});
+		};
+
+			$.post("../get_set.php", {type:'unlisted_value_unlock', kedcd:kedcd, check_only:1, unlock_token:unlockToken}, function(preData){
+				var pre = (preData || "").split("|");
+				if(pre[0] == "1000"){
+					if(pre[1] == "already"){
+						unlockAction();
+						return;
+					}
+
+				if(pre[3]){
+					var checkCost = parseInt(pre[3], 10);
+					if(checkCost > 0) creditCost = checkCost;
+				}
+
+				var confirmMessage = "비상장주식가치 공개 시 " + creditCost + "크레딧이 사용됩니다.\n진행하시겠습니까?";
+				if(typeof jConfirm === "function"){
+					jConfirm(confirmMessage, "알림", function(isOk){
+						if(isOk) unlockAction();
+					});
+				}else{
+					if(confirm(confirmMessage)) unlockAction();
+				}
+			}else{
+				var preMsg = pre[1] ? pre[1] : "처리 중 오류가 발생했습니다.";
+				if(pre[2] == "PLAN"){
+					jAlert(preMsg,"알림",function(){ location.href='/ko/plan.php'; });
+				}else{
+					jAlert(preMsg,"알림");
+				}
+			}
+		});
+
+		return false;
 	});
 </script>
 

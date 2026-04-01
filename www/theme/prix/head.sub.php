@@ -142,6 +142,7 @@ history.scrollRestoration = "auto";
 <script type="text/javascript" src="<?php echo G5_THEME_JS_URL; ?>/jquery.fancybox.js"></script>
 
 <script type="text/javascript" src="<?php echo G5_THEME_JS_URL ?>/publisher.js?ver=<?php echo G5_JS_VER; ?>"></script>
+<script type="text/javascript" src="<?php echo G5_THEME_JS_URL ?>/company-detail-actions.js?ver=<?php echo G5_JS_VER; ?>"></script>
 
 <script type="text/javascript" src="/build/jquery.waypoints.min.js"></script>
 
