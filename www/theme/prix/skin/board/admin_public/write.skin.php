@@ -101,11 +101,11 @@ if (!defined('_GNUBOARD_')) exit; // 개별 페이지 접근 불가
 				</tr>
 				<tr>
 					<th scope="row"><span class="">식별번호	</span></th>
-					<td><input type="text" name="wr_1" value="<?php echo $write[wr_1] ?>" id="wr_1" required class="required" size="50" maxlength="255" placeholder="식별번호 : 23636579"></td>
+					<td><input type="text" name="wr_1" value="<?php echo $write['wr_1'] ?>" id="wr_1" required class="required" size="50" maxlength="255" placeholder="식별번호 : 23636579"></td>
 				</tr>
 				<tr>
 					<th scope="row"><span class="">금액	</span></th>
-					<td><input type="text" name="wr_2" value="<?php echo $write[wr_2] ?>" id="wr_2" required class="required" size="50" maxlength="255" placeholder="" onkeyup="chkNumber(this)"></td>
+					<td><input type="text" name="wr_2" value="<?php echo $write['wr_2'] ?>" id="wr_2" required class="required" size="50" maxlength="255" placeholder="" onkeyup="chkNumber(this)"></td>
 				</tr>
 				<tr class="dt">
 					<th scope="row"><span class="">제품상세</span></th>

@@ -66,7 +66,7 @@ $my_membership=$msinfo_row[0];
                         <li><?=$value['pay_type']?></li>
                     </ul>
 
-					<form name="mobileweb<?= $value[no]?>" method="post" class="mpay">
+					<form name="mobileweb<?= $value['no']?>" method="post" class="mpay">
 							<input type="hidden" name="mtype" value="<?=$value['title']?>">
 							<input type="hidden" name="authtype" value="D">
 							<input type="hidden" name="mid" value="<?php echo $mid ?>">
@@ -80,10 +80,10 @@ $my_membership=$msinfo_row[0];
 							<input type="hidden" name="buyeremail" value="<?=$member['mb_email']?>">
 							<input type="hidden" name="returnurl" value="https://macomaex.com/ko/INIbill_mo_return.php">
 							<input type="hidden" name="carduse" value="">
-							<?if($my_membership[membership_parent_no]==$value[no]){?>
+							<?if($my_membership['membership_parent_no']==$value['no']){?>
 							<a class="plan_payment_use">맴버쉽 이용중</a>
 							<?}else{?>
-							<a mtype="<?=$value['title']?>" idx="<?= $value[no]?>" class="plan_payment">결제하기</a>
+							<a mtype="<?=$value['title']?>" idx="<?= $value['no']?>" class="plan_payment">결제하기</a>
 							<?}?>
 					</form>
 

@@ -25,7 +25,7 @@ function ConvertLineFeed($cVal, $tag){
 
 <?php for ($i=0; $i<count($list); $i++) {  ?>
 	<?php
-		$sql = " select bf_file from $g5[board_file_table] where bo_table = '". $bo_table. "' and wr_id = '". $list[$i][wr_id] ."' order by '".$list[$i][wr_datetime]."' asc ";
+		$sql = " select bf_file from {$g5['board_file_table']} where bo_table = '". $bo_table. "' and wr_id = '". $list[$i]['wr_id'] ."' order by '".$list[$i]['wr_datetime']."' asc ";
 		$result = sql_query($sql);
 		$imgSrc = array();
 		for($k=0; $k<$data=sql_fetch_array($result); $k++)  {

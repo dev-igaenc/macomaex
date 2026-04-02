@@ -132,7 +132,7 @@ function getFavorite($user){
 	$result=sql_query($sql);
 	$r = array(); 
 	while($row = sql_fetch_array($result)) { 
-		$r[] = $row[KEDCD];
+		$r[] = $row['KEDCD'];
 	}
 	 return $r;
 }
@@ -152,7 +152,7 @@ function getUserMembership($id=""){
 	//마스터의 경우 최고 맴버쉽
 	if($member['mb_level']==20) {
 		$membership_info = sql_fetch("select * from g5_membership_manage order by no desc limit 1");
-		$msinfo['membership_parent_no'] = $membership_info[no];
+		$msinfo['membership_parent_no'] = $membership_info['no'];
 	}
 	$result[]=$msinfo;
 	$result[]=$membership_info;
@@ -259,7 +259,7 @@ function updateKODATA($comnum){ // 한국평가데이터 정보 업데이트 API
 			$comnum=str_replace("-","",$comnum);
 						//API 로그기록에 정보가 남아있는지 체크 있으면 해당 기록에서 그냥 가져오기
 						$log_chk=sql_fetch("select * from company_api_log where c_bizno='{$comnum}' and DATE(c_datetime)='".date("Y-m-d")."'");
-						if(!$log_chk[c_content]){
+						if(!$log_chk['c_content']){
 							$com_d=getKODATA($comnum);
 							$com_data=explode("|",$com_d);
 							if($com_data[0]==1000){
@@ -270,7 +270,7 @@ function updateKODATA($comnum){ // 한국평가데이터 정보 업데이트 API
 							}
 						}else{
 							//API기록에서 정보가져옴
-							$com_info=json_decode($log_chk[c_content]);
+							$com_info=json_decode($log_chk['c_content']);
 						}
 
 								$KEDCD=$com_info->CONTENTS->ENPintr0000->kedcd;
@@ -527,8 +527,8 @@ function updateKODATA($comnum){ // 한국평가데이터 정보 업데이트 API
 //쿠폰 정보가져오기
 function getCouponInfo($id){
 	if(strlen($id)<6) {
-		$result[chk]="false";
-		$result[err]="쿠폰번호를 확인해주세요.";
+		$result['chk']="false";
+		$result['err']="쿠폰번호를 확인해주세요.";
 		return $result;
 		return false;
 	}
@@ -538,10 +538,10 @@ function getCouponInfo($id){
 	$result=sql_fetch($sql);
 
 		if($result)  {
-			$result[chk]="true";
+			$result['chk']="true";
 		}else{ 
-			$result[chk]="false";
-			$result[err]="없는 쿠폰입니다. 다시 확인해주세요.";
+			$result['chk']="false";
+			$result['err']="없는 쿠폰입니다. 다시 확인해주세요.";
 		}
 	 return $result;
 }
@@ -551,34 +551,34 @@ function useCoupon($id, $mb_id=""){
 	if($id && $mb_id){
 		$coupon=getCouponInfo($id);
 		$user_info=getUserInfo($mb_id);
-		if($coupon[chk]=="true"){
+		if($coupon['chk']=="true"){
 			//쿠폰 사용처리
 
-			$minfo=sql_fetch("select * from g5_membership_manage where no='{$coupon[cp_type]}'"); // 맴버쉽 정보
+			$minfo=sql_fetch("select * from g5_membership_manage where no='{$coupon['cp_type']}'"); // 맴버쉽 정보
 			$date_begin = date("Y-m-d");
 			
-			$timestamp = strtotime("+{$coupon[cp_trunc]} months");
+			$timestamp = strtotime("+{$coupon['cp_trunc']} months");
 			$date_end=date("Y-m-d H:i:s", $timestamp);
 
 			$e_month=date("m", $timestamp );
 
 			$tmpmonth=date("Y-m")."-01";
 			$tmpmonth_stamp=strtotime($tmpmonth);
-			$nextstamp = strtotime("+{$coupon[cp_trunc]} months",$tmpmonth_stamp);
+			$nextstamp = strtotime("+{$coupon['cp_trunc']} months",$tmpmonth_stamp);
 			$nextmonth = date("m",$nextstamp);
 
 			//다음달 같은 일자가 없는 경우 마지막일자로
 			if($nextmonth!=$e_month) {
 				$tmpmonth=date("Y-m")."-01";
 				$tmpmonth_stamp=strtotime($tmpmonth);
-				$nextstamp = strtotime("+{$coupon[cp_trunc]} months",$tmpmonth_stamp);
+				$nextstamp = strtotime("+{$coupon['cp_trunc']} months",$tmpmonth_stamp);
 				$nextmonth = date("Y-m",$nextstamp);
 				$lastDay = DATE('t', strtotime($nextmonth )); //마지말일 구하기
 				$date_end=$nextmonth."-".$lastDay;
 				//$timestamp = strtotime($date_end);
 			}
 
-			$selected_cnt_limit=$minfo[selected_cnt]*$coupon[cp_trunc];
+			$selected_cnt_limit=$minfo['selected_cnt']*$coupon['cp_trunc'];
 			
 			$orderid="C_".time().round((float)microtime(false) * 1000);
 			
@@ -601,9 +601,9 @@ function useCoupon($id, $mb_id=""){
 			$sql.="selected_able_cnt='{$minfo['selected_cnt']}',";
 			$sql.="selected_cnt='{$selected_cnt_limit}',";
 			$sql.="regdate=now(),";
-			$sql.="coupon='{$coupon[cp_id]}',";
+			$sql.="coupon='{$coupon['cp_id']}',";
 			$sql.="status='T',";
-			$sql.="membership_parent_no='{$coupon[cp_type]}'";
+			$sql.="membership_parent_no='{$coupon['cp_type']}'";
 			sql_query($sql);
 			
 			//맵버쉽 스테이터스 히스토리
@@ -622,9 +622,9 @@ function useCoupon($id, $mb_id=""){
 			$sql.="selected_able_cnt='{$minfo['selected_cnt']}',";
 			$sql.="selected_cnt='{$selected_cnt_limit}',";
 			$sql.="regdate=now(),";
-			$sql.="coupon='{$coupon[cp_id]}',";
+			$sql.="coupon='{$coupon['cp_id']}',";
 			$sql.="status='T',";
-			$sql.="membership_parent_no='{$coupon[cp_type]}',";
+			$sql.="membership_parent_no='{$coupon['cp_type']}',";
 			$sql.="memo='쿠폰 사용\\n',";
 			$sql.="ext_1='".G5_TIME_YMDHIS."\\n'";
 			sql_query($sql);
@@ -633,13 +633,13 @@ function useCoupon($id, $mb_id=""){
 			$sql="insert g5_membership_payment set ";
 			$sql.="	uid='{$mb_id}',";
 			$sql.="	order_no='{$orderid}',";
-			$sql.="	order_goods='{$minfo[title]}',";
-			$sql.="	price='{$minfo[price_sale]}',";
+			$sql.="	order_goods='{$minfo['title']}',";
+			$sql.="	price='{$minfo['price_sale']}',";
 			$sql.="	complete_yn='Y',";
 			$sql.="	complete_date=now(),";
 			$sql.="	regdate=now(),";
-			$sql.="	name='{$user_info[mb_name]}',";
-			$sql.="	phone='{$user_info[mb_8]}',";
+			$sql.="	name='{$user_info['mb_name']}',";
+			$sql.="	phone='{$user_info['mb_8']}',";
 			$sql.="	email='{$mb_id}',";
 			$sql.="	tid='{$id}',";
 			$sql.="	mid='COUPON',";
@@ -669,24 +669,24 @@ function useCoupon($id, $mb_id=""){
 			$sql.="	vact_date='',";
 			$sql.="	vact_time='',";
 			$sql.="	hpp_num='',";
-			$sql.="	membership_parent_no='{$coupon[cp_type]}'	";
+			$sql.="	membership_parent_no='{$coupon['cp_type']}'	";
 			sql_query($sql);
 
 			//쿠폰사용 히스토리 저장
 			$sql="insert g5_shop_coupon_log set ";
 			$sql.="cp_id='{$id}',";
 			$sql.="mb_id='{$mb_id}',";
-			$sql.="cp_subject='{$coupon[cp_subject]}',";
-			$sql.="cp_start='{$coupon[cp_start]}',";
-			$sql.="cp_end='{$coupon[cp_end]}',";
-			$sql.="cp_type='{$coupon[cp_type]}',";
-			$sql.="cp_trunc='{$coupon[cp_trunc]}',";
-			$sql.="cp_price='{$coupon[cp_price]}',";
+			$sql.="cp_subject='{$coupon['cp_subject']}',";
+			$sql.="cp_start='{$coupon['cp_start']}',";
+			$sql.="cp_end='{$coupon['cp_end']}',";
+			$sql.="cp_type='{$coupon['cp_type']}',";
+			$sql.="cp_trunc='{$coupon['cp_trunc']}',";
+			$sql.="cp_price='{$coupon['cp_price']}',";
 			$sql.="cl_datetime=now()";
 			sql_query($sql);
 
 			//셀렉티드 추가 처리
-			if($minfo[selected_cnt]>0){
+			if($minfo['selected_cnt']>0){
 				
 				/*
 				$timestamp = strtotime("+1 months");
@@ -711,9 +711,9 @@ function useCoupon($id, $mb_id=""){
 				*/
 				
 				$sql="insert g5_selected set ";
-				$sql.="s_subject='{$user_info[mb_name]}',";
-				$sql.="KEDCD='{$user_info[mb_company]}',";
-				$sql.="s_membership='{$minfo[no]}',";
+				$sql.="s_subject='{$user_info['mb_name']}',";
+				$sql.="KEDCD='{$user_info['mb_company']}',";
+				$sql.="s_membership='{$minfo['no']}',";
 				$sql.="mb_id='{$mb_id}',";
 				$sql.="s_start='{$date_begin}',";
 				$sql.="s_end='{$date_end}',";
@@ -728,7 +728,7 @@ function useCoupon($id, $mb_id=""){
 
 			return true;
 		}else{
-			alert($coupon[err]);
+			alert($coupon['err']);
 			return false;
 		}
 	}else{
@@ -745,22 +745,22 @@ function SelectedRange($id=""){
 	//셀렉티드 정보
     $sql = " select * from g5_selected where s_no = '$id' ";
     $cp = sql_fetch($sql);
-	$msm_info=sql_fetch("select * from g5_membership_manage where no={$cp[s_membership]}"); //맴버쉽 정보
+	$msm_info=sql_fetch("select * from g5_membership_manage where no={$cp['s_membership']}"); //맴버쉽 정보
 	$now=time();
 	//한달 이상일 경우
-	if($msm_info[selected_cnt]!=$cp[s_cnt_limit]){
+	if($msm_info['selected_cnt']!=$cp['s_cnt_limit']){
 
 		$timestamp = strtotime("+1 months");
 		$date_end=date("Y-m-d H:i:s", $timestamp);
 
-		$month=$cp[s_cnt_limit]/$msm_info[selected_cnt]; //달 수 구하기
+		$month=$cp['s_cnt_limit']/$msm_info['selected_cnt']; //달 수 구하기
 		for($tmp=0;$tmp<$month;$tmp++){
 
 				if(!$date_end){
-				$stimestamp = strtotime("+{$tmp} months",strtotime($cp[s_start]));
+				$stimestamp = strtotime("+{$tmp} months",strtotime($cp['s_start']));
 				$date_begin = date("Y-m-d", $stimestamp);
 					$chk_lastDay = DATE('t', strtotime(substr($date_begin ,0,-3)));
-					if(substr($cp[s_start],-2)==$chk_lastDay) $chk_lastDay="true";
+					if(substr($cp['s_start'],-2)==$chk_lastDay) $chk_lastDay="true";
 				}
 
 				if($date_end){
@@ -771,8 +771,8 @@ function SelectedRange($id=""){
 					$nextstamp = strtotime("+1 months",$tmpmonth_stamp);
 					$nextstamp_m=date("Y-m", $nextstamp);
 					$next_lastDay = DATE('t', strtotime($nextstamp_m)); //마지말일 구하기
-					if(substr($cp[s_start],-2)==$next_lastDay) $date_end=$nextstamp_m."-".$next_lastDay;
-					elseif(substr($cp[s_start],-2)<$next_lastDay) $date_end=$nextstamp_m."-".substr($cp[s_start],-2);
+					if(substr($cp['s_start'],-2)==$next_lastDay) $date_end=$nextstamp_m."-".$next_lastDay;
+					elseif(substr($cp['s_start'],-2)<$next_lastDay) $date_end=$nextstamp_m."-".substr($cp['s_start'],-2);
 					else $date_end=$nextstamp_m."-".$next_lastDay;
 
 				}else{
@@ -798,28 +798,28 @@ function SelectedRange($id=""){
 						//$timestamp = strtotime($date_end);
 					}
 				}
-				$Range[$tmp][S]=$date_begin;
-				$Range[$tmp][E]=date("Y-m-d", strtotime("-1 day",strtotime($date_end)));
+				$Range[$tmp]['S']=$date_begin;
+				$Range[$tmp]['E']=date("Y-m-d", strtotime("-1 day",strtotime($date_end)));
 				//echo $date_begin." - ".date("Y-m-d", strtotime("-1 day",strtotime($date_end)))."<br>";
-				$tmp_s=strtotime($Range[$tmp][S]." 00:00:00");
-				$tmp_e=strtotime($Range[$tmp][E]. "23:59:59");
+				$tmp_s=strtotime($Range[$tmp]['S']." 00:00:00");
+				$tmp_e=strtotime($Range[$tmp]['E']. "23:59:59");
 				if($tmp_s <= $now and $tmp_e >= $now) {
-					$Range[NOW_S]=$Range[$tmp][S];
-					$Range[NOW_E]=$Range[$tmp][E];
+					$Range['NOW_S']=$Range[$tmp]['S'];
+					$Range['NOW_E']=$Range[$tmp]['E'];
 				}
 		}
 	}else{
-		$Range[0][S]=$cp[s_start];
-		$Range[0][E]=date("Y-m-d", strtotime("-1 day",strtotime($cp[s_end])));
-		$tmp_s=strtotime($Range[0][S]." 00:00:00");
-		$tmp_e=strtotime($Range[0][E]. "23:59:59");
+		$Range[0]['S']=$cp['s_start'];
+		$Range[0]['E']=date("Y-m-d", strtotime("-1 day",strtotime($cp['s_end'])));
+		$tmp_s=strtotime($Range[0]['S']." 00:00:00");
+		$tmp_e=strtotime($Range[0]['E']. "23:59:59");
 		if($tmp_s <= $now and $tmp_e >= $now) {
-			$Range[NOW_S]=$Range[0][S];
-			$Range[NOW_E]=$Range[0][E];
+			$Range['NOW_S']=$Range[0]['S'];
+			$Range['NOW_E']=$Range[0]['E'];
 		}
 	}
-	$Range[LIMIT]=$msm_info[selected_cnt];
-	$Range[MEMBERSHIP]=$msm_info;
+	$Range['LIMIT']=$msm_info['selected_cnt'];
+	$Range['MEMBERSHIP']=$msm_info;
 	 return $Range;
 }
 

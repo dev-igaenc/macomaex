@@ -82,16 +82,16 @@ $rnumber=($total_count-($page-1)*$rows)+1;
     ?>
     <tr>
         <td class="td_id"><?=$rnumber=$rnumber-1?></td>
-        <td class="td_center"><a href="<?=$link?>"><?=$v[mb_name]?></a></td>
-		<td class="td_center"><?=$v[mb_company]?></td>
-		<td class="td_center"><?=$Ksscinfo[k_code_name];?></td>
-		<td class="td_center"><?=$v[mb_6]?></td>
-		<td class="td_center"><?=$v[mb_7]?></td>
-		<td class="td_center"><?=$v[mb_8]?></td>
-		<td class="td_center"><?=$v[mb_datetime]?></td>
+        <td class="td_center"><a href="<?=$link?>"><?=$v['mb_name']?></a></td>
+		<td class="td_center"><?=$v['mb_company']?></td>
+		<td class="td_center"><?=$Ksscinfo['k_code_name'];?></td>
+		<td class="td_center"><?=$v['mb_6']?></td>
+		<td class="td_center"><?=$v['mb_7']?></td>
+		<td class="td_center"><?=$v['mb_8']?></td>
+		<td class="td_center"><?=$v['mb_datetime']?></td>
         <td class="td_mng td_mng_l">
-            <a href="./matching_disti.view.php?no=<?=$v[mb_no]?>&amp;<?=$qstr?>" class="btn btn_03">확인</a>
-            <a href="./matching_disti_update.php?w=d&amp;no=<?php echo $v[mb_no]; ?>&amp;<?=$qstr?>" onclick="return delete_confirm(this);" class="btn btn_02"><span class="sound_only"><?php echo htmlspecialchars2($v['title']); ?> </span>삭제</a>
+            <a href="./matching_disti.view.php?no=<?=$v['mb_no']?>&amp;<?=$qstr?>" class="btn btn_03">확인</a>
+            <a href="./matching_disti_update.php?w=d&amp;no=<?php echo $v['mb_no']; ?>&amp;<?=$qstr?>" onclick="return delete_confirm(this);" class="btn btn_02"><span class="sound_only"><?php echo htmlspecialchars2($v['title']); ?> </span>삭제</a>
         </td>
     </tr>
     <?php

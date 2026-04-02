@@ -99,7 +99,7 @@ $colspan = 10;
     <?php
     for ($i=0; $row=sql_fetch_array($result); $i++) {
         $bg = 'bg'.($i%2);
-		$mship=sql_fetch("select title from g5_membership_manage where no='{$row[s_membership]}'");
+		$mship=sql_fetch("select title from g5_membership_manage where no='{$row['s_membership']}'");
 		if($row['s_status']=="S") $status="<span class='btn btn-sm btn-primary'>이용중</span>";
 		if($row['s_status']=="E") $status="<span class='btn btn-sm btn-secondary'>종료</span>";
     ?>

@@ -8,7 +8,7 @@ include_once(G5_LIB_PATH.'/thumbnail.lib.php');
 ?>
 
 <?php for ($i=0; $i<count($list); $i++) {  ?>
-	<?php $sql = " select bf_file from $g5[board_file_table] where bo_table = '". $bo_table. "' and wr_id = '". $list[$i][wr_id] ."' order by '".$list[$i][wr_datetime]."' asc "; ?>
+	<?php $sql = " select bf_file from {$g5['board_file_table']} where bo_table = '". $bo_table. "' and wr_id = '". $list[$i]['wr_id'] ."' order by '".$list[$i]['wr_datetime']."' asc "; ?>
 
 	<?php $files=get_file($bo_table,$list[$i]['wr_id'])?>
 

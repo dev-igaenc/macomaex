@@ -236,8 +236,8 @@ if($page_rows > 0) {
         $list[$i]['num'] = $list_num - $k;
 
 		if($endpage != ""){
-			$pagev = (int)(($k / $board[bo_page_rows]) + 1);
-			$list[$i][href] = $list[$i][href]."&page=".$pagev;
+			$pagev = (int)(($k / $board['bo_page_rows']) + 1);
+			$list[$i]['href'] = $list[$i]['href']."&page=".$pagev;
 		}
 
         $i++;

@@ -109,7 +109,7 @@ switch ($type) {
 
 			//오늘 검색 로그에서 있으면 API말고 로그에서 가져오기
 			$log_chk=sql_fetch("select * from company_api_log where c_bizno='{$comnum}' and DATE(c_datetime)='".date("Y-m-d")."'");
-			if(!$log_chk[c_content]){
+			if(!$log_chk['c_content']){
 				//사용자 토큰 받기
 				$TOKEN_URL = "https://218.55.37.214:6059/enpinfo?userid=igaenconl&process=S&bzno={$comnum}&pidagryn=Y&jmno=ig001&format=XML&Length=10000";
 				//----------curl 변수 세팅----------
@@ -153,7 +153,7 @@ switch ($type) {
 				echo "1000|".$json;
 			}else{
 				//DB에 있으면 DB값 가져옴
-				$json=$log_chk[c_content];
+				$json=$log_chk['c_content'];
 				echo "1000|".$json;
 			}
 			 exit;
@@ -167,18 +167,18 @@ switch ($type) {
 		if($comnum) {
 			if($r_mb_id) $mem_chk=sql_fetch("select count(*) as cnt from g5_member where mb_leave_date='' and mb_4='$comnum' and mb_id!='{$r_mb_id}'");
 			else $mem_chk=sql_fetch("select count(*) as cnt from g5_member where mb_leave_date='' and mb_4='$comnum'");
-			if($mem_chk[cnt]>0) {echo "502|이미 등록된 회원 있습니다."; exit;}
+			if($mem_chk['cnt']>0) {echo "502|이미 등록된 회원 있습니다."; exit;}
 			$comnum=str_replace("-","",$comnum);
 					$chk=sql_fetch("select * from company where BZNO='$comnum'");
 
-					if($chk[KEDCD]) { 
-						if(!$chk[ENP_NM_TRD]) $chk[ENP_NM_TRD]=$chk[ENP_NM];
-						echo "1000|".$chk[ENP_NM_TRD]."|".$chk[KEDCD];
+					if($chk['KEDCD']) { 
+						if(!$chk['ENP_NM_TRD']) $chk['ENP_NM_TRD']=$chk['ENP_NM'];
+						echo "1000|".$chk['ENP_NM_TRD']."|".$chk['KEDCD'];
 					}else{
 						//등록된 정보가 없으면 API로 가져와서 등록함
 						//API 로그기록에 정보가 남아있는지 체크 있으면 해당 기록에서 그냥 가져오기
 						$log_chk=sql_fetch("select * from company_api_log where c_bizno='{$comnum}' and DATE(c_datetime)='".date("Y-m-d")."'");
-						if(!$log_chk[c_content]){
+						if(!$log_chk['c_content']){
 							$com_d=getKODATA($comnum);
 							$com_data=explode("|",$com_d);
 							if($com_data[0]==1000){
@@ -253,7 +253,7 @@ switch ($type) {
 							}
 						}else{
 								//API기록에서 정보가져옴
-								$com_info=json_decode($log_chk[c_content]);
+								$com_info=json_decode($log_chk['c_content']);
 								//print_r($com_info); exit;
 								$KEDCD=$com_info->CONTENTS->ENPintr0000->kedcd;
 								$enp_nm=$com_info->CONTENTS->ENPintr0000->enp_nm;
@@ -536,8 +536,8 @@ switch ($type) {
 				if($chk=="1000"){
 					unset($comp);
 					$comp=getComapyInfo($kedcd);
-					$kssc9=getKsscInfo9($comp[KSIC9_BZC_CD]);
-					$kssc=getKsscInfo($comp[BZC_CD]);
+					$kssc9=getKsscInfo9($comp['KSIC9_BZC_CD']);
+					$kssc=getKsscInfo($comp['BZC_CD']);
 					$matcing=sql_fetch("SELECT * from g5_matching where del != 'D' and  request_id='{$member['mb_id']}' and KEDCD='{$kedcd}'");//매칭요청
 					if($matcing['receive_approval']=="Y") $receve_info=getUserInfo($matcing['receive_id']);
 					if(!$matcing['receive_approval']) {
@@ -555,7 +555,7 @@ switch ($type) {
 
 ?>
 	<div class="cv-name">
-		<strong><?=$comp[ENP_NM]?></strong>
+		<strong><?=$comp['ENP_NM']?></strong>
 		<div class="option">
 			<button type="button" star class="<?if($favorite['ms_id']){?>active<?}?> star_btn" kedcd="<?=$kedcd?>"><img src="/images/icon_star.svg" alt=""></button>
 			<a href="javascript:copyUrl('<?=simple_crypt($kedcd);?>')" link><img src="/images/icon_link.svg" alt=""></a>
@@ -584,25 +584,25 @@ switch ($type) {
 				</dl-->
 				<dl>
 					<dt>설립일자</dt>
-					<dd><span><?=substr($comp[ESTB_DT],0,4)?>-<?=substr($comp[ESTB_DT],4,2)?></span></dd>
+					<dd><span><?=substr($comp['ESTB_DT'],0,4)?>-<?=substr($comp['ESTB_DT'],4,2)?></span></dd>
 				</dl>
 
 				<dl>
 					<dt>법인(주민)번호</dt>
-					<dd><span><?=substr($comp[CONO_PID],0,6)?>-<?=substr($comp[CONO_PID],6,7)?></span></dd>
+					<dd><span><?=substr($comp['CONO_PID'],0,6)?>-<?=substr($comp['CONO_PID'],6,7)?></span></dd>
 				</dl>
 				<dl>
 					<dt>사업자번호</dt>
-					<dd><span><?=licenseNum($comp[BZNO]);?></span></dd>
+					<dd><span><?=licenseNum($comp['BZNO']);?></span></dd>
 				</dl>
 
 				<dl>
 					<dt>고용인원</dt>
-					<dd><span><?=number_format($comp[LABORER_SUM])?>명</span></dd>
+					<dd><span><?=number_format($comp['LABORER_SUM'])?>명</span></dd>
 				</dl>
 				<dl>
 					<dt>기업규모</dt>
-					<dd><span><?=$ENP_SZE[$comp[ENP_SZE]]?></span></dd>
+					<dd><span><?=$ENP_SZE[$comp['ENP_SZE']]?></span></dd>
 				</dl>
 			</div>
 		</div>
@@ -611,25 +611,25 @@ switch ($type) {
 			<div class="cv-info-conts">
 				<dl>
 					<dt>기업유형</dt>
-					<dd><?=$enp_typt[$comp[ENP_TYP]]?></dd>
+					<dd><?=$enp_typt[$comp['ENP_TYP']]?></dd>
 				</dl>
 				<dl>
 					<dt>주요제품</dt>
-					<dd><?=$comp[PD_NM]?></dd>
+					<dd><?=$comp['PD_NM']?></dd>
 				</dl>
 
 				<dl>
 					<dt>표준산업분류(9차)</dt>
-					<dd>(<?=$comp[KSIC9_BZC_CD]?>) <?=$kssc9[k_code_name]?></dd>
+					<dd>(<?=$comp['KSIC9_BZC_CD']?>) <?=$kssc9['k_code_name']?></dd>
 				</dl>
 				<dl>
 					<dt>표준산업분류</dt>
-					<dd>(<?=$comp[BZC_CD]?>) <?=$kssc[k_code_name]?></dd>
+					<dd>(<?=$comp['BZC_CD']?>) <?=$kssc['k_code_name']?></dd>
 				</dl>
 
 				<dl>
 					<dt>직전연도 매출액</dt>
-					<dd><?=number_format($sales[0][SALES]*1000);?>원</dd>
+					<dd><?=number_format($sales[0]['SALES']*1000);?>원</dd>
 				</dl>
 			</div>
 		</div>
@@ -642,7 +642,7 @@ switch ($type) {
 					<?if(!$matcing or $matcing['receive_approval']=="N"){?>
 					수락 후 공개
 					<?}else{?>
-					<a href="tel:<?=$receve_info[mb_8]?>"><?=$receve_info[mb_8]?></a>
+					<a href="tel:<?=$receve_info['mb_8']?>"><?=$receve_info['mb_8']?></a>
 					<?}?>
 					</dd>
 				</dl>
@@ -652,17 +652,17 @@ switch ($type) {
 					<?if(!$matcing or $matcing['receive_approval']=="N"){?>
 					수락 후 공개
 					<?}else{?>
-					<a href="mailto:<?=$receve_info[mb_5]?>" u><?=$receve_info[mb_5]?></a>
+					<a href="mailto:<?=$receve_info['mb_5']?>" u><?=$receve_info['mb_5']?></a>
 					<?}?>
 					</dd>
 				</dl>
 				<dl>
 					<dt>홈페이지</dt>
-					<dd><a href="http://<?=$comp[HPAGE_URL]?>" target="_blank" u><?=$comp[HPAGE_URL]?></a></dd>
+					<dd><a href="http://<?=$comp['HPAGE_URL']?>" target="_blank" u><?=$comp['HPAGE_URL']?></a></dd>
 				</dl>
 				<dl>
 					<dt>주소(도로명)</dt>
-					<dd><a href="https://map.kakao.com/?q=<?=$comp[LOC_RDNM_ADDRA]?> <?=$comp[LOC_RDNM_ADDRB]?>" target="_blank"><?=$comp[LOC_RDNM_ADDRA]?><br /><?=$comp[LOC_RDNM_ADDRB]?></a></dd>
+					<dd><a href="https://map.kakao.com/?q=<?=$comp['LOC_RDNM_ADDRA']?> <?=$comp['LOC_RDNM_ADDRB']?>" target="_blank"><?=$comp['LOC_RDNM_ADDRA']?><br /><?=$comp['LOC_RDNM_ADDRB']?></a></dd>
 				</dl>
 
 				<div class="cv-character">
@@ -679,25 +679,25 @@ switch ($type) {
 			<div class="step-re">
 				<p class="step"><strong>STEP 1</strong><span><img src="/images/arr_message_r.png" alt=""></span></p>
 				<p class="icon"><img src="/images/icon_connection.png" alt=""></p>
-				<?if(trim($comp[EMAIL])){?>
+				<?if(trim($comp['EMAIL'])){?>
 				<p class="tit pVar">직접 연결</p>
 				<div class="conts tel pVar">
 					<span class="point">대표 이메일</span>로 연결됩니다.
-					<p class="btn"><a href="mailto:<?=$comp[EMAIL]?>"><?=format_phone_number($comp[TEL_NO])?></a></p>
+					<p class="btn"><a href="mailto:<?=$comp['EMAIL']?>"><?=format_phone_number($comp['TEL_NO'])?></a></p>
 				</div> 
 				<?}else{?>
 				<p class="tit pVar">직접 연결</p>
 				<div class="conts tel pVar">
 					<span class="point">대표 이메일</span>로 연결됩니다.
-					<?if($comp[TEL_NO]){?><p class="btn"><a><?=format_phone_number($comp[TEL_NO])?></a></p><?}?>
+					<?if($comp['TEL_NO']){?><p class="btn"><a><?=format_phone_number($comp['TEL_NO'])?></a></p><?}?>
 					<p class="btn">등록된 이메일 정보가 없습니다.</p>
 				</div>
 				<?}?>
-				<?if(trim($comp[TEL_NO])){?>
+				<?if(trim($comp['TEL_NO'])){?>
 				<p class="tit tmVar">직접 연결</p>
 				<div class="conts tel tmVar">
 					<span class="point">대표 전화번호</span>로 연결됩니다.
-					<p class="btn"><a href="tel:<?=$comp[TEL_NO]?>"><?=format_phone_number($comp[TEL_NO])?></a></p>
+					<p class="btn"><a href="tel:<?=$comp['TEL_NO']?>"><?=format_phone_number($comp['TEL_NO'])?></a></p>
 				</div>
 				<?}else{?>
 				<p class="tit tmVar">직접 연결</p>
@@ -1058,7 +1058,7 @@ switch ($type) {
 	case "matching_accept": //매칭수락
 		if($member['mb_id'] && $idx) {
 				$pre=sql_fetch("select * from g5_matching where no='{$idx}'");
-				if ($pre[receive_approval]=="N") $status="Y";
+				if ($pre['receive_approval']=="N") $status="Y";
 				else $status="N";
 				if($typ=="accept") $status="Y";
 				if($typ=="reject") $status="R";
@@ -1727,10 +1727,10 @@ switch ($type) {
 
 		if($id) {
 				$chk=getCouponInfo($id);
-				if($chk[chk]=="true"){
+				if($chk['chk']=="true"){
 					echo "1000|".$chk['cp_type']."|".$chk['cp_subject']."|".$chk['cp_trunc'];
 				}else{
-					echo "500|".$chk[err];
+					echo "500|".$chk['err'];
 				}
 		}else{
 			echo "500|쿠폰번호를 확인해 주세요.";

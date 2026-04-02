@@ -43,9 +43,9 @@ if (!defined("_GNUBOARD_")) exit; // 개별 페이지 접근 불가
 						<td>
 							<div class="three days">
 								<select name="wr_subject" required itemname="연도" class="history_w">
-									<?php for($years=$board[bo_1];$years<=$board[bo_2];$years++) { ?>
+									<?php for($years=$board['bo_1'];$years<=$board['bo_2'];$years++) { ?>
 										<?php if($w==""){ ?>
-											<option value="<?=$years?>" <?=$board[bo_2]==$years ? "selected" : "" ?> ><?=$years?></option>
+											<option value="<?=$years?>" <?=$board['bo_2']==$years ? "selected" : "" ?> ><?=$years?></option>
 										<?php }else{ ?>
 											<option value="<?=$years?>" <?=$subject==$years ? "selected" : "" ?> ><?=$years?></option>
 										<?php } ?>

@@ -1,12 +1,12 @@
 <?
 	ob_start();
-	include_once $_SERVER[DOCUMENT_ROOT]."/inc/lib/base.class.php";
+	include_once $_SERVER['DOCUMENT_ROOT']."/inc/lib/base.class.php";
 
 
 
-	$no		= $_REQUEST[no];
-	$kind		= $_REQUEST[kind];
-	$tg		= $_REQUEST[tg];
+	$no		= $_REQUEST['no'];
+	$kind		= $_REQUEST['kind'];
+	$tg		= $_REQUEST['tg'];
 
 	$tbl = "";
 	if($kind == "F")

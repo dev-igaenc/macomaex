@@ -5,8 +5,8 @@ include_once(G5_LIB_PATH.'/thumbnail.lib.php');
 // add_stylesheet('css 구문', 출력순서); 숫자가 작을 수록 먼저 출력됨
 //add_stylesheet('<link rel="stylesheet" href="'.$board_skin_url.'/style.css">', 0);
 
-if($write[wr_8] == null){$write[wr_8] =  37.566400714093284;}
-if($write[wr_9] == null){$write[wr_9] = 126.9785391897507;}
+if($write['wr_8'] == null){$write['wr_8'] =  37.566400714093284;}
+if($write['wr_9'] == null){$write['wr_9'] = 126.9785391897507;}
 $colspan=5;
 if ($is_admin) $colspan++;
 ?>
@@ -200,7 +200,7 @@ if ($is_admin) $colspan++;
 						if (status === kakao.maps.services.Status.OK) {
 							var coords = new kakao.maps.LatLng(result[0].y, result[0].x);
 
-							//new kakao.maps.LatLng(<?=$row[wr_8]?>, <?=$row[wr_9]?>)
+							//new kakao.maps.LatLng(<?=$row['wr_8']?>, <?=$row['wr_9']?>)
 
 							$(".storeMap_list a.link").eq(<?php echo $i; ?>).attr({"data-codes-lat": coords.getLat(), "data-codes-lng": coords.getLng()})
 
@@ -211,9 +211,9 @@ if ($is_admin) $colspan++;
 							});
 
 							//alert(coords)
-							//console.log(<?=$row[wr_8]?>, <?=$row[wr_9]?>)
+							//console.log(<?=$row['wr_8']?>, <?=$row['wr_9']?>)
 
-							var contentStr = '<div class="customoverlay"><a href="javascript:storeFancy(\'<?=$bo_table ?>\', <?php echo $list[$i]['wr_id']?>);" class="coBox"><span class="title"><?=$row[subject]?></span></a></div>';
+							var contentStr = '<div class="customoverlay"><a href="javascript:storeFancy(\'<?=$bo_table ?>\', <?php echo $list[$i]['wr_id']?>);" class="coBox"><span class="title"><?=$row['subject']?></span></a></div>';
 							var customOverlay = new kakao.maps.CustomOverlay({
 								map: map,
 								content: contentStr,

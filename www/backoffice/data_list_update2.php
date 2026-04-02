@@ -48,24 +48,24 @@ else if ($w == "u")
 }
 else if ($w == "d")
 {
-    @unlink(G5_DATA_PATH."/exldata/".$co_row[FILE]);
+    @unlink(G5_DATA_PATH."/exldata/".$co_row['FILE']);
 
     $sql = " delete from company_update_excel where c_id = '$c_id' ";
     sql_query($sql);
 }
 else if ($w == "df")
 {
-    @unlink(G5_DATA_PATH."/exldata/".$co_row[FILE]);
+    @unlink(G5_DATA_PATH."/exldata/".$co_row['FILE']);
 }
 else if ($w == "s")
 {
-	if($co_row[FILE]) {
+	if($co_row['FILE']) {
 		ob_start();
 		unset($myfiles);
 		$mydir = G5_DATA_PATH.'/exldata/'; 
 
-		if(strpos($co_row[FILE],".zip")) {
-			system('unzip -x '.G5_DATA_PATH.'/exldata/'.$co_row[FILE].' -d '.G5_DATA_PATH.'/exldata/');
+		if(strpos($co_row['FILE'],".zip")) {
+			system('unzip -x '.G5_DATA_PATH.'/exldata/'.$co_row['FILE'].' -d '.G5_DATA_PATH.'/exldata/');
 			$run= ob_get_contents();
 			$run_count=substr_count($run,"inflating");
 			echo "총 ".$run_count."개 파일 해제<br>";
@@ -73,8 +73,8 @@ else if ($w == "s")
 		}
   
 	  //업데이트 파일 DB적용
-	  if(strpos($co_row[FILE],".zip")) $myfiles = array_diff(scandir($mydir), array('.', '..',$co_row[FILE]));
-	  else $myfiles[] = $co_row[FILE];
+	  if(strpos($co_row['FILE'],".zip")) $myfiles = array_diff(scandir($mydir), array('.', '..',$co_row['FILE']));
+	  else $myfiles[] = $co_row['FILE'];
 	  
 	  foreach($myfiles as $value){
 		  if(strpos($value,".zip")) continue; //압축파일은 지우지 않기
@@ -178,7 +178,7 @@ else if ($w == "s")
 				ob_end_flush();
 
 			//적용된 파일 삭제
-			if(strpos($co_row[FILE],".zip")) @unlink(G5_DATA_PATH."/exldata/".$value);
+			if(strpos($co_row['FILE'],".zip")) @unlink(G5_DATA_PATH."/exldata/".$value);
 		}
 
 	  }

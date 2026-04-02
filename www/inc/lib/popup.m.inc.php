@@ -12,12 +12,12 @@
 
 		foreach( $arrPopup as $k=>$v ){
 			
-			if( $_COOKIE["AuthPopupCloseM_" . $v[no]] <> "Y" ) {
-				$_img = $UPLOAD_WDIR_POPUP."/" . $v[p_img];
+			if( $_COOKIE["AuthPopupCloseM_" . $v['no']] <> "Y" ) {
+				$_img = $UPLOAD_WDIR_POPUP."/" . $v['p_img'];
 				$_s = @getimagesize($_img);
-				$app_div_name = "event_popup_div_" . $v[no];
+				$app_div_name = "event_popup_div_" . $v['no'];
 
-				$zindex = ($defultNo) + ($v[no] *1);
+				$zindex = ($defultNo) + ($v['no'] *1);
 ?>
 	
 		
@@ -26,12 +26,12 @@
 			<div class="no_m_ad_popup_pos">
 				<div class="no_m_ad_popup_con">
 					<!-- event 발생할 시를 위한 a tag -->
-					<a href="<?=$v[p_link]?>" title="<?=$v[p_title]?>"  target='<?=$v[p_target]?>' class="no_m_ad_popup_con_img">
-						<img src="<?=$_img?>" title="<?=$v[p_title]?>" />				
+					<a href="<?=$v['p_link']?>" title="<?=$v['p_title']?>"  target='<?=$v['p_target']?>' class="no_m_ad_popup_con_img">
+						<img src="<?=$_img?>" title="<?=$v['p_title']?>" />				
 					</a>
 				</div>
 				<div class="no_m_ad_popup_con_btn">
-					<a href="javascript:void(0);" class="no_m_ad_btn_01"	 onclick="common_frame.location.href=('./inc/lib/popup.m.close.php?_mode=popup_close&uid=<?=$v[no]?>');" >오늘 하루 보지 않기</a>
+					<a href="javascript:void(0);" class="no_m_ad_btn_01"	 onclick="common_frame.location.href=('./inc/lib/popup.m.close.php?_mode=popup_close&uid=<?=$v['no']?>');" >오늘 하루 보지 않기</a>
 					<a href="javascript:void(0);" onClick="popup_m_display('<?=$app_div_name?>')" class="no_m_ad_btn_02">닫기</a>
 				</div>
 			</div>

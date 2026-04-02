@@ -73,7 +73,7 @@ $hashData = hash("sha256",(string)$mid.(string)$orderid.(string)$dateVal.(string
                         <li><?=$value['pay_type']?></li>
                     </ul>
 
-					<form name="mobileweb<?= $value[no]?>" method="post" class="mpay">
+					<form name="mobileweb<?= $value['no']?>" method="post" class="mpay">
 							<input type="hidden" name="mtype" value="<?=$value['title']?>">
 							<input type="hidden" name="authtype" value="D">
 							<input type="hidden" name="mid" value="<?php echo $mid ?>">
@@ -87,7 +87,7 @@ $hashData = hash("sha256",(string)$mid.(string)$orderid.(string)$dateVal.(string
 							<input type="hidden" name="buyeremail" value="<?=$member['mb_email']?>">
 							<input type="hidden" name="returnurl" value="https://macomaex.com/ko/INIbill_mo_return.php">
 							<input type="text" name="carduse" value="">
-							<a mtype="<?=$value['title']?>" idx="<?= $value[no]?>" class="plan_payment">결제하기</a>
+							<a mtype="<?=$value['title']?>" idx="<?= $value['no']?>" class="plan_payment">결제하기</a>
 					</form>
 
                 </div>

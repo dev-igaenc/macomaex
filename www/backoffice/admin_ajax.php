@@ -167,7 +167,7 @@ switch ($type) {
 
 		if(!$KEDCD) {echo "500"; exit;}
 		$chk=sql_fetch("select count(*) as cnt from company_credit where KEDCD='{$KEDCD}'");
-		if($chk[cnt]==0){
+		if($chk['cnt']==0){
 			$sql="insert company_credit set ";
 			$sql.="KEDCD='".$KEDCD."', ";
 			$sql.="ACCT_DT='".$ACCT_DT."', ";
@@ -251,10 +251,10 @@ switch ($type) {
 			 for ($i=0; $row=sql_fetch_array($result); $i++) {
 ?>
 			<dl>
-				<dt><?php if($row[ENP_NM_TRD]){?><?=$row[ENP_NM_TRD]?><?php }else{?><?=$row[ENP_NM]?><?php }?></dt>
-				<dd>/ 사업자번호:<?=$row[BZNO]?></dd>
-				<dd class="bn1"><button type="button" class="btn btn-info link_sel" link_data="/ko/matching_view.php?cd=<?=$row[KEDCD]?>">선택</button></dd>
-				<dd class="bn2"><a type="button" class="btn btn-info text-light" href="/ko/matching_view.php?cd=<?=$row[KEDCD]?>" target="_blank">새창열기</a></dd>
+				<dt><?php if($row['ENP_NM_TRD']){?><?=$row['ENP_NM_TRD']?><?php }else{?><?=$row['ENP_NM']?><?php }?></dt>
+				<dd>/ 사업자번호:<?=$row['BZNO']?></dd>
+				<dd class="bn1"><button type="button" class="btn btn-info link_sel" link_data="/ko/matching_view.php?cd=<?=$row['KEDCD']?>">선택</button></dd>
+				<dd class="bn2"><a type="button" class="btn btn-info text-light" href="/ko/matching_view.php?cd=<?=$row['KEDCD']?>" target="_blank">새창열기</a></dd>
 			</dl>
 	<?php
 			 }
@@ -612,17 +612,17 @@ switch ($type) {
 			s_parent='{$S_NO}',
 			s_subject='{$CINFO[1]}',
 			KEDCD='{$CINFO[0]}',
-			mb_id='{$P_INFO[mb_id]}',
-			s_start='{$Range[NOW_S]}',
-			s_end='{$Range[NOW_E]}',
+			mb_id='{$P_INFO['mb_id']}',
+			s_start='{$Range['NOW_S']}',
+			s_end='{$Range['NOW_E']}',
 			s_status='S',
 			s_datetime=now()";
 			$result=sql_query($sql);
 			$s_cnt=sql_fetch("select count(*) as cnt, mb_id  from g5_selected_data where s_parent={$S_NO} and s_status='S'");
-			sql_query("update g5_selected set s_cnt='{$s_cnt[cnt]}', s_modi=now() where s_no={$S_NO}");
-			sql_query("update g5_membership_status set selected_able_cnt=selected_cnt-{$s_cnt[cnt]} where uid='{$s_cnt['mb_id']}' ");
+			sql_query("update g5_selected set s_cnt='{$s_cnt['cnt']}', s_modi=now() where s_no={$S_NO}");
+			sql_query("update g5_membership_status set selected_able_cnt=selected_cnt-{$s_cnt['cnt']} where uid='{$s_cnt['mb_id']}' ");
 			$mat=sql_fetch("select * from g5_membership_status where uid='{$s_cnt['mb_id']}' ");
-			sql_query("update g5_membership_status_history set selected_able_cnt=selected_cnt-{$s_cnt[cnt]} where uid='{$s_cnt['mb_id']}' and order_no='{$mat['order_no']}' ");
+			sql_query("update g5_membership_status_history set selected_able_cnt=selected_cnt-{$s_cnt['cnt']} where uid='{$s_cnt['mb_id']}' and order_no='{$mat['order_no']}' ");
 			if($result) echo "1000";
 			else echo "500";
 		}else{
@@ -634,12 +634,12 @@ switch ($type) {
 		if($S_NO){
 			$P_INFO=sql_fetch("select * from g5_selected_data where s_no={$S_NO}");
 			$result=sql_query("delete  from g5_selected_data where s_no={$S_NO}");
-			$s_cnt=sql_fetch("select count(*)  as cnt, mb_id from g5_selected_data where s_parent={$P_INFO[s_parent]} and s_status='S'");
-			if(!$s_cnt[cnt]) $s_cnt[cnt]=0;
-			sql_query("update g5_selected set s_cnt='{$s_cnt[cnt]}', s_modi=now() where s_no={$P_INFO[s_parent]}");
-			sql_query("update g5_membership_status set selected_able_cnt=selected_cnt-{$s_cnt[cnt]} where uid='{$P_INFO['mb_id']}' ");
+			$s_cnt=sql_fetch("select count(*)  as cnt, mb_id from g5_selected_data where s_parent={$P_INFO['s_parent']} and s_status='S'");
+			if(!$s_cnt['cnt']) $s_cnt['cnt']=0;
+			sql_query("update g5_selected set s_cnt='{$s_cnt['cnt']}', s_modi=now() where s_no={$P_INFO['s_parent']}");
+			sql_query("update g5_membership_status set selected_able_cnt=selected_cnt-{$s_cnt['cnt']} where uid='{$P_INFO['mb_id']}' ");
 			$mat=sql_fetch("select * from g5_membership_status where uid='{$P_INFO['mb_id']}' ");
-			sql_query("update g5_membership_status_history set selected_able_cnt=selected_cnt-{$s_cnt[cnt]} where uid='{$P_INFO['mb_id']}' and order_no='{$mat['order_no']}' ");
+			sql_query("update g5_membership_status_history set selected_able_cnt=selected_cnt-{$s_cnt['cnt']} where uid='{$P_INFO['mb_id']}' and order_no='{$mat['order_no']}' ");
 			if($result) echo "1000";
 			else echo "500";
 		}else{

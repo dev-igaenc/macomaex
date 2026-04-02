@@ -325,9 +325,11 @@ define('_iv',      macomaex_env('INIBILL_LIVE_IV', ''));
 define('_clientIp',      macomaex_env('INIBILL_LIVE_CLIENT_IP', ''));
 define('_test_pay',      macomaex_env('INIBILL_LIVE_TEST_PAY', 'N'));
 
+/*
 if (empty($_SERVER['HTTPS']) || $_SERVER['HTTPS'] === 'off') {
     $redirect = 'https://' . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'];
     header('HTTP/1.1 301 Moved Permanently');
     header('Location: ' . $redirect);
     exit();
 }
+*/

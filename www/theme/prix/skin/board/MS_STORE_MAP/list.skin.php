@@ -5,8 +5,8 @@ include_once(G5_LIB_PATH.'/thumbnail.lib.php');
 // add_stylesheet('css 구문', 출력순서); 숫자가 작을 수록 먼저 출력됨
 //add_stylesheet('<link rel="stylesheet" href="'.$board_skin_url.'/style.css">', 0);
 
-if($write[wr_8] == null){$write[wr_8] =  37.566400714093284;}
-if($write[wr_9] == null){$write[wr_9] = 126.9785391897507;}
+if($write['wr_8'] == null){$write['wr_8'] =  37.566400714093284;}
+if($write['wr_9'] == null){$write['wr_9'] = 126.9785391897507;}
 $colspan=5;
 if ($is_admin) $colspan++;
 ?>
@@ -45,23 +45,23 @@ if ($is_admin) $colspan++;
 
 			for ($i=0;$i<count($list);$i++){
 				$row=$list[$i];
-				if($row[wr_8] && $row[wr_9]) {
+				if($row['wr_8'] && $row['wr_9']) {
 		?>
 					var marker = new kakao.maps.Marker({
 						zIndex:3,
 						map: map, // 마커를 표시할 지도
-						position: new kakao.maps.LatLng(<?=$row[wr_8]?>, <?=$row[wr_9]?>) // 마커의 위치
+						position: new kakao.maps.LatLng(<?=$row['wr_8']?>, <?=$row['wr_9']?>) // 마커의 위치
 					});
 
-					var contentStr = '<div class="customoverlay"><a href="<?=G5_HTTP_BBS_URL."/board.php?bo_table=".$bo_table?>&wr_id=<?=$row[wr_id]?>" class="coBox"><span class="title"><?=$row[subject]?></span></a></div>';
+					var contentStr = '<div class="customoverlay"><a href="<?=G5_HTTP_BBS_URL."/board.php?bo_table=".$bo_table?>&wr_id=<?=$row['wr_id']?>" class="coBox"><span class="title"><?=$row['subject']?></span></a></div>';
 					var customOverlay = new kakao.maps.CustomOverlay({
 						map: map,
-						position: new kakao.maps.LatLng(<?=$row[wr_8]?>, <?=$row[wr_9]?>),
+						position: new kakao.maps.LatLng(<?=$row['wr_8']?>, <?=$row['wr_9']?>),
 						content: contentStr,
 						yAnchor: 1
 					});
 
-					bounds.extend(new kakao.maps.LatLng(<?=$row[wr_8]?>, <?=$row[wr_9]?>));
+					bounds.extend(new kakao.maps.LatLng(<?=$row['wr_8']?>, <?=$row['wr_9']?>));
 
 					//bounds.extend(bounds_jp[]);
 

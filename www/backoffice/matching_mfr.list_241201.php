@@ -82,16 +82,16 @@ $rnumber=($total_count-($page-1)*$rows)+1;
     ?>
     <tr>
         <td class="td_id"><?=$rnumber=$rnumber-1?></td>
-        <td class="td_center"><a href="<?=$link?>"><?=$v[corporate_name]?></a></td>
-		<td class="td_center"><?=$v[manage_number]?></td>
-		<td class="td_center"><?=$Ksscinfo[k_code_name];?></td>
-		<td class="td_center"><?=$v[charger_name]?></td>
-		<td class="td_center"><?=$v[charger_duty]?></td>
-		<td class="td_center"><?=$v[charger_phone]?></td>
-		<td class="td_center"><?=$v[regdate]?></td>
+        <td class="td_center"><a href="<?=$link?>"><?=$v['corporate_name']?></a></td>
+		<td class="td_center"><?=$v['manage_number']?></td>
+		<td class="td_center"><?=$Ksscinfo['k_code_name'];?></td>
+		<td class="td_center"><?=$v['charger_name']?></td>
+		<td class="td_center"><?=$v['charger_duty']?></td>
+		<td class="td_center"><?=$v['charger_phone']?></td>
+		<td class="td_center"><?=$v['regdate']?></td>
         <td class="td_mng td_mng_l">
-            <a href="./matching_mfr.view.php?no=<?=$v[no]?>&amp;<?=$qstr?>" class="btn btn_03">확인</a>
-            <a href="./matching_mfr_update.php?w=d&amp;no=<?php echo $v[no]; ?>&amp;<?=$qstr?>" onclick="return delete_confirm(this);" class="btn btn_02"><span class="sound_only"><?php echo htmlspecialchars2($v['title']); ?> </span>삭제</a>
+            <a href="./matching_mfr.view.php?no=<?=$v['no']?>&amp;<?=$qstr?>" class="btn btn_03">확인</a>
+            <a href="./matching_mfr_update.php?w=d&amp;no=<?php echo $v['no']; ?>&amp;<?=$qstr?>" onclick="return delete_confirm(this);" class="btn btn_02"><span class="sound_only"><?php echo htmlspecialchars2($v['title']); ?> </span>삭제</a>
         </td>
     </tr>
     <?php

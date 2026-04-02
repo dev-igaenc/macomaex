@@ -5,8 +5,8 @@ if (!defined('_GNUBOARD_')) exit; // 개별 페이지 접근 불가
 //add_stylesheet('<link rel="stylesheet" href="'.$board_skin_url.'/style.css">', 0);
 
 // 다음지도 처음화면 설정
-if($write[wr_8] == null){$write[wr_8] =  37.566400714093284;}
-if($write[wr_9] == null){$write[wr_9] = 126.9785391897507;}
+if($write['wr_8'] == null){$write['wr_8'] =  37.566400714093284;}
+if($write['wr_9'] == null){$write['wr_9'] = 126.9785391897507;}
 ?>
 <style>.cke_sc{display:none !important;}</style>
 
@@ -16,7 +16,7 @@ if($write[wr_9] == null){$write[wr_9] = 126.9785391897507;}
 	<script>
 		var mapContainer = document.getElementById("storeMap"), // 지도를 표시할 div
 			mapOption = {
-				center: new kakao.maps.LatLng(<?=$write[wr_8]?>, <?=$write[wr_9]?>), // 지도의 중심좌표
+				center: new kakao.maps.LatLng(<?=$write['wr_8']?>, <?=$write['wr_9']?>), // 지도의 중심좌표
 				level: 3 // 지도의 확대 레벨
 			};
 

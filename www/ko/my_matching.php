@@ -119,7 +119,7 @@ $r_result = sql_query($r_sql);
     <div class="tabContent">
         <ul class="matching_lish">
 			<?for ($i=0; $row=sql_fetch_array($r_result); $i++) {
-				$r_info=sql_fetch("select *, (SELECT k_code_name from kssc where k_code=A.BZC_CD) as BZC_NAME from company A LEFT JOIN  g5_member B ON A.KEDCD=B.mb_company where B.mb_id='{$row[request_id]}'");
+				$r_info=sql_fetch("select *, (SELECT k_code_name from kssc where k_code=A.BZC_CD) as BZC_NAME from company A LEFT JOIN  g5_member B ON A.KEDCD=B.mb_company where B.mb_id='{$row['request_id']}'");
 			?>
             <li>
                 <div class="matching_list_top">
@@ -180,7 +180,7 @@ $r_result = sql_query($r_sql);
     <div class="tabContent">
         <ul class="matching_lish">
 			<?for ($i=0; $row=sql_fetch_array($result); $i++) {
-				$s_info=sql_fetch("select * from   g5_member where mb_id='{$row[receive_id]}'");
+				$s_info=sql_fetch("select * from   g5_member where mb_id='{$row['receive_id']}'");
 			?>
             <li>
                 <div class="matching_list_top">

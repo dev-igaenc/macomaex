@@ -182,7 +182,7 @@ function getMatchingSucessCnt(){
 	$result=mysqli_query($connect ,$query);
 	$data=mysqli_fetch_array($result);
 	if($data){
-		$totalCnt = $data[cnt];
+		$totalCnt = $data['cnt'];
 	}
 
 	return $totalCnt;

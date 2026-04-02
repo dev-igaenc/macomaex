@@ -40,12 +40,12 @@ include_once(G5_LIB_PATH.'/thumbnail.lib.php');
 			<div class="productPhoto">
 				<div class="product-big"><div class="product-big_in">
 					<?php
-						if($view['file'][count]){
+						if($view['file']['count']){
 							for($i=1; $i<$view['file']['count'];$i++){
 								if($view['file'][$i]['view']){
 									if($i>=6) continue;
 									//echo "<div class='slider'><img src='{$view['file'][$i][path]}/{$view['file'][$i][file]}' class='ofi'></div>";
-									echo "<div class='slider' style='background-image: url(\"{$view['file'][$i][path]}/{$view['file'][$i][file]}\");' data-src='{$view['file'][$i][path]}/{$view['file'][$i][file]}'><img src='/theme/prix/img/thumb/thumb_580x460.png' alt=''></div>";
+									echo "<div class='slider' style='background-image: url(\"{$view['file'][$i]['path']}/{$view['file'][$i]['file']}\");' data-src='{$view['file'][$i]['path']}/{$view['file'][$i]['file']}'><img src='/theme/prix/img/thumb/thumb_580x460.png' alt=''></div>";
 								}
 							}
 						}else{

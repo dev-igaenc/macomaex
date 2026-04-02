@@ -1275,7 +1275,7 @@ function get_mail_content($mailling_content, $data_siteinfo) {
 	
 	// 메일링 로고 추출
 	$mailing_url = $protocol.$NO_CURRENT_URL;
-	$mailling_logo = $protocol.$NO_CURRENT_URL.$UPLOAD_SITEINFO_WDIR_LOGO."/".$data_siteinfo[logo_top];
+	$mailling_logo = $protocol.$NO_CURRENT_URL.$UPLOAD_SITEINFO_WDIR_LOGO."/".$data_siteinfo['logo_top'];
 
 
 	$mail_body = '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
