@@ -1063,9 +1063,16 @@ switch ($type) {
 				else $status="N";
 				if($typ=="accept") $status="Y";
 				if($typ=="reject") $status="R";
-				$chk2=sql_query("update g5_matching set receive_approval='{$status}', receive_approval_date=now() where receive_id='{$member['mb_id']}' and no='{$idx}'");
-
+				$send_accept_notice = false;
 				if($status=="Y") {
+					$chk2=sql_query("update g5_matching set receive_approval='{$status}', receive_approval_date=now() where receive_id='{$member['mb_id']}' and no='{$idx}' and receive_approval != 'Y'");
+					$affected_row = sql_fetch("select ROW_COUNT() as cnt");
+					$send_accept_notice = isset($affected_row['cnt']) && (int)$affected_row['cnt'] > 0;
+				}else{
+					$chk2=sql_query("update g5_matching set receive_approval='{$status}', receive_approval_date=now() where receive_id='{$member['mb_id']}' and no='{$idx}'");
+				}
+
+				if($status=="Y" && $send_accept_notice) {
 						//알림톡 발송
 						$minfo=sql_fetch("select * from g5_matching where no='{$idx}'");
 						$t_uinfo= getUserInfo($minfo['request_id']);
@@ -1077,9 +1084,7 @@ switch ($type) {
 						}
 						//알림톡 발송 끝
 
-						if ($pre['receive_approval'] !== 'Y') {
-							send_matching_accept_mail($idx);
-						}
+						send_matching_accept_mail($idx);
 				}
 				echo "1000";
 		}else{
