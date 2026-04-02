@@ -148,7 +148,10 @@ if (!function_exists('send_matching_accept_mail')) {
         include G5_BBS_PATH.'/matching_accept_mail.php';
         $request_content = ob_get_clean();
 
-        $request_mail_sent = mailer($config['cf_admin_email_name'], $config['cf_admin_email'], $to_email, $request_subject, $request_content, 1);
+        $request_mail_sent = mailer($config['cf_admin_email_name'], $config['cf_admin_email'], $to_email, $request_subject, $request_content, 1, "", "", "", array(
+            'mail_type' => 'matching_accept_requester',
+            'related_id' => (string) $matching_no
+        ));
 
         $receive_to_email = matching_mail_pick_login_email($receive_member);
         $receive_mail_sent = false;
@@ -162,7 +165,10 @@ if (!function_exists('send_matching_accept_mail')) {
             include G5_BBS_PATH.'/matching_accept_mail2.php';
             $receive_content = ob_get_clean();
 
-            $receive_mail_sent = mailer($config['cf_admin_email_name'], $config['cf_admin_email'], $receive_to_email, $receive_subject, $receive_content, 1);
+            $receive_mail_sent = mailer($config['cf_admin_email_name'], $config['cf_admin_email'], $receive_to_email, $receive_subject, $receive_content, 1, "", "", "", array(
+                'mail_type' => 'matching_accept_receiver',
+                'related_id' => (string) $matching_no
+            ));
         } else {
             error_log('[matching_mail] receive member login email missing for matching '.$matching_no);
         }

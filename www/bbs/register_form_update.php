@@ -346,7 +346,10 @@ if ($w == '') {
 
         $content = run_replace('register_form_update_mail_mb_content', $content, $mb_id);
 
-        mailer($config['cf_admin_email_name'], $config['cf_admin_email'], $mb_email, $subject, $content, 1);
+        mailer($config['cf_admin_email_name'], $config['cf_admin_email'], $mb_email, $subject, $content, 1, "", "", "", array(
+            'mail_type' => 'signup_member',
+            'related_id' => $mb_id
+        ));
 
         run_event('register_form_update_send_mb_mail', $config['cf_admin_email_name'], $config['cf_admin_email'], $mb_email, $subject, $content);
 
@@ -366,7 +369,10 @@ if ($w == '') {
 
         $content = run_replace('register_form_update_mail_admin_content', $content, $mb_id);
 
-        mailer($mb_nick, $mb_email, $config['cf_admin_email'], $subject, $content, 1);
+        mailer($mb_nick, $mb_email, $config['cf_admin_email'], $subject, $content, 1, "", "", "", array(
+            'mail_type' => 'signup_admin',
+            'related_id' => $mb_id
+        ));
 
         run_event('register_form_update_send_admin_mail', $mb_nick, $mb_email, $config['cf_admin_email'], $subject, $content);
     }
@@ -588,7 +594,10 @@ if ($config['cf_use_email_certify'] && $old_email != $mb_email) {
 
     $content = run_replace('register_form_update_mail_certify_content', $content, $mb_id);
 
-    mailer($config['cf_admin_email_name'], $config['cf_admin_email'], $mb_email, $subject, $content, 1);
+    mailer($config['cf_admin_email_name'], $config['cf_admin_email'], $mb_email, $subject, $content, 1, "", "", "", array(
+        'mail_type' => 'signup_certify',
+        'related_id' => $mb_id
+    ));
 
     run_event('register_form_update_send_certify_mail', $config['cf_admin_email_name'], $config['cf_admin_email'], $mb_email, $subject, $content);
 }
