@@ -22,6 +22,15 @@ $allowed_sfl = array(
     'error_message' => '에러'
 );
 
+$mail_type_labels = array(
+    'signup_member' => '회원가입 안내',
+    'signup_admin' => '회원가입 관리자 알림',
+    'signup_certify' => '회원가입 인증',
+    'matching_accept_requester' => '매칭 수락 안내(요청자)',
+    'matching_accept_receiver' => '매칭 수락 안내(수락자)',
+    'general' => '기타'
+);
+
 $sfl = isset($_GET['sfl']) ? trim((string)$_GET['sfl']) : 'recipient_email';
 if (!isset($allowed_sfl[$sfl])) {
     $sfl = 'recipient_email';
@@ -82,6 +91,13 @@ $qarr = array(
 );
 $qstr = http_build_query($qarr);
 
+function mail_log_build_qstr($params, $overrides = array())
+{
+    $query = array_merge($params, $overrides);
+
+    return http_build_query($query);
+}
+
 ?>
 <style>
 .mail-log-badge {
@@ -101,6 +117,9 @@ $qstr = http_build_query($qarr);
     max-width: 320px;
     white-space: pre-wrap;
 }
+.mail-log-row-fail td {
+    background: #fffaf9;
+}
 </style>
 
 <h2><?php echo $g5['title']; ?></h2>
@@ -110,9 +129,15 @@ $qstr = http_build_query($qarr);
 
 <form method="get" class="local_sch01 local_sch">
     <div class="local_ov01 local_ov">
-        <span class="btn_ov01"><span class="ov_txt">전체</span><span class="ov_num"> <?php echo number_format((int)$summary['total_cnt']); ?>건</span></span>
-        <span class="btn_ov01"><span class="ov_txt">성공</span><span class="ov_num"> <?php echo number_format((int)$summary['success_cnt']); ?>건</span></span>
-        <span class="btn_ov01"><span class="ov_txt">실패</span><span class="ov_num"> <?php echo number_format((int)$summary['fail_cnt']); ?>건</span></span>
+        <a href="./mail_log_list.php?<?php echo mail_log_build_qstr($qarr, array('status' => '')); ?>" class="btn_ov01">
+            <span class="ov_txt">전체</span><span class="ov_num"> <?php echo number_format((int)$summary['total_cnt']); ?>건</span>
+        </a>
+        <a href="./mail_log_list.php?<?php echo mail_log_build_qstr($qarr, array('status' => 'SUCCESS')); ?>" class="btn_ov01">
+            <span class="ov_txt">성공</span><span class="ov_num"> <?php echo number_format((int)$summary['success_cnt']); ?>건</span>
+        </a>
+        <a href="./mail_log_list.php?<?php echo mail_log_build_qstr($qarr, array('status' => 'FAIL')); ?>" class="btn_ov01">
+            <span class="ov_txt">실패</span><span class="ov_num"> <?php echo number_format((int)$summary['fail_cnt']); ?>건</span>
+        </a>
 
         <div style="display:inline-block; margin-left:14px;">
             <label for="date_from">기간</label>
@@ -134,7 +159,6 @@ $qstr = http_build_query($qarr);
             <input type="text" name="stx" value="<?php echo get_sanitize_input($stx); ?>" class="frm_input" placeholder="검색어">
             <button type="submit" class="btn btn_03">검색</button>
             <a href="./mail_log_list.php" class="btn btn_02">초기화</a>
-            <a href="./sendmail_test.php" class="btn btn_03">메일 테스트</a>
         </div>
     </div>
 </form>
@@ -160,11 +184,13 @@ $qstr = http_build_query($qarr);
         for ($i = 0; $row = sql_fetch_array($result); $i++) {
             $bg = 'bg' . ($i % 2);
             $status_class = strtolower($row['status']) === 'success' ? 'success' : 'fail';
+            $type_label = isset($mail_type_labels[$row['mail_type']]) ? $mail_type_labels[$row['mail_type']] : $row['mail_type'];
+            $tr_class = trim($bg . ' ' . ($status_class === 'fail' ? 'mail-log-row-fail' : ''));
             ?>
-            <tr class="<?php echo $bg; ?>">
+            <tr class="<?php echo $tr_class; ?>">
                 <td class="td_num"><?php echo $list_num - $i; ?></td>
                 <td class="td_datetime"><?php echo htmlspecialchars2($row['created_at']); ?></td>
-                <td class="td_left"><?php echo htmlspecialchars2($row['mail_type']); ?></td>
+                <td class="td_left"><?php echo htmlspecialchars2($type_label); ?></td>
                 <td class="td_left"><?php echo htmlspecialchars2($row['related_id']); ?></td>
                 <td class="td_left mail-log-email"><?php echo htmlspecialchars2($row['recipient_email']); ?></td>
                 <td class="td_left mail-log-subject"><?php echo htmlspecialchars2($row['subject']); ?></td>
