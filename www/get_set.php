@@ -1,6 +1,7 @@
 <?
 include_once('./_common.php');
 include_once(G5_LIB_PATH.'/connect.lib.php');
+include_once(G5_LIB_PATH.'/matching_mail.lib.php');
 include_once(G5_LIB_PATH.'/outlogin.lib.php');
 
 // Input normalization for legacy query-building code paths.
@@ -1075,6 +1076,10 @@ switch ($type) {
 							$gw_msg->send();
 						}
 						//알림톡 발송 끝
+
+						if ($pre['receive_approval'] !== 'Y') {
+							send_matching_accept_mail($idx);
+						}
 				}
 				echo "1000";
 		}else{
