@@ -5,6 +5,20 @@ include_once(G5_LIB_PATH.'/register.lib.php');
 include_once(G5_LIB_PATH.'/mailer.lib.php');
 include_once(G5_LIB_PATH.'/thumbnail.lib.php');
 
+if (!function_exists('register_mail_log_failure')) {
+    function register_mail_log_failure($mail_type, $related_id, $recipient_email, $subject, $error_message)
+    {
+        if (!function_exists('mailer_log_write')) {
+            return false;
+        }
+
+        return mailer_log_write(array(
+            'mail_type' => (string) $mail_type,
+            'related_id' => (string) $related_id
+        ), $recipient_email, $subject, 'FAIL', $error_message);
+    }
+}
+
 // 리퍼러 체크
 referer_check();
 
@@ -346,12 +360,16 @@ if ($w == '') {
 
         $content = run_replace('register_form_update_mail_mb_content', $content, $mb_id);
 
-        mailer($config['cf_admin_email_name'], $config['cf_admin_email'], $mb_email, $subject, $content, 1, "", "", "", array(
-            'mail_type' => 'signup_member',
-            'related_id' => $mb_id
-        ));
+        if ($mb_email && filter_var($mb_email, FILTER_VALIDATE_EMAIL)) {
+            mailer($config['cf_admin_email_name'], $config['cf_admin_email'], $mb_email, $subject, $content, 1, "", "", "", array(
+                'mail_type' => 'signup_member',
+                'related_id' => $mb_id
+            ));
 
-        run_event('register_form_update_send_mb_mail', $config['cf_admin_email_name'], $config['cf_admin_email'], $mb_email, $subject, $content);
+            run_event('register_form_update_send_mb_mail', $config['cf_admin_email_name'], $config['cf_admin_email'], $mb_email, $subject, $content);
+        } else {
+            register_mail_log_failure('signup_member', $mb_id, (string) $mb_email, $subject, '회원가입 로그인 이메일이 없습니다.');
+        }
 
         // 메일인증을 사용하는 경우 가입메일에 인증 url이 있으므로 인증메일을 다시 발송되지 않도록 함
         if($config['cf_use_email_certify'])
