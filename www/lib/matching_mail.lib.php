@@ -85,6 +85,20 @@ if (!function_exists('matching_mail_company_name')) {
     }
 }
 
+if (!function_exists('matching_mail_log_failure')) {
+    function matching_mail_log_failure($mail_type, $related_id, $recipient_email, $subject, $error_message)
+    {
+        if (!function_exists('mailer_log_write')) {
+            return false;
+        }
+
+        return mailer_log_write(array(
+            'mail_type' => (string) $mail_type,
+            'related_id' => (string) $related_id
+        ), $recipient_email, $subject, 'FAIL', $error_message);
+    }
+}
+
 if (!function_exists('send_matching_accept_mail')) {
     function send_matching_accept_mail($matching_no)
     {
@@ -101,17 +115,23 @@ if (!function_exists('send_matching_accept_mail')) {
             return false;
         }
 
+        $request_log_context = array(
+            'mail_type' => 'matching_accept_requester',
+            'related_id' => (string) $matching_no
+        );
+        $receive_log_context = array(
+            'mail_type' => 'matching_accept_receiver',
+            'related_id' => (string) $matching_no
+        );
+
         $request_member = sql_fetch(" select * from {$g5['member_table']} where mb_id = '".sql_real_escape_string($matching['request_id'])."' ");
         $receive_member = sql_fetch(" select * from {$g5['member_table']} where mb_id = '".sql_real_escape_string($matching['receive_id'])."' ");
 
         if (!$request_member || !$receive_member) {
             error_log('[matching_mail] member lookup failed for matching '.$matching_no);
-            return false;
-        }
-
-        $to_email = matching_mail_pick_login_email($request_member);
-        if ($to_email === '') {
-            error_log('[matching_mail] request member login email missing for matching '.$matching_no);
+            $fail_subject = '['.$config['cf_title'].'] 매칭 수락 메일 발송 실패';
+            matching_mail_log_failure('matching_accept_requester', $matching_no, '', $fail_subject, '요청자 또는 수락자 회원 정보를 찾을 수 없습니다.');
+            matching_mail_log_failure('matching_accept_receiver', $matching_no, '', $fail_subject, '요청자 또는 수락자 회원 정보를 찾을 수 없습니다.');
             return false;
         }
 
@@ -148,10 +168,14 @@ if (!function_exists('send_matching_accept_mail')) {
         include G5_BBS_PATH.'/matching_accept_mail.php';
         $request_content = ob_get_clean();
 
-        $request_mail_sent = mailer($config['cf_admin_email_name'], $config['cf_admin_email'], $to_email, $request_subject, $request_content, 1, "", "", "", array(
-            'mail_type' => 'matching_accept_requester',
-            'related_id' => (string) $matching_no
-        ));
+        $to_email = matching_mail_pick_login_email($request_member);
+        $request_mail_sent = false;
+        if ($to_email !== '') {
+            $request_mail_sent = mailer($config['cf_admin_email_name'], $config['cf_admin_email'], $to_email, $request_subject, $request_content, 1, "", "", "", $request_log_context);
+        } else {
+            error_log('[matching_mail] request member login email missing for matching '.$matching_no);
+            matching_mail_log_failure('matching_accept_requester', $matching_no, '', $request_subject, '요청자 로그인 이메일이 없습니다.');
+        }
 
         $receive_to_email = matching_mail_pick_login_email($receive_member);
         $receive_mail_sent = false;
@@ -165,12 +189,10 @@ if (!function_exists('send_matching_accept_mail')) {
             include G5_BBS_PATH.'/matching_accept_mail2.php';
             $receive_content = ob_get_clean();
 
-            $receive_mail_sent = mailer($config['cf_admin_email_name'], $config['cf_admin_email'], $receive_to_email, $receive_subject, $receive_content, 1, "", "", "", array(
-                'mail_type' => 'matching_accept_receiver',
-                'related_id' => (string) $matching_no
-            ));
+            $receive_mail_sent = mailer($config['cf_admin_email_name'], $config['cf_admin_email'], $receive_to_email, $receive_subject, $receive_content, 1, "", "", "", $receive_log_context);
         } else {
             error_log('[matching_mail] receive member login email missing for matching '.$matching_no);
+            matching_mail_log_failure('matching_accept_receiver', $matching_no, '', '['.$config['cf_title'].'] 매칭 요청을 수락했습니다.', '수락자 로그인 이메일이 없습니다.');
         }
 
         return ($request_mail_sent || $receive_mail_sent);
