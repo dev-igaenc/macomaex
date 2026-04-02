@@ -46,14 +46,14 @@ else if ($w == "u")
 }
 else if ($w == "d")
 {
-    @unlink(G5_DATA_PATH."/kodata/".$co_row[FILE]);
+    @unlink(G5_DATA_PATH."/kodata/".$co_row['FILE']);
 
     $sql = " delete from company_update where c_id = '$c_id' ";
     sql_query($sql);
 }
 else if ($w == "df")
 {
-    @unlink(G5_DATA_PATH."/kodata/".$co_row[FILE]);
+    @unlink(G5_DATA_PATH."/kodata/".$co_row['FILE']);
 }
 else if ($w == "s")
 {
@@ -62,10 +62,10 @@ else if ($w == "s")
 	$type_table['03']="company_financial";
 	$type_table['12']="company_stock";
 
-	if($co_row[FILE]) {
+	if($co_row['FILE']) {
 		//압축해제
 		ob_start();
-		system('unzip -x '.G5_DATA_PATH.'/kodata/'.$co_row[FILE].' -d '.G5_DATA_PATH.'/kodata/');
+		system('unzip -x '.G5_DATA_PATH.'/kodata/'.$co_row['FILE'].' -d '.G5_DATA_PATH.'/kodata/');
 		$run= ob_get_contents();
 		ob_end_clean();
 		$run_count=substr_count($run,"inflating");
@@ -75,7 +75,7 @@ else if ($w == "s")
 		flush();
 		//업데이트 파일 DB적용
 	  $mydir = G5_DATA_PATH.'/kodata/'; 
-	  $myfiles = array_diff(scandir($mydir), array('.', '..',$co_row[FILE])); 
+	  $myfiles = array_diff(scandir($mydir), array('.', '..',$co_row['FILE'])); 
 	  foreach($myfiles as $value){
 		  if(strpos($value,".jar")) continue; //압축파일은 지우지 않기
 		  echo $value."<br>";

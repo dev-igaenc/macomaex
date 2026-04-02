@@ -49,7 +49,7 @@ echo "<th>무료기간</th>".PHP_EOL;
 echo "</tr>".PHP_EOL;
 
 for ($i=0; $v=sql_fetch_array($result); $i++) {
-	$mship=sql_fetch("select title from g5_membership_manage where no='{$v[cp_type]}'");
+	$mship=sql_fetch("select title from g5_membership_manage where no='{$v['cp_type']}'");
 
 	// 테이블 출력을 위한 HTML 코드 추가
     echo "<tr>".PHP_EOL;

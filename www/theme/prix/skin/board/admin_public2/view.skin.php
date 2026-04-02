@@ -39,26 +39,26 @@ include_once(G5_LIB_PATH.'/thumbnail.lib.php');
 			<tr>
 				<th scope="row"><span class="">품명	</span></th>
 				<td>
-					<?php echo $view[wr_2] ?><?if($view[wr_1]){?><br>
-					<a href="<?php echo $view[wr_1] ?>" target="_blank"><?php echo $view[wr_1] ?></a>
+					<?php echo $view['wr_2'] ?><?if($view['wr_1']){?><br>
+					<a href="<?php echo $view['wr_1'] ?>" target="_blank"><?php echo $view['wr_1'] ?></a>
 					<?}?>
 				</td>
 			</tr>
 			<tr>
 				<th scope="row"><span class="">규격	</span></th>
-				<td><?php echo $view[wr_3] ?></td>
+				<td><?php echo $view['wr_3'] ?></td>
 			</tr>
 			<tr>
 				<th scope="row"><span class="">모델명	</span></th>
-				<td><?php echo $view[wr_4] ?></td>
+				<td><?php echo $view['wr_4'] ?></td>
 			</tr>
 			<tr>
 				<th scope="row"><span class="">제조사	</span></th>
-				<td><?php echo $view[wr_5] ?></td>
+				<td><?php echo $view['wr_5'] ?></td>
 			</tr>
 			<tr>
 				<th scope="row"><span class="">단가(원)	</span></th>
-				<td><?php echo $view[wr_6] ?></td>
+				<td><?php echo $view['wr_6'] ?></td>
 			</tr>
 			<tr>
 				<th scope="row"><span class="">식별번호</span></th>

@@ -21,7 +21,7 @@ include_once(G5_THEME_PATH.'/head.php');
                 <div class="formBox">
                     <div class="inputBox type2">
                         <p class="title">이메일</p>
-                        <input class="readonly" type="text" value="<?=$member[mb_id]?>" readonly>
+                        <input class="readonly" type="text" value="<?=$member['mb_id']?>" readonly>
                     </div>
                     <div class="formBox password">
                         <div class="inputBox">

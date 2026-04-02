@@ -39,14 +39,14 @@ set_session('ss_membership_cancel_token', $membership_cancel_token);
 $remain_credit = (int)$msinfo['matching_able_cnt'];
 $show_credit_cancel_btn = ($is_credit_membership && $remain_credit > 0);
 
-if($msinfo[coupon]) $coupon=getCouponInfo($msinfo[coupon]);
+if($msinfo['coupon']) $coupon=getCouponInfo($msinfo['coupon']);
 ?>
 
 
 <div id="my_plan">
 
     <div class="fullBox my_plan mgb10">
-		<input type="hidden" name="ms_id"  id="ms_id" value="<?=$msinfo[no]?>">
+		<input type="hidden" name="ms_id"  id="ms_id" value="<?=$msinfo['no']?>">
 		<input type="hidden" name="is_credit_membership" id="is_credit_membership" value="<?=$is_credit_membership?>">
 		<input type="hidden" name="membership_cancel_token" id="membership_cancel_token" value="<?=$membership_cancel_token?>">
 
@@ -55,17 +55,17 @@ if($msinfo[coupon]) $coupon=getCouponInfo($msinfo[coupon]);
         <!-- 무료가 아닌경우 -->
         <div class="inner">
             <div class="textArea">
-                <div class="vat">VAT <?=$mship[$membership_info['title_en']][vat]?></div><?if($coupon[cp_trunc]){?><span class="coupon_use vat"><?=$coupon[cp_trunc]?>개월 무료</span><?}?>
+                <div class="vat">VAT <?=$mship[$membership_info['title_en']]['vat']?></div><?if($coupon['cp_trunc']){?><span class="coupon_use vat"><?=$coupon['cp_trunc']?>개월 무료</span><?}?>
 				<?if($is_credit_membership){?><div class="vat">잔여 크레딧 <strong><?=$remain_credit?></strong></div><?}?>
                 <h4 class="title">
 					<?if($is_credit_membership){?>
 						크레딧 잔액 <span>CREDIT</span> <br>
 						<p class="price_sale"><?=number_format($remain_credit)?></p>
 					<?}else{?>
-						<?=$mship[$membership_info['title_en']][title]?><span><?=$mship[$membership_info['title_en']][title_en]?></span> <br>
-						<?if($mship[$membership_info['title_en']][price_origin]>-1){?><p class="price_origin"><?=number_format($mship[$membership_info['title_en']][price_origin]);?></p><?}?>
-						<?if($mship[$membership_info['title_en']][sale]){?><p class="sale"><?=number_format($mship[$membership_info['title_en']][sale]);?>%</p><?}?>
-						<?if($mship[$membership_info['title_en']][price_sale]){?><p class="price_sale"><?=number_format($mship[$membership_info['title_en']][price_sale]);?></p><?}?>
+						<?=$mship[$membership_info['title_en']]['title']?><span><?=$mship[$membership_info['title_en']]['title_en']?></span> <br>
+						<?if($mship[$membership_info['title_en']]['price_origin']>-1){?><p class="price_origin"><?=number_format($mship[$membership_info['title_en']]['price_origin']);?></p><?}?>
+						<?if($mship[$membership_info['title_en']]['sale']){?><p class="sale"><?=number_format($mship[$membership_info['title_en']]['sale']);?>%</p><?}?>
+						<?if($mship[$membership_info['title_en']]['price_sale']){?><p class="price_sale"><?=number_format($mship[$membership_info['title_en']]['price_sale']);?></p><?}?>
 					<?}?>
                 </h4>
                 <ul class="venefit">
@@ -79,7 +79,7 @@ if($msinfo[coupon]) $coupon=getCouponInfo($msinfo[coupon]);
 						<div class="text">자동 만료 없음 (잔여 크레딧 기준)</div>
 					</li>
 				<?}else{?>
-					<?$desc=explode("\n",$mship[$membership_info['title_en']][desc]);
+					<?$desc=explode("\n",$mship[$membership_info['title_en']]['desc']);
 						foreach($desc as $value2){
 							$value2=str_replace("[","",$value2);
 							$value2=str_replace("]","",$value2);
@@ -102,7 +102,7 @@ if($msinfo[coupon]) $coupon=getCouponInfo($msinfo[coupon]);
 					<?}?>
 				<?}?>
                 </ul>
-				<?if($msinfo[status]=="T" && !$is_credit_membership){?>
+				<?if($msinfo['status']=="T" && !$is_credit_membership){?>
 				 <a href="javascript:jAlert('<?=$msinfo['date_end']?>일 이후 구독 취소 됩니다.','알림');" id="" class="unSubscribe"><span>만료일 후 취소</span></a>
 				<?}else if($is_credit_membership && !$show_credit_cancel_btn){?>
 				<!-- 잔여 크레딧이 0이면 취소 버튼 노출하지 않음 -->
@@ -117,15 +117,15 @@ if($msinfo[coupon]) $coupon=getCouponInfo($msinfo[coupon]);
         <!-- 무료 -->
         <div class="inner">
             <div class="textArea">
-                <div class="vat">VAT <?=$mship[FREE][vat]?></div>
+                <div class="vat">VAT <?=$mship['FREE']['vat']?></div>
                 <h4 class="title">
-                    <?=$mship[FREE][title]?><span><?=$mship[FREE][title_en]?></span> <br>
-					<?if($mship[FREE][price_origin]>-1){?><p class="price_origin"><?=number_format($mship[FREE][price_origin]);?></p><?}?>
-					<?if($mship[FREE][sale]){?><p class="sale"><?=number_format($mship[FREE][sale]);?>%</p><?}?>
-					<?if($mship[FREE][price_sale]){?><p class="price_sale"><?=number_format($mship[FREE][price_sale]);?></p><?}?>
+                    <?=$mship['FREE']['title']?><span><?=$mship['FREE']['title_en']?></span> <br>
+					<?if($mship['FREE']['price_origin']>-1){?><p class="price_origin"><?=number_format($mship['FREE']['price_origin']);?></p><?}?>
+					<?if($mship['FREE']['sale']){?><p class="sale"><?=number_format($mship['FREE']['sale']);?>%</p><?}?>
+					<?if($mship['FREE']['price_sale']){?><p class="price_sale"><?=number_format($mship['FREE']['price_sale']);?></p><?}?>
                 </h4>
                 <ul class="venefit">
-				<?$desc=explode("\n",$mship[FREE][desc]);
+				<?$desc=explode("\n",$mship['FREE']['desc']);
 					foreach($desc as $value2){
 						$value2=str_replace("[","",$value2);
 						$value2=str_replace("]","",$value2);

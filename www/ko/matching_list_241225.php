@@ -368,10 +368,10 @@ if($member['mb_id']) $msinfo=sql_fetch("select * from g5_membership_status where
 				?>
                 <tr>
                     <td>
-						<?if($cust_sub[$i][TXPL_NM]){?>
+						<?if($cust_sub[$i]['TXPL_NM']){?>
                         <div class="company_top">
-                            <div class="title"><?=$cust_sub[$i][TXPL_NM]?></div>
-                            <a href="/ko/matching_view.php?cd=<?=$cust_sub[$i][TXPL_KEDCD]?>" class="viewDetail">상세보기</a>
+                            <div class="title"><?=$cust_sub[$i]['TXPL_NM']?></div>
+                            <a href="/ko/matching_view.php?cd=<?=$cust_sub[$i]['TXPL_KEDCD']?>" class="viewDetail">상세보기</a>
 							<?//print_r($cust_sub[$i])?>
                         </div>
                         <ul class="company_desc">
@@ -391,10 +391,10 @@ if($member['mb_id']) $msinfo=sql_fetch("select * from g5_membership_status where
 						<?}?>
                     </td>
                     <td>
-						<?if($supp_sub[$i][TXPL_NM]){?>
+						<?if($supp_sub[$i]['TXPL_NM']){?>
                         <div class="company_top">
-                            <div class="title"><?=$supp_sub[$i][TXPL_NM]?></div>
-                            <a href="/ko/matching_view.php?cd=<?=$supp_sub[$i][TXPL_KEDCD]?>" class="viewDetail">상세보기</a>
+                            <div class="title"><?=$supp_sub[$i]['TXPL_NM']?></div>
+                            <a href="/ko/matching_view.php?cd=<?=$supp_sub[$i]['TXPL_KEDCD']?>" class="viewDetail">상세보기</a>
                         </div>
                         <ul class="company_desc">
                             <li>

@@ -102,7 +102,7 @@ if (!defined('_GNUBOARD_')) exit; // 개별 페이지 접근 불가
 				</tr>
 				<tr>
 					<th scope="row"><span class="">간단설명</span></th>
-					<td><input type="text" name="wr_3" value="<?php echo $write[wr_3] ?>" id="wr_3" required class="required" size="50" maxlength="255" placeholder="간단설명"></td>
+					<td><input type="text" name="wr_3" value="<?php echo $write['wr_3'] ?>" id="wr_3" required class="required" size="50" maxlength="255" placeholder="간단설명"></td>
 				</tr>
 				<tr class="dt">
 					<th scope="row"><span class="">제품특징</span></th>
@@ -134,7 +134,7 @@ if (!defined('_GNUBOARD_')) exit; // 개별 페이지 접근 불가
 							<ul id="sortable">
 								<li><button type="button" id="add_btn" class="click btn" desc="제품스팩"><i class="fa fa-plus" aria-hidden="true"></i> 추가하기</button></li>
 							<? 
-								$spec=explode("||",$write[wr_link1]);
+								$spec=explode("||",$write['wr_link1']);
 								foreach($spec as $key) {
 									$key2=explode("##",$key);
 							?>
@@ -159,8 +159,8 @@ if (!defined('_GNUBOARD_')) exit; // 개별 페이지 접근 불가
 								<li><p class="checkIn"><input type="checkbox" id="icon7" name="icon1[]" class="selec_chk" value="6"><label for="icon7">가변형<img src="/img/icon_check6.jpg" class="icon1img"></label></p></li>
 							</ul>
 							<input type="hidden" name="wr_1">
-							<? if($write[wr_1]){
-									$icon1=explode("||",$write[wr_1]);
+							<? if($write['wr_1']){
+									$icon1=explode("||",$write['wr_1']);
 							?>
 								<script>
 								<?foreach($icon1 as $value){?>
@@ -184,8 +184,8 @@ if (!defined('_GNUBOARD_')) exit; // 개별 페이지 접근 불가
 								<!-- <li><p class="checkIn"><input type="checkbox" id="icon2_5" name="icon2[]" class="selec_chk" value="4"><label for="icon2_5"><img src="/img/crt_4.png" class="icon2img"></label></p></li> -->
 							</ul>
 							<input type="hidden" name="wr_2">
-							<? if($write[wr_2]){
-									$icon2=explode("||",$write[wr_2]);
+							<? if($write['wr_2']){
+									$icon2=explode("||",$write['wr_2']);
 							?>
 								<script>
 								<?foreach($icon2 as $value){?>

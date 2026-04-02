@@ -66,7 +66,7 @@ include_once(G5_LIB_PATH.'/thumbnail.lib.php');
 								<script>
 									var mapContainer = document.getElementById("storeMap"), // 지도의 중심좌표
 										mapOption = {
-											center: new daum.maps.LatLng(<?=$view[wr_8]?>, <?=$view[wr_9]?>), // 지도의 중심좌표
+											center: new daum.maps.LatLng(<?=$view['wr_8']?>, <?=$view['wr_9']?>), // 지도의 중심좌표
 											level: 2 // 지도의 확대 레벨
 										};
 									var map = new daum.maps.Map(mapContainer, mapOption); // 지도를 생성합니다
@@ -81,18 +81,18 @@ include_once(G5_LIB_PATH.'/thumbnail.lib.php');
 									// 지도에 마커를 표시합니다
 									var marker = new daum.maps.Marker({
 										map: map,
-										position: new daum.maps.LatLng(<?=$view[wr_8]?>, <?=$view[wr_9]?>)
+										position: new daum.maps.LatLng(<?=$view['wr_8']?>, <?=$view['wr_9']?>)
 									});
 
-									var contentStr = "<div class='customoverlay'><p class='coBox'><span class='title'><?=$view[wr_subject]?></span></p></div>";
+									var contentStr = "<div class='customoverlay'><p class='coBox'><span class='title'><?=$view['wr_subject']?></span></p></div>";
 									var overlay = new kakao.maps.CustomOverlay({
 										map: map,
-										position: new kakao.maps.LatLng(<?=$view[wr_8]?>, <?=$view[wr_9]?>),
+										position: new kakao.maps.LatLng(<?=$view['wr_8']?>, <?=$view['wr_9']?>),
 										content: contentStr,
 										yAnchor: 1
 									});
 
-									bounds.extend(new kakao.maps.LatLng(<?=$view[wr_8]?>, <?=$view[wr_9]?>));
+									bounds.extend(new kakao.maps.LatLng(<?=$view['wr_8']?>, <?=$view['wr_9']?>));
 
 									$(window).on('throttledresize', function(){// Resize Event
 										setTimeout(function(){
@@ -106,12 +106,12 @@ include_once(G5_LIB_PATH.'/thumbnail.lib.php');
 								<div class="storePhoto">
 									<div class="store-big"><div class="store-big_in">
 										<?php
-											if($view['file'][count]){
+											if($view['file']['count']){
 												for($i=0; $i<$view['file']['count'];$i++){
 													if($view['file'][$i]['view']){
 														if($i>=5) continue;
 														//echo "<div class='slider'><img src='{$view['file'][$i][path]}/{$view['file'][$i][file]}' class='ofi'></div>";
-														echo "<div class='slider' style='background-image: url(\"{$view['file'][$i][path]}/{$view['file'][$i][file]}\");'></div>";
+														echo "<div class='slider' style='background-image: url(\"{$view['file'][$i]['path']}/{$view['file'][$i]['file']}\");'></div>";
 													}
 												}
 											}else{

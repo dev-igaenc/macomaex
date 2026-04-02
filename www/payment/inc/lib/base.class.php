@@ -208,7 +208,7 @@ $NO_ADMIN_LNB_BOARD_MENU_ROLE_OPEN = false; /*게시판 권한 관리 */
 
 $devIArrIP = array("220.72.73.182", "125.128.228.224","1.228.9.177");
 
-if(in_array($_SERVER[REMOTE_ADDR], $devIArrIP)){
+if(in_array($_SERVER['REMOTE_ADDR'], $devIArrIP)){
 	$NO_ADMIN_LNB_BOARD_MENU_OPEN = true;
 	$NO_ADMIN_LNB_BOARD_MENU_ROLE_OPEN = true;
 	$NO_ADMIN_GNB_MEMBER_OPEN = true;

@@ -21,7 +21,7 @@
 
 		$result=mysqli_query($connect ,"SELECT ifnull(SUM(Visit_Num),0) as Visit_Num_sum FROM nb_counter_data ");
 		$counter_result =mysqli_fetch_array($result);
-		$Total_Num = $counter_result[Visit_Num_sum];
+		$Total_Num = $counter_result['Visit_Num_sum'];
 
 		$CoIP = $_SERVER["REMOTE_ADDR"];
 		$CoRoute = $_SERVER["HTTP_REFERER"];
@@ -40,20 +40,20 @@
 		$ToDay_Time = time();
 		
 
-		if($counter_config_row[Cookie_Use] == "O") {
-			$temp1 = date('Y-m-d',$_SESSION[nb_counter_Term2]);
+		if($counter_config_row['Cookie_Use'] == "O") {
+			$temp1 = date('Y-m-d',$_SESSION['nb_counter_Term2']);
 			$temp2 = date('Y-m-d');
 
 			
 			if($temp1 != $temp2) {
 				$Counter_ON = "Y";
 				//setcookie("nb_counter_Term2",$ToDay_Time,($ToDay_Time+100*24*3600),"/", null);
-				$_SESSION[nb_counter_Term2] = $ToDay_Time;
+				$_SESSION['nb_counter_Term2'] = $ToDay_Time;
 			}
 		}
 		
 
-		if($counter_config_row[Admin_Check_Use] == "N" && $counter_config_row[Admin_IP] == $CoIP) {
+		if($counter_config_row['Admin_Check_Use'] == "N" && $counter_config_row['Admin_IP'] == $CoIP) {
 			$Counter_ON = "N";
 		}
 
@@ -77,8 +77,8 @@
 		if($Counter_ON == "Y" && !$isRobot) {
 			$Total_Num++;
 
-			if($counter_config_row[Counter_Use] == "Y") {
-				if($_POST[referer]) $CoRoute .= "&referer=".$_POST[referer];
+			if($counter_config_row['Counter_Use'] == "Y") {
+				if($_POST['referer']) $CoRoute .= "&referer=".$_POST['referer'];
 
 				mysqli_query("INSERT INTO nb_counter (Connect_IP, Time, Year, Month, Day, Hour, Week, Connect_Route) VALUES ('$CoIP', '$ToDay_Time', '$ToDay_Year', '$ToDay_Month', '$ToDay_Day', '$ToDay_Hour', '$ToDay_Week', '$CoRoute')");
 
@@ -86,7 +86,7 @@
 				$result=mysqli_query($connect ,$data_query);
 				$data_result = mysqli_fetch_array($result);
 
-				if($data_result[cnt] > 0 ) {
+				if($data_result['cnt'] > 0 ) {
 					mysqli_query($connect ,"UPDATE nb_counter_data SET Hour$ToDay_Hour = Hour$ToDay_Hour+1, Visit_Num = Hour00+Hour01+Hour02+Hour03+Hour04+Hour05+Hour06+Hour07+Hour08+Hour09+Hour10+Hour11+Hour12+Hour13+Hour14+Hour15+Hour16+Hour17+Hour18+Hour19+Hour20+Hour21+Hour22+Hour23 WHERE Year = '$ToDay_Year' AND Month = '$ToDay_Month' AND Day = '$ToDay_Day'");
 				}
 				else {
@@ -96,7 +96,7 @@
 
 				$result=mysqli_query($connect ,"SELECT count(*) as cnt FROM nb_counter_route WHERE Connect_Route = '$CoRoute'");
 				$route_result =mysqli_fetch_array($result);
-				if($route_result[cnt] > 0 ) {
+				if($route_result['cnt'] > 0 ) {
 					mysqli_query($connect ,"UPDATE nb_counter_route SET Time = '$ToDay_Time', Visit_Num = Visit_Num+1 WHERE Connect_Route = '$CoRoute'");
 				}
 				else {

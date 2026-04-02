@@ -392,7 +392,7 @@ if($member['mb_id']) {
 				for($i=0;$i<$cust_cnt;$i++){
 				?>
 				<div class="matching-item">
-					<p class="name"><strong><?=$cpoint[TXPL_NM]?></strong></p>
+					<p class="name"><strong><?=$cpoint['TXPL_NM']?></strong></p>
 					<div class="info-area">
 						<dl>
 							<dt>소<i></i>재<i></i>지</dt>
@@ -408,7 +408,7 @@ if($member['mb_id']) {
 						</dl>
 					</div>
 					<div class="btn-detail">
-						<a href="javascript:void(0);" kedcd="<?=$cpoint[TXPL_KEDCD]?>" class="detail_view">상세보기</a>
+						<a href="javascript:void(0);" kedcd="<?=$cpoint['TXPL_KEDCD']?>" class="detail_view">상세보기</a>
 					</div>
 				</div>
 				<?
@@ -429,7 +429,7 @@ if($member['mb_id']) {
 				for($i=0;$i<$supp_cnt;$i++){
 				?>
 				<div class="matching-item">
-					<p class="name"><strong><?=$spoint[TXPL_NM]?></strong></p>
+					<p class="name"><strong><?=$spoint['TXPL_NM']?></strong></p>
 					<div class="info-area">
 						<dl>
 							<dt>소<i></i>재<i></i>지</dt>
@@ -445,7 +445,7 @@ if($member['mb_id']) {
 						</dl>
 					</div>
 					<div class="btn-detail">
-						<a href="javascript:void(0);" kedcd="<?=$spoint[TXPL_KEDCD]?>" class="detail_view">상세보기</a>
+						<a href="javascript:void(0);" kedcd="<?=$spoint['TXPL_KEDCD']?>" class="detail_view">상세보기</a>
 					</div>
 				</div>
 				<?

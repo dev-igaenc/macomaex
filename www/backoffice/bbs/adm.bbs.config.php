@@ -336,7 +336,7 @@ function get_member_board($mb_id="", $gr_id="", $bo_table=""){
 		$result = sql_query("SELECT gr_id FROM ".$g5['group_member_table']." WHERE mb_id='".$mb_id."' ");
 		$group_member_board = array();
 		while($row = sql_fetch_array($result))
-			$group_member_board[] = "'" . $row[gr_id] . "'";
+			$group_member_board[] = "'" . $row['gr_id'] . "'";
 
 		if ($group_member_board)
 			$sql_gr_use_access = " or b.gr_id in ( " . implode("," , $group_member_board) . ")";

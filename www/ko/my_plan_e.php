@@ -35,22 +35,22 @@ $membership_info = sql_fetch("select * from g5_membership_manage where no='{$msi
 <div id="my_plan">
 
     <div class="fullBox my_plan mgb10">
-	<input type="hidden" name="ms_id"  id="ms_id" value="<?=$msinfo[no]?>">
+	<input type="hidden" name="ms_id"  id="ms_id" value="<?=$msinfo['no']?>">
 
 
 		<?if($membership_info['title_en']!="FREE" && $msinfo){?>
         <!-- 무료가 아닌경우 -->
         <div class="inner">
             <div class="textArea">
-                <div class="vat">VAT <?=$mship[$membership_info['title_en']][vat]?></div>
+                <div class="vat">VAT <?=$mship[$membership_info['title_en']]['vat']?></div>
                 <h4 class="title">
-                    <?=$mship[$membership_info['title_en']][title]?><span><?=$mship[$membership_info['title_en']][title_en]?></span> <br>
-					<?if($mship[$membership_info['title_en']][price_origin]>-1){?><p class="price_origin"><?=number_format($mship[$membership_info['title_en']][price_origin]);?></p><?}?>
-					<?if($mship[$membership_info['title_en']][sale]){?><p class="sale"><?=number_format($mship[$membership_info['title_en']][sale]);?>%</p><?}?>
-					<?if($mship[$membership_info['title_en']][price_sale]){?><p class="price_sale"><?=number_format($mship[$membership_info['title_en']][price_sale]);?></p><?}?>
+                    <?=$mship[$membership_info['title_en']]['title']?><span><?=$mship[$membership_info['title_en']]['title_en']?></span> <br>
+					<?if($mship[$membership_info['title_en']]['price_origin']>-1){?><p class="price_origin"><?=number_format($mship[$membership_info['title_en']]['price_origin']);?></p><?}?>
+					<?if($mship[$membership_info['title_en']]['sale']){?><p class="sale"><?=number_format($mship[$membership_info['title_en']]['sale']);?>%</p><?}?>
+					<?if($mship[$membership_info['title_en']]['price_sale']){?><p class="price_sale"><?=number_format($mship[$membership_info['title_en']]['price_sale']);?></p><?}?>
                 </h4>
                 <ul class="venefit">
-				<?$desc=explode("\n",$mship[$membership_info['title_en']][desc]);
+				<?$desc=explode("\n",$mship[$membership_info['title_en']]['desc']);
 					foreach($desc as $value2){
 						$value2=str_replace("[","",$value2);
 						$value2=str_replace("]","",$value2);
@@ -72,7 +72,7 @@ $membership_info = sql_fetch("select * from g5_membership_manage where no='{$msi
                     </li>
 				<?}?>
                 </ul>
-				<?if($msinfo[status]=="T"){?>
+				<?if($msinfo['status']=="T"){?>
 				 <a href="javascript:jAlert('<?=$msinfo['date_end']?>일 이후 구독 취소 됩니다.','알림');" id="" class="unSubscribe"><span>만료일 후 취소</span></a>
 				<?}else{?>
                 <a href="javascript:;" id="membership_cancel" class="unSubscribe"><span>구독 취소</span></a>
@@ -85,15 +85,15 @@ $membership_info = sql_fetch("select * from g5_membership_manage where no='{$msi
         <!-- 무료 -->
         <div class="inner">
             <div class="textArea">
-                <div class="vat">VAT <?=$mship[FREE][vat]?></div>
+                <div class="vat">VAT <?=$mship['FREE']['vat']?></div>
                 <h4 class="title">
-                    <?=$mship[FREE][title]?><span><?=$mship[FREE][title_en]?></span> <br>
-					<?if($mship[FREE][price_origin]>-1){?><p class="price_origin"><?=number_format($mship[FREE][price_origin]);?></p><?}?>
-					<?if($mship[FREE][sale]){?><p class="sale"><?=number_format($mship[FREE][sale]);?>%</p><?}?>
-					<?if($mship[FREE][price_sale]){?><p class="price_sale"><?=number_format($mship[FREE][price_sale]);?></p><?}?>
+                    <?=$mship['FREE']['title']?><span><?=$mship['FREE']['title_en']?></span> <br>
+					<?if($mship['FREE']['price_origin']>-1){?><p class="price_origin"><?=number_format($mship['FREE']['price_origin']);?></p><?}?>
+					<?if($mship['FREE']['sale']){?><p class="sale"><?=number_format($mship['FREE']['sale']);?>%</p><?}?>
+					<?if($mship['FREE']['price_sale']){?><p class="price_sale"><?=number_format($mship['FREE']['price_sale']);?></p><?}?>
                 </h4>
                 <ul class="venefit">
-				<?$desc=explode("\n",$mship[FREE][desc]);
+				<?$desc=explode("\n",$mship['FREE']['desc']);
 					foreach($desc as $value2){
 						$value2=str_replace("[","",$value2);
 						$value2=str_replace("]","",$value2);

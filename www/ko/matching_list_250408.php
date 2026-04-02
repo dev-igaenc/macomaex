@@ -380,10 +380,10 @@ if($member['mb_id']) {
 				?>
                 <tr>
                     <td>
-						<?if($cpoint[TXPL_NM]){?>
+						<?if($cpoint['TXPL_NM']){?>
                         <div class="company_top">
-                            <div class="title"><?=$cpoint[TXPL_NM]?></div>
-                            <a href="/ko/matching_view.php?cd=<?=$cpoint[TXPL_KEDCD]?>" class="viewDetail">상세보기</a>
+                            <div class="title"><?=$cpoint['TXPL_NM']?></div>
+                            <a href="/ko/matching_view.php?cd=<?=$cpoint['TXPL_KEDCD']?>" class="viewDetail">상세보기</a>
                         </div>
                         <ul class="company_desc">
                             <li>
@@ -402,10 +402,10 @@ if($member['mb_id']) {
 						<?}?>
                     </td>
                     <td>
-						<?if($spoint[TXPL_NM]){?>
+						<?if($spoint['TXPL_NM']){?>
                         <div class="company_top">
-                            <div class="title"><?=$spoint[TXPL_NM]?></div>
-                            <a href="/ko/matching_view.php?cd=<?=$spoint[TXPL_KEDCD]?>" class="viewDetail">상세보기</a>
+                            <div class="title"><?=$spoint['TXPL_NM']?></div>
+                            <a href="/ko/matching_view.php?cd=<?=$spoint['TXPL_KEDCD']?>" class="viewDetail">상세보기</a>
                         </div>
                         <ul class="company_desc">
                             <li>

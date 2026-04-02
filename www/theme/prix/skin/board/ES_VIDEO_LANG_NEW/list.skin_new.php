@@ -4,15 +4,15 @@ include_once(G5_LIB_PATH.'/thumbnail.lib.php');
 
 // add_stylesheet('css 구문', 출력순서); 숫자가 작을 수록 먼저 출력됨
 //add_stylesheet('<link rel="stylesheet" href="'.$board_skin_url.'/style.css">', 0);
-$cate=explode("|",$board[bo_category_list]);
+$cate=explode("|",$board['bo_category_list']);
 $c_count=sql_fetch("select count(*) as cnt from g5_write_".$bo_table);
-$cate_count[전체]=$c_count[cnt];
+$cate_count['전체']=$c_count['cnt'];
 foreach($cate as $value){
 	$c_count=sql_fetch("select count(*) as cnt from g5_write_".$bo_table." where ca_name='".$value."'");
-	$cate_count[$value]=$c_count[cnt];
+	$cate_count[$value]=$c_count['cnt'];
 	$category_option=str_replace("<span>".$value."</span>","<span>".$value." ".number_format($cate_count[$value])."</span>",$category_option);
 }
-$category_option=str_replace("<span>All</span>","<span>All ".number_format($cate_count[전체])."</span>",$category_option);
+$category_option=str_replace("<span>All</span>","<span>All ".number_format($cate_count['전체'])."</span>",$category_option);
 ?>
 <style>
 	#pageTop,

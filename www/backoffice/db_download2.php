@@ -179,7 +179,7 @@ fclose($fp);
 
 
 
-$passed=base64_decode($config[cf_10]); 
+$passed=base64_decode($config['cf_10']); 
 $zip = new ZipArchive();
 if( $zip->open(G5_DATA_PATH.'/db_down/db_'.$dateString.$add_txt.'.zip', ZipArchive::CREATE)) {
 	$zip->setPassword($passed);

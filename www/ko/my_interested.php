@@ -63,26 +63,26 @@ $total_cnt=mysqli_num_rows($result);
 <p class="matching-length"><span class="point"><?=$total_cnt?>개</span>의 관심 기업</p>
 <div class="matching-list">
 <?for ($i=0; $row=sql_fetch_array($result); $i++) {
-	$match=sql_fetch("select * from g5_matching where del != 'D' and KEDCD='{$row[KEDCD]}' and request_id='{$member['mb_id']}'");
+	$match=sql_fetch("select * from g5_matching where del != 'D' and KEDCD='{$row['KEDCD']}' and request_id='{$member['mb_id']}'");
 	if($match['receive_approval']=="Y") $receve_info=getUserInfo($match['receive_id']);
 	if(!$match['receive_approval']) {
-		$match=sql_fetch("SELECT * from g5_matching where del != 'D' and  receive_id='{$member['mb_id']}' and KEDCD='{$row[KEDCD]}'");//받은매칭요청
+		$match=sql_fetch("SELECT * from g5_matching where del != 'D' and  receive_id='{$member['mb_id']}' and KEDCD='{$row['KEDCD']}'");//받은매칭요청
 		if($match['receive_approval']=="Y") $receve_info=getUserInfo($match['request_id']);
 	}
 
 	?>
-	<div class="matching-item" kedcd="<?=$row[KEDCD]?>">
-		<p class="name"><strong><?=$row[ENP_NM]?></strong>
-			<button type="button" star class="active star_btn" kedcd="<?=$row[KEDCD]?>"><img src="/images/icon_star.svg" alt=""></button>
+	<div class="matching-item" kedcd="<?=$row['KEDCD']?>">
+		<p class="name"><strong><?=$row['ENP_NM']?></strong>
+			<button type="button" star class="active star_btn" kedcd="<?=$row['KEDCD']?>"><img src="/images/icon_star.svg" alt=""></button>
 		</p>
 		<div class="info-area">
 			<dl>
 				<dt>주<i></i>소</dt>
-				<dd><?=$row[LOC_ADDRA]?></dd>
+				<dd><?=$row['LOC_ADDRA']?></dd>
 			</dl>
 			<dl>
 				<dt>종<i></i>목</dt>
-				<dd><?=$row[BZC_NAME]?></dd>
+				<dd><?=$row['BZC_NAME']?></dd>
 			</dl>
 			<dl>
 				<dt>연<i></i>락<i></i>처</dt>
@@ -94,13 +94,13 @@ $total_cnt=mysqli_num_rows($result);
 			</dl>
 		</div>
 		<div class="btn-option">
-			<a href="javascript:" kedcd="<?=$row[KEDCD]?>" class="detail_view">상세보기</a>
+			<a href="javascript:" kedcd="<?=$row['KEDCD']?>" class="detail_view">상세보기</a>
 			<?if(!$match['no']){?>
-				<a id="popup_open" kedcd="<?=$row[KEDCD]?>" class="submit">매칭요청</a>
+				<a id="popup_open" kedcd="<?=$row['KEDCD']?>" class="submit">매칭요청</a>
 			<?}else if($match['receive_approval']=="Y"){?>
 				<a class="accepted">매칭완료</a>
 			<?}else if($match['receive_approval']=="N"){?>
-				<a kedcd="<?=$row[KEDCD]?>" href="javascript:jAlert('매칭 수락 대기중입니다.','알림')" class="accepting" style="cursor:default">수락대기</a>
+				<a kedcd="<?=$row['KEDCD']?>" href="javascript:jAlert('매칭 수락 대기중입니다.','알림')" class="accepting" style="cursor:default">수락대기</a>
 			<?}else if($match['receive_approval']=="R"){?>
 				<a class="rejected" style="cursor:default">매칭거절</a>
 			<?}?>

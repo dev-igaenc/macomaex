@@ -42,7 +42,7 @@ if($com['BZNO']) {
 }
 
 
- if($com[ext_1]=="API 입력") {
+ if($com['ext_1']=="API 입력") {
 	//updateKODATA($com['BZNO']);
  }
 if($com['BZC_CD']) $kssc=sql_fetch("SELECT * from kssc where k_code='{$com['BZC_CD']}'");
@@ -58,10 +58,10 @@ $minfo[0]['no'];
 	$result=sql_query($s_query);
 	for ($i=0; $row=sql_fetch_array($result); $i++) {
 		//echo $row[ACCT_DT]." ".$row[FUNDTOTAL]."<br>";
-		$year=substr($row[ACCT_DT],0,4);
-		$PROFIT[$year]=$row[TERMNETPROFIT];
-		$FTOTAL[]=$row[FUNDTOTAL];
-		$SALESY[$year]=$row[SALES];
+		$year=substr($row['ACCT_DT'],0,4);
+		$PROFIT[$year]=$row['TERMNETPROFIT'];
+		$FTOTAL[]=$row['FUNDTOTAL'];
+		$SALESY[$year]=$row['SALES'];
 	}
 
 if($minfo[1]['title']=="프리미엄" or $minfo[1]['title']=="프리미엄+"){ 
@@ -69,15 +69,15 @@ if($minfo[1]['title']=="프리미엄" or $minfo[1]['title']=="프리미엄+"){
 	#주식수
 	$sto_info=sql_fetch("select * from company_stock where KEDCD='{$cd}' order by STD_DT DESC limit 1");
 
-	if(count($PROFIT)>1 && $sto_info[ISS_STK_CN]){  //3년도 정보가 있어야 구함
+	if(count($PROFIT)>1 && $sto_info['ISS_STK_CN']){  //3년도 정보가 있어야 구함
 
 
 	#자산가치 자본총계(천원) / 총주식
-	$asset_value = ($FTOTAL[0]*1000) / $sto_info[ISS_STK_CN];
+	$asset_value = ($FTOTAL[0]*1000) / $sto_info['ISS_STK_CN'];
 	//echo "#자산가치 : 자본총계(천원) / 총주식 : ($FTOTAL[0]*1000) / {$sto_info[ISS_STK_CN]} = ".$asset_value."<br>";
 	#주당순이익 구하기 당기순이익/주식수
 	foreach($PROFIT as $key=>$value){
-		$EPS[$key]=($value*1000)/$sto_info[ISS_STK_CN];
+		$EPS[$key]=($value*1000)/$sto_info['ISS_STK_CN'];
 		//echo "#주당순이익 : ({$value}*1000)/{$sto_info[ISS_STK_CN]}=".$EPS[$key]."<br>";
 	}
 	#수익가치
@@ -166,7 +166,7 @@ if($com['HPAGE_URL']) {
 
 				<dl>
 					<dt>법인(주민)번호</dt>
-					<dd><span><?=substr($com[CONO_PID],0,6)?>-<?=substr($com[CONO_PID],6,7)?></span></dd>
+					<dd><span><?=substr($com['CONO_PID'],0,6)?>-<?=substr($com['CONO_PID'],6,7)?></span></dd>
 				</dl>
 				<dl>
 					<dt>사업자번호</dt>
@@ -234,7 +234,7 @@ if($SALESY[$yearsm]){?>
 				</dl>
 				<dl>
 					<dt>주소(도로명)</dt>
-					<dd><a href="https://map.kakao.com/?q=<?=$com[LOC_RDNM_ADDRA]?> <?=$com[LOC_RDNM_ADDRB]?>" target="_blank"><?=$com[LOC_RDNM_ADDRA]?><br /><?=$com[LOC_RDNM_ADDRB]?></a>	
+					<dd><a href="https://map.kakao.com/?q=<?=$com['LOC_RDNM_ADDRA']?> <?=$com['LOC_RDNM_ADDRB']?>" target="_blank"><?=$com['LOC_RDNM_ADDRA']?><br /><?=$com['LOC_RDNM_ADDRB']?></a>	
 </dd>
 				</dl>
 			</div>

@@ -118,8 +118,8 @@ $.datepicker.setDefaults({
         <td>
             <select name="cp_type" id="cp_type">
 			<?$mship=sql_fetch("select group_concat(no) as no,group_concat(title) as title from g5_membership_manage where title!='무료'");
-			$no=explode(",",$mship[no]);
-			$title=explode(",",$mship[title]);
+			$no=explode(",",$mship['no']);
+			$title=explode(",",$mship['title']);
 			?>
 			<?foreach($no as $key => $value){?>
             <option value="<?=$value?>" <?if($value==$cp['cp_type']){?>selected<?}?>><?=$title[$key]?></option>

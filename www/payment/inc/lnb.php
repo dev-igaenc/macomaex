@@ -107,7 +107,7 @@
             
             <?
                 if($isView && $view_skin === 'caseStudy'){ ?>
-                    <span class="view-text"><?=$data[extra1]?></span>
+                    <span class="view-text"><?=$data['extra1']?></span>
                 <?}
             ?>
         </div>

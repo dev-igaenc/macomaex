@@ -65,7 +65,7 @@ include_once $board_skin_path . "/board_head.skin.php";
 		<div id="his_progress"></div>
 		<?php
 			foreach ($hList as $key => $val) {
-				if ($is_admin || $is_checkbox)  $checkbox='<input type="checkbox" name="chk_wr_id[]" value="' . $value[wr_id] . '" title="' . $value[wr_subject] . '"> ';
+				if ($is_admin || $is_checkbox)  $checkbox='<input type="checkbox" name="chk_wr_id[]" value="' . $value['wr_id'] . '" title="' . $value['wr_subject'] . '"> ';
 		?>
 			<li>
 				<div class="txt_wrap">
@@ -75,13 +75,13 @@ include_once $board_skin_path . "/board_head.skin.php";
 						<li data-aos="fade-up" data-aos-delay="100" data-month="<?php echo $value['wr_1'] ?>">
 							<?php if ($is_admin) { ?>
 							<p class="checkIn noTxt">
-								<input type="checkbox" name="chk_wr_id[]" value="<?php echo $value[wr_id] ?>" id="chk_wr_id_<?php echo $value[wr_id] ?>">
-								<label for="chk_wr_id_<?php echo $value[wr_id] ?>"><?php echo $value['wr_content'] ?></label>
+								<input type="checkbox" name="chk_wr_id[]" value="<?php echo $value['wr_id'] ?>" id="chk_wr_id_<?php echo $value['wr_id'] ?>">
+								<label for="chk_wr_id_<?php echo $value['wr_id'] ?>"><?php echo $value['wr_content'] ?></label>
 							</p>
 							<?php } ?>
 							<?php
 								if ($is_admin) {
-									echo ' <a href="' . G5_BBS_URL . '/write.php?bo_table=' . $bo_table . '&w=u&wr_id=' . $value[wr_id] . '">';
+									echo ' <a href="' . G5_BBS_URL . '/write.php?bo_table=' . $bo_table . '&w=u&wr_id=' . $value['wr_id'] . '">';
 								}
 								echo $value['wr_content'];
 								if ($is_admin) {
