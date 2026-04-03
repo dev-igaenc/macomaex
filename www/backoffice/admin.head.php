@@ -281,12 +281,22 @@ if (!empty($_COOKIE['g5_admin_btn_gnb'])) {
                       <?php echo print_menu1('menu' . $key, 1); ?>
                     </ul>
                   </li>
-            <?php
-                $jj++;
-            }     //end foreach
-				if ($is_admin == 'super') {
-					$audit_current_class = '';
-					if (isset($_SERVER['SCRIPT_NAME']) && basename((string)$_SERVER['SCRIPT_NAME']) === 'audit_log_list.php') {
+	            <?php
+	                $jj++;
+	            }     //end foreach
+					$mail_log_can_view = ($is_admin == 'super' || isset($auth['500100']));
+					if ($mail_log_can_view) {
+						$mail_log_current_class = '';
+						if (isset($_SERVER['SCRIPT_NAME']) && basename((string)$_SERVER['SCRIPT_NAME']) === 'mail_log_list.php') {
+							$mail_log_current_class = ' current-page';
+						}
+	            ?>
+	                  <li class="<?=$mail_log_current_class?>"><a href="<?=G5_ADMIN_URL?>/mail_log_list.php"><i class="fa fa-envelope-o"></i> 메일 발송 이력</a></li>
+	            <?php
+					}
+					if ($is_admin == 'super') {
+						$audit_current_class = '';
+						if (isset($_SERVER['SCRIPT_NAME']) && basename((string)$_SERVER['SCRIPT_NAME']) === 'audit_log_list.php') {
 						$audit_current_class = ' current-page';
 					}
 					$error_current_class = '';
