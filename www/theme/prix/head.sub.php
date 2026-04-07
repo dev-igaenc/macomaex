@@ -12,6 +12,11 @@ if (!isset($g5['title'])) {
 	$g5_head_title = implode(' | ', array_filter(array($g5['title'], $config['cf_title'])));
 }
 
+$gr_subject = '';
+$gr_text = '';
+$bo_subject = '';
+$bo_text = '';
+
 if($board['bo_5'])$gr_subject = $board['bo_5']; // 그룹명
 if($board['bo_6'])$gr_text = $board['bo_6']; // 페이지 설명
 

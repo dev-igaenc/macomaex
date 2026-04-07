@@ -27,7 +27,7 @@ if(_test_pay=='Y') $orderid= "DemoTest_". $timestamp ;
 else $orderid= "M_". $timestamp ;
 $hashData = hash("sha256",(string)$mid.(string)$orderid.(string)$dateVal.(string)$merchantKey);
 $msinfo_row = getUserMembership();
-$my_membership=$msinfo_row[0];
+$my_membership = (is_array($msinfo_row) && isset($msinfo_row[0]) && is_array($msinfo_row[0])) ? $msinfo_row[0] : array();
 /*결제모듈*/
 ?>
 <style>

@@ -21,7 +21,8 @@ class G5_URI {
 		$uri = $_SERVER['REQUEST_URI'];
 		$script = $_SERVER['SCRIPT_NAME'];
 		/* get extension */
-		$ext = end( explode(".",$script) );
+		$script_parts = explode(".", $script);
+		$ext = end($script_parts);
 
 		/* if extension is found in URL, eliminate it */
 		if(strstr($uri,".")) {
@@ -88,8 +89,10 @@ class G5_URI {
 		/* convert normal URL query string to clean URL */
 		$url=parse_url($string_url);
 		$strurl = basename($url['path'],".php");
-		$qstring = parse_str($url['query'],$vars);
-		while(list($k,$v) = each($vars)) $strurl .= "/".$v;
+		$qstring = parse_str($url['query'], $vars);
+		foreach ((array)$vars as $v) {
+			$strurl .= "/".$v;
+		}
 		return $strurl;
    }
 
@@ -159,7 +162,9 @@ class G5_URI {
             $add_param .= $add_param ? '&amp;'.$add_qry : '?'.$add_qry;
         }
 
-        while(list($k,$v) = each($s)) $return_url .= '/'.$v;
+        foreach ((array)$s as $v) {
+            $return_url .= '/'.$v;
+        }
 
 		return $host.$return_url.$add_param.$fragment;
    }
