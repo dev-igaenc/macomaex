@@ -4,11 +4,12 @@ if (!defined('_GNUBOARD_')) exit; // 개별 페이지 접근 불가
 // add_stylesheet('css 구문', 출력순서); 숫자가 작을 수록 먼저 출력됨
 //add_stylesheet('<link rel="stylesheet" href="'.$board_skin_url.'/style.css">', 0);
 
-$wr_addr    = explode("|",$write['wr_8']);
-$zip1   = $wr_addr[0];
-$zip2   = $wr_addr[1];
-$addr1  = $wr_addr[2];
-$addr2  = $wr_addr[3];
+// 주소 분해 기본값 처리
+$wr_addr = array_pad(explode("|", isset($write['wr_8']) ? (string)$write['wr_8'] : ''), 4, '');
+$zip1 = $wr_addr[0];
+$zip2 = $wr_addr[1];
+$addr1 = $wr_addr[2];
+$addr2 = $wr_addr[3];
 ?>
 <style>.cke_sc{display:none !important;}</style>
 
@@ -86,7 +87,7 @@ $addr2  = $wr_addr[3];
 					<tr>
 						<th scope="row"><span class="">체크박스</span></th>
 						<td>
-							<?php $array = explode('|', $write['wr_5']); ?>
+							<?php $array = explode('|', isset($write['wr_5']) ? (string)$write['wr_5'] : ''); ?>
 							<div class="checkBox">
 								<p class="checkIn"><input type="checkbox" id="kinds_01" name="wr_5[]" <?php if(in_array('오피스', $array)) echo 'checked'; ?> value="오피스" /><label for="kinds_01">오피스</label></p>
 								<p class="checkIn"><input type="checkbox" id="kinds_02" name="wr_5[]" <?php if(in_array('판매시설', $array)) echo 'checked'; ?> value="판매시설" /><label for="kinds_02">판매시설</label></p>
@@ -126,9 +127,13 @@ $addr2  = $wr_addr[3];
                     <tr>
 						<th scope="row"><span class="">이메일</span></th>
 						<td>
-							<?php
-							list($wr_email_1,$wr_email_2)=explode('@',$write['wr_email']);
-							?>
+								<?php
+										// 이메일 분해 기본값 처리
+										list($wr_email_1, $wr_email_2) = array_pad(explode('@', isset($write['wr_email']) ? (string)$write['wr_email'] : ''), 2, '');
+										// member 이메일 기본값 처리
+										$member_email = isset($member['mb_email']) ? (string)$member['mb_email'] : '';
+										list($mb_email_1, $mb_email_2) = array_pad(explode('@', $member_email), 2, '');
+										?>
 							<div class="three email">
 								<input type="text" name="wr_email[]" id="wr_email_1" value="<?=empty($wr_email_1) ? $mb_email_1 : $wr_email_1?>" placeholder="" required class="required"/>
 								<span class="type c">@</span>
@@ -159,36 +164,73 @@ $addr2  = $wr_addr[3];
 						<th scope="row"><span class="">연락처</span></th>
 						<td>
 							<?php
-							list($wr_10_1,$wr_10_2,$wr_10_3)=explode('-',$write['wr_10']);
+							// 연락처 숫자 분해
+							$split_phone = function($phone) {
+								$phone = trim((string)$phone);
+								if ($phone === '') {
+									return array('', '', '');
+								}
+
+								if (strpos($phone, '-') !== false) {
+									return array_pad(explode('-', $phone), 3, '');
+								}
+
+								$digits = preg_replace('/[^0-9]/', '', $phone);
+								$len = strlen($digits);
+
+								if ($len === 11) {
+									return array(substr($digits, 0, 3), substr($digits, 3, 4), substr($digits, 7, 4));
+								}
+								if ($len === 10) {
+									if (substr($digits, 0, 2) === '02') {
+										return array(substr($digits, 0, 2), substr($digits, 2, 4), substr($digits, 6, 4));
+									}
+									return array(substr($digits, 0, 3), substr($digits, 3, 3), substr($digits, 6, 4));
+								}
+								if ($len === 9 && substr($digits, 0, 2) === '02') {
+									return array(substr($digits, 0, 2), substr($digits, 2, 3), substr($digits, 5, 4));
+								}
+
+								return array($digits, '', '');
+							};
+
+							// 게시글 연락처 기본값 처리
+							list($wr_10_1, $wr_10_2, $wr_10_3) = $split_phone(isset($write['wr_10']) ? $write['wr_10'] : '');
+							// member 연락처 기본값 처리
+							list($mb_hp_1, $mb_hp_2, $mb_hp_3) = $split_phone(isset($member['mb_hp']) ? $member['mb_hp'] : '');
+							// 화면 표시 연락처 우선값
+							$phone_1 = ($wr_10_1 !== '') ? $wr_10_1 : $mb_hp_1;
+							$phone_2 = ($wr_10_2 !== '') ? $wr_10_2 : $mb_hp_2;
+							$phone_3 = ($wr_10_3 !== '') ? $wr_10_3 : $mb_hp_3;
 							?>
 							<div class="three phone">
 								<select name="phone_change" id="phone_change" required>
-									<option value="010" <?=get_selected("010",$wr_10_1)?>>010</option>
-									<option value="02" <?=get_selected("02",$wr_10_1)?>>02</option>
-									<option value="031" <?=get_selected("031",$wr_10_1)?>>031</option>
-									<option value="032" <?=get_selected("032",$wr_10_1)?>>032</option>
-									<option value="033" <?=get_selected("033",$wr_10_1)?>>033</option>
-									<option value="041" <?=get_selected("041",$wr_10_1)?>>041</option>
-									<option value="042" <?=get_selected("042",$wr_10_1)?>>042</option>
-									<option value="043" <?=get_selected("043",$wr_10_1)?>>043</option>
-									<option value="051" <?=get_selected("051",$wr_10_1)?>>051</option>
-									<option value="052" <?=get_selected("052",$wr_10_1)?>>052</option>
-									<option value="053" <?=get_selected("053",$wr_10_1)?>>053</option>
-									<option value="054" <?=get_selected("054",$wr_10_1)?>>054</option>
-									<option value="055" <?=get_selected("055",$wr_10_1)?>>055</option>
-									<option value="061" <?=get_selected("061",$wr_10_1)?>>061</option>
-									<option value="062" <?=get_selected("062",$wr_10_1)?>>062</option>
-									<option value="063" <?=get_selected("063",$wr_10_1)?>>063</option>
-									<option value="064" <?=get_selected("064",$wr_10_1)?>>064</option>
-									<option value="070" <?=get_selected("070",$wr_10_1)?>>070</option>
-									<option value="0505" <?=get_selected("0505",$wr_10_1)?>>0505</option>
-									<option value="" <?=get_selected("",$wr_10_1)?>>직접입력</option>
+									<option value="010" <?=get_selected("010",$phone_1)?>>010</option>
+									<option value="02" <?=get_selected("02",$phone_1)?>>02</option>
+									<option value="031" <?=get_selected("031",$phone_1)?>>031</option>
+									<option value="032" <?=get_selected("032",$phone_1)?>>032</option>
+									<option value="033" <?=get_selected("033",$phone_1)?>>033</option>
+									<option value="041" <?=get_selected("041",$phone_1)?>>041</option>
+									<option value="042" <?=get_selected("042",$phone_1)?>>042</option>
+									<option value="043" <?=get_selected("043",$phone_1)?>>043</option>
+									<option value="051" <?=get_selected("051",$phone_1)?>>051</option>
+									<option value="052" <?=get_selected("052",$phone_1)?>>052</option>
+									<option value="053" <?=get_selected("053",$phone_1)?>>053</option>
+									<option value="054" <?=get_selected("054",$phone_1)?>>054</option>
+									<option value="055" <?=get_selected("055",$phone_1)?>>055</option>
+									<option value="061" <?=get_selected("061",$phone_1)?>>061</option>
+									<option value="062" <?=get_selected("062",$phone_1)?>>062</option>
+									<option value="063" <?=get_selected("063",$phone_1)?>>063</option>
+									<option value="064" <?=get_selected("064",$phone_1)?>>064</option>
+									<option value="070" <?=get_selected("070",$phone_1)?>>070</option>
+									<option value="0505" <?=get_selected("0505",$phone_1)?>>0505</option>
+									<option value="" <?=get_selected("",$phone_1)?>>직접입력</option>
 								</select>
-								<input type="text" name="w_10[]" id="wr_10_1" value="<?=empty($wr_10_1) ? $mb_hp_1 : $wr_10_1?>" placeholder="" class="next" oninput="this.value = this.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');" maxlength="4"/>
+								<input type="text" name="w_10[]" id="wr_10_1" value="<?=$phone_1?>" placeholder="" class="next" oninput="this.value = this.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');" maxlength="4"/>
 								<span class="type c">-</span>
-								<input type="text" name="w_10[]" id="wr_10_2" value="<?=empty($wr_10_2) ? $mb_hp_2 : $wr_10_2?>" placeholder="" required class="next required" oninput="this.value = this.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');" maxlength="4" />
+								<input type="text" name="w_10[]" id="wr_10_2" value="<?=$phone_2?>" placeholder="" required class="next required" oninput="this.value = this.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');" maxlength="4" />
 								<span class="type c">-</span>
-								<input type="text" name="w_10[]" id="wr_10_3" value="<?=empty($wr_10_3) ? $mb_hp_3 : $wr_10_3?>" placeholder="" required class="next required" oninput="this.value = this.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');" maxlength="4" />
+								<input type="text" name="w_10[]" id="wr_10_3" value="<?=$phone_3?>" placeholder="" required class="next required" oninput="this.value = this.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');" maxlength="4" />
 							</div>
 						</td>
 					</tr>
