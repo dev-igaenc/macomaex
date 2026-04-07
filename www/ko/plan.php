@@ -6,15 +6,6 @@ $board['bo_9']="1"; // 2뎁스
 
 include_once(G5_THEME_PATH.'/head.php');
 $membership_list=get_membership();
-$credit_membership_list = array();
-foreach($membership_list as $tmp_membership){
-	if(strpos((string)$tmp_membership['title_en'], 'CREDIT_') === 0){
-		$credit_membership_list[] = $tmp_membership;
-	}
-}
-if(count($credit_membership_list) > 0){
-	$membership_list = $credit_membership_list;
-}
 
 /*결제모듈*/
 require_once('libs/INIStdPayUtil.php');
@@ -68,8 +59,10 @@ $my_membership = (is_array($msinfo_row) && isset($msinfo_row[0]) && is_array($ms
 				</div>
 			</div>
 		</li>
-	<?foreach($membership_list as $value){
-		 $value['pay_type']=str_replace("[","<span>",$value['pay_type']);
+		<?foreach($membership_list as $value){
+			 // FREE 플랜은 상단 고정 카드로 표시
+			 if(strtoupper(trim((string)$value['title_en'])) === 'FREE') continue;
+			 $value['pay_type']=str_replace("[","<span>",$value['pay_type']);
 		 $value['pay_type']=str_replace("]","</span>",$value['pay_type']);
 		 $value['desc']="<li>".str_replace("\n","</li><li>",$value['desc'])."</li>";
 		 $value['desc']=str_replace("<li>[","<li class='under'><span>",$value['desc']);
@@ -85,7 +78,8 @@ $my_membership = (is_array($msinfo_row) && isset($msinfo_row[0]) && is_array($ms
 		 if($credit_cnt === 220) $credit_bonus = 20;
 		 else if($credit_cnt === 600) $credit_bonus = 100;
 		 $is_credit_plan = ($credit_cnt > 0);
-		 $display_pay_type = $is_credit_plan ? '1회 결제' : $value['pay_type'];
+			 $display_pay_type = $is_credit_plan ? '1회 결제' : $value['pay_type'];
+			 $pay_price = is_numeric($value['price_sale']) ? (float)$value['price_sale'] * 1.1 : 0;
 		 $plan_desc_items = array();
 		 if($credit_cnt === 100){
 			$plan_desc_items = array(
@@ -148,7 +142,7 @@ $my_membership = (is_array($msinfo_row) && isset($msinfo_row[0]) && is_array($ms
 							<input type="hidden" name="authtype" value="D">
 							<input type="hidden" name="mid" value="<?php echo $mid ?>">
 							<input type="hidden" name="orderid" value="<?php echo $orderid ?>">
-							<input type="hidden" name="price" value="<?php echo $value['price_sale']*1.1?>">
+								<input type="hidden" name="price" value="<?=$pay_price?>">
 							<input type="hidden" name="timestamp" value="<?php echo $dateVal ?>">
 							<input type="hidden" name="hashdata" value="<?php echo $hashData ?>">
 							<input type="hidden" name="goodname" value="<?=$value['title']?>">
