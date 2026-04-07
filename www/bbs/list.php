@@ -211,8 +211,10 @@ if ($sst) {
 if ($is_search_bbs) {
     $sql = " select distinct wr_parent from {$write_table} where {$sql_search} {$add_sql} {$sql_order} limit {$from_record}, $page_rows ";
 } else {
+    $wr_6 = isset($wr_6) ? trim((string)$wr_6) : '';
+    $wr_7 = isset($wr_7) ? trim((string)$wr_7) : '';
     $sql = " select * from {$write_table} where wr_is_comment = 0 {$add_sql}";
-	if($wr_6) $sqadd_sql.= " and wr_6 like ('%{$wr_6}%')";
+    if($wr_6) $sql .= " and wr_6 like ('%{$wr_6}%')";
     if($wr_7) $sql.= " and wr_7 like ('%{$wr_7}%')";
     if(!empty($notice_array))
         $sql .= " and wr_id not in (".implode(', ', $notice_array).") ";
