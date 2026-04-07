@@ -51,6 +51,7 @@ if ($sop != 'and' && $sop != 'or')
 // 검색 보조 파라미터 기본값
 $wr_6 = isset($wr_6) ? trim((string)$wr_6) : '';
 $wr_7 = isset($wr_7) ? trim((string)$wr_7) : '';
+$add_sql = '';
 
 // 분류 선택 또는 검색어가 있다면
 $stx = trim($stx);
