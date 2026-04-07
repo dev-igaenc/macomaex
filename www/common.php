@@ -130,7 +130,22 @@ $_REQUEST = array_map_deep(G5_ESCAPE_FUNCTION,  $_REQUEST);
 // $member 에 값을 직접 넘길 수 있음
 $config = array();
 $member = array('mb_id'=>'', 'mb_level'=> 1, 'mb_name'=> '', 'mb_point'=> 0, 'mb_certify'=>'', 'mb_email'=>'', 'mb_open'=>'', 'mb_homepage'=>'', 'mb_tel'=>'', 'mb_hp'=>'', 'mb_zip1'=>'', 'mb_zip2'=>'', 'mb_addr1'=>'', 'mb_addr2'=>'', 'mb_addr3'=>'', 'mb_addr_jibeon'=>'', 'mb_signature'=>'', 'mb_profile'=>'');
-$board  = array('bo_table'=>'', 'bo_skin'=>'', 'bo_mobile_skin'=>'', 'bo_upload_count' => 0, 'bo_use_dhtml_editor'=>'', 'bo_subject'=>'', 'bo_image_width'=>0);
+$board  = array(
+    'bo_table'=>'',
+    'bo_skin'=>'',
+    'bo_mobile_skin'=>'',
+    'bo_upload_count' => 0,
+    'bo_use_dhtml_editor'=>'',
+    'bo_subject'=>'',
+    'bo_image_width'=>0,
+    'bo_4'=>'',
+    'bo_5'=>'',
+    'bo_6'=>'',
+    'bo_7'=>'',
+    'bo_8'=>'',
+    'bo_9'=>'',
+    'bo_10'=>''
+);
 $group  = array('gr_device'=>'', 'gr_subject'=>'');
 $g5     = array();
 if( version_compare( phpversion(), '8.0.0', '>=' ) ) { $g5 = array('title'=>''); }
@@ -141,6 +156,7 @@ include_once(G5_LIB_PATH.'/hook.lib.php');    // hook 함수 파일
 include_once(G5_LIB_PATH.'/get_data.lib.php');    // 데이타 가져오는 함수 모음
 include_once(G5_LIB_PATH.'/cache.lib.php');     // cache 함수 및 object cache class 모음
 include_once(G5_LIB_PATH.'/uri.lib.php');    // URL 함수 파일
+include_once(G5_LIB_PATH.'/php81_compat.lib.php'); // PHP 8.1 호환용 레거시 헬퍼
 
 $g5_object = new G5_object_cache();
 

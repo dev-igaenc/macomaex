@@ -53,6 +53,11 @@ if (!function_exists('macomaex_load_env')) {
 
 macomaex_load_env(dirname(dirname(dirname(dirname(__FILE__)))) . '/.env');
 
+if (!defined('MACOMAEX_PHP81_COMPAT_ALLOW')) {
+	define('MACOMAEX_PHP81_COMPAT_ALLOW', true);
+}
+include_once(dirname(dirname(dirname(__FILE__))) . '/lib/php81_compat.lib.php');
+
 
 session_start();
 
