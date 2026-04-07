@@ -61,3 +61,13 @@ Thumbs.db
 # Backup files
 *.bak
 *.swp
+
+# Local Machine Files (repo root only)
+/.bash_history
+/.bash_profile
+/.ftpaccess
+/.ftpaccess2
+/.htaccess
+/.lastlogin
+/.logincount
+/.upload_guard
