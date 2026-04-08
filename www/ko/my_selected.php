@@ -40,7 +40,7 @@ if($member['mb_id']){
 }
 
 
-if($member['mb_id'] && $matcing['receive_approval']=="Y") $view_chk="true";
+$view_chk = "false";
 //맴버쉽 정보
 $today = date("Y-m-d");
 $msinfo=sql_fetch("select * from g5_membership_status where uid='{$member['mb_id']}' and date_begin <= '{$today }' and date_end >='{$today }'" );
@@ -72,10 +72,12 @@ $favorite=getFavorite($member['mb_id']);
 <div class="matching-list">
 <?for ($i=0; $row=sql_fetch_array($result); $i++) {
 		$match=sql_fetch("select * from g5_matching where del != 'D' and KEDCD='{$row['KEDCD']}' and request_id='{$member['mb_id']}'");
+		if(!is_array($match)) $match = array();
 		if($match['receive_approval']=="Y") $receve_info=getUserInfo($match['receive_id']);
 		if(!$match['receive_approval']) {
-			$match=sql_fetch("SELECT * from g5_matching where del != 'D' and  receive_id='{$member['mb_id']}' and KEDCD='{$kedcd}'");//받은매칭요청
-			if($match['receive_approval']=="Y") $receve_info=getUserInfo($matcing['request_id']);
+			$match=sql_fetch("SELECT * from g5_matching where del != 'D' and  receive_id='{$member['mb_id']}' and KEDCD='{$row['KEDCD']}'");//받은매칭요청
+			if(!is_array($match)) $match = array();
+			if($match['receive_approval']=="Y") $receve_info=getUserInfo($match['request_id']);
 		}
 
 		$f_chk=in_array($row['KEDCD'],$favorite);
@@ -145,7 +147,7 @@ $favorite=getFavorite($member['mb_id']);
                     </tr>
                     <tr>
                         <th>받는 사람</th>
-                        <td><?=$com['ENP_NM']?> 신규 거래처 담당자</td>
+	                        <td>신규 거래처 담당자</td>
                     </tr>
                 </tbody>
             </table>
