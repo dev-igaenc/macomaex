@@ -345,12 +345,36 @@ if ($w == '') {
     // 회원님께 메일 발송
     if ($config['cf_email_mb_member']) {
         $subject = '['.$config['cf_title'].'] 회원가입을 축하드립니다.';
+        $member_mail_log_context = array(
+            'mail_type' => 'signup_member',
+            'related_id' => $mb_id
+        );
 
         // 어떠한 회원정보도 포함되지 않은 일회용 난수를 생성하여 인증에 사용
         if ($config['cf_use_email_certify']) {
             $mb_md5 = md5(pack('V*', rand(), rand(), rand(), rand()));
             sql_query(" update {$g5['member_table']} set mb_email_certify2 = '$mb_md5' where mb_id = '$mb_id' ");
             $certify_href = G5_BBS_URL.'/email_certify.php?mb_id='.$mb_id.'&amp;mb_md5='.$mb_md5;
+        }
+
+        if (function_exists('mailer_prepare_tracking_context')) {
+            $member_mail_log_context = mailer_prepare_tracking_context(1, $member_mail_log_context);
+        }
+
+        $member_track_token = isset($member_mail_log_context['track_token']) ? trim((string) $member_mail_log_context['track_token']) : '';
+        $signup_home_url = G5_URL;
+        if ($member_track_token !== '' && function_exists('mailer_tracking_click_url')) {
+            $signup_home_url = mailer_tracking_click_url($member_track_token, G5_URL);
+        }
+
+        $signup_action_url = G5_URL;
+        if ($config['cf_use_email_certify']) {
+            $signup_action_target = str_replace('&amp;', '&', (string) $certify_href);
+            $signup_action_url = $member_track_token !== '' && function_exists('mailer_tracking_click_url')
+                ? mailer_tracking_click_url($member_track_token, $signup_action_target)
+                : $signup_action_target;
+        } else if ($member_track_token !== '' && function_exists('mailer_tracking_click_url')) {
+            $signup_action_url = mailer_tracking_click_url($member_track_token, G5_URL);
         }
 
         ob_start();
@@ -361,10 +385,7 @@ if ($w == '') {
         $content = run_replace('register_form_update_mail_mb_content', $content, $mb_id);
 
         if ($mb_email && filter_var($mb_email, FILTER_VALIDATE_EMAIL)) {
-            mailer($config['cf_admin_email_name'], $config['cf_admin_email'], $mb_email, $subject, $content, 1, "", "", "", array(
-                'mail_type' => 'signup_member',
-                'related_id' => $mb_id
-            ));
+            mailer($config['cf_admin_email_name'], $config['cf_admin_email'], $mb_email, $subject, $content, 1, "", "", "", $member_mail_log_context);
 
             run_event('register_form_update_send_mb_mail', $config['cf_admin_email_name'], $config['cf_admin_email'], $mb_email, $subject, $content);
         } else {

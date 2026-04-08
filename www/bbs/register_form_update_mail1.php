@@ -12,13 +12,18 @@ if (!defined('_GNUBOARD_')) exit; // 개별 페이지 접근 불가
 
 <body>
 
+<?php
+$signup_home_url = isset($signup_home_url) && $signup_home_url ? $signup_home_url : G5_URL;
+$signup_action_url = isset($signup_action_url) && $signup_action_url ? $signup_action_url : ($config['cf_use_email_certify'] ? $certify_href : G5_URL);
+?>
+
 <div style="margin:30px auto;width:600px;border:10px solid #f7f7f7">
     <div style="border:1px solid #dedede">
         <h1 style="padding:30px 30px 0;background:#f7f7f7;color:#555;font-size:1.4em">
             회원가입을 축하합니다.
         </h1>
         <span style="display:block;padding:10px 30px 30px;background:#f7f7f7;text-align:right">
-            <a href="<?php echo G5_URL ?>" target="_blank"><?php echo $config['cf_title'] ?></a>
+            <a href="<?php echo $signup_home_url ?>" target="_blank"><?php echo $config['cf_title'] ?></a>
         </span>
         <p style="margin:20px 0 0;padding:30px 30px 50px;min-height:200px;height:auto !important;height:200px;border-bottom:1px solid #eee">
             <b><?php echo $mb_name ?></b> 님의 회원가입을 진심으로 축하합니다.<br>
@@ -28,9 +33,9 @@ if (!defined('_GNUBOARD_')) exit; // 개별 페이지 접근 불가
         </p>
 
         <?php if ($config['cf_use_email_certify']) { ?>
-        <a href="<?php echo $certify_href ?>" target="_blank" style="display:block;padding:30px 0;background:#484848;color:#fff;text-decoration:none;text-align:center">메일인증</a>
+        <a href="<?php echo $signup_action_url ?>" target="_blank" style="display:block;padding:30px 0;background:#484848;color:#fff;text-decoration:none;text-align:center">메일인증</a>
         <?php } else { ?>
-        <a href="<?php echo G5_URL ?>" target="_blank" style="display:block;padding:30px 0;background:#484848;color:#fff;text-decoration:none;text-align:center">사이트바로가기</a>
+        <a href="<?php echo $signup_action_url ?>" target="_blank" style="display:block;padding:30px 0;background:#484848;color:#fff;text-decoration:none;text-align:center">사이트바로가기</a>
         <?php } ?>
     </div>
 </div>

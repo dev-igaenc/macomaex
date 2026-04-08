@@ -124,6 +124,11 @@ if (!function_exists('send_matching_accept_mail')) {
             'related_id' => (string) $matching_no
         );
 
+        if (function_exists('mailer_prepare_tracking_context')) {
+            $request_log_context = mailer_prepare_tracking_context(1, $request_log_context);
+            $receive_log_context = mailer_prepare_tracking_context(1, $receive_log_context);
+        }
+
         $request_member = sql_fetch(" select * from {$g5['member_table']} where mb_id = '".sql_real_escape_string($matching['request_id'])."' ");
         $receive_member = sql_fetch(" select * from {$g5['member_table']} where mb_id = '".sql_real_escape_string($matching['receive_id'])."' ");
 
@@ -158,8 +163,24 @@ if (!function_exists('send_matching_accept_mail')) {
         $receiver_contact_phone = isset($receive_member['mb_8']) ? trim((string)$receive_member['mb_8']) : '';
         $matching_request_message = isset($matching['contents']) ? trim((string)$matching['contents']) : '';
         $matching_date = isset($matching['receive_approval_date']) && $matching['receive_approval_date'] ? $matching['receive_approval_date'] : G5_TIME_YMDHIS;
+        $request_track_token = isset($request_log_context['track_token']) ? trim((string) $request_log_context['track_token']) : '';
+        $receive_track_token = isset($receive_log_context['track_token']) ? trim((string) $receive_log_context['track_token']) : '';
+        $request_site_url = G5_URL;
+        $receive_site_url = G5_URL;
         $request_matching_url = G5_URL.'/ko/my_matching_s.php';
         $receive_matching_url = G5_URL.'/ko/my_matching_r.php';
+
+        if (function_exists('mailer_tracking_click_url')) {
+            if ($request_track_token !== '') {
+                $request_site_url = mailer_tracking_click_url($request_track_token, G5_URL);
+                $request_matching_url = mailer_tracking_click_url($request_track_token, $request_matching_url);
+            }
+
+            if ($receive_track_token !== '') {
+                $receive_site_url = mailer_tracking_click_url($receive_track_token, G5_URL);
+                $receive_matching_url = mailer_tracking_click_url($receive_track_token, $receive_matching_url);
+            }
+        }
 
         $subject_target = $receive_company_name !== '' ? $receive_company_name : '매칭 요청';
         $request_subject = '['.$config['cf_title'].'] '.$subject_target.' 매칭 요청이 수락되었습니다.';
