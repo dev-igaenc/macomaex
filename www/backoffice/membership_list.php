@@ -63,11 +63,11 @@ $result = sql_query($sql);
         <td class="td_id"><?php echo $i+1; ?></td>
         <td class="td_center"><?php echo $row['title']; ?><br><?php echo $row['title_en']; ?></td>
 		<td class="td_center"><?php echo $row['month']; ?> 달</td>
-		<td class="td_center">
-			<?if($row['price_origin']>-1){?><p class="text-secondary <?if($row['sale']){?>throu<?}?>"><?php echo number_format($row['price_origin']); ?></p><?}?>
-			<?if($row['sale']){?><p class="text-info"><?php echo number_format($row['sale']); ?>%</p><?}?>
-			<?if($row['price_sale']){?><p class="text-bold"><?php echo number_format($row['price_sale']); ?></p><?}?>
-		</td>
+			<td class="td_center">
+				<?if($row['price_origin']>-1){?><p class="text-secondary <?if($row['sale']){?>throu<?}?>"><?php echo is_numeric($row['price_origin']) ? number_format((float)$row['price_origin']) : $row['price_origin']; ?></p><?}?>
+				<?if(isset($row['sale']) && is_numeric($row['sale'])){?><p class="text-info"><?php echo number_format((float)$row['sale']); ?>%</p><?}?>
+				<?if($row['price_sale']){?><p class="text-bold"><?php echo is_numeric($row['price_sale']) ? number_format((float)$row['price_sale']) : $row['price_sale']; ?></p><?}?>
+			</td>
 		<td class="td_center"><?php echo $row['vat']; ?></td>
 		<td class="td_center"><?php echo $row['pay_type']; ?></td>
 		<td class="td_center"><?php if($row['open_cnt']=="-") echo "무제한"; else  echo $row['open_cnt'];?></td>

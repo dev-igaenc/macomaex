@@ -63,9 +63,9 @@ if($msinfo['coupon']) $coupon=getCouponInfo($msinfo['coupon']);
 						<p class="price_sale"><?=number_format($remain_credit)?></p>
 					<?}else{?>
 						<?=$mship[$membership_info['title_en']]['title']?><span><?=$mship[$membership_info['title_en']]['title_en']?></span> <br>
-						<?if($mship[$membership_info['title_en']]['price_origin']>-1){?><p class="price_origin"><?=number_format($mship[$membership_info['title_en']]['price_origin']);?></p><?}?>
-						<?if($mship[$membership_info['title_en']]['sale']){?><p class="sale"><?=number_format($mship[$membership_info['title_en']]['sale']);?>%</p><?}?>
-						<?if($mship[$membership_info['title_en']]['price_sale']){?><p class="price_sale"><?=number_format($mship[$membership_info['title_en']]['price_sale']);?></p><?}?>
+							<?if($mship[$membership_info['title_en']]['price_origin']>-1){?><p class="price_origin"><?=(is_numeric($mship[$membership_info['title_en']]['price_origin']) ? number_format((float)$mship[$membership_info['title_en']]['price_origin']) : $mship[$membership_info['title_en']]['price_origin']);?></p><?}?>
+							<?if(isset($mship[$membership_info['title_en']]['sale']) && is_numeric($mship[$membership_info['title_en']]['sale'])){?><p class="sale"><?=number_format((float)$mship[$membership_info['title_en']]['sale']);?>%</p><?}?>
+							<?if($mship[$membership_info['title_en']]['price_sale']){?><p class="price_sale"><?=(is_numeric($mship[$membership_info['title_en']]['price_sale']) ? number_format((float)$mship[$membership_info['title_en']]['price_sale']) : $mship[$membership_info['title_en']]['price_sale']);?></p><?}?>
 					<?}?>
                 </h4>
                 <ul class="venefit">

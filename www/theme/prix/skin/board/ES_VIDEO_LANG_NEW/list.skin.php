@@ -48,8 +48,7 @@ foreach($cate as $value){
 				if(strpos($string,"&")){
 					$string = substr($string,0,strpos($string,"&"));
 				}
-				if(strcmp()){}
-				//echo $string;
+					//echo $string;
 				$string = str_replace('youtu.be/','youtube.com/embed/',$string);
 				$string_url = str_replace('/watch?v=','/embed/',$string);
 				$string_url2 = str_replace('/shorts/','/embed/',$string_url);

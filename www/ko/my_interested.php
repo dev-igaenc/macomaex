@@ -16,7 +16,7 @@ login_chk();
 include_once(G5_THEME_PATH.'/head.php');
 
 if($member['mb_id']){
-	if($w==d && $idx){
+		if($w=="d" && $idx){
 		sql_query("delete from g5_favorite where ms_id='{$idx}' and mb_id='{$member['mb_id']}'");
 	}
 	$query="SELECT *, (select k_code_name from kssc where k_code=B.BZC_CD) as BZC_NAME  from g5_favorite A left join company B ON A.KEDCD=B.KEDCD where A.mb_id='{$member['mb_id']}' ";
@@ -25,7 +25,6 @@ if($member['mb_id']){
 }
 
 $view_chk="false";
-if($member['mb_id'] && $matcing['receive_approval']=="Y") $view_chk="true";
 //맴버쉽 정보
 $today = date("Y-m-d");
 $msinfo=sql_fetch("select * from g5_membership_status where uid='{$member['mb_id']}' and date_begin <= '{$today }' and date_end >='{$today }'" );
@@ -63,12 +62,16 @@ $total_cnt=mysqli_num_rows($result);
 <p class="matching-length"><span class="point"><?=$total_cnt?>개</span>의 관심 기업</p>
 <div class="matching-list">
 <?for ($i=0; $row=sql_fetch_array($result); $i++) {
-	$match=sql_fetch("select * from g5_matching where del != 'D' and KEDCD='{$row['KEDCD']}' and request_id='{$member['mb_id']}'");
-	if($match['receive_approval']=="Y") $receve_info=getUserInfo($match['receive_id']);
-	if(!$match['receive_approval']) {
-		$match=sql_fetch("SELECT * from g5_matching where del != 'D' and  receive_id='{$member['mb_id']}' and KEDCD='{$row['KEDCD']}'");//받은매칭요청
-		if($match['receive_approval']=="Y") $receve_info=getUserInfo($match['request_id']);
-	}
+		$match=sql_fetch("select * from g5_matching where del != 'D' and KEDCD='{$row['KEDCD']}' and request_id='{$member['mb_id']}'");
+		if(!is_array($match)) $match = array('no'=>'', 'receive_approval'=>'');
+		$receve_info = array('mb_6'=>'', 'mb_7'=>'', 'mb_8'=>'');
+		if($match['receive_approval']=="Y") $receve_info=getUserInfo($match['receive_id']);
+		if(!$match['receive_approval']) {
+			$match=sql_fetch("SELECT * from g5_matching where del != 'D' and  receive_id='{$member['mb_id']}' and KEDCD='{$row['KEDCD']}'");//받은매칭요청
+			if(!is_array($match)) $match = array('no'=>'', 'receive_approval'=>'');
+			if($match['receive_approval']=="Y") $receve_info=getUserInfo($match['request_id']);
+		}
+		if(!is_array($receve_info)) $receve_info = array('mb_6'=>'', 'mb_7'=>'', 'mb_8'=>'');
 
 	?>
 	<div class="matching-item" kedcd="<?=$row['KEDCD']?>">
@@ -137,7 +140,7 @@ $total_cnt=mysqli_num_rows($result);
                     </tr>
                     <tr>
                         <th>받는 사람</th>
-                        <td id="recv"><?=$com['ENP_NM']?> 신규 거래처 담당자</td>
+                        <td id="recv">신규 거래처 담당자</td>
                     </tr>
                 </tbody>
             </table>
