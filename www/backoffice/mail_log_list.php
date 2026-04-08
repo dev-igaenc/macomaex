@@ -4,12 +4,14 @@ include_once('./_common.php');
 include_once(G5_LIB_PATH.'/mailer.lib.php');
 
 $mail_log_table = function_exists('mailer_log_table_name') ? mailer_log_table_name() : (G5_TABLE_PREFIX . 'mail_log');
+$mail_open_tracking_ready = function_exists('mailer_log_ensure_open_tracking_schema') ? mailer_log_ensure_open_tracking_schema() : false;
+$mail_click_tracking_ready = function_exists('mailer_log_click_tracking_ready') ? mailer_log_click_tracking_ready() : false;
 
 $g5['title'] = '메일 발송 이력';
 include_once('./admin.head.php');
 
 if (!sql_query(" DESC `{$mail_log_table}` ", false)) {
-    echo '<div class="local_desc01 local_desc"><p>메일 로그 테이블이 없어 조회할 수 없습니다. `g5_mail_log` 생성 SQL을 먼저 적용해 주세요.</p></div>';
+    echo '<div class="local_desc01 local_desc"><p>메일 로그 테이블이 없습니다. `g5_mail_log` SQL을 먼저 적용해 주세요.</p></div>';
     include_once('./admin.tail.php');
     exit;
 }
@@ -23,9 +25,8 @@ $allowed_sfl = array(
 );
 
 $mail_type_labels = array(
-    'signup_member' => '회원가입 안내',
-    'signup_admin' => '회원가입 관리자 알림',
-    'signup_certify' => '회원가입 인증',
+    'signup_member' => '회원가입 완료',
+    'password_lost' => '비밀번호 찾기',
     'matching_accept_requester' => '매칭 수락 안내(요청자)',
     'matching_accept_receiver' => '매칭 수락 안내(수락자)',
     'general' => '기타'
@@ -79,7 +80,7 @@ $summary = sql_fetch(" select
 
 $result = sql_query(" select *
                       {$sql_common}
-                      order by id desc
+                      order by created_at desc, id desc
                       limit {$from_record}, {$rows} ");
 
 $qarr = array(
@@ -124,7 +125,7 @@ function mail_log_build_qstr($params, $overrides = array())
 
 <h2><?php echo $g5['title']; ?></h2>
 <div class="local_desc01 local_desc">
-    <p>회원가입, 매칭 수락 등 메일 발송 결과를 확인할 수 있습니다.</p>
+    <p>메일 발송 내역을 확인할 수 있습니다.</p>
 </div>
 
 <form method="get" class="local_sch01 local_sch">
@@ -175,6 +176,14 @@ function mail_log_build_qstr($params, $overrides = array())
             <th scope="col">수신자</th>
             <th scope="col">제목</th>
             <th scope="col">상태</th>
+            <?php if ($mail_open_tracking_ready) { ?>
+            <th scope="col">오픈 시간</th>
+            <th scope="col">오픈수</th>
+            <?php } ?>
+            <?php if ($mail_click_tracking_ready) { ?>
+            <th scope="col">클릭 시간</th>
+            <th scope="col">클릭수</th>
+            <?php } ?>
             <th scope="col">에러</th>
         </tr>
         </thead>
@@ -184,7 +193,7 @@ function mail_log_build_qstr($params, $overrides = array())
         for ($i = 0; $row = sql_fetch_array($result); $i++) {
             $bg = 'bg' . ($i % 2);
             $status_class = strtolower($row['status']) === 'success' ? 'success' : 'fail';
-            $type_label = isset($mail_type_labels[$row['mail_type']]) ? $mail_type_labels[$row['mail_type']] : $row['mail_type'];
+            $type_label = isset($mail_type_labels[$row['mail_type']]) ? $mail_type_labels[$row['mail_type']] : $mail_type_labels['general'];
             $tr_class = trim($bg . ' ' . ($status_class === 'fail' ? 'mail-log-row-fail' : ''));
             ?>
             <tr class="<?php echo $tr_class; ?>">
@@ -195,12 +204,27 @@ function mail_log_build_qstr($params, $overrides = array())
                 <td class="td_left mail-log-email"><?php echo htmlspecialchars2($row['recipient_email']); ?></td>
                 <td class="td_left mail-log-subject"><?php echo htmlspecialchars2($row['subject']); ?></td>
                 <td class="td_center"><span class="mail-log-badge <?php echo $status_class; ?>"><?php echo htmlspecialchars2($row['status']); ?></span></td>
+                <?php if ($mail_open_tracking_ready) { ?>
+                <td class="td_datetime"><?php echo !empty($row['first_opened_at']) ? htmlspecialchars2($row['first_opened_at']) : '<span class="txt_gray">-</span>'; ?></td>
+                <td class="td_num"><?php echo isset($row['open_count']) ? number_format((int) $row['open_count']) : 0; ?></td>
+                <?php } ?>
+                <?php if ($mail_click_tracking_ready) { ?>
+                <td class="td_datetime"><?php echo !empty($row['first_clicked_at']) ? htmlspecialchars2($row['first_clicked_at']) : '<span class="txt_gray">-</span>'; ?></td>
+                <td class="td_num"><?php echo isset($row['click_count']) ? number_format((int) $row['click_count']) : 0; ?></td>
+                <?php } ?>
                 <td class="td_left mail-log-error"><?php echo $row['error_message'] !== '' ? nl2br(htmlspecialchars($row['error_message'], ENT_QUOTES, 'UTF-8')) : '<span class="txt_gray">-</span>'; ?></td>
             </tr>
         <?php
         }
         if ($i == 0) {
-            echo '<tr><td colspan="8" class="empty_table">메일 발송 이력이 없습니다.</td></tr>';
+            $empty_colspan = 8;
+            if ($mail_open_tracking_ready) {
+                $empty_colspan += 2;
+            }
+            if ($mail_click_tracking_ready) {
+                $empty_colspan += 2;
+            }
+            echo '<tr><td colspan="' . $empty_colspan . '" class="empty_table">메일 발송 이력이 없습니다.</td></tr>';
         }
         ?>
         </tbody>
