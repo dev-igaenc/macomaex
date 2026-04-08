@@ -41,6 +41,23 @@ sql_query($sql);
 
 // 인증 링크 생성
 $href = G5_BBS_URL.'/password_lost_certify.php?mb_no='.$mb['mb_no'].'&amp;mb_nonce='.$mb_nonce;
+$mail_log_context = array(
+    'mail_type' => 'password_lost',
+    'related_id' => (string) $mb['mb_id']
+);
+
+if (function_exists('mailer_prepare_tracking_context')) {
+    $mail_log_context = mailer_prepare_tracking_context(1, $mail_log_context);
+}
+
+$password_mail_track_token = isset($mail_log_context['track_token']) ? trim((string) $mail_log_context['track_token']) : '';
+$password_home_url = G5_URL;
+$password_reset_url = str_replace('&amp;', '&', (string) $href);
+
+if ($password_mail_track_token !== '' && function_exists('mailer_tracking_click_url')) {
+    $password_home_url = mailer_tracking_click_url($password_mail_track_token, G5_URL);
+    $password_reset_url = mailer_tracking_click_url($password_mail_track_token, $password_reset_url);
+}
 
 $subject = "[".$config['cf_title']."] 요청하신 회원정보 찾기 안내 메일입니다.";
 
@@ -52,7 +69,7 @@ $content .= '<h1 style="padding:30px 30px 0;background:#f7f7f7;color:#555;font-s
 $content .= '회원정보 찾기 안내';
 $content .= '</h1>';
 $content .= '<span style="display:block;padding:10px 30px 30px;background:#f7f7f7;text-align:right">';
-$content .= '<a href="'.G5_URL.'" target="_blank">'.$config['cf_title'].'</a>';
+$content .= '<a href="'.$password_home_url.'" target="_blank">'.$config['cf_title'].'</a>';
 $content .= '</span>';
 $content .= '<p style="margin:20px 0 0;padding:30px 30px 30px;border-bottom:1px solid #eee;line-height:1.7em">';
 $content .= addslashes($mb['mb_name'])." (".addslashes($mb['mb_nick']).")"." 회원님은 ".G5_TIME_YMDHIS." 에 회원정보 찾기 요청을 하셨습니다.<br>";
@@ -65,11 +82,11 @@ $content .= '<p style="margin:0;padding:30px 30px 30px;border-bottom:1px solid #
 $content .= '<span style="display:inline-block;width:100px">회원아이디</span> '.$mb['mb_id'].'<br>';
 $content .= '<span style="display:inline-block;width:100px">변경될 비밀번호</span> <strong style="color:#ff3061">'.$change_password.'</strong>';
 $content .= '</p>';
-$content .= '<a href="'.$href.'" target="_blank" style="display:block;padding:30px 0;background:#484848;color:#fff;text-decoration:none;text-align:center">비밀번호 변경</a>';
+$content .= '<a href="'.$password_reset_url.'" target="_blank" style="display:block;padding:30px 0;background:#484848;color:#fff;text-decoration:none;text-align:center">비밀번호 변경</a>';
 $content .= '</div>';
 $content .= '</div>';
 
-mailer($config['cf_admin_email_name'], $config['cf_admin_email'], $mb['mb_email'], $subject, $content, 1);
+mailer($config['cf_admin_email_name'], $config['cf_admin_email'], $mb['mb_email'], $subject, $content, 1, "", "", "", $mail_log_context);
 
 run_event('password_lost2_after', $mb, $mb_nonce, $mb_lost_certify);
 

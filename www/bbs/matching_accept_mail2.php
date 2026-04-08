@@ -17,7 +17,7 @@ if (!defined('_GNUBOARD_')) exit;
             매칭 요청 수락이 완료되었습니다.
         </h1>
         <span style="display:block;padding:10px 30px 30px;background:#f7f7f7;text-align:right">
-            <a href="<?php echo G5_URL ?>" target="_blank"><?php echo $config['cf_title'] ?></a>
+            <a href="<?php echo isset($receive_site_url) && $receive_site_url ? $receive_site_url : G5_URL ?>" target="_blank"><?php echo $config['cf_title'] ?></a>
         </span>
 
         <div style="padding:30px;border-bottom:1px solid #eee;color:#333;line-height:1.7">
