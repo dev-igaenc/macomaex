@@ -4,6 +4,10 @@ include_once('./_common.php');
 
 auth_check_menu($auth, $sub_menu, 'w');
 include_once('./admin.head.php');
+
+// 추가 등록 기업코드 기본값 처리
+$ADDKEDCD = isset($_REQUEST['ADDKEDCD']) ? preg_replace('/[^A-Za-z0-9]/', '', (string)$_REQUEST['ADDKEDCD']) : '';
+
 $mb = array(
 'mb_certify' => null,
 'mb_adult' => null,

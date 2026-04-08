@@ -168,12 +168,16 @@ $rnumber=($total_count-($page-1)*$rows)+1;
     <tbody>
     <?php for ($i=0; $i<count($rows_list); $i++) {
 			$v = $rows_list[$i];
-			$kind = $v['rc_kind'];
-			$requestCon	= getUserInfo($v['request_id']);
-			$recieveCon	= getUserInfo($v['receive_id']);
+				$kind = $v['rc_kind'];
+				$requestCon	= getUserInfo($v['request_id']);
+				$recieveCon	= getUserInfo($v['receive_id']);
 
-			$recieveCon2	= getComapyInfo($v['KEDCD']);
-			$status = "";
+				$recieveCon2	= getComapyInfo($v['KEDCD']);
+				// 매칭 회원정보 기본값 처리
+				if(!is_array($requestCon)) $requestCon = array('mb_name'=>'-', 'mb_4'=>'-', 'mb_6'=>'-', 'mb_7'=>'-', 'mb_email'=>'-', 'mb_8'=>'-');
+				if(!is_array($recieveCon)) $recieveCon = array('mb_no'=>'', 'mb_6'=>'', 'mb_7'=>'', 'mb_8'=>'', 'mb_email'=>'');
+				if(!is_array($recieveCon2)) $recieveCon2 = array('ENP_NM'=>'-', 'BZNO'=>'');
+				$status = "";
 			$statusClass = "";
 			$history_info = isset($history_map[(string)$v['no']]) ? $history_map[(string)$v['no']] : array();
 			$request_type = strtoupper(trim((string)(isset($history_info['request_type']) ? $history_info['request_type'] : '')));

@@ -7,6 +7,7 @@ auth_check($auth[$sub_menu], 'r');
 
 $fr_date = isset($_REQUEST['fr_date']) ? preg_replace('/[^0-9 :\-]/i', '', $_REQUEST['fr_date']) : "";
 $to_date = isset($_REQUEST['to_date']) ? preg_replace('/[^0-9 :\-]/i', '', $_REQUEST['to_date']) : "";
+$event_type = isset($_REQUEST['event_type']) ? (int)$_REQUEST['event_type'] : 0;
 
 
 $sql_common = " from  ".G5_TABLE_PREFIX."seo ";
@@ -29,7 +30,7 @@ if ($stx) {
     $sql_search .= " ) ";
     $qstr.="&sfl={$sfl}&stx={$stx}";
 }
-if($event_type) {
+if($event_type > 0) {
     $sql_search.= " and event_type={$event_type}";
     $qstr.="&event_type={$event_type}";
 }

@@ -205,15 +205,20 @@ $total = sql_fetch($sql);
  $result1 = sql_query($sql);
  $all_com = 0;
  $all_art= 0;
+ $today_art = 0;
  $week_art=0;
-	 $t_cnt =  mysqli_num_rows($result1);
-     for ($i=0; $row2=sql_fetch_array($result1); $i++) {
+ $month_art = 0;
+ $allavg_art = 0;
+ $weekavg_art = 0;
+ $monthavg_art = 0;
+		 $t_cnt =  mysqli_num_rows($result1);
+	     for ($i=0; $row2=sql_fetch_array($result1); $i++) {
 		//전체 게시물
 		$gul_su="select count(wr_id) as ctt, avg(wr_id) as avg from g5_write_{$row2['bo_table']} where wr_is_comment='0' ";
 		$article = sql_fetch($gul_su);
 		$article_su=$article['ctt'];
 		$all_art= $all_art +$article_su;
-		$allavg_art= $all_art / $t_cnt;
+		if($t_cnt > 0) $allavg_art= $all_art / $t_cnt;
 
 		//오늘
 		$gul_su="select count(wr_id) as ctt, avg(wr_id) as avg from g5_write_{$row2['bo_table']} where wr_is_comment='0' and DATE(wr_datetime) = '".$now_date."'";
@@ -234,7 +239,7 @@ $total = sql_fetch($sql);
 		$article_su =$article4['ctt'];
 		$month_art= $month_art +$article_su;
 		$monthavg_art= $month_art/30;
- 	}
+	 	}
 
 
 
