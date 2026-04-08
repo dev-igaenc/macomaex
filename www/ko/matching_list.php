@@ -117,8 +117,13 @@ $msinfo = [];
 
 if ($member['mb_id']) {
     $msinfo_row = getUserMembership();
-    // 멤버십 없으면 무료 플랜으로 설정
-    $msinfo = $msinfo_row[0] ?: ['membership_parent_no' => $membership[0]['no']];
+    // 멤버십 기본값 처리
+    if (is_array($msinfo_row) && isset($msinfo_row[0]) && is_array($msinfo_row[0]) && !empty($msinfo_row[0])) {
+        $msinfo = $msinfo_row[0];
+    } else {
+        $free_membership_no = (is_array($msinfo_row) && isset($msinfo_row[1]['no'])) ? $msinfo_row[1]['no'] : 1;
+        $msinfo = ['membership_parent_no' => $free_membership_no];
+    }
 }
 
 $free_limit   = 9;

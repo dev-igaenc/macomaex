@@ -827,19 +827,19 @@ unset($amenu);
 		for ($i2 = 0; $row2 = sql_fetch_array($result2); $i2++) {
 			$tmp=array();
 			$cnt=0;
-			$key2="true";
+			$key2=true;
 			foreach($row2 as $key => $value){
 				$cnt++;
 				if($cnt<3) continue;
 				// 맴버에 맞춰 권한에서 제거
 				if($member['mb_level'] < 20){
-					if($cnt==3) {
-						
-						$key2=array_search($value, $mb_auth);
-						if(!$key2) {unset($key2); continue;}
-					}
+						if($cnt==3) {
+							
+							$key2=array_search($value, $mb_auth);
+							if(!$key2) { $key2 = false; continue; }
+						}
 				}else{
-					$key2="true";
+					$key2=true;
 				}
 				$tmp[]=$value;
 			}

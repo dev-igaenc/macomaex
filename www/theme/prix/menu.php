@@ -1,6 +1,13 @@
 <?php
-$brand_borad=sql_fetch("select * from {$g5['board_table']} where bo_table='menu_adm'");
-$brand_category=explode("|",$brand_borad['bo_category_list']);
+$brand_borad = sql_fetch("select * from {$g5['board_table']} where bo_table='menu_adm'");
+if (!is_array($brand_borad)) {
+	$brand_borad = array();
+}
+$brand_category = array();
+if (isset($brand_borad['bo_category_list']) && $brand_borad['bo_category_list'] !== '') {
+	$brand_category = explode("|", $brand_borad['bo_category_list']);
+}
+$menu_cnt = count($brand_category);
 
 $link_0000 = "/"; // 홈
 

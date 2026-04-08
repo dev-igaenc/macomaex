@@ -116,12 +116,14 @@ $rnumber=($total_count-($page-1)*$rows)+1;
     </tr>
     </thead>
     <tbody>
-    <?php for ($i=0; $row=sql_fetch_array($result); $i++) {
-			$membershipInfo	= getMembership($row['membership_parent_no']);
-			$paymentInfo			= getPaymentInfo($row['order_no']);
-			$is_credit_goods = (isset($membershipInfo['title_en']) && strpos($membershipInfo['title_en'], 'CREDIT_') === 0) ? 1 : 0;
-			$refundInfo = sql_fetch("select id from g5_matching_credit_history where order_no='{$row['order_no']}' and tx_type='REFUND' order by id desc limit 1");
-			$is_refunded = $refundInfo['id'] ? 1 : 0;
+	    <?php for ($i=0; $row=sql_fetch_array($result); $i++) {
+				$membershipInfo	= getMembership($row['membership_parent_no']);
+				$paymentInfo			= getPaymentInfo($row['order_no']);
+				if(!is_array($membershipInfo)) $membershipInfo = array('title'=>'-', 'title_en'=>'');
+				if(!is_array($paymentInfo)) $paymentInfo = array('price'=>0);
+				$is_credit_goods = (isset($membershipInfo['title_en']) && strpos($membershipInfo['title_en'], 'CREDIT_') === 0) ? 1 : 0;
+				$refundInfo = sql_fetch("select id from g5_matching_credit_history where order_no='{$row['order_no']}' and tx_type='REFUND' order by id desc limit 1");
+				$is_refunded = (is_array($refundInfo) && !empty($refundInfo['id'])) ? 1 : 0;
 			$status_text = $ms_status_text[$row['status']];
 			$status_btn_class = "btn-primary";
 			if($row['status']=="C") $status_btn_class = "btn-danger";

@@ -535,11 +535,14 @@ switch ($type) {
 				$chk="1000";
 			}
 				if($chk=="1000"){
-					unset($comp);
-					$comp=getComapyInfo($kedcd);
-					$kssc9=getKsscInfo9($comp['KSIC9_BZC_CD']);
-					$kssc=getKsscInfo($comp['BZC_CD']);
-					$matcing=sql_fetch("SELECT * from g5_matching where del != 'D' and  request_id='{$member['mb_id']}' and KEDCD='{$kedcd}'");//매칭요청
+						unset($comp);
+						$comp=getComapyInfo($kedcd);
+						$kssc9=getKsscInfo9($comp['KSIC9_BZC_CD']);
+						$kssc=getKsscInfo($comp['BZC_CD']);
+						// 표준산업분류 기본값 처리
+						if(!is_array($kssc9)) $kssc9 = array('k_code_name' => '-');
+						if(!is_array($kssc)) $kssc = array('k_code_name' => '-');
+						$matcing=sql_fetch("SELECT * from g5_matching where del != 'D' and  request_id='{$member['mb_id']}' and KEDCD='{$kedcd}'");//매칭요청
 					if($matcing['receive_approval']=="Y") $receve_info=getUserInfo($matcing['receive_id']);
 					if(!$matcing['receive_approval']) {
 						//$receve_info=getUserInfo($matcing['request_id']);
@@ -550,9 +553,11 @@ switch ($type) {
 						$matcing=sql_fetch("SELECT * from g5_matching where del != 'D' and  receive_id='{$member['mb_id']}' and request_id=(select mb_id from g5_member where mb_company='{$kedcd}')");//받은매칭요청
 						if($matcing['receive_approval']=="Y") $receve_info=getUserInfo($matcing['request_id']);
 					}
-					$favorite=sql_fetch("SELECT * from g5_favorite where mb_id='{$member['mb_id']}' and KEDCD='{$kedcd}'"); //북마크
-					$sales=getFinanceInfo($kedcd);
-					
+						$favorite=sql_fetch("SELECT * from g5_favorite where mb_id='{$member['mb_id']}' and KEDCD='{$kedcd}'"); //북마크
+						$sales=getFinanceInfo($kedcd);
+						// 재무정보 기본값 처리
+						if(!is_array($sales)) $sales = array(array('SALES' => 0));
+						
 
 ?>
 	<div class="cv-name">

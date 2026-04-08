@@ -17,6 +17,41 @@ define('G5_MSHOP_URL',  G5_MOBILE_URL.'/'.G5_SHOP_DIR);
 define('G5_SHOP_IMG_URL',  G5_SHOP_URL.'/'.G5_IMG_DIR);
 define('G5_MSHOP_IMG_URL', G5_MSHOP_URL.'/'.G5_IMG_DIR);
 
+// dbconfig.php에 쇼핑몰 테이블 키가 일부만 정의된 경우 기본 키 보강
+$shop_table_suffixes = array(
+    'g5_shop_default_table' => 'default',
+    'g5_shop_banner_table' => 'banner',
+    'g5_shop_cart_table' => 'cart',
+    'g5_shop_category_table' => 'category',
+    'g5_shop_event_table' => 'event',
+    'g5_shop_event_item_table' => 'event_item',
+    'g5_shop_item_table' => 'item',
+    'g5_shop_item_option_table' => 'item_option',
+    'g5_shop_item_use_table' => 'item_use',
+    'g5_shop_item_qa_table' => 'item_qa',
+    'g5_shop_item_relation_table' => 'item_relation',
+    'g5_shop_order_table' => 'order',
+    'g5_shop_order_delete_table' => 'order_delete',
+    'g5_shop_wish_table' => 'wish',
+    'g5_shop_coupon_table' => 'coupon',
+    'g5_shop_coupon_zone_table' => 'coupon_zone',
+    'g5_shop_coupon_log_table' => 'coupon_log',
+    'g5_shop_sendcost_table' => 'sendcost',
+    'g5_shop_personalpay_table' => 'personalpay',
+    'g5_shop_order_address_table' => 'order_address',
+    'g5_shop_item_stocksms_table' => 'item_stocksms',
+    'g5_shop_post_log_table' => 'order_post_log',
+    'g5_shop_order_data_table' => 'order_data',
+    'g5_shop_inicis_log_table' => 'inicis_log',
+);
+
+foreach ($shop_table_suffixes as $shop_table_key => $shop_table_suffix) {
+    if (!isset($g5[$shop_table_key]) || !$g5[$shop_table_key]) {
+        $g5[$shop_table_key] = G5_SHOP_TABLE_PREFIX.$shop_table_suffix;
+    }
+}
+unset($shop_table_key, $shop_table_suffix, $shop_table_suffixes);
+
 // 보안서버주소 설정
 if (G5_HTTPS_DOMAIN) {
     define('G5_HTTPS_SHOP_URL', G5_HTTPS_DOMAIN.'/'.G5_SHOP_DIR);
@@ -37,6 +72,18 @@ if (G5_HTTPS_DOMAIN) {
 
 // 쇼핑몰 설정값 배열변수
 $default = sql_fetch(" select * from {$g5['g5_shop_default_table']} ");
+if (!is_array($default)) {
+    $default = array();
+}
+if (!isset($default['de_shop_skin']) || !$default['de_shop_skin']) {
+    $default['de_shop_skin'] = 'basic';
+}
+if (!isset($default['de_shop_mobile_skin']) || !$default['de_shop_mobile_skin']) {
+    $default['de_shop_mobile_skin'] = 'basic';
+}
+if (!isset($default['de_card_test'])) {
+    $default['de_card_test'] = 0;
+}
 
 if(!defined('_THEME_PREVIEW_')) {
     // 테마 경로 설정

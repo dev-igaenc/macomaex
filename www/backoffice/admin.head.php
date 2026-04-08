@@ -30,16 +30,15 @@ if ($is_member) {
 		$is_auth = true;
 }
 
-$sql = " select count(*) as cnt from {$g5['memo_table']} where me_{$kind}_mb_id = '{$member['mb_id']}' and me_type = '$kind' ";
-$row = sql_fetch($sql);
-$total_count = $row['cnt'];
-
-
 $kind = 'recv';
 $unkind = 'send';
 $kind_title = '받은';
 $recv_img = 'on';
 $send_img = 'off';
+
+$sql = " select count(*) as cnt from {$g5['memo_table']} where me_{$kind}_mb_id = '{$member['mb_id']}' and me_type = '$kind' ";
+$row = sql_fetch($sql);
+$total_count = isset($row['cnt']) ? (int)$row['cnt'] : 0;
 
 $list = array();
 

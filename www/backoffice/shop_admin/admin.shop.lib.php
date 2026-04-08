@@ -160,10 +160,12 @@ function check_order_inicis_tmps(){
     global $g5, $config, $default, $member;
 
     $admin_cookie_time = get_cookie('admin_visit_time');
+    $de_pg_service = isset($default['de_pg_service']) ? (string)$default['de_pg_service'] : '';
+    $de_card_test = !empty($default['de_card_test']) ? 1 : 0;
 
     if( ! $admin_cookie_time ){
 
-        if( $default['de_pg_service'] === 'inicis' && empty($default['de_card_test']) ){
+        if( $de_pg_service === 'inicis' && !$de_card_test ){
             $sql = " select * from {$g5['g5_shop_inicis_log_table']} where P_TID <> '' and P_TYPE in ('CARD', 'ISP', 'BANK') and P_MID <> '' and P_STATUS = '00' and is_mail_send = 0 and substr(P_AUTH_DT, 1, 14) < '".date('YmdHis', strtotime('-3 minutes', G5_SERVER_TIME))."' ";
 
             $result = sql_query($sql, false);
@@ -212,7 +214,7 @@ function check_order_inicis_tmps(){
             }
         }
 
-        if( $default['de_pg_service'] == 'lg' && function_exists('check_log_folder') ){
+        if( $de_pg_service == 'lg' && function_exists('check_log_folder') ){
             check_log_folder(G5_LGXPAY_PATH.'/lgdacom/log');
         }
 

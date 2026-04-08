@@ -1,16 +1,22 @@
 <?
 include_once("./_common.php");
 
+$wr_6 = isset($wr_6) ? trim((string)$wr_6) : '';
+$wr_7 = isset($wr_7) ? trim((string)$wr_7) : '';
+$stx = isset($stx) ? trim((string)$stx) : '';
+
 $sql_common="";
 if($wr_6) $sql_common.=" and wr_6 like ('%{$wr_6}%')";
 if($wr_7) $sql_common.=" and wr_7 like ('%{$wr_7}%')";
 if($stx) $sql_common.=" and wr_subject like ('%{$stx}%')";
 
-$total_cnt=sql_fetch("SELECT COUNT(*) as cnt FROM {$g5['write_prefix']}agency where 1 {$sql_common} ");
+$total_cnt_row = sql_fetch("SELECT COUNT(*) as cnt FROM {$g5['write_prefix']}agency where 1 {$sql_common} ");
+$total_cnt = isset($total_cnt_row['cnt']) ? (int)$total_cnt_row['cnt'] : 0;
 
 $store_sql="SELECT * FROM {$g5['write_prefix']}agency where 1 {$sql_common} ORDER BY wr_6,wr_7 ASC ";
 $store_res=sql_query($store_sql);
 
+$stores = array();
 for ($i=0;$row=sql_fetch_array($store_res);$i++){
     $stores[]=$row;
 }
@@ -19,7 +25,12 @@ include_once(G5_THEME_PATH.'/head.php');
 
     <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=3863294a080737bb6d374a24a5d2ff43&libraries=services"></script>
 
-<? include $_SERVER["DOCUMENT_ROOT"]."/_inc/sub_top.php"; ?>
+<?
+$sub_top_file = G5_PATH."/_inc/sub_top.php";
+if (is_file($sub_top_file)) {
+	include $sub_top_file;
+}
+?>
 <section class="subpage sub0301">
     <div class="limit1200">
         <div class="subp_titleWrap">
@@ -111,7 +122,7 @@ include_once(G5_THEME_PATH.'/head.php');
 
         var map = new kakao.maps.Map(mapContainer, mapOption); // 지도를 생성합니다
         <?php
-        if($total_cnt['cnt'] > 0){ ?>
+        if($total_cnt > 0){ ?>
         var positions=[];
             <?php
             foreach ($stores as $store){
