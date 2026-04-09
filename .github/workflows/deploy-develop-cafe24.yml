@@ -1,0 +1,71 @@
+name: Deploy Develop To Cafe24
+
+on:
+  push:
+    branches:
+      - develop
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-develop-cafe24
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Validate required secrets
+        env:
+          DEPLOY_HOST: ${{ secrets.CAFE24_SFTP_HOST }}
+          DEPLOY_PORT: ${{ secrets.CAFE24_SFTP_PORT }}
+          DEPLOY_USER: ${{ secrets.CAFE24_SFTP_USER }}
+          DEPLOY_PASSWORD: ${{ secrets.CAFE24_SFTP_PASSWORD }}
+          REMOTE_PATH: ${{ secrets.CAFE24_REMOTE_PATH }}
+        run: |
+          missing=0
+          for key in DEPLOY_HOST DEPLOY_PORT DEPLOY_USER DEPLOY_PASSWORD REMOTE_PATH; do
+            eval "value=\${$key}"
+            if [ -z "$value" ]; then
+              echo "::error ::Missing required secret: $key"
+              missing=1
+            fi
+          done
+          exit "$missing"
+
+      - name: Install lftp
+        run: sudo apt-get update && sudo apt-get install -y lftp
+
+      - name: Deploy www to Cafe24
+        env:
+          DEPLOY_HOST: ${{ secrets.CAFE24_SFTP_HOST }}
+          DEPLOY_PORT: ${{ secrets.CAFE24_SFTP_PORT }}
+          DEPLOY_USER: ${{ secrets.CAFE24_SFTP_USER }}
+          DEPLOY_PASSWORD: ${{ secrets.CAFE24_SFTP_PASSWORD }}
+          REMOTE_PATH: ${{ secrets.CAFE24_REMOTE_PATH }}
+        run: |
+          cd "$GITHUB_WORKSPACE/www"
+          lftp -u "$DEPLOY_USER","$DEPLOY_PASSWORD" "sftp://$DEPLOY_HOST:$DEPLOY_PORT" <<EOF
+          set cmd:fail-exit yes
+          set sftp:auto-confirm yes
+          set net:max-retries 2
+          set net:timeout 20
+          set xfer:clobber on
+          mkdir -p $REMOTE_PATH
+          mirror -R --only-newer --verbose=1 --parallel=2 \
+            --exclude-glob data \
+            --exclude-glob data/** \
+            --exclude-glob .DS_Store \
+            --exclude-glob .git/** \
+            --exclude-glob .github/** \
+            --exclude-glob .vscode/** \
+            --exclude-glob tmp \
+            --exclude-glob tmp/** \
+            . $REMOTE_PATH
+          bye
+          EOF
