@@ -56,7 +56,6 @@ jobs:
           set net:max-retries 2
           set net:timeout 20
           set xfer:clobber on
-          mkdir -p $REMOTE_PATH
           mirror -R --only-newer --verbose=1 --parallel=2 \
             --exclude-glob data \
             --exclude-glob data/** \
