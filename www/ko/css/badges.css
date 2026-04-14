@@ -1,0 +1,27 @@
+
+/* 공통 기업카드 뱃지 스타일 */
+.mCompanyCard_badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-bottom: 6px;
+    align-self: flex-start;
+}
+.mCompanyCard_badges .mCompanyCard_badge {
+    margin-bottom: 0;
+}
+.mCompanyCard_badge {
+    display: inline-block;
+    padding: 3px var(--sp-2, 8px);
+    border-radius: var(--r-xs, 4px);
+    font-size: var(--fs-badge, 11px);
+    font-weight: 600;
+    margin-bottom: 0;
+    align-self: flex-start;
+    line-height: 1.2;
+    white-space: nowrap;
+}
+.mCompanyCard_badge_top_growth { background: #dbeafe; color: #1e40af; }
+.mCompanyCard_badge_top_stability { background: #ede9fe; color: #5b21b6; }
+.mCompanyCard_badge_venture { background: var(--green-badge, #10b981); color: #fff; }
+.mCompanyCard_badge_placeholder { background: #f3f4f6; color: #9ca3af; }

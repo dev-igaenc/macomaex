@@ -1,0 +1,108 @@
+
+/* ===== 상단 고정 네비게이션 바 (공통 컴포넌트) ===== */
+.top-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 20px;
+    flex-wrap: wrap;
+    gap: 12px;
+    background: rgba(250,251,253,0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    position: sticky;
+    top: var(--header-h, 65px);
+    z-index: 90;
+    margin: 0 -20px 0;
+    width: calc(100% + 40px);
+}
+.top-nav-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+.btn-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 16px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+}
+.btn-back:hover { border-color: var(--purple); color: var(--purple); background: var(--purple-soft); }
+
+/* 거래 요청하기 버튼 — 구조 공통, 색상은 각 페이지에서 오버라이드 */
+.btn-match-cta-top {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 24px;
+    font-size: 15px;
+    font-weight: 700;
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+.btn-match-cta-top:hover { transform: scale(1.03); }
+
+/* 아이콘 버튼 (관심기업, 공유하기) */
+.btn-topnav-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    background: #fff;
+    cursor: pointer;
+    color: #888;
+    transition: all 0.2s;
+}
+.btn-topnav-icon:hover { border-color: #c5c5c5; color: #333; background: #f9fafb; }
+
+@media (max-width: 768px) {
+    .top-nav {
+        flex-wrap: nowrap;
+        padding: 8px 16px;
+        margin: 0 -16px;
+        width: calc(100% + 32px);
+        gap: 8px;
+    }
+    .top-nav-actions {
+        flex-wrap: nowrap;
+        gap: 8px;
+        flex: 1;
+        min-width: 0;
+    }
+    .btn-back {
+        padding: 9px 12px;
+        font-size: 12px;
+        white-space: nowrap;
+        flex-shrink: 0;
+    }
+    .btn-match-cta-top {
+        flex: 1;
+        min-width: 0;
+        padding: 9px 10px;
+        font-size: 13px;
+        justify-content: center;
+        white-space: nowrap;
+    }
+    .btn-topnav-icon,
+    .btn-favorite {
+        width: 38px;
+        height: 38px;
+        flex-shrink: 0;
+    }
+}

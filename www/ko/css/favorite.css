@@ -1,0 +1,72 @@
+/* 관심기업 별 버튼 공통 컴포넌트 */
+.btn-favorite {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 40px;
+	height: 40px;
+	border: 1px solid #e5e7eb;
+	border-radius: var(--r-base, 10px);
+	background: var(--card, #fff);
+	cursor: pointer;
+	color: #888;
+	transition: all 0.2s;
+	padding: 0;
+}
+.btn-favorite:hover { border-color: #c5c5c5; color: #333; background: #f9fafb; }
+.btn-favorite.is-active { color: #fbbf24; border-color: #fbbf24; }
+.btn-favorite.is-active svg { fill: #fbbf24; }
+.btn-favorite svg { width: 20px; height: 20px; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+/* 토스트 알림 */
+.toast-notify {
+	position: fixed;
+	bottom: 32px;
+	left: 50%;
+	transform: translateX(-50%) translateY(20px);
+	display: inline-flex;
+	align-items: center;
+	gap: 10px;
+	padding: 14px var(--sp-6, 24px);
+	background: #1a1a1a;
+	color: #fff;
+	font-size: var(--fs-body-sm, 14px);
+	font-weight: 500;
+	border-radius: var(--r-xl, 14px);
+	box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+	z-index: 99999;
+	opacity: 0;
+	transition: opacity 0.3s, transform 0.3s;
+	pointer-events: none;
+	white-space: nowrap;
+	max-width: calc(100vw - 32px);
+}
+.toast-notify.is-show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.toast-notify.toast-success { background: #1e293b; }
+.toast-notify.toast-default { background: #475569; }
+.toast-notify.toast-info { background: #1e3a5f; }
+.toast-icon { display: flex; align-items: center; flex-shrink: 0; }
+.toast-msg { line-height: 1.4; }
+
+/* 버튼 근처 앵커 토스트 */
+.toast-notify.toast-anchored {
+	position: absolute;
+	top: calc(100% + 8px);
+	right: 0;
+	left: auto;
+	bottom: auto;
+	transform: translateY(8px);
+	font-size: 13px;
+	padding: 10px 16px;
+	border-radius: 10px;
+}
+.toast-notify.toast-anchored.is-show { transform: translateY(0); }
+
+/* iOS 안전 영역 대응 */
+@media (max-width: 768px) {
+    .toast-notify {
+        bottom: calc(var(--sp-4, 16px) + env(safe-area-inset-bottom, 0px));
+        padding: var(--sp-3, 12px) var(--sp-5, 20px);
+        font-size: var(--fs-caption, 13px);
+    }
+}
