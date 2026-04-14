@@ -1,5 +1,85 @@
 <?php
 include_once("./_common.php");
+
+$cd = isset($_GET['cd']) ? trim((string)$_GET['cd']) : '';
+$kedcd = $cd ? simple_crypt($cd, 'd') : '';
+
+if (!preg_match('/^\d{10}$/', $kedcd)) {
+	alert('잘못된 접근입니다.', '/ko/matching_list.php');
+}
+
+$company = sql_fetch("
+	SELECT
+		KEDCD,
+		ENP_NM,
+		BZC_CD,
+		ESTB_DT,
+		LABORER_SUM,
+		ENP_TYP,
+		PD_NM,
+		LOC_ADDRA,
+		LOC_ADDRB,
+		HPAGE_URL
+	FROM company
+	WHERE KEDCD = '{$kedcd}'
+");
+
+if (empty($company['KEDCD'])) {
+	alert('기업 정보를 찾을 수 없습니다.', '/ko/matching_list.php');
+}
+
+$industry = array();
+if (!empty($company['BZC_CD'])) {
+	$industry = sql_fetch("
+		SELECT k_code, k_code_name
+		FROM kssc
+		WHERE k_code = '{$company['BZC_CD']}'
+	");
+}
+
+$score = sql_fetch("
+	SELECT
+		KEDCD,
+		total_grade_22,
+		growth_score_5,
+		profit_score_5,
+		stability_score_5,
+		age_score_5,
+		emp_score_5,
+		final_total_score_5
+	FROM company_score_final_dedup
+	WHERE KEDCD = '{$kedcd}'
+");
+
+$foundedYear = '';
+if (!empty($company['ESTB_DT']) && strlen($company['ESTB_DT']) >= 4) {
+	$foundedYear = substr($company['ESTB_DT'], 0, 4) . '년';
+}
+
+$companyType = '';
+if (!empty($company['ENP_TYP']) && isset($enp_typt[$company['ENP_TYP']])) {
+	$companyType = $enp_typt[$company['ENP_TYP']];
+}
+
+$companyDetailData = array(
+	'kedcd' => $company['KEDCD'] ?? '',
+	'title' => $company['ENP_NM'] ?? '',
+	'sub' => $industry['k_code_name'] ?? '',
+	'tags' => array(),
+	'founded' => $foundedYear,
+	'employees' => !empty($company['LABORER_SUM']) ? number_format((float)$company['LABORER_SUM']) . '명' : '',
+	'corp_type' => $companyType,
+	'product_line' => $company['PD_NM'] ?? '',
+	'credit' => $score['total_grade_22'] ?? '',
+	'address' => trim(($company['LOC_ADDRA'] ?? '') . ' ' . ($company['LOC_ADDRB'] ?? '')),
+	'homepage' => $company['HPAGE_URL'] ?? '',
+	'grow' => isset($score['growth_score_5']) ? (float)$score['growth_score_5'] : 0,
+	'profit' => isset($score['profit_score_5']) ? (float)$score['profit_score_5'] : 0,
+	'stable' => isset($score['stability_score_5']) ? (float)$score['stability_score_5'] : 0,
+	'ageScore' => isset($score['age_score_5']) ? (float)$score['age_score_5'] : 0,
+	'empScore' => isset($score['emp_score_5']) ? (float)$score['emp_score_5'] : 0,
+	'score' => isset($score['final_total_score_5']) ? (float)$score['final_total_score_5'] : 0,
+);
 ?>
 <!DOCTYPE html>
 <html lang="ko">
@@ -258,7 +338,9 @@ include_once("./_common.php");
 	<symbol id="icon-magic-wand" viewBox="0 0 24 24"><path fill="currentColor" d="M16.8 2.2l1.1 2.3 2.3 1.1-2.3 1.1-1.1 2.3-1.1-2.3-2.3-1.1 2.3-1.1 1.1-2.3zm3.2 2.8.6 1.1 1.1.6-1.1.6-.6 1.1-.6-1.1-1.1-.6 1.1-.6.6-1.1zM7.4 17.4 16.1 8.7l2.6 2.6-8.7 8.7-2.6-2.6zm-1 2.4 1.3 1.3-3.1 1 .8-2.9z"/></symbol>
 </svg>
 
-<script src="js/mock-data.js"></script>
+<script>
+window.COMPANY_DETAIL_DATA = <?php echo json_encode($companyDetailData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
+</script>
 <script src="js/badges.js"></script>
 <script src="js/company-detail-left.js"></script>
 <script src="js/company-detail.js"></script>

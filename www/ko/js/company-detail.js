@@ -1,18 +1,8 @@
-/* ===== Demo Company Data — js/mock-data.js 로 이동됨 ===== */
-var demoCompanies = window.MOCK_COMPANIES;
-
 /* ===== Utility Functions ===== */
 function escHtml(s) {
 	var d = document.createElement('div');
 	d.textContent = s;
 	return d.innerHTML;
-}
-
-function getCompanyId() {
-	var params = new URLSearchParams(window.location.search);
-	var id = (params.get('id') || '').replace(/[^a-z0-9\-_]/gi, '');
-	if (!id || !demoCompanies[id]) id = 'beauty-factory';
-	return id;
 }
 
 function renderStars(score) {
@@ -41,24 +31,25 @@ function calcYearsInBusiness(foundedStr) {
 	return (currentYear - year) + '년';
 }
 
-function demoRandom(min, max) {
-	// Seeded by company id hash for consistency per session
-	return Math.floor(Math.random() * (max - min + 1)) + min;
-}
-
 /* ===== Main Render ===== */
 (function() {
-	var companyId = getCompanyId();
-	var co = demoCompanies[companyId];
+	var co = window.COMPANY_DETAIL_DATA || null;
+	if (!co) return;
 
 	// Update page title
 	document.title = co.title + ' · 기업 상세 — 매커멕스';
-	var demoNoticeEl = document.getElementById('demoNoticeCode');
-	if (demoNoticeEl) demoNoticeEl.textContent = 'company_detail.html?id=' + companyId;
 
 	// 기업 핵심 정보 카드 (공통 모듈)
 	renderDetailLeftCard(co, '');
-	window._matchCompany = { id: companyId, name: co.title };
+	window._matchCompany = { id: co.kedcd || '', name: co.title };
+
+	var verifyCompanyEl = document.getElementById('modal_verify_company');
+	if (verifyCompanyEl) verifyCompanyEl.textContent = co.title || '';
+
+	var verifyTextEl = document.querySelector('.modal_verify_text');
+	if (verifyTextEl && co.sub && co.corp_type) {
+		verifyTextEl.innerHTML = '귀사는 ' + escHtml(co.sub) + '<br>' + escHtml(co.corp_type) + '으로 확인되었습니다.';
+	}
 
 	// === RIGHT COLUMN: 5각형 레이더 차트 ===
 	var RD_LABELS = ['성장성','수익성','재무안정','업력','고용규모'];
@@ -68,13 +59,22 @@ function demoRandom(min, max) {
 		var a = (Math.PI * 2 * i / RD_NUM) - Math.PI / 2;
 		return { x: cx + r * Math.cos(a), y: cy + r * Math.sin(a) };
 	}
-	// 업력·고용규모 점수 산출
-	var yearsInBiz = calcYearsInBusiness(co.founded);
-	var yearsNum = parseFloat(yearsInBiz);
-	var careerScore = (!isNaN(yearsNum) ? Math.min(5, Math.max(1, yearsNum / 5)) : 3.0).toFixed(1);
-	var empNum = parseInt(co.employees) || 50;
-	var employScore = Math.min(5, Math.max(1, Math.log2(empNum / 5))).toFixed(1);
-	var radarScores = [co.grow, co.profit, co.stable, parseFloat(careerScore), parseFloat(employScore)];
+
+	var growthScore = parseFloat(co.grow) || 0;
+	var profitScore = parseFloat(co.profit) || 0;
+	var stableScore = parseFloat(co.stable) || 0;
+	var ageScore = parseFloat(co.ageScore);
+	if (isNaN(ageScore)) {
+		var yearsInBiz = calcYearsInBusiness(co.founded);
+		var yearsNum = parseFloat(yearsInBiz);
+		ageScore = !isNaN(yearsNum) ? Math.min(5, Math.max(1, yearsNum / 5)) : 0;
+	}
+	var empScore = parseFloat(co.empScore);
+	if (isNaN(empScore)) {
+		var empNum = parseInt(String(co.employees).replace(/[^\d]/g, ''), 10) || 0;
+		empScore = empNum ? Math.min(5, Math.max(1, Math.log2(empNum / 5))) : 0;
+	}
+	var radarScores = [growthScore, profitScore, stableScore, ageScore, empScore];
 
 	var svgH = '';
 	RD_GRID.forEach(function(lv) {
@@ -105,7 +105,7 @@ function demoRandom(min, max) {
 		else dy = 3;
 		svgH += '<text x="' + (p.x + dx) + '" y="' + (p.y + dy) + '" text-anchor="' + anc + '" class="radar-label">' + RD_LABELS[i] + '</text>';
 	}
-	var sc = parseFloat(co.score);
+	var sc = parseFloat(co.score) || 0;
 	var starsFull = Math.floor(sc);
 	var starsH = '';
 	for (var si = 0; si < starsFull; si++) starsH += '<svg viewBox="0 0 24 24" width="16" height="16" fill="#3B5BDB"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>';
@@ -126,9 +126,8 @@ function demoRandom(min, max) {
 		'<div class="radar-chart"><svg viewBox="0 0 210 200" class="radar-svg">' + svgH + '</svg></div>' +
 		'<div class="radar-scores">' + scoreItems + '</div>';
 
-
-	// Floating bar title
-	document.getElementById('floatingTitle').textContent = co.title;
+	var floatingTitleEl = document.getElementById('floatingTitle');
+	if (floatingTitleEl) floatingTitleEl.textContent = co.title;
 })();
 
 /* ===== AI Loading ===== */
