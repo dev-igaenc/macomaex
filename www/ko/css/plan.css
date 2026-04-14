@@ -6,6 +6,23 @@ body {
     overflow-x: hidden;
 }
 
+#wrapper,
+#container_wr {
+    background: var(--plan-page-bg, var(--bg, #FAFBFD));
+}
+
+#wrapper #container_wr #container {
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: var(--plan-page-bg, var(--bg, #FAFBFD)) !important;
+}
+
+#wrapper #container_wr #container.full {
+    max-width: none !important;
+    padding: 0 !important;
+}
+
 body.sub #sVisual,
 body.sub #pageTop {
     display: none !important;
