@@ -3,7 +3,7 @@
  *
  * 사용법:
  *   <link rel="stylesheet" href="css/badges.css">
- *   <script src="inc/badges.js"></script>
+ *   <script src="js/badges.js"></script>
  *
  *   var html = companyBadgesHtml(companyObj);
  *   // companyObj: { badge_growth: 15, badge_stability: 5, badge_venture: 'Y' }

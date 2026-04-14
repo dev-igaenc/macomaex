@@ -2,7 +2,7 @@
  * mock-data.js — 매커멕스 공용 목업 데이터
  *
  * 단일 진실 공급원(Single Source of Truth): 모든 기업 데이터를 이 파일에서 관리합니다.
- * 자동 생성: node inc/build-mock-data.js
+ * 자동 생성: node js/build-mock-data.js
  *
  * 노출 전역 변수
  *   window.MOCK_COMPANIES  — 기업 ID 키 객체 (company_detail / company_detail_ai 용)

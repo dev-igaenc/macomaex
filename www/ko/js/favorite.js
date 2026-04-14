@@ -3,11 +3,11 @@
  * 관심기업 별 버튼 + 토스트 알림 공통 모듈
  *
  * 사용법:
- *   <link rel="stylesheet" href="/css/favorite.css">
+ *   <link rel="stylesheet" href="css/favorite.css">
  *   <button class="btn-favorite" data-favorite title="관심기업 등록" aria-label="관심기업 등록">
  *     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
  *   </button>
- *   <script src="/inc/favorite.js"></script>
+ *   <script src="js/favorite.js"></script>
  */
 (function () {
   // ─── 토스트 ───

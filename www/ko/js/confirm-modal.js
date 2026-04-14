@@ -2,8 +2,8 @@
  * 커스텀 확인 모달 공통 모듈
  *
  * 사용법:
- *   <link rel="stylesheet" href="/css/confirm-modal.css">
- *   <script src="/inc/confirm-modal.js"></script>
+ *   <link rel="stylesheet" href="css/confirm-modal.css">
+ *   <script src="js/confirm-modal.js"></script>
  *
  *   window._confirm({
  *     icon: 'purple',  // 'purple' | 'blue' | 'amber'

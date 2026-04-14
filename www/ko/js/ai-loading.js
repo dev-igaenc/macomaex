@@ -4,7 +4,7 @@
  * 사용법:
  *   <link rel="stylesheet" href="css/ai-loading.css">
  *   <!-- ai-loading HTML 포함 -->
- *   <script src="inc/ai-loading.js"></script>
+ *   <script src="js/ai-loading.js"></script>
  *
  *   showAiLoading('company_list.html?cat=all&type=ai');
  */

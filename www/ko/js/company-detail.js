@@ -1,4 +1,4 @@
-/* ===== Demo Company Data — inc/mock-data.js 로 이동됨 ===== */
+/* ===== Demo Company Data — js/mock-data.js 로 이동됨 ===== */
 var demoCompanies = window.MOCK_COMPANIES;
 
 /* ===== Utility Functions ===== */

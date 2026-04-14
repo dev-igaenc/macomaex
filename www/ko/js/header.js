@@ -3,7 +3,7 @@
  *
  * 사용법:
  *   <div id="site-header" data-variant="search|nav|none"></div>
- *   <script src="inc/header.js"></script>
+ *   <script src="js/header.js"></script>
  *
  * data-variant 값:
  *   "search" — 사업자번호 AI 추천 검색창 표시 (기본값)

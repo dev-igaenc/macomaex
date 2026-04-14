@@ -4,7 +4,7 @@
  * 사용법:
  *   <link rel="stylesheet" href="css/verify-modal.css">
  *   <!-- verify-modal HTML 포함 -->
- *   <script src="inc/verify-modal.js"></script>
+ *   <script src="js/verify-modal.js"></script>
  *
  *   openVerifyModal('(주)이가이엔씨');
  *   openAiGuideModal({ title: '...', text: '...', text2: '...' });

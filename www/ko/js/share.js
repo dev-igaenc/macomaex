@@ -2,9 +2,9 @@
  * 공유하기 공통 모듈
  *
  * 사용법:
- *   <link rel="stylesheet" href="/css/share.css">
+ *   <link rel="stylesheet" href="css/share.css">
  *   <button class="btn-topnav-icon" data-share title="공유하기">...</button>
- *   <script src="/inc/share.js"></script>
+ *   <script src="js/share.js"></script>
  */
 (function () {
   var popover = null;
