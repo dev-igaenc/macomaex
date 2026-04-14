@@ -4,10 +4,12 @@ include_once(__DIR__ . '/_common.php');
 $board['bo_10'] = '4'; // 1뎁스
 $board['bo_9'] = '1'; // 2뎁스
 
+$design_tokens_ver = file_exists(__DIR__ . '/css/design-tokens.css') ? filemtime(__DIR__ . '/css/design-tokens.css') : time();
 $plan_css_ver = file_exists(__DIR__ . '/css/plan.css') ? filemtime(__DIR__ . '/css/plan.css') : time();
 $plan_js_ver = file_exists(__DIR__ . '/js/plan.js') ? filemtime(__DIR__ . '/js/plan.js') : time();
 $hide_theme_svisual = true;
 $hide_theme_pagetop = true;
+add_stylesheet('<link rel="stylesheet" href="/ko/css/design-tokens.css?ver=' . $design_tokens_ver . '">', 190);
 add_stylesheet('<link rel="stylesheet" href="/ko/css/plan.css?ver=' . $plan_css_ver . '">', 200);
 add_javascript('<script src="/ko/js/plan.js?ver=' . $plan_js_ver . '"></script>', 200);
 include_once(G5_THEME_PATH . '/head.php');
@@ -237,7 +239,7 @@ if (!function_exists('plan_display_title_en')) {
                 $display_pay_type = trim((string)$value['pay_type']) !== '' ? trim((string)$value['pay_type']) : '1회 결제';
                 $vat_text = trim((string)$value['vat']);
 
-                // get_set.php 의 membership_credit_pay 금액 산식과 동일하게 맞춘다.
+        
                 $base_price = 0.0;
                 if (is_numeric($value['price_sale']) && (float)$value['price_sale'] > 0) {
                     $base_price = (float)$value['price_sale'];
