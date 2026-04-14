@@ -1,13 +1,27 @@
 <?php
 include_once("./_common.php");
 
+// badge 퍼센트 포맷 변환
+function format_badge_percent_detail($value) {
+	if ($value === null || $value === '') return '';
+	$str = trim((string)$value);
+	if ($str === '') return '';
+	if (!is_numeric($str)) return $str;
+
+	$num = (float)$str;
+	if ($num == (int)$num) return (string)((int)$num);
+	return rtrim(rtrim(number_format($num, 2, '.', ''), '0'), '.');
+}
+
 $cd = isset($_GET['cd']) ? trim((string)$_GET['cd']) : '';
 $kedcd = $cd ? simple_crypt($cd, 'd') : '';
 
+// 기업코드 값 최소 검증
 if (!preg_match('/^\d{10}$/', $kedcd)) {
 	alert('잘못된 접근입니다.', '/ko/matching_list.php');
 }
 
+// 리스트 -> 상세 페이지 기업코드 값 기준 조회
 $company = sql_fetch("
 	SELECT
 		KEDCD,
@@ -28,6 +42,7 @@ if (empty($company['KEDCD'])) {
 	alert('기업 정보를 찾을 수 없습니다.', '/ko/matching_list.php');
 }
 
+// 기업의 업종코드(BZC_CD) 기준 업종명 조회
 $industry = array();
 if (!empty($company['BZC_CD'])) {
 	$industry = sql_fetch("
@@ -37,6 +52,7 @@ if (!empty($company['BZC_CD'])) {
 	");
 }
 
+// 해당 기업코드 기준 성장성 ~ 재무상태 조회
 $score = sql_fetch("
 	SELECT
 		KEDCD,
@@ -44,6 +60,9 @@ $score = sql_fetch("
 		growth_score_5,
 		profit_score_5,
 		stability_score_5,
+		badge_growth,
+		badge_stability,
+		badge_venture,
 		age_score_5,
 		emp_score_5,
 		final_total_score_5
@@ -51,16 +70,19 @@ $score = sql_fetch("
 	WHERE KEDCD = '{$kedcd}'
 ");
 
+// 설립일자(ESTB_DT) : YYYYMMDD -> YYYY년 변환
 $foundedYear = '';
 if (!empty($company['ESTB_DT']) && strlen($company['ESTB_DT']) >= 4) {
 	$foundedYear = substr($company['ESTB_DT'], 0, 4) . '년';
 }
 
+// extend/user.config 의 $enp_typt 활용 -> 기업유형
 $companyType = '';
 if (!empty($company['ENP_TYP']) && isset($enp_typt[$company['ENP_TYP']])) {
 	$companyType = $enp_typt[$company['ENP_TYP']];
 }
 
+// JS 전달 전 화면용 데이터 구조 정리
 $companyDetailData = array(
 	'kedcd' => $company['KEDCD'] ?? '',
 	'title' => $company['ENP_NM'] ?? '',
@@ -73,6 +95,9 @@ $companyDetailData = array(
 	'credit' => $score['total_grade_22'] ?? '',
 	'address' => trim(($company['LOC_ADDRA'] ?? '') . ' ' . ($company['LOC_ADDRB'] ?? '')),
 	'homepage' => $company['HPAGE_URL'] ?? '',
+	'badge_growth' => format_badge_percent_detail($score['badge_growth'] ?? null),
+	'badge_stability' => format_badge_percent_detail($score['badge_stability'] ?? null),
+	'badge_venture' => strtoupper(trim((string)($score['badge_venture'] ?? ''))),
 	'grow' => isset($score['growth_score_5']) ? (float)$score['growth_score_5'] : 0,
 	'profit' => isset($score['profit_score_5']) ? (float)$score['profit_score_5'] : 0,
 	'stable' => isset($score['stability_score_5']) ? (float)$score['stability_score_5'] : 0,
