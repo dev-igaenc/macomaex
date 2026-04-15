@@ -190,7 +190,17 @@ try {
 	$current_credit = (int)$status['matching_able_cnt'];
 	$credit_after = $current_credit + $charge_credit;
 
-	$memo = addslashes('사용자 일반결제 충전');
+	$plan_title_en = trim((string)$minfo['title_en']);
+	$plan_title_for_memo = preg_replace('/^CREDIT_/i', '', $plan_title_en);
+	$plan_title_for_memo = str_replace('_', ' ', $plan_title_for_memo);
+	if (preg_match('/^[A-Za-z0-9 ]+$/', $plan_title_for_memo)) {
+		$plan_title_for_memo = ucwords(strtolower($plan_title_for_memo));
+	}
+	if ($plan_title_for_memo === '') {
+		$plan_title_for_memo = '크레딧';
+	}
+	$charge_memo_text = $plan_title_for_memo . ' 플랜 충전';
+	$memo = addslashes($charge_memo_text);
 	$history_sql = "insert into g5_matching_credit_history set
 		uid='{$pinfo['uid']}',
 		tx_type='CHARGE',
@@ -222,7 +232,7 @@ try {
 	}
 
 	$snapshot = sql_fetch("select * from g5_membership_status where uid='{$pinfo['uid']}'");
-	$memo_text = addslashes("사용자 일반결제 충전\n");
+	$memo_text = addslashes($charge_memo_text . "\n");
 	$history_status_sql = "insert g5_membership_status_history set
 		uid='{$pinfo['uid']}',
 		order_no='{$order_no}',

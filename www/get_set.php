@@ -1004,9 +1004,8 @@ switch ($type) {
 					if($mat['order_no']) sql_query("update g5_membership_status_history set matching_able_cnt={$mat['matching_able_cnt']} where uid='{$member['mb_id']}' and order_no='{$mat['order_no']}' ");
 
 					// 크레딧 원장 기록 (사용)
-					$memo_prefix = ($request_type === "TM") ? "TM 요청" : "기본 요청";
-					$memo = addslashes($memo_prefix." 사용({$matching_credit_cost} 차감)");
-					sql_query("insert into g5_matching_credit_history set uid='{$member['mb_id']}', tx_type='USE', credit_delta='-{$matching_credit_cost}', credit_after='{$mat['matching_able_cnt']}', order_no=NULL, matching_no='{$matching_no}', request_type='{$request_type}', memo='{$memo}', created_at=now()");
+						$memo = addslashes($request_type === "TM" ? "TM 서포트 거래 요청" : "일반 거래 요청");
+						sql_query("insert into g5_matching_credit_history set uid='{$member['mb_id']}', tx_type='USE', credit_delta='-{$matching_credit_cost}', credit_after='{$mat['matching_able_cnt']}', order_no=NULL, matching_no='{$matching_no}', request_type='{$request_type}', memo='{$memo}', created_at=now()");
 
 					sql_query("COMMIT");
 

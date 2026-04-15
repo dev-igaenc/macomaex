@@ -15,7 +15,7 @@ $(function () {
         var showCount = PAGE_SIZE;
 
         function getCards() {
-            return Array.prototype.slice.call(listEl.querySelectorAll(".pay-card"));
+            return Array.prototype.slice.call(listEl.querySelectorAll(".pay-card[data-type]"));
         }
 
         function matchFilter(card) {
@@ -127,26 +127,6 @@ $(function () {
             }
         });
     })();
-
-    $(document).on("click", "a.receipt", function () {
-        var oid = $(this).attr("oid");
-        $.post("../get_set.php", {
-            type: "receipt",
-            oid: oid
-        }).done(function (jqXHR) {
-            jqXHR = jqXHR.split("|");
-            if (jqXHR[0] == 1000) {
-                var receiptUrl = "https://iniweb.inicis.com/DefaultWebApp/mall/cr/cm/mCmReceipt_head.jsp?noTid=" + jqXHR[1] + "&noMethod=1";
-                window.open(receiptUrl, "receipt", "width=430,height=700,scrollbars=yes,toolbar=no,menubar=no");
-            } else {
-                if (jqXHR[1] == "02") {
-                    jAlert("검색 결과가 없습니다.", "알림");
-                } else {
-                    jAlert(jqXHR[1], "알림");
-                }
-            }
-        });
-    });
 
     $("#membership_cancel").on("click", function () {
         var ms_id = $("#ms_id").val();

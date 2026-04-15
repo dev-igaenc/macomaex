@@ -51,6 +51,146 @@ $remain_credit = (int)$msinfo['matching_able_cnt'];
 $show_credit_cancel_btn = ($is_credit_membership && $remain_credit > 0);
 
 if($msinfo['coupon']) $coupon=getCouponInfo($msinfo['coupon']);
+
+if (!function_exists('my_plan_display_title_en')) {
+	function my_plan_display_title_en($rawTitleEn)
+	{
+		$rawTitleEn = trim((string)$rawTitleEn);
+		if ($rawTitleEn === '') return '';
+		$rawTitleEn = preg_replace('/^CREDIT_/i', '', $rawTitleEn);
+		if ($rawTitleEn === strtoupper($rawTitleEn)) {
+			return ucwords(strtolower(str_replace('_', ' ', $rawTitleEn)));
+		}
+		return str_replace('_', ' ', $rawTitleEn);
+	}
+}
+
+if (!function_exists('my_plan_pay_method_text')) {
+	function my_plan_pay_method_text($raw)
+	{
+		$raw = strtoupper(trim((string)$raw));
+		if ($raw === '') return '';
+		if (strpos($raw, 'CARD') !== false || strpos($raw, 'CARD') === 0) return '카드결제';
+		if (strpos($raw, 'VBANK') !== false || strpos($raw, 'BANK') !== false || strpos($raw, 'TRANS') !== false) return '계좌이체';
+		if (strpos($raw, 'HPP') !== false || strpos($raw, 'PHONE') !== false || strpos($raw, 'MOBILE') !== false) return '휴대폰결제';
+		if (strpos($raw, 'KAKAOPAY') !== false || strpos($raw, 'NAVERPAY') !== false || strpos($raw, 'PAYCO') !== false || strpos($raw, 'TOSS') !== false) return '간편결제';
+		return trim((string)$raw);
+	}
+}
+
+// 결제/사용 이력 조회
+$sql = "select
+			H.id,
+			H.uid,
+			H.tx_type,
+			H.request_type,
+			H.credit_delta,
+			H.credit_after,
+			H.order_no,
+			H.matching_no,
+			H.memo,
+			H.created_at as event_date,
+			B.tid as bill_tid,
+			B.card_appl_price as bill_paid_amount,
+			B.pay_method as bill_pay_method,
+			P.membership_parent_no,
+			P.order_goods,
+			P.price as payment_price,
+			P.pay_method as payment_method,
+			MM.title_en as plan_title_en,
+			MM.sale as plan_bonus_rate,
+			MM.vat as plan_vat,
+			M.rq_kind as matching_rq_kind,
+			M.rc_kind as matching_rc_kind,
+			M.KEDCD as matching_kedcd,
+			C.ENP_NM as company_name
+		from g5_matching_credit_history H
+		left join g5_membership_paybill B on H.order_no=B.order_no
+		left join g5_membership_payment P on H.order_no=P.order_no
+		left join g5_membership_manage MM on P.membership_parent_no=MM.no
+		left join g5_matching M on H.matching_no=M.no
+		left join company C on M.KEDCD=C.KEDCD
+		where
+			LOWER(TRIM(H.uid))=LOWER(TRIM('{$member['mb_id']}'))
+			".($member['mb_email'] ? " or LOWER(TRIM(H.uid))=LOWER(TRIM('{$member['mb_email']}'))" : "")."
+			".($msinfo['uid'] ? " or LOWER(TRIM(H.uid))=LOWER(TRIM('{$msinfo['uid']}'))" : "")."
+		order by H.created_at desc, H.id desc";
+$result = sql_query($sql, false);
+if(!$result){
+	$sql = "select
+				H.id,
+				H.uid,
+				H.tx_type,
+				H.request_type,
+				H.credit_delta,
+				H.credit_after,
+				H.order_no,
+				H.matching_no,
+				H.memo,
+				H.created_at as event_date,
+				'' as bill_tid,
+				0 as bill_paid_amount,
+				'' as bill_pay_method,
+				P.membership_parent_no,
+				P.order_goods,
+				P.price as payment_price,
+				P.pay_method as payment_method,
+				MM.title_en as plan_title_en,
+				MM.sale as plan_bonus_rate,
+				MM.vat as plan_vat,
+				M.rq_kind as matching_rq_kind,
+				M.rc_kind as matching_rc_kind,
+				M.KEDCD as matching_kedcd,
+				C.ENP_NM as company_name
+			from g5_matching_credit_history H
+			left join g5_membership_payment P on H.order_no=P.order_no
+			left join g5_membership_manage MM on P.membership_parent_no=MM.no
+			left join g5_matching M on H.matching_no=M.no
+			left join company C on M.KEDCD=C.KEDCD
+			where
+				LOWER(TRIM(H.uid))=LOWER(TRIM('{$member['mb_id']}'))
+				".($member['mb_email'] ? " or LOWER(TRIM(H.uid))=LOWER(TRIM('{$member['mb_email']}'))" : "")."
+				".($msinfo['uid'] ? " or LOWER(TRIM(H.uid))=LOWER(TRIM('{$msinfo['uid']}'))" : "")."
+			order by H.created_at desc, H.id desc";
+	$result = sql_query($sql, false);
+}
+
+$history_rows = array();
+if($result){
+	while($row = sql_fetch_array($result)){
+		$history_rows[] = $row;
+	}
+}
+
+$payment_rows = array();
+$use_rows = array();
+for($i=0; $i<count($history_rows); $i++){
+	$row = $history_rows[$i];
+	$tx_type = strtoupper(trim((string)$row['tx_type']));
+	if($tx_type=="USE") $use_rows[] = $row;
+	else $payment_rows[] = $row;
+}
+
+$matching_company_map = array();
+$matching_rq_kind_map = array();
+$matching_rc_kind_map = array();
+$matching_no_list = array();
+for($i=0; $i<count($use_rows); $i++){
+	$mn = (int)$use_rows[$i]['matching_no'];
+	if($mn > 0) $matching_no_list[$mn] = $mn;
+}
+if(count($matching_no_list) > 0){
+	$matching_no_in = implode(',', $matching_no_list);
+	$company_result = sql_query("select M.no as matching_no, C.ENP_NM as company_name, M.rq_kind, M.rc_kind from g5_matching M left join company C on M.KEDCD=C.KEDCD where M.no in ({$matching_no_in})", false);
+	if($company_result){
+		while($crow = sql_fetch_array($company_result)){
+			$key = (string)$crow['matching_no'];
+			$matching_company_map[$key] = trim((string)$crow['company_name']);
+			$matching_rq_kind_map[$key] = strtoupper(trim((string)$crow['rq_kind']));
+			$matching_rc_kind_map[$key] = strtoupper(trim((string)$crow['rc_kind']));
+		}
+	}
+}
 ?>
 
 
@@ -78,7 +218,7 @@ if($msinfo['coupon']) $coupon=getCouponInfo($msinfo['coupon']);
                                 현재 보유 크레딧
                             </div>
                             <div class="amount">
-                                <span class="num">120</span>
+                                <span class="num"><?=number_format((float)$remain_credit)?></span>
                                 <span class="unit">크레딧</span>
                             </div>
                         </div>
@@ -105,108 +245,118 @@ if($msinfo['coupon']) $coupon=getCouponInfo($msinfo['coupon']);
                     </div>
 
                     <div id="chargeList" class="card-list">
-                        <div class="pay-card" data-type="charge">
-                            <div class="pay-card-icon charge">
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
-                            </div>
-                            <div class="pay-card-info">
-                                <div class="title">Enterprise 플랜 충전</div>
-                                <div class="meta">
-                                    <span>2026-04-01</span>
-                                    <span class="dot"></span>
-                                    <span>1,300 크레딧 (보너스 +30% 포함)</span>
-                                    <span class="dot"></span>
-                                    <span>카드결제</span>
-                                </div>
-                            </div>
-                            <div class="pay-card-right">
-                                <span class="credit-delta plus">+1,300</span>
-                                <span class="price-text">₩100,000</span>
-                                <span class="status-badge done">완료</span>
-                            </div>
-                        </div>
+                        <?for($i=0; $i<count($payment_rows); $i++){
+                            $row = $payment_rows[$i];
+                            $tx_type = strtoupper(trim((string)$row['tx_type']));
+                            $amount = (float)$row['credit_delta'];
+                            $amount_abs = abs($amount);
+                            $delta = number_format($amount_abs, 1);
+                            if(substr($delta, -2)=='.0') $delta = number_format($amount_abs, 0);
 
-                        <div class="pay-card" data-type="charge">
-                            <div class="pay-card-icon charge">
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
-                            </div>
-                            <div class="pay-card-info">
-                                <div class="title">Business 플랜 충전</div>
-                                <div class="meta">
-                                    <span>2026-03-18</span>
-                                    <span class="dot"></span>
-                                    <span>600 크레딧 (보너스 +20% 포함)</span>
-                                    <span class="dot"></span>
-                                    <span>카드결제</span>
-                                </div>
-                            </div>
-                            <div class="pay-card-right">
-                                <span class="credit-delta plus">+600</span>
-                                <span class="price-text">₩50,000</span>
-                                <span class="status-badge done">완료</span>
-                            </div>
-                        </div>
+                            $is_free = ($tx_type=="BONUS" || $tx_type=="FREE" || $tx_type=="EVENT");
+                            if(!$is_free && !$row['order_no'] && $amount > 0) $is_free = true;
+                            $filter_type = $is_free ? "free" : "charge";
+                            $icon_class = $is_free ? "free" : "charge";
+                            $is_signup_free = ($is_free && strpos((string)$row['memo'], "신규 가입 무료 크레딧 지급") !== false);
+                            $plan_title = my_plan_display_title_en($row['plan_title_en']);
+                            $bonus_rate = (int)$row['plan_bonus_rate'];
+                            $pay_method_text = my_plan_pay_method_text($row['bill_pay_method'] ? $row['bill_pay_method'] : $row['payment_method']);
 
-                        <div class="pay-card" data-type="charge">
-                            <div class="pay-card-icon charge">
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
-                            </div>
-                            <div class="pay-card-info">
-                                <div class="title">Professional 플랜 충전</div>
-                                <div class="meta">
-                                    <span>2026-01-20</span>
-                                    <span class="dot"></span>
-                                    <span>220 크레딧 (보너스 +10% 포함)</span>
-                                    <span class="dot"></span>
-                                    <span>카드결제</span>
-                                </div>
-                            </div>
-                            <div class="pay-card-right">
-                                <span class="credit-delta plus">+220</span>
-                                <span class="price-text">₩20,000</span>
-                                <span class="status-badge done">완료</span>
-                            </div>
-                        </div>
+                            $title = $row['memo'] ? $row['memo'] : "[크레딧] {$delta} 크레딧 충전";
+                            if(!$row['memo']){
+                                if($tx_type=="CHARGE" && $plan_title) $title = $plan_title." 플랜 충전";
+                                else if($tx_type=="REFUND") $title = "[크레딧] {$delta} 크레딧 환불";
+                                else if($tx_type=="ADJUST") $title = "[크레딧] 관리자 조정 {$delta} 크레딧";
+                                else if($is_free) $title = "[크레딧] 무료 크레딧 지급 {$delta}";
+                            }
+                            if($tx_type=="CHARGE" && $plan_title){
+                                if(strpos((string)$title, "일반결제 충전")!==false || strpos((string)$title, "[크레딧] ")===0){
+                                    $title = $plan_title." 플랜 충전";
+                                }
+                            }
 
-                        <div class="pay-card" data-type="charge">
-                            <div class="pay-card-icon charge">
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
-                            </div>
-                            <div class="pay-card-info">
-                                <div class="title">Starter 플랜 충전</div>
-                                <div class="meta">
-                                    <span>2026-01-05</span>
-                                    <span class="dot"></span>
-                                    <span>100 크레딧</span>
-                                    <span class="dot"></span>
-                                    <span>카드결제</span>
-                                </div>
-                            </div>
-                            <div class="pay-card-right">
-                                <span class="credit-delta plus">+100</span>
-                                <span class="price-text">₩10,000</span>
-                                <span class="status-badge done">완료</span>
-                            </div>
-                        </div>
+                            $meta_credit_text = number_format($amount_abs)." 크레딧";
+                            if($tx_type=="REFUND"){
+                                $meta_credit_text = number_format($amount_abs)." 크레딧 환불";
+                            } else if($tx_type=="ADJUST"){
+                                $meta_credit_text = number_format($amount_abs)." 크레딧 조정";
+                            } else if($tx_type=="CHARGE" && $bonus_rate > 0){
+                                $meta_credit_text = number_format($amount_abs)." 크레딧 (보너스 +".$bonus_rate."% 포함)";
+                            }
+                            $meta_method_text = $is_free ? "무료" : ($pay_method_text ? $pay_method_text : ($tx_type=="REFUND" ? "환불" : "카드결제"));
+                            $paid_amount = (int)$row['bill_paid_amount'];
+                            if($paid_amount < 1) $paid_amount = (int)$row['payment_price'];
+                            $is_vat_separate = (strpos((string)$row['plan_vat'], '별도') !== false);
+                            $paid_amount_ex_vat = $paid_amount;
+                            if($tx_type=="CHARGE" && $paid_amount > 0 && $is_vat_separate){
+                                $paid_amount_ex_vat = (int)round($paid_amount / 1.1);
+                            }
+                            $price_text_display = $is_free ? "무료" : ($pay_method_text ? $pay_method_text : "카드결제");
+                            if($tx_type=="CHARGE" && $paid_amount > 0){
+                                $price_text_display = "₩".number_format($paid_amount_ex_vat);
+                            }else if($tx_type=="REFUND"){
+                                $price_text_display = ($paid_amount > 0) ? "-₩".number_format($paid_amount) : "환불";
+                            }
 
-                        <div class="pay-card" data-type="free">
-                            <div class="pay-card-icon free">
+                            $status_text = "완료";
+                            $status_class = "done";
+                            if($is_free){
+                                $status_text = "무상지급";
+                                $status_class = "free";
+                            }else if($tx_type=="REFUND"){
+                                $status_text = "결제취소";
+                                $status_class = "used";
+                            }else if($tx_type=="ADJUST"){
+                                $status_text = "관리자조정";
+                                $status_class = "used";
+                            }
+
+                            $delta_sign = ($amount >= 0 ? "+" : "-");
+                            $delta_class = ($amount >= 0 ? "plus" : "minus");
+                            if($is_free){
+                                $delta_sign = "+";
+                                $delta_class = "green";
+                            }
+                        ?>
+                        <div class="pay-card" data-type="<?=$filter_type?>">
+                            <div class="pay-card-icon <?=$icon_class?>">
+                                <?if($icon_class=="free"){?>
                                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5" rx="1"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 010-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 000-5C13 2 12 7 12 7z"/></svg>
+                                <?}else{?>
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+                                <?}?>
                             </div>
                             <div class="pay-card-info">
-                                <div class="title">신규 가입 무료 크레딧 지급</div>
+                                <div class="title"><?=htmlspecialchars($title, ENT_QUOTES)?></div>
                                 <div class="meta">
-                                    <span>2025-12-20</span>
+                                    <?if($is_signup_free){?>
+                                    <span><?=substr((string)$row['event_date'],0,10)?></span>
                                     <span class="dot"></span>
                                     <span>Free 플랜 · 서비스 체험용 · 청약철회 제외</span>
+                                    <?}else{?>
+                                    <span><?=substr((string)$row['event_date'],0,10)?></span>
+                                    <span class="dot"></span>
+                                    <span><?=htmlspecialchars($meta_credit_text, ENT_QUOTES)?></span>
+                                    <span class="dot"></span>
+                                    <span><?=htmlspecialchars($meta_method_text, ENT_QUOTES)?></span>
+                                    <?}?>
                                 </div>
                             </div>
                             <div class="pay-card-right">
-                                <span class="credit-delta green">+30</span>
-                                <span class="price-text">무료</span>
-                                <span class="status-badge free">무상지급</span>
+                                <span class="credit-delta <?=$delta_class?>"><?=$delta_sign?><?=$delta?></span>
+                                <span class="price-text"><?=htmlspecialchars($price_text_display, ENT_QUOTES)?></span>
+                                <span class="status-badge <?=$status_class?>"><?=$status_text?></span>
                             </div>
                         </div>
+                        <?}?>
+                        <?if(!count($payment_rows)){?>
+                        <div class="pay-card">
+                            <div class="pay-card-info">
+                                <div class="title">결제 내역이 없습니다.</div>
+                                <div class="meta"><span>결제 또는 지급 이력이 없습니다.</span></div>
+                            </div>
+                        </div>
+                        <?}?>
                     </div>
                     <div class="load-more-wrap" id="chargeMoreWrap">
                         <button class="load-more-btn" id="chargeMoreBtn" type="button">
@@ -231,121 +381,85 @@ if($msinfo['coupon']) $coupon=getCouponInfo($msinfo['coupon']);
                         </div>
 
                         <div id="useList" class="card-list">
-                            <div class="pay-card" data-type="match">
-                                <div class="pay-card-icon match">
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
-                                </div>
-                                <div class="pay-card-info">
-                                    <div class="title">TM 서포트 거래 요청 — (주)한국정밀기계</div>
-                                    <div class="meta">
-                                        <span>2026-04-10</span>
-                                        <span class="dot"></span>
-                                        <span>거래 방향: 구매</span>
-                                        <span class="dot"></span>
-                                        <span>TM 서포트</span>
-                                    </div>
-                                </div>
-                                <div class="pay-card-right">
-                                    <span class="credit-delta minus">−30</span>
-                                    <span class="status-badge used">사용</span>
-                                </div>
-                            </div>
+                            <?for($i=0; $i<count($use_rows); $i++){
+                                $row = $use_rows[$i];
+                                $amount = (float)$row['credit_delta'];
+                                $amount_abs = abs($amount);
+                                $delta = number_format($amount_abs, 1);
+                                if(substr($delta, -2)=='.0') $delta = number_format($amount_abs, 0);
 
-                            <div class="pay-card" data-type="match">
-                                <div class="pay-card-icon match">
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
-                                </div>
-                                <div class="pay-card-info">
-                                    <div class="title">일반 거래 요청 — 대원스틸(주)</div>
-                                    <div class="meta">
-                                        <span>2026-04-08</span>
-                                        <span class="dot"></span>
-                                        <span>거래 방향: 구매</span>
-                                        <span class="dot"></span>
-                                        <span>일반 거래</span>
-                                    </div>
-                                </div>
-                                <div class="pay-card-right">
-                                    <span class="credit-delta minus">−10</span>
-                                    <span class="status-badge used">사용</span>
-                                </div>
-                            </div>
+                                $title = $row['memo'] ? $row['memo'] : "[크레딧] 매칭 요청 {$delta} 크레딧 차감";
+                                $company_name = trim((string)$row['company_name']);
+                                $rq_kind = strtoupper(trim((string)$row['matching_rq_kind']));
+                                $rc_kind = strtoupper(trim((string)$row['matching_rc_kind']));
+                                if(!$company_name && (int)$row['matching_no'] > 0){
+                                    $map_key = (string)((int)$row['matching_no']);
+                                    if(isset($matching_company_map[$map_key])) $company_name = $matching_company_map[$map_key];
+                                    if(!$rq_kind && isset($matching_rq_kind_map[$map_key])) $rq_kind = $matching_rq_kind_map[$map_key];
+                                    if(!$rc_kind && isset($matching_rc_kind_map[$map_key])) $rc_kind = $matching_rc_kind_map[$map_key];
+                                }
 
-                            <div class="pay-card" data-type="analyze">
-                                <div class="pay-card-icon analyze">
+                                $is_tm_request = (strpos((string)$title, "TM") !== false);
+                                $request_type_local = strtoupper(trim((string)$row['request_type']));
+                                if(!$request_type_local){
+                                    $request_type_local = $is_tm_request ? "TM" : "BASIC";
+                                }
+                                $service_label = ($request_type_local === "TM") ? "TM 서포트" : "일반 거래";
+                                $direction_label = "구매";
+                                if($rq_kind === "M" && $rc_kind === "D") $direction_label = "판매";
+                                else if($rq_kind === "D" && $rc_kind === "M") $direction_label = "구매";
+                                else if($rq_kind === "M") $direction_label = "판매";
+                                else if($rq_kind === "D") $direction_label = "구매";
+                                $is_match_request_memo = (
+                                    strpos((string)$title, "일반 거래 요청") !== false ||
+                                    strpos((string)$title, "TM 서포트 거래 요청") !== false
+                                );
+                                if($company_name && $is_match_request_memo){
+                                    $title = $is_tm_request ? "TM 서포트 거래 요청 — ".$company_name : "일반 거래 요청 — ".$company_name;
+                                }
+                                $use_type = "match";
+                                if(stripos((string)$title, "AI")!==false || stripos((string)$title, "분석")!==false) $use_type = "analyze";
+                            ?>
+                            <div class="pay-card" data-type="<?=$use_type?>">
+                                <div class="pay-card-icon <?=$use_type?>">
+                                    <?if($use_type=="analyze"){?>
                                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z"/></svg>
-                                </div>
-                                <div class="pay-card-info">
-                                    <div class="title">AI 기업 분석 — (주)안정기계</div>
-                                    <div class="meta">
-                                        <span>2026-04-07</span>
-                                        <span class="dot"></span>
-                                        <span>기업 심층 분석 리포트</span>
-                                    </div>
-                                </div>
-                                <div class="pay-card-right">
-                                    <span class="credit-delta minus">−0.5</span>
-                                    <span class="status-badge used">사용</span>
-                                </div>
-                            </div>
-
-                            <div class="pay-card" data-type="match">
-                                <div class="pay-card-icon match">
+                                    <?}else{?>
                                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+                                    <?}?>
                                 </div>
                                 <div class="pay-card-info">
-                                    <div class="title">일반 거래 요청 — (주)태양화학</div>
+                                    <div class="title"><?=htmlspecialchars($title, ENT_QUOTES)?></div>
                                     <div class="meta">
-                                        <span>2026-03-25</span>
+                                        <?if($use_type=="match"){?>
+                                        <span><?=substr((string)$row['event_date'],0,10)?></span>
                                         <span class="dot"></span>
-                                        <span>거래 방향: 판매</span>
+                                        <span>거래 방향 : <?=htmlspecialchars($direction_label, ENT_QUOTES)?></span>
                                         <span class="dot"></span>
-                                        <span>일반 거래</span>
+                                        <span><?=htmlspecialchars($service_label, ENT_QUOTES)?></span>
+                                        <?}else{?>
+                                        <span><?=substr((string)$row['event_date'],0,10)?></span>
+                                        <?if($row['matching_no']){?>
+                                        <span class="dot"></span>
+                                        <span>매칭번호 <?=htmlspecialchars($row['matching_no'], ENT_QUOTES)?></span>
+                                        <?}?>
+                                        <?}?>
                                     </div>
                                 </div>
                                 <div class="pay-card-right">
-                                    <span class="credit-delta minus">−10</span>
+                                    <span class="credit-delta minus">-<?=$delta?></span>
                                     <span class="status-badge used">사용</span>
                                 </div>
                             </div>
-
-                            <div class="pay-card" data-type="analyze">
-                                <div class="pay-card-icon analyze">
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z"/></svg>
-                                </div>
+                            <?}?>
+                            <?if(!count($use_rows)){?>
+                            <div class="pay-card">
                                 <div class="pay-card-info">
-                                    <div class="title">AI 기업 분석 — (주)태양화학</div>
-                                    <div class="meta">
-                                        <span>2026-03-25</span>
-                                        <span class="dot"></span>
-                                        <span>기업 심층 분석 리포트</span>
-                                    </div>
-                                </div>
-                                <div class="pay-card-right">
-                                    <span class="credit-delta minus">−0.5</span>
-                                    <span class="status-badge used">사용</span>
+                                    <div class="title">크레딧 사용 내역이 없습니다.</div>
+                                    <div class="meta"><span>사용 이력이 없습니다.</span></div>
                                 </div>
                             </div>
-
-                            <div class="pay-card" data-type="match">
-                                <div class="pay-card-icon match">
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
-                                </div>
-                                <div class="pay-card-info">
-                                    <div class="title">일반 거래 요청 — 삼원포장(주)</div>
-                                    <div class="meta">
-                                        <span>2026-01-12</span>
-                                        <span class="dot"></span>
-                                        <span>거래 방향: 구매</span>
-                                        <span class="dot"></span>
-                                        <span>일반 거래</span>
-                                    </div>
-                                </div>
-                                <div class="pay-card-right">
-                                    <span class="credit-delta minus">−10</span>
-                                    <span class="status-badge used">사용</span>
-                                </div>
-                            </div>
+                            <?}?>
                         </div>
                         <div class="load-more-wrap" id="useMoreWrap">
                             <button class="load-more-btn" id="useMoreBtn" type="button">
