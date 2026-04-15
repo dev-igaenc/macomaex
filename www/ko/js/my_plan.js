@@ -1,7 +1,135 @@
 $(function () {
-    $("a.receipt").on("click", function () {
-        var oid = $(this).attr("oid");
+    var PAGE_SIZE = 3;
 
+    function initCardSection(opts) {
+        var listEl = document.getElementById(opts.listId);
+        var moreWrap = document.getElementById(opts.moreWrapId);
+        var moreBtn = document.getElementById(opts.moreBtnId);
+        var badgeEl = document.getElementById(opts.badgeId);
+        var filterEl = opts.filterId ? document.getElementById(opts.filterId) : null;
+        if (!listEl || !moreBtn || !moreWrap) {
+            return;
+        }
+
+        var currentFilter = "all";
+        var showCount = PAGE_SIZE;
+
+        function getCards() {
+            return Array.prototype.slice.call(listEl.querySelectorAll(".pay-card"));
+        }
+
+        function matchFilter(card) {
+            if (currentFilter === "all") {
+                return true;
+            }
+            return card.getAttribute(opts.filterAttr) === currentFilter;
+        }
+
+        function render() {
+            var cards = getCards();
+            var matched = cards.filter(matchFilter);
+            var visible = 0;
+
+            cards.forEach(function (card) {
+                if (matchFilter(card)) {
+                    card.style.display = visible < showCount ? "" : "none";
+                    visible++;
+                } else {
+                    card.style.display = "none";
+                }
+            });
+
+            var remaining = matched.length - showCount;
+            if (remaining > 0) {
+                moreWrap.style.display = "";
+                moreBtn.classList.remove("expanded");
+                moreBtn.innerHTML =
+                    '더 보기 <span style="color:#2563eb;font-weight:700;">+' + remaining + '</span>' +
+                    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>';
+            } else {
+                if (matched.length > PAGE_SIZE && showCount >= matched.length) {
+                    moreWrap.style.display = "";
+                    moreBtn.classList.add("expanded");
+                    moreBtn.innerHTML =
+                        '접기' +
+                        '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>';
+                } else {
+                    moreWrap.style.display = "none";
+                }
+            }
+
+            if (badgeEl) {
+                badgeEl.textContent = matched.length + "건";
+            }
+        }
+
+        moreBtn.addEventListener("click", function () {
+            var matchedLength = getCards().filter(matchFilter).length;
+            if (showCount >= matchedLength) {
+                showCount = PAGE_SIZE;
+            } else {
+                showCount += PAGE_SIZE;
+            }
+            render();
+        });
+
+        if (filterEl) {
+            var btns = filterEl.querySelectorAll(".filter-btn");
+            btns.forEach(function (btn) {
+                btn.addEventListener("click", function () {
+                    btns.forEach(function (b) {
+                        b.classList.remove("active");
+                    });
+                    btn.classList.add("active");
+                    currentFilter = btn.getAttribute("data-filter");
+                    showCount = PAGE_SIZE;
+                    render();
+                });
+            });
+        }
+
+        render();
+    }
+
+    initCardSection({
+        listId: "chargeList",
+        moreWrapId: "chargeMoreWrap",
+        moreBtnId: "chargeMoreBtn",
+        badgeId: "chargeBadge",
+        filterId: "chargeFilter",
+        filterAttr: "data-type"
+    });
+
+    initCardSection({
+        listId: "useList",
+        moreWrapId: "useMoreWrap",
+        moreBtnId: "useMoreBtn",
+        badgeId: "useBadge",
+        filterId: "useFilter",
+        filterAttr: "data-type"
+    });
+
+    (function () {
+        var box = document.getElementById("policyBox");
+        var toggle = document.getElementById("policyToggle");
+        if (!box || !toggle) {
+            return;
+        }
+        toggle.addEventListener("click", function () {
+            var isOpen = box.classList.contains("open");
+            box.classList.toggle("open", !isOpen);
+            toggle.setAttribute("aria-expanded", String(!isOpen));
+        });
+        toggle.addEventListener("keydown", function (e) {
+            if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                toggle.click();
+            }
+        });
+    })();
+
+    $(document).on("click", "a.receipt", function () {
+        var oid = $(this).attr("oid");
         $.post("../get_set.php", {
             type: "receipt",
             oid: oid
