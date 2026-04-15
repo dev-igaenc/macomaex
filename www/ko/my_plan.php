@@ -3,12 +3,6 @@ include_once("./_common.php");
 
 $board['bo_10']="6"; // 1뎁스
 $board['bo_9']="5"; // 2뎁스
-//$board['bo_8']="1"; // 3뎁스
-//$board['bo_7']="1"; // 4뎁스
-// $board['bo_5'] = ""; // 1뎁스 제목
-// $board['bo_6'] = ""; // 1뎁스 설명
-// $board['bo_subject'] = "";  // 2뎁스 제목
-//$board['bo_4'] = $config['cf_title']."의 혜택을 확인하세요.";  // 2뎁스 설명
 
 //로그인 체크
 if(!$member['mb_id']) ALERT("로그인 후 이용하세요.","/bbs/login.php");
@@ -26,19 +20,11 @@ $hide_theme_svisual = true;
 $hide_theme_pagetop = true;
 include_once(G5_THEME_PATH.'/head.php');
 $membership=get_membership();
-foreach($membership as $value){
-	$mship[$value['title_en']]=$value;
-}
 
 //맴버쉽 정보
-$today = date("Y-m-d");
 $msinfo_row = getUserMembership();
 if(!is_array($msinfo_row)) $msinfo_row = array();
-//print_r($msinfo_row[0]);
-$chk = (isset($msinfo_row[0]) && is_array($msinfo_row[0])) ? $msinfo_row[0] : array();
-//if($chk['uid']) print_r($chk);
-
-//맴버쉽이 없는 경우 무료로
+// 멤버십 기본값 보정
 if(!empty($msinfo_row[0]) && is_array($msinfo_row[0])) $msinfo = $msinfo_row[0];
 else $msinfo = array();
 
@@ -67,8 +53,6 @@ set_session('ss_membership_cancel_token', $membership_cancel_token);
 $remain_credit = (int)$msinfo['matching_able_cnt'];
 $show_credit_cancel_btn = ($is_credit_membership && $remain_credit > 0);
 
-if($msinfo['coupon']) $coupon=getCouponInfo($msinfo['coupon']);
-
 if (!function_exists('my_plan_display_title_en')) {
 	function my_plan_display_title_en($rawTitleEn)
 	{
@@ -95,7 +79,7 @@ if (!function_exists('my_plan_pay_method_text')) {
 	}
 }
 
-// 결제/사용 이력 조회
+// 원장 조회 (구버전 fallback)
 $sql = "select
 			H.id,
 			H.uid,
@@ -181,6 +165,7 @@ if($result){
 
 $payment_rows = array();
 $use_rows = array();
+// 결제/사용 분리
 for($i=0; $i<count($history_rows); $i++){
 	$row = $history_rows[$i];
 	$tx_type = strtoupper(trim((string)$row['tx_type']));
@@ -192,6 +177,7 @@ $matching_company_map = array();
 $matching_rq_kind_map = array();
 $matching_rc_kind_map = array();
 $matching_no_list = array();
+// 매칭번호로 회사명 보강
 for($i=0; $i<count($use_rows); $i++){
 	$mn = (int)$use_rows[$i]['matching_no'];
 	if($mn > 0) $matching_no_list[$mn] = $mn;

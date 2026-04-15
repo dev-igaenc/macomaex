@@ -1,6 +1,7 @@
 $(function () {
     var PAGE_SIZE = 3;
 
+    // 카드 리스트 공통: 필터 + 더보기/접기 + 건수 배지 처리
     function initCardSection(opts) {
         var listEl = document.getElementById(opts.listId);
         var moreWrap = document.getElementById(opts.moreWrapId);
@@ -109,6 +110,7 @@ $(function () {
         filterAttr: "data-type"
     });
 
+    // 환불 정책 아코디언
     (function () {
         var box = document.getElementById("policyBox");
         var toggle = document.getElementById("policyToggle");
@@ -128,6 +130,7 @@ $(function () {
         });
     })();
 
+    // 구독/결제취소 요청
     $("#membership_cancel").on("click", function () {
         var ms_id = $("#ms_id").val();
         var isCredit = $("#is_credit_membership").val();
