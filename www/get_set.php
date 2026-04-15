@@ -82,7 +82,7 @@ switch ($type) {
 	case "member_check":
 		if($id) {
 			$chk=sql_fetch("select * from {$g5['member_table']} where mb_id='{$id}'");
-			if($chk['mb_id']) {
+			if(is_array($chk) && !empty($chk['mb_id'])) {
 				if($chk['mb_leave_date']) echo "501|탈퇴한 계정입니다.";
 				else if($chk['mb_intercept_date']) echo "501|이용 정지된 계정입니다.";
 				else echo "500|가입한 이력이 있습니다.";
