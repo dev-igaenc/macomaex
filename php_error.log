@@ -1,0 +1,69 @@
+[15-Apr-2026 13:20:09 Asia/Seoul] PHP Warning:  Undefined variable $link_1101 in /Users/igaienc/Desktop/macomaex-prod-ftp/www/theme/prix/head.php on line 301
+[15-Apr-2026 13:20:09 Asia/Seoul] PHP Warning:  Undefined variable $link_1102 in /Users/igaienc/Desktop/macomaex-prod-ftp/www/theme/prix/head.php on line 302
+[15-Apr-2026 13:20:09 Asia/Seoul] PHP Warning:  Undefined variable $link_1103 in /Users/igaienc/Desktop/macomaex-prod-ftp/www/theme/prix/head.php on line 303
+[15-Apr-2026 13:20:09 Asia/Seoul] PHP Warning:  Undefined variable $link_1104 in /Users/igaienc/Desktop/macomaex-prod-ftp/www/theme/prix/head.php on line 304
+[15-Apr-2026 13:20:50 Asia/Seoul] PHP Warning:  Undefined variable $link_1101 in /Users/igaienc/Desktop/macomaex-prod-ftp/www/theme/prix/head.php on line 301
+[15-Apr-2026 13:20:50 Asia/Seoul] PHP Warning:  Undefined variable $link_1102 in /Users/igaienc/Desktop/macomaex-prod-ftp/www/theme/prix/head.php on line 302
+[15-Apr-2026 13:20:50 Asia/Seoul] PHP Warning:  Undefined variable $link_1103 in /Users/igaienc/Desktop/macomaex-prod-ftp/www/theme/prix/head.php on line 303
+[15-Apr-2026 13:20:50 Asia/Seoul] PHP Warning:  Undefined variable $link_1104 in /Users/igaienc/Desktop/macomaex-prod-ftp/www/theme/prix/head.php on line 304
+[15-Apr-2026 13:20:52 Asia/Seoul] PHP Warning:  Undefined variable $link_1101 in /Users/igaienc/Desktop/macomaex-prod-ftp/www/theme/prix/head.php on line 301
+[15-Apr-2026 13:20:52 Asia/Seoul] PHP Warning:  Undefined variable $link_1102 in /Users/igaienc/Desktop/macomaex-prod-ftp/www/theme/prix/head.php on line 302
+[15-Apr-2026 13:20:52 Asia/Seoul] PHP Warning:  Undefined variable $link_1103 in /Users/igaienc/Desktop/macomaex-prod-ftp/www/theme/prix/head.php on line 303
+[15-Apr-2026 13:20:52 Asia/Seoul] PHP Warning:  Undefined variable $link_1104 in /Users/igaienc/Desktop/macomaex-prod-ftp/www/theme/prix/head.php on line 304
+[15-Apr-2026 13:20:55 Asia/Seoul] PHP Warning:  Undefined variable $link_1101 in /Users/igaienc/Desktop/macomaex-prod-ftp/www/theme/prix/head.php on line 301
+[15-Apr-2026 13:20:55 Asia/Seoul] PHP Warning:  Undefined variable $link_1102 in /Users/igaienc/Desktop/macomaex-prod-ftp/www/theme/prix/head.php on line 302
+[15-Apr-2026 13:20:55 Asia/Seoul] PHP Warning:  Undefined variable $link_1103 in /Users/igaienc/Desktop/macomaex-prod-ftp/www/theme/prix/head.php on line 303
+[15-Apr-2026 13:20:55 Asia/Seoul] PHP Warning:  Undefined variable $link_1104 in /Users/igaienc/Desktop/macomaex-prod-ftp/www/theme/prix/head.php on line 304
+[15-Apr-2026 13:21:00 Asia/Seoul] PHP Warning:  Undefined variable $link_1101 in /Users/igaienc/Desktop/macomaex-prod-ftp/www/theme/prix/head.php on line 301
+[15-Apr-2026 13:21:00 Asia/Seoul] PHP Warning:  Undefined variable $link_1102 in /Users/igaienc/Desktop/macomaex-prod-ftp/www/theme/prix/head.php on line 302
+[15-Apr-2026 13:21:00 Asia/Seoul] PHP Warning:  Undefined variable $link_1103 in /Users/igaienc/Desktop/macomaex-prod-ftp/www/theme/prix/head.php on line 303
+[15-Apr-2026 13:21:00 Asia/Seoul] PHP Warning:  Undefined variable $link_1104 in /Users/igaienc/Desktop/macomaex-prod-ftp/www/theme/prix/head.php on line 304
+[15-Apr-2026 13:24:30 Asia/Seoul] PHP Warning:  Trying to access array offset on value of type null in /Users/igaienc/Desktop/macomaex-prod-ftp/www/get_set.php on line 1212
+[15-Apr-2026 13:35:27 Asia/Seoul] PHP Warning:  Trying to access array offset on value of type null in /Users/igaienc/Desktop/macomaex-prod-ftp/www/get_set.php on line 566
+[15-Apr-2026 13:35:29 Asia/Seoul] PHP Warning:  Trying to access array offset on value of type null in /Users/igaienc/Desktop/macomaex-prod-ftp/www/get_set.php on line 546
+[15-Apr-2026 13:35:29 Asia/Seoul] PHP Warning:  Trying to access array offset on value of type null in /Users/igaienc/Desktop/macomaex-prod-ftp/www/get_set.php on line 547
+[15-Apr-2026 13:35:29 Asia/Seoul] PHP Warning:  Trying to access array offset on value of type null in /Users/igaienc/Desktop/macomaex-prod-ftp/www/get_set.php on line 550
+[15-Apr-2026 13:35:29 Asia/Seoul] PHP Warning:  Trying to access array offset on value of type null in /Users/igaienc/Desktop/macomaex-prod-ftp/www/get_set.php on line 552
+[15-Apr-2026 13:35:29 Asia/Seoul] PHP Warning:  Trying to access array offset on value of type null in /Users/igaienc/Desktop/macomaex-prod-ftp/www/get_set.php on line 554
+[15-Apr-2026 13:35:29 Asia/Seoul] PHP Warning:  Trying to access array offset on value of type null in /Users/igaienc/Desktop/macomaex-prod-ftp/www/get_set.php on line 566
+[15-Apr-2026 13:35:29 Asia/Seoul] PHP Warning:  Trying to access array offset on value of type null in /Users/igaienc/Desktop/macomaex-prod-ftp/www/get_set.php on line 568
+[15-Apr-2026 13:35:29 Asia/Seoul] PHP Warning:  Trying to access array offset on value of type null in /Users/igaienc/Desktop/macomaex-prod-ftp/www/get_set.php on line 571
+[15-Apr-2026 13:35:29 Asia/Seoul] PHP Warning:  Trying to access array offset on value of type null in /Users/igaienc/Desktop/macomaex-prod-ftp/www/get_set.php on line 574
+[15-Apr-2026 13:35:29 Asia/Seoul] PHP Warning:  Trying to access array offset on value of type null in /Users/igaienc/Desktop/macomaex-prod-ftp/www/get_set.php on line 577
+[15-Apr-2026 13:48:54 Asia/Seoul] PHP Warning:  Undefined array key "de_cart_keep_term" in /Users/igaienc/Desktop/macomaex-prod-ftp/www/lib/shop.lib.php on line 2609
+[15-Apr-2026 13:48:54 Asia/Seoul] PHP Warning:  Undefined array key "de_guest_cart_use" in /Users/igaienc/Desktop/macomaex-prod-ftp/www/lib/shop.lib.php on line 1398
+[15-Apr-2026 13:48:59 Asia/Seoul] PHP Warning:  Undefined array key "title" in /Users/igaienc/Desktop/macomaex-prod-ftp/www/backoffice/matching_success.list.php on line 260
+[15-Apr-2026 13:48:59 Asia/Seoul] PHP Warning:  Undefined array key "title" in /Users/igaienc/Desktop/macomaex-prod-ftp/www/backoffice/matching_success.list.php on line 260
+[15-Apr-2026 13:48:59 Asia/Seoul] PHP Warning:  Undefined array key "title" in /Users/igaienc/Desktop/macomaex-prod-ftp/www/backoffice/matching_success.list.php on line 260
+[15-Apr-2026 13:48:59 Asia/Seoul] PHP Warning:  Undefined array key "title" in /Users/igaienc/Desktop/macomaex-prod-ftp/www/backoffice/matching_success.list.php on line 260
+[15-Apr-2026 13:48:59 Asia/Seoul] PHP Warning:  Undefined array key "title" in /Users/igaienc/Desktop/macomaex-prod-ftp/www/backoffice/matching_success.list.php on line 260
+[15-Apr-2026 13:48:59 Asia/Seoul] PHP Warning:  Undefined array key "title" in /Users/igaienc/Desktop/macomaex-prod-ftp/www/backoffice/matching_success.list.php on line 260
+[15-Apr-2026 13:48:59 Asia/Seoul] PHP Warning:  Undefined array key "title" in /Users/igaienc/Desktop/macomaex-prod-ftp/www/backoffice/matching_success.list.php on line 260
+[15-Apr-2026 13:48:59 Asia/Seoul] PHP Warning:  Undefined array key "title" in /Users/igaienc/Desktop/macomaex-prod-ftp/www/backoffice/matching_success.list.php on line 260
+[15-Apr-2026 13:48:59 Asia/Seoul] PHP Warning:  Undefined array key "title" in /Users/igaienc/Desktop/macomaex-prod-ftp/www/backoffice/matching_success.list.php on line 260
+[15-Apr-2026 13:48:59 Asia/Seoul] PHP Warning:  Undefined array key "title" in /Users/igaienc/Desktop/macomaex-prod-ftp/www/backoffice/matching_success.list.php on line 260
+[15-Apr-2026 13:48:59 Asia/Seoul] PHP Warning:  Undefined array key "title" in /Users/igaienc/Desktop/macomaex-prod-ftp/www/backoffice/matching_success.list.php on line 260
+[15-Apr-2026 13:48:59 Asia/Seoul] PHP Warning:  Undefined array key "title" in /Users/igaienc/Desktop/macomaex-prod-ftp/www/backoffice/matching_success.list.php on line 260
+[15-Apr-2026 13:48:59 Asia/Seoul] PHP Warning:  Undefined array key "title" in /Users/igaienc/Desktop/macomaex-prod-ftp/www/backoffice/matching_success.list.php on line 260
+[15-Apr-2026 13:48:59 Asia/Seoul] PHP Warning:  Undefined array key "title" in /Users/igaienc/Desktop/macomaex-prod-ftp/www/backoffice/matching_success.list.php on line 260
+[15-Apr-2026 13:48:59 Asia/Seoul] PHP Warning:  Undefined array key "title" in /Users/igaienc/Desktop/macomaex-prod-ftp/www/backoffice/matching_success.list.php on line 260
+[15-Apr-2026 13:49:08 Asia/Seoul] PHP Warning:  Undefined variable $required_mb_email_class in /Users/igaienc/Desktop/macomaex-prod-ftp/www/backoffice/member_form.php on line 243
+[15-Apr-2026 13:58:37 Asia/Seoul] PHP Warning:  Undefined array key "title" in /Users/igaienc/Desktop/macomaex-prod-ftp/www/backoffice/matching_success.list.php on line 260
+[15-Apr-2026 13:58:37 Asia/Seoul] PHP Warning:  Undefined array key "title" in /Users/igaienc/Desktop/macomaex-prod-ftp/www/backoffice/matching_success.list.php on line 260
+[15-Apr-2026 13:58:37 Asia/Seoul] PHP Warning:  Undefined array key "title" in /Users/igaienc/Desktop/macomaex-prod-ftp/www/backoffice/matching_success.list.php on line 260
+[15-Apr-2026 13:58:37 Asia/Seoul] PHP Warning:  Undefined array key "title" in /Users/igaienc/Desktop/macomaex-prod-ftp/www/backoffice/matching_success.list.php on line 260
+[15-Apr-2026 13:58:37 Asia/Seoul] PHP Warning:  Undefined array key "title" in /Users/igaienc/Desktop/macomaex-prod-ftp/www/backoffice/matching_success.list.php on line 260
+[15-Apr-2026 13:58:37 Asia/Seoul] PHP Warning:  Undefined array key "title" in /Users/igaienc/Desktop/macomaex-prod-ftp/www/backoffice/matching_success.list.php on line 260
+[15-Apr-2026 13:58:37 Asia/Seoul] PHP Warning:  Undefined array key "title" in /Users/igaienc/Desktop/macomaex-prod-ftp/www/backoffice/matching_success.list.php on line 260
+[15-Apr-2026 13:58:37 Asia/Seoul] PHP Warning:  Undefined array key "title" in /Users/igaienc/Desktop/macomaex-prod-ftp/www/backoffice/matching_success.list.php on line 260
+[15-Apr-2026 13:58:37 Asia/Seoul] PHP Warning:  Undefined array key "title" in /Users/igaienc/Desktop/macomaex-prod-ftp/www/backoffice/matching_success.list.php on line 260
+[15-Apr-2026 13:58:37 Asia/Seoul] PHP Warning:  Undefined array key "title" in /Users/igaienc/Desktop/macomaex-prod-ftp/www/backoffice/matching_success.list.php on line 260
+[15-Apr-2026 13:58:37 Asia/Seoul] PHP Warning:  Undefined array key "title" in /Users/igaienc/Desktop/macomaex-prod-ftp/www/backoffice/matching_success.list.php on line 260
+[15-Apr-2026 13:58:37 Asia/Seoul] PHP Warning:  Undefined array key "title" in /Users/igaienc/Desktop/macomaex-prod-ftp/www/backoffice/matching_success.list.php on line 260
+[15-Apr-2026 13:58:37 Asia/Seoul] PHP Warning:  Undefined array key "title" in /Users/igaienc/Desktop/macomaex-prod-ftp/www/backoffice/matching_success.list.php on line 260
+[15-Apr-2026 13:58:37 Asia/Seoul] PHP Warning:  Undefined array key "title" in /Users/igaienc/Desktop/macomaex-prod-ftp/www/backoffice/matching_success.list.php on line 260
+[15-Apr-2026 13:58:37 Asia/Seoul] PHP Warning:  Undefined array key "title" in /Users/igaienc/Desktop/macomaex-prod-ftp/www/backoffice/matching_success.list.php on line 260
+[15-Apr-2026 14:00:11 Asia/Seoul] PHP Warning:  Trying to access array offset on value of type null in /Users/igaienc/Desktop/macomaex-prod-ftp/www/ko/my_plan.php on line 45
+[15-Apr-2026 14:00:11 Asia/Seoul] PHP Warning:  Trying to access array offset on value of type null in /Users/igaienc/Desktop/macomaex-prod-ftp/www/ko/my_plan.php on line 45
+[15-Apr-2026 14:13:33 Asia/Seoul] PHP Warning:  Undefined array key "de_cart_keep_term" in /Users/igaienc/Desktop/macomaex-prod-ftp/www/lib/shop.lib.php on line 2609
+[15-Apr-2026 14:13:33 Asia/Seoul] PHP Warning:  Undefined array key "de_guest_cart_use" in /Users/igaienc/Desktop/macomaex-prod-ftp/www/lib/shop.lib.php on line 1398

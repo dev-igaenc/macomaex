@@ -1208,8 +1208,8 @@ switch ($type) {
 				}
 
 			sql_query("delete from g5_membership_payment where order_no!='{$orderid}' and uid='{$member['mb_id']}' and complete_yn='N'");
-			$pinfo=sql_fetch("select * from g5_membership_payment where order_no='{$orderid}' and uid='{$member['mb_id']}'");
-				if(!$pinfo['uid']) {
+				$pinfo=sql_fetch("select * from g5_membership_payment where order_no='{$orderid}' and uid='{$member['mb_id']}'");
+					if(!is_array($pinfo) || empty($pinfo['uid'])) {
 					$sql="insert g5_membership_payment set ";
 					$sql.="	uid='{$member['mb_id']}',";
 					$sql.="	order_no='{$orderid}',";

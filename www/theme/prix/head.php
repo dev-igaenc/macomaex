@@ -294,17 +294,6 @@ include_once(G5_LIB_PATH.'/popular.lib.php');
                     <?if($member['mb_level']>9) {?>
                     <li class="one"><a href="/backoffice/" class="menu_txt"><span>관리자</span></a></li>
                     <?}else{?>
-                    <!-- <li><a href="<?php echo G5_BBS_URL ?>/member_confirm.php?url=/bbs/register_form.php" class="menu_txt"><span>마이페이지</span></a></li>
-                    <li>
-                        <a href="#">마이페이지</a>
-                        <ul class="gnbSub d2">
-                            <li><a href="<?=$link_1101?>"><span>매칭 히스토리</span></a></li>
-                            <li><a href="<?=$link_1102?>"><span>관심기업</span></a></li>
-                            <li><a href="<?=$link_1103?>"><span>회원 정보 수정</span></a></li>
-                            <li><a href="<?=$link_1104?>"><span>결제정보</span></a></li>
-                        </ul>
-                    </li>
-					 -->
                     <?}?>
                 <?php }  ?>
             </ul>

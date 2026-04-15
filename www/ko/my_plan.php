@@ -33,16 +33,33 @@ foreach($membership as $value){
 //맴버쉽 정보
 $today = date("Y-m-d");
 $msinfo_row = getUserMembership();
+if(!is_array($msinfo_row)) $msinfo_row = array();
 //print_r($msinfo_row[0]);
-$chk=$msinfo_row[0];
+$chk = (isset($msinfo_row[0]) && is_array($msinfo_row[0])) ? $msinfo_row[0] : array();
 //if($chk['uid']) print_r($chk);
 
 //맴버쉽이 없는 경우 무료로
-if(empty($msinfo_row[0])) $msinfo['membership_parent_no']=$membership[0]['no'];
-else $msinfo=$msinfo_row[0];
-$membership_info = sql_fetch("select * from g5_membership_manage where no='{$msinfo['membership_parent_no']}'" );
+if(!empty($msinfo_row[0]) && is_array($msinfo_row[0])) $msinfo = $msinfo_row[0];
+else $msinfo = array();
+
+if(empty($msinfo['membership_parent_no']) && !empty($membership[0]['no'])) {
+	$msinfo['membership_parent_no'] = (int)$membership[0]['no'];
+}
+
+$msinfo = array_merge(array(
+	'no' => 0,
+	'uid' => '',
+	'membership_parent_no' => 0,
+	'matching_able_cnt' => 0,
+	'coupon' => ''
+), $msinfo);
+
+$membership_parent_no = (int)$msinfo['membership_parent_no'];
+if($membership_parent_no > 0) $membership_info = sql_fetch("select * from g5_membership_manage where no='{$membership_parent_no}'" );
+else $membership_info = array();
+if(!is_array($membership_info)) $membership_info = array();
 $is_credit_membership = 0;
-if(($membership_info['title_en'] && strpos($membership_info['title_en'], 'CREDIT_') === 0) || ((int)$membership_info['matching_cnt'] > 0 && (int)$membership_info['month'] === 0)){
+if((!empty($membership_info['title_en']) && strpos((string)$membership_info['title_en'], 'CREDIT_') === 0) || ((int)$membership_info['matching_cnt'] > 0 && (int)$membership_info['month'] === 0)){
 	$is_credit_membership = 1;
 }
 $membership_cancel_token = uniqid('', true);
