@@ -542,41 +542,48 @@ switch ($type) {
 						// 표준산업분류 기본값 처리
 						if(!is_array($kssc9)) $kssc9 = array('k_code_name' => '-');
 						if(!is_array($kssc)) $kssc = array('k_code_name' => '-');
-						$matcing=sql_fetch("SELECT * from g5_matching where del != 'D' and  request_id='{$member['mb_id']}' and KEDCD='{$kedcd}'");//매칭요청
-					if($matcing['receive_approval']=="Y") $receve_info=getUserInfo($matcing['receive_id']);
-					if(!$matcing['receive_approval']) {
-						//$receve_info=getUserInfo($matcing['request_id']);
-						$matcing=sql_fetch("SELECT * from g5_matching where del != 'D' and  receive_id='{$member['mb_id']}' and KEDCD='{$kedcd}'");//받은매칭요청
-						if($matcing['receive_approval']=="Y") $receve_info=getUserInfo($matcing['request_id']);
-					}
-					if(!$matcing['receive_approval']) {
-						$matcing=sql_fetch("SELECT * from g5_matching where del != 'D' and  receive_id='{$member['mb_id']}' and request_id=(select mb_id from g5_member where mb_company='{$kedcd}')");//받은매칭요청
-						if($matcing['receive_approval']=="Y") $receve_info=getUserInfo($matcing['request_id']);
-					}
-						$favorite=sql_fetch("SELECT * from g5_favorite where mb_id='{$member['mb_id']}' and KEDCD='{$kedcd}'"); //북마크
-						$sales=getFinanceInfo($kedcd);
-						// 재무정보 기본값 처리
-						if(!is_array($sales)) $sales = array(array('SALES' => 0));
+							$matcing=sql_fetch("SELECT * from g5_matching where del != 'D' and  request_id='{$member['mb_id']}' and KEDCD='{$kedcd}'");//매칭요청
+							if(!is_array($matcing)) $matcing = array();
+							$receive_approval = isset($matcing['receive_approval']) ? (string)$matcing['receive_approval'] : '';
+						if($receive_approval=="Y") $receve_info=getUserInfo($matcing['receive_id']);
+						if(!$receive_approval) {
+							//$receve_info=getUserInfo($matcing['request_id']);
+							$matcing=sql_fetch("SELECT * from g5_matching where del != 'D' and  receive_id='{$member['mb_id']}' and KEDCD='{$kedcd}'");//받은매칭요청
+							if(!is_array($matcing)) $matcing = array();
+							$receive_approval = isset($matcing['receive_approval']) ? (string)$matcing['receive_approval'] : '';
+							if($receive_approval=="Y") $receve_info=getUserInfo($matcing['request_id']);
+						}
+						if(!$receive_approval) {
+							$matcing=sql_fetch("SELECT * from g5_matching where del != 'D' and  receive_id='{$member['mb_id']}' and request_id=(select mb_id from g5_member where mb_company='{$kedcd}')");//받은매칭요청
+							if(!is_array($matcing)) $matcing = array();
+							$receive_approval = isset($matcing['receive_approval']) ? (string)$matcing['receive_approval'] : '';
+							if($receive_approval=="Y") $receve_info=getUserInfo($matcing['request_id']);
+						}
+							$favorite=sql_fetch("SELECT * from g5_favorite where mb_id='{$member['mb_id']}' and KEDCD='{$kedcd}'"); //북마크
+							if(!is_array($favorite)) $favorite = array();
+							$sales=getFinanceInfo($kedcd);
+							// 재무정보 기본값 처리
+							if(!is_array($sales)) $sales = array(array('SALES' => 0));
 						
 
 ?>
 	<div class="cv-name">
 		<strong><?=$comp['ENP_NM']?></strong>
 		<div class="option">
-			<button type="button" star class="<?if($favorite['ms_id']){?>active<?}?> star_btn" kedcd="<?=$kedcd?>"><img src="/images/icon_star.svg" alt=""></button>
-			<a href="javascript:copyUrl('<?=simple_crypt($kedcd);?>')" link><img src="/images/icon_link.svg" alt=""></a>
-			<?if($matcing['receive_approval']=="N"){?>
-			<a href="javascript:jAlert('매칭 수락 대기중입니다.','알림')" request><span>수락대기</span></a>
-			<?}?>
-			<?if($matcing['receive_approval']=="Y"){?>
-			<a request class="accepted"><span>매칭완료</span></a>
-			<?}?>
-			<?if($matcing['receive_approval']=="R"){?>
-			<a request class="rejected"><span>매칭거절</span></a>
-			<?}?>
-			<?if(!$matcing['receive_approval']){?>
-			<a id="popup_open" kedcd="<?=$kedcd?>" request><span>매칭 요청</span></a>
-			<?}?>
+				<button type="button" star class="<?if(!empty($favorite['ms_id'])){?>active<?}?> star_btn" kedcd="<?=$kedcd?>"><img src="/images/icon_star.svg" alt=""></button>
+				<a href="javascript:copyUrl('<?=simple_crypt($kedcd);?>')" link><img src="/images/icon_link.svg" alt=""></a>
+				<?if($receive_approval=="N"){?>
+				<a href="javascript:jAlert('매칭 수락 대기중입니다.','알림')" request><span>수락대기</span></a>
+				<?}?>
+				<?if($receive_approval=="Y"){?>
+				<a request class="accepted"><span>매칭완료</span></a>
+				<?}?>
+				<?if($receive_approval=="R"){?>
+				<a request class="rejected"><span>매칭거절</span></a>
+				<?}?>
+				<?if(!$receive_approval){?>
+				<a id="popup_open" kedcd="<?=$kedcd?>" request><span>매칭 요청</span></a>
+				<?}?>
 			<!--a href="javascript:void(0);" request>매칭요청</a-->
 		</div>
 	</div>
