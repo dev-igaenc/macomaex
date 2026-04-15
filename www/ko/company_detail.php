@@ -211,55 +211,7 @@ $companyDetailData = array(
 		</div>
 	</div>
 
-	<!-- 1) 거래 타입 선택 -->
-	<div class="modal-overlay" id="modalType" aria-hidden="true">
-		<div class="modal modal-sm" role="dialog" aria-labelledby="typeTitle">
-			<div class="modal-header">
-				<h2 id="typeTitle">거래 타입 선택</h2>
-				<button type="button" class="modal-close" data-close="modalType" aria-label="닫기">&times;</button>
-			</div>
-			<div class="modal-body">
-				<div class="type-cards">
-					<div class="type-card selected" data-type="normal" role="button" tabindex="0">
-						<div class="type-card-head">
-							<input type="radio" name="match_type" value="normal" checked>
-							<div>
-								<div class="type-title">일반 거래</div>
-								<div class="type-cost">10 크레딧 차감</div>
-							</div>
-						</div>
-						<p class="type-desc">피거래기업의 응답을 기다리는 방식으로, 회신 시점이 불확실할 수 있습니다.</p>
-						<ul class="type-features">
-							<li>&#10003; 거래 수락 시 채팅방 오픈</li>
-							<li>&#9888; 수락/거절 응답 대기 필요</li>
-						</ul>
-					</div>
-					<div class="type-card" data-type="tm" role="button" tabindex="0">
-						<span class="badge-rec">추천</span>
-						<div class="type-card-head">
-							<input type="radio" name="match_type" value="tm">
-							<div>
-								<div class="type-title">TM 서포트 거래</div>
-								<div class="type-cost">30 크레딧 차감</div>
-							</div>
-						</div>
-						<p class="type-desc">24시간 무응답 시 전문 TM이 피거래기업을 직접 컨택하여 회신을 유도합니다.</p>
-						<ul class="type-features">
-							<li>&#10003; TM 거래 중계</li>
-							<li>&#10003; 무응답 시 직접 컨택</li>
-							<li>&#10003; 체계적 진행 보장</li>
-						</ul>
-					</div>
-				</div>
-			</div>
-			<div class="modal-footer">
-				<button type="button" class="btn-gray" id="backToRequest">&#8592; 뒤로</button>
-				<button type="button" class="btn-primary" id="confirmType" style="display:inline-flex;align-items:center;gap:6px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><polyline points="2,4 12,13 22,4"/></svg>거래요청하기</button>
-			</div>
-		</div>
-	</div>
-
-	<!-- 2) 거래 요청서 작성 -->
+	<!-- 1) 거래 요청서 작성 -->
 	<div class="modal-overlay" id="modalRequest" aria-hidden="true">
 		<div class="modal" role="dialog" aria-labelledby="reqTitle">
 			<div class="modal-header">
@@ -316,6 +268,54 @@ $companyDetailData = array(
 			<div class="modal-footer">
 				<button type="button" class="btn-gray" data-close="modalRequest">&#10005; 취소</button>
 				<button type="button" class="btn-primary" id="goToTypeStep">다음 &#10145;</button>
+			</div>
+		</div>
+	</div>
+
+	<!-- 2) 거래 타입 선택 -->
+	<div class="modal-overlay" id="modalType" aria-hidden="true">
+		<div class="modal modal-sm" role="dialog" aria-labelledby="typeTitle">
+			<div class="modal-header">
+				<h2 id="typeTitle">거래 타입 선택</h2>
+				<button type="button" class="modal-close" data-close="modalType" aria-label="닫기">&times;</button>
+			</div>
+			<div class="modal-body">
+				<div class="type-cards">
+					<div class="type-card selected" data-type="normal" role="button" tabindex="0">
+						<div class="type-card-head">
+							<input type="radio" name="match_type" value="normal" checked>
+							<div>
+								<div class="type-title">일반 거래</div>
+								<div class="type-cost">10 크레딧 차감</div>
+							</div>
+						</div>
+						<p class="type-desc">피거래기업의 응답을 기다리는 방식으로, 회신 시점이 불확실할 수 있습니다.</p>
+						<ul class="type-features">
+							<li>&#10003; 거래 수락 시 채팅방 오픈</li>
+							<li>&#9888; 수락/거절 응답 대기 필요</li>
+						</ul>
+					</div>
+					<div class="type-card" data-type="tm" role="button" tabindex="0">
+						<span class="badge-rec">추천</span>
+						<div class="type-card-head">
+							<input type="radio" name="match_type" value="tm">
+							<div>
+								<div class="type-title">TM 서포트 거래</div>
+								<div class="type-cost">30 크레딧 차감</div>
+							</div>
+						</div>
+						<p class="type-desc">24시간 무응답 시 전문 TM이 피거래기업을 직접 컨택하여 회신을 유도합니다.</p>
+						<ul class="type-features">
+							<li>&#10003; TM 거래 중계</li>
+							<li>&#10003; 무응답 시 직접 컨택</li>
+							<li>&#10003; 체계적 진행 보장</li>
+						</ul>
+					</div>
+				</div>
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn-gray" id="backToRequest">&#8592; 뒤로</button>
+				<button type="button" class="btn-primary" id="confirmType" style="display:inline-flex;align-items:center;gap:6px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><polyline points="2,4 12,13 22,4"/></svg>거래요청하기</button>
 			</div>
 		</div>
 	</div>
