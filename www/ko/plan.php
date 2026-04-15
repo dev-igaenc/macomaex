@@ -19,13 +19,10 @@ $membership_list = get_membership();
 require_once(__DIR__ . '/libs/INIStdPayUtil.php');
 $signature_util = new INIStdPayUtil();
 $timestamp = $signature_util->getTimestamp();
-$merchantKey = defined('_merchantKey') ? (string)_merchantKey : '';
-$mid = defined('_mid') ? (string)_mid : '';
-$dateVal = date('YmdHis');
 $orderid = (defined('_test_pay') && _test_pay == 'Y') ? 'DemoTest_' . $timestamp : 'M_' . $timestamp;
-$hashData = hash('sha256', (string)$mid . (string)$orderid . (string)$dateVal . (string)$merchantKey);
-$msinfo_row = getUserMembership();
-$my_membership = (is_array($msinfo_row) && isset($msinfo_row[0]) && is_array($msinfo_row[0])) ? $msinfo_row[0] : array();
+// membership_credit_pay 요청 검증 토큰
+$membership_credit_pay_token = uniqid('', true);
+set_session('ss_membership_credit_pay_token', $membership_credit_pay_token);
 
 $signup_bonus = (defined('_new_member_signup_credit') && (int)_new_member_signup_credit > 0)
     ? (int)_new_member_signup_credit
@@ -185,6 +182,7 @@ if (!function_exists('plan_display_title_en')) {
     data-login-url="/bbs/login.php?url=/ko/plan.php"
     data-my-plan-url="/ko/my_plan.php"
     data-credit-pay-url="/ko/credit_pay.php"
+    data-membership-credit-pay-token="<?= htmlspecialchars($membership_credit_pay_token, ENT_QUOTES) ?>"
 >
     <div class="plan-page">
         <!-- 현재 미사용: 쿠폰 결제 플로우 복구 대비 보존
@@ -192,7 +190,6 @@ if (!function_exists('plan_display_title_en')) {
         <input type="hidden" name="coupon_pop" id="coupon_pop" value="false">
         -->
         <input type="hidden" id="plan_orderid" name="orderid" value="<?= htmlspecialchars($orderid, ENT_QUOTES) ?>">
-        <input type="hidden" id="plan_mid" name="mid" value="<?= htmlspecialchars($mid, ENT_QUOTES) ?>">
 
         <div class="plan-hero">
             <span class="eyebrow">PRICING PLAN</span>
@@ -237,10 +234,6 @@ if (!function_exists('plan_display_title_en')) {
                     : (isset($ui['analysis_count']) ? (int)$ui['analysis_count'] : ($credit_cnt * 2));
                 $bonus_rate = isset($value['sale']) ? (int)$value['sale'] : 0;
                 $bonus_label = $bonus_rate > 0 ? '+' . number_format($bonus_rate) . '% 보너스' : '-';
-                $display_pay_type = trim((string)$value['pay_type']) !== '' ? trim((string)$value['pay_type']) : '1회 결제';
-                $vat_text = trim((string)$value['vat']);
-
-        
                 $base_price = 0.0;
                 if (is_numeric($value['price_sale']) && (float)$value['price_sale'] > 0) {
                     $base_price = (float)$value['price_sale'];
@@ -249,20 +242,13 @@ if (!function_exists('plan_display_title_en')) {
                 }
 
                 if ($base_price > 0) {
-                    if (strpos($vat_text, '별도') !== false) {
-                        $pay_price = (float)round($base_price * 1.1);
-                    } else {
-                        $pay_price = $base_price;
-                    }
                     $price_text = number_format($base_price);
                 } else {
-                    $pay_price = 0;
                     $price_text = trim((string)$value['price_sale']) !== ''
                         ? trim((string)$value['price_sale'])
                         : trim((string)$value['price_origin']);
                 }
 
-                $price_info_text = $display_pay_type . ($vat_text !== '' ? ' / VAT ' . $vat_text : '');
                 $rendered_plan_count++;
                 ?>
                 <div class="plan-card<?= $featured ? ' is-featured' : '' ?>">
@@ -295,30 +281,13 @@ if (!function_exists('plan_display_title_en')) {
                             <span class="feat-credit">최대 <?= number_format($analysis_count) ?>회</span>
                         </div>
                     </div>
-                    <form name="mobileweb<?= (int)$value['no'] ?>" method="post" class="mpay">
-                        <input type="hidden" name="mtype" value="<?= htmlspecialchars((string)$value['title'], ENT_QUOTES) ?>">
-                        <input type="hidden" name="authtype" value="D">
-                        <input type="hidden" name="mid" value="<?= htmlspecialchars((string)$mid, ENT_QUOTES) ?>">
-                        <input type="hidden" name="orderid" value="<?= htmlspecialchars((string)$orderid, ENT_QUOTES) ?>">
-                        <input type="hidden" name="price" value="<?= htmlspecialchars((string)$pay_price, ENT_QUOTES) ?>">
-                        <input type="hidden" name="timestamp" value="<?= htmlspecialchars((string)$dateVal, ENT_QUOTES) ?>">
-                        <input type="hidden" name="hashdata" value="<?= htmlspecialchars((string)$hashData, ENT_QUOTES) ?>">
-                        <input type="hidden" name="goodname" value="<?= htmlspecialchars((string)$value['title'], ENT_QUOTES) ?>">
-                        <input type="hidden" name="buyername" value="<?= htmlspecialchars((string)$member['mb_id'], ENT_QUOTES) ?>">
-                        <input type="hidden" name="buyertel" value="<?= htmlspecialchars((string)$member['mb_hp'], ENT_QUOTES) ?>">
-                        <input type="hidden" name="buyeremail" value="<?= htmlspecialchars((string)$member['mb_email'], ENT_QUOTES) ?>">
-                        <input type="hidden" name="returnurl" value="https://macomaex.com/ko/INIbill_mo_return.php">
-                        <input type="hidden" name="carduse" value="">
+                    <div class="mpay">
                         <a
                             href="#"
-                            mtype="<?= htmlspecialchars((string)$value['title'], ENT_QUOTES) ?>"
                             idx="<?= (int)$value['no'] ?>"
-                            data-plan-kr="<?= htmlspecialchars($label_kr, ENT_QUOTES) ?>"
-                            data-price-display="<?= htmlspecialchars($price_text, ENT_QUOTES) ?>"
-                            data-price-info="<?= htmlspecialchars($price_info_text, ENT_QUOTES) ?>"
                             class="plan-cta <?= $featured ? 'solid' : 'outline' ?> plan_payment"
                         >충전하기</a>
-                    </form>
+                    </div>
                 </div>
             <?php } ?>
 

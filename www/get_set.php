@@ -19,6 +19,7 @@ $mtype = isset($_REQUEST['mtype']) ? sql_real_escape_string(trim((string)$_REQUE
 $coupon = isset($_REQUEST['coupon']) ? sql_real_escape_string(trim((string)$_REQUEST['coupon'])) : '';
 $request_type = isset($_REQUEST['request_type']) ? sql_real_escape_string(trim((string)$_REQUEST['request_type'])) : '';
 $match_content = isset($_REQUEST['match_content']) ? sql_real_escape_string(trim((string)$_REQUEST['match_content'])) : '';
+$pay_token = isset($_REQUEST['pay_token']) ? preg_replace('/[^0-9a-z_\.-]/i', '', (string)$_REQUEST['pay_token']) : '';
 
 if (!function_exists('membership_refund_lock_name')) {
 	function membership_refund_lock_name($order_no) {
@@ -1180,18 +1181,28 @@ switch ($type) {
 	break;
 
 	case "membership_credit_pay": //크레딧 일반결제 주문 생성
-		if($member['mb_id']) {
-				$stdpay_mid_for_order = (defined('_stdpay_mid') && trim((string)_stdpay_mid) !== '') ? trim((string)_stdpay_mid) : ((defined('_mid') && trim((string)_mid) !== '') ? trim((string)_mid) : '');
-				if(!$stdpay_mid_for_order){
-					echo "500|일반결제 MID가 설정되지 않았습니다.";
-					exit;
-				}
+			if($_SERVER['REQUEST_METHOD'] !== 'POST'){
+				echo "500|잘못된 요청 방식입니다.";
+				exit;
+			}
+			// plan.php 에서 발급한 결제 요청 토큰 검증
+			$session_pay_token = get_session('ss_membership_credit_pay_token');
+			if(!$pay_token || !$session_pay_token || $pay_token !== $session_pay_token){
+				echo "500|유효하지 않은 요청입니다.";
+				exit;
+			}
+			if($member['mb_id']) {
+					$stdpay_mid_for_order = (defined('_stdpay_mid') && trim((string)_stdpay_mid) !== '') ? trim((string)_stdpay_mid) : ((defined('_mid') && trim((string)_mid) !== '') ? trim((string)_mid) : '');
+					if(!$stdpay_mid_for_order){
+						echo "500|일반결제 MID가 설정되지 않았습니다.";
+						exit;
+					}
 
-				$minfo_manage = sql_fetch("select * from g5_membership_manage where no='{$idx}'");
-				if(!$minfo_manage['no']){
-					echo "500|상품 정보를 찾을 수 없습니다.";
-					exit;
-				}
+					$minfo_manage = sql_fetch("select * from g5_membership_manage where no='{$idx}'");
+					if(!is_array($minfo_manage) || empty($minfo_manage['no'])){
+						echo "500|상품 정보를 찾을 수 없습니다.";
+						exit;
+					}
 				$is_credit_manage = false;
 				if(($minfo_manage['title_en'] && strpos((string)$minfo_manage['title_en'], 'CREDIT_') === 0) || ((int)$minfo_manage['matching_cnt'] > 0 && (int)$minfo_manage['month'] === 0)){
 					$is_credit_manage = true;
@@ -1214,9 +1225,8 @@ switch ($type) {
 					exit;
 				}
 
-			sql_query("delete from g5_membership_payment where order_no!='{$orderid}' and uid='{$member['mb_id']}' and complete_yn='N'");
-				$pinfo=sql_fetch("select * from g5_membership_payment where order_no='{$orderid}' and uid='{$member['mb_id']}'");
-					if(!is_array($pinfo) || empty($pinfo['uid'])) {
+					$pinfo=sql_fetch("select * from g5_membership_payment where order_no='{$orderid}' and uid='{$member['mb_id']}'");
+						if(!is_array($pinfo) || empty($pinfo['uid'])) {
 					$sql="insert g5_membership_payment set ";
 					$sql.="	uid='{$member['mb_id']}',";
 					$sql.="	order_no='{$orderid}',";
