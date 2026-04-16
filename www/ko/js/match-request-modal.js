@@ -10,6 +10,11 @@
 (function () {
 'use strict';
 
+// 기본 안내 문구는 PHP에서 내려준 값을 우선 사용하고, 없으면 현재 textarea 값을 사용
+var DEFAULT_NOTE = (window.COMPANY_DETAIL_DATA && window.COMPANY_DETAIL_DATA.defaultRequestMessage)
+    ? String(window.COMPANY_DETAIL_DATA.defaultRequestMessage)
+    : '';
+
 /* ---- 모달 열기/닫기 (전역 노출 — 페이지 내 다른 코드에서도 사용 가능) ---- */
 window.openModal = function (id) {
     var sw = window.innerWidth - document.documentElement.clientWidth;
@@ -152,9 +157,9 @@ renderTypes('buy');
 
 /* ---- 추가 문의사항: 포커스 시 기본 텍스트 지우기 ---- */
 (function () {
-    var DEFAULT_NOTE = '담당자님, 안녕하세요. 귀사를 확인하고 연락드립니다. 신규 거래처를 검토 중이며, 귀사와 적합한 경우 거래 진행을 희망합니다. 상세 조건은 협의를 통해 논의하고자 합니다.';
     var ta = document.getElementById('reqExtraNote');
     if (!ta) return;
+    if (!DEFAULT_NOTE) DEFAULT_NOTE = ta.value;
     if (ta.value === DEFAULT_NOTE) ta.style.color = '#a0aec0';
     ta.addEventListener('focus', function () { if (ta.value === DEFAULT_NOTE) { ta.value = ''; ta.style.color = ''; } });
     ta.addEventListener('blur',  function () { if (!ta.value.trim()) { ta.value = DEFAULT_NOTE; ta.style.color = '#a0aec0'; } });
@@ -186,36 +191,45 @@ if (confirmTypeBtn) {
         if (result.missing.length) { alert('필수 항목(*)을 모두 입력해 주세요.'); return; }
         var extraNote = document.getElementById('reqExtraNote');
         var dir = document.querySelector('input[name="req_dir"]:checked');
-        var dirLabel = dir ? dir.parentElement.textContent.trim() : '';
-        var typeLabels = typeChecks.map(function (c) { return c.parentElement.textContent.trim(); });
         var matchType = document.querySelector('input[name="match_type"]:checked');
-        var matchLabel = matchType && matchType.value === 'tm' ? 'TM 서포트' : '일반';
-        /* 상세 필드 → 레이블·값 배열로 변환 */
-        var detail = result.data.req_item
-            ? [{ typeLabel: '거래 희망 품목', fields: [{ label: '거래 희망 품목', value: result.data.req_item }] }]
-            : [];
+        if (!dir || !matchType) { alert('거래 요청 정보를 다시 확인해 주세요.'); return; }
 
-        /* localStorage 저장 */
-        try {
-            var mc = window._matchCompany || {};
-            var requests = JSON.parse(localStorage.getItem('macomaex_matchRequests') || '[]');
-            requests.unshift({
-                id: Date.now(),
-                timestamp: new Date().toISOString(),
-                companyId:   mc.id   || '',
-                companyName: mc.name || '',
-                matchType:   matchLabel,
-                direction:   dirLabel,
-                types:       typeLabels,
-                detail:      detail,
-                extra:       extraNote.value.trim(),
-                status:      'N'
-            });
-            localStorage.setItem('macomaex_matchRequests', JSON.stringify(requests.slice(0, 50)));
-        } catch(e) {}
+        var formData = new URLSearchParams();
+        formData.set('action', 'trade_request_insert');
+        formData.set('trade_direction', dir.value);
+        typeChecks.forEach(function (c) { formData.append('trade_purpose[]', c.value); });
+        formData.set('desired_item', result.data.req_item);
+        formData.set('message_content', extraNote && extraNote.value.trim() ? extraNote.value.trim() : DEFAULT_NOTE);
+        formData.set('trade_type', matchType.value);
 
-        alert('[시안 데모]\n거래 타입: ' + matchLabel + '\n거래 방향: ' + dirLabel + '\n거래 유형: ' + typeLabels.join(', ') + (extraNote.value.trim() ? '\n추가 문의: ' + extraNote.value.trim() : ''));
-        closeModal('modalType');
+        confirmTypeBtn.disabled = true;
+
+        // 거래 요청서 저장 fetch로 전송
+        fetch(window.location.pathname + window.location.search, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: formData.toString()
+        })
+        .then(function (response) { return response.json(); })
+        .then(function (data) {
+            if (!data || !data.success) {
+                alert(data && data.message ? data.message : '거래 요청서 저장 중 오류가 발생했습니다.');
+                return;
+            }
+
+            alert(data.message || '거래 요청서가 저장되었습니다.');
+            closeModal('modalType');
+            closeModal('modalRequest');
+        })
+        .catch(function () {
+            alert('서버 통신 중 오류가 발생했습니다.');
+        })
+        .finally(function () {
+            confirmTypeBtn.disabled = false;
+        });
     });
 }
 

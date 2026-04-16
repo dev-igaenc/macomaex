@@ -13,6 +13,30 @@ function format_badge_percent_detail($value) {
 	return rtrim(rtrim(number_format($num, 2, '.', ''), '0'), '.');
 }
 
+// ajax 요청 응답 JSON 형태로 내려주는 함수
+function trade_request_json_response($success, $message, $extra = array()) {
+	header('Content-Type: application/json; charset=utf-8');
+	echo json_encode(array_merge(array(
+		'success' => $success,
+		'message' => $message,
+	), $extra), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+	exit;
+}
+
+// 로그용
+function trade_request_log($stage, $data = array()) {
+	$payload = array(
+		'stage' => $stage,
+		'uri' => $_SERVER['REQUEST_URI'] ?? '',
+		'method' => $_SERVER['REQUEST_METHOD'] ?? '',
+		'ip' => $_SERVER['REMOTE_ADDR'] ?? '',
+		'data' => $data,
+	);
+
+	error_log('[trade_request] ' . json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+}
+
+// 진입 시 암호화 기업코드 복호화 후 조회하기 위함
 $cd = isset($_GET['cd']) ? trim((string)$_GET['cd']) : '';
 $kedcd = $cd ? simple_crypt($cd, 'd') : '';
 
@@ -21,11 +45,12 @@ if (!preg_match('/^\d{10}$/', $kedcd)) {
 	alert('잘못된 접근입니다.', '/ko/matching_list.php');
 }
 
-// 리스트 -> 상세 페이지 기업코드 값 기준 조회
+// 대상 기업 기본 정보 조회
 $company = sql_fetch("
 	SELECT
 		KEDCD,
 		ENP_NM,
+		BZNO,
 		BZC_CD,
 		ESTB_DT,
 		LABORER_SUM,
@@ -82,6 +107,211 @@ if (!empty($company['ENP_TYP']) && isset($enp_typt[$company['ENP_TYP']])) {
 	$companyType = $enp_typt[$company['ENP_TYP']];
 }
 
+// 거래 요청서 기본 안내 문구는 PHP/JS에서 공통으로 사용
+$defaultMessage = '담당자님, 안녕하세요. 귀사를 확인하고 연락드립니다. 신규 거래처를 검토 중이며, 귀사와 적합한 경우 거래 진행을 희망합니다. 상세 조건은 협의를 통해 논의하고자 합니다.';
+
+// 거래 요청서 저장 요청 처리
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'trade_request_insert') {
+	trade_request_log('request_received', array(
+		'member_id' => $member['mb_id'] ?? '',
+		'kedcd' => $company['KEDCD'] ?? '',
+		'post_keys' => array_keys($_POST),
+	));
+
+	if (empty($member['mb_id'])) {
+		trade_request_log('validation_failed', array('reason' => 'member_not_logged_in'));
+		trade_request_json_response(false, '로그인 후 이용해 주세요.');
+	}
+
+	$tradeDirectionRaw = isset($_POST['trade_direction']) ? trim((string)$_POST['trade_direction']) : '';
+	$tradePurposeRaw = isset($_POST['trade_purpose']) ? $_POST['trade_purpose'] : array();
+	$desiredItem = isset($_POST['desired_item']) ? trim((string)$_POST['desired_item']) : '';
+	$messageContent = isset($_POST['message_content']) ? trim((string)$_POST['message_content']) : '';
+	$tradeTypeRaw = isset($_POST['trade_type']) ? trim((string)$_POST['trade_type']) : '';
+
+	$directionMap = array(
+		'buy' => 'P',
+		'supply' => 'S',
+		'collab' => 'C',
+	);
+	$purposeMap = array(
+		'buy' => array(
+			'buy1' => 'BUY_PRODUCT',
+			'buy2' => 'SOURCE_MATERIAL_PART',
+			'buy3' => 'REQUEST_OEM_ODM',
+			'buy4' => 'REQUEST_IMPORT_PROCUREMENT',
+			'buy5' => 'REQUEST_REGULAR_SUPPLY',
+		),
+		'supply' => array(
+			'sup1' => 'OFFER_PRODUCT_SALE',
+			'sup2' => 'OFFER_OEM_ODM',
+			'sup3' => 'OFFER_DISTRIBUTION_SALES',
+			'sup4' => 'OFFER_EXPORT_AGENCY',
+			'sup5' => 'OFFER_REGULAR_SALE',
+		),
+		'collab' => array(
+			'col1' => 'COLLAB_NEW_PRODUCT_DEVELOPMENT',
+			'col2' => 'COLLAB_MARKETING_PROMOTION',
+			'col3' => 'COLLAB_TECH_ALLIANCE_LICENSING',
+		),
+	);
+	$tradeTypeMap = array(
+		'normal' => array('type' => 'BASIC', 'amount' => 10),
+		'tm' => array('type' => 'TM', 'amount' => 30),
+	);
+
+	// 화면 입력값을 DB 저장 코드로 변환하기 위한 매핑 정의
+	if (!isset($directionMap[$tradeDirectionRaw])) {
+		trade_request_log('validation_failed', array('reason' => 'invalid_trade_direction', 'value' => $tradeDirectionRaw));
+		trade_request_json_response(false, '거래 방향을 다시 선택해 주세요.');
+	}
+
+	if (!is_array($tradePurposeRaw) || empty($tradePurposeRaw)) {
+		trade_request_log('validation_failed', array('reason' => 'empty_trade_purpose'));
+		trade_request_json_response(false, '거래 목적을 1개 이상 선택해 주세요.');
+	}
+
+	if ($desiredItem === '') {
+		trade_request_log('validation_failed', array('reason' => 'empty_desired_item'));
+		trade_request_json_response(false, '거래 희망 품목을 입력해 주세요.');
+	}
+
+	if (mb_strlen($desiredItem, 'UTF-8') > 255) {
+		trade_request_log('validation_failed', array('reason' => 'desired_item_too_long', 'length' => mb_strlen($desiredItem, 'UTF-8')));
+		trade_request_json_response(false, '거래 희망 품목은 255자 이내로 입력해 주세요.');
+	}
+
+	if ($messageContent === '') {
+		$messageContent = $defaultMessage;
+	}
+
+	if (mb_strlen($messageContent, 'UTF-8') > 500) {
+		trade_request_log('validation_failed', array('reason' => 'message_content_too_long', 'length' => mb_strlen($messageContent, 'UTF-8')));
+		trade_request_json_response(false, '추가 문의 사항은 500자 이내로 입력해 주세요.');
+	}
+
+	if (!isset($tradeTypeMap[$tradeTypeRaw])) {
+		trade_request_log('validation_failed', array('reason' => 'invalid_trade_type', 'value' => $tradeTypeRaw));
+		trade_request_json_response(false, '거래 타입을 다시 선택해 주세요.');
+	}
+
+	$mappedPurposes = array();
+	$seenPurpose = array();
+	foreach ($tradePurposeRaw as $purposeId) {
+		$purposeId = trim((string)$purposeId);
+		if ($purposeId === '' || isset($seenPurpose[$purposeId])) {
+			continue;
+		}
+		$seenPurpose[$purposeId] = true;
+
+		if (!isset($purposeMap[$tradeDirectionRaw][$purposeId])) {
+			trade_request_log('validation_failed', array(
+				'reason' => 'invalid_trade_purpose',
+				'direction' => $tradeDirectionRaw,
+				'purpose_id' => $purposeId,
+			));
+			trade_request_json_response(false, '거래 목적 데이터가 올바르지 않습니다.');
+		}
+
+		$mappedPurposes[] = $purposeMap[$tradeDirectionRaw][$purposeId];
+	}
+
+	if (empty($mappedPurposes)) {
+		trade_request_log('validation_failed', array('reason' => 'mapped_trade_purpose_empty'));
+		trade_request_json_response(false, '거래 목적을 다시 선택해 주세요.');
+	}
+
+	// 사용자 입력값 서버 측 최종 검증
+	$requestMemberId = trim((string)($member['mb_id'] ?? ''));
+	$requestCompanyName = trim((string)($member['mb_name'] ?? ''));
+	$requestBzno = preg_replace('/[^0-9]/', '', (string)($member['mb_4'] ?? ''));
+	$targetCompanyName = trim((string)($company['ENP_NM'] ?? ''));
+	$targetBzno = preg_replace('/[^0-9]/', '', (string)($company['BZNO'] ?? ''));
+	$targetKedcd = trim((string)($company['KEDCD'] ?? ''));
+
+	if ($requestMemberId === '' || $requestCompanyName === '' || $requestBzno === '') {
+		trade_request_log('validation_failed', array(
+			'reason' => 'invalid_request_member_info',
+			'request_mb_id' => $requestMemberId,
+			'request_company_name' => $requestCompanyName,
+			'request_bzno' => $requestBzno,
+		));
+		trade_request_json_response(false, '회원 정보가 올바르지 않습니다. 관리자에게 문의해 주세요.');
+	}
+
+	if ($targetCompanyName === '' || $targetBzno === '' || $targetKedcd === '') {
+		trade_request_log('validation_failed', array(
+			'reason' => 'invalid_target_company_info',
+			'target_company_name' => $targetCompanyName,
+			'target_bzno' => $targetBzno,
+			'target_kedcd' => $targetKedcd,
+		));
+		trade_request_json_response(false, '대상 기업 정보가 올바르지 않습니다.');
+	}
+
+	$tradeDirection = $directionMap[$tradeDirectionRaw];
+	$tradeType = $tradeTypeMap[$tradeTypeRaw]['type'];
+	$creditAmount = (int)$tradeTypeMap[$tradeTypeRaw]['amount'];
+	$tradePurposeJson = json_encode(array_values($mappedPurposes), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+
+	if ($tradePurposeJson === false) {
+		trade_request_log('validation_failed', array('reason' => 'trade_purpose_json_encode_failed'));
+		trade_request_json_response(false, '거래 목적 처리 중 오류가 발생했습니다.');
+	}
+
+	trade_request_log('insert_prepare', array(
+		'request_mb_id' => $requestMemberId,
+		'target_kedcd' => $targetKedcd,
+		'trade_direction' => $tradeDirection,
+		'trade_purpose' => $mappedPurposes,
+		'desired_item' => $desiredItem,
+		'trade_type' => $tradeType,
+		'credit_amount' => $creditAmount,
+	));
+
+	// 거래 요청서 테이블 데이터 insert
+	$sql = "INSERT INTO trade_request SET
+		request_mb_id = '" . sql_escape_string($requestMemberId) . "',
+		target_mb_id = NULL,
+		request_company_name = '" . sql_escape_string($requestCompanyName) . "',
+		target_company_name = '" . sql_escape_string($targetCompanyName) . "',
+		request_bzno = '" . sql_escape_string($requestBzno) . "',
+		target_bzno = '" . sql_escape_string($targetBzno) . "',
+		target_kedcd = '" . sql_escape_string($targetKedcd) . "',
+		trade_direction = '" . sql_escape_string($tradeDirection) . "',
+		trade_purpose = '" . sql_escape_string($tradePurposeJson) . "',
+		desired_item = '" . sql_escape_string($desiredItem) . "',
+		message_content = '" . sql_escape_string($messageContent) . "',
+		trade_type = '" . sql_escape_string($tradeType) . "',
+		credit_used = 0,
+		credit_amount = {$creditAmount},
+		approval_status = 0,
+		adm_chk = 0,
+		adm_memo = NULL";
+
+	$result = sql_query($sql, false);
+	if (!$result) {
+		trade_request_log('insert_failed', array(
+			'request_mb_id' => $requestMemberId,
+			'target_kedcd' => $targetKedcd,
+		));
+		trade_request_json_response(false, '거래 요청서 저장 중 오류가 발생했습니다.');
+	}
+
+	$insertId = sql_insert_id();
+	trade_request_log('insert_success', array(
+		'tr_no' => $insertId,
+		'request_mb_id' => $requestMemberId,
+		'target_kedcd' => $targetKedcd,
+		'credit_used' => 0,
+		'credit_amount' => $creditAmount,
+	));
+
+	trade_request_json_response(true, '거래 요청서가 저장되었습니다.', array(
+		'tr_no' => $insertId,
+	));
+}
+
 // JS 전달 전 화면용 데이터 구조 정리
 $companyDetailData = array(
 	'kedcd' => $company['KEDCD'] ?? '',
@@ -93,6 +323,8 @@ $companyDetailData = array(
 	'corp_type' => $companyType,
 	'product_line' => $company['PD_NM'] ?? '',
 	'credit' => $score['total_grade_22'] ?? '',
+	'bzno' => $company['BZNO'] ?? '',
+	'defaultRequestMessage' => $defaultMessage,
 	'address' => trim(($company['LOC_ADDRA'] ?? '') . ' ' . ($company['LOC_ADDRB'] ?? '')),
 	'homepage' => $company['HPAGE_URL'] ?? '',
 	'badge_growth' => format_badge_percent_detail($score['badge_growth'] ?? null),
@@ -223,13 +455,13 @@ $companyDetailData = array(
 					<div>
 						<div class="form-section-title">1. 거래요청기업 정보</div>
 						<table class="read-table">
-							<tr><th>회사명</th><td>(주)해움인터내셔널</td></tr>
-							<tr><th>사업자번호</th><td>123-45-67890</td></tr>
-							<tr><th>설립</th><td>2008년</td></tr>
-							<tr><th>고용인원</th><td>48명</td></tr>
-							<tr><th>기업유형</th><td>법인기업</td></tr>
-							<tr><th>업종</th><td>화장품 제조업</td></tr>
-							<tr><th>주요제품</th><td>산업용 케미컬·정밀첨가제·맞춤 배합·납기·친환경 소재 컨설팅</td></tr>
+							<tr><th>회사명</th><td><?php echo get_text($company['ENP_NM'] ?? ''); ?></td></tr>
+							<tr><th>사업자번호</th><td><?php echo get_text(licenseNum($company['BZNO'] ?? '')); ?></td></tr>
+							<tr><th>설립</th><td><?php echo get_text($foundedYear); ?></td></tr>
+							<tr><th>고용인원</th><td><?php echo get_text(!empty($company['LABORER_SUM']) ? number_format((float)$company['LABORER_SUM']) . '명' : ''); ?></td></tr>
+							<tr><th>기업유형</th><td><?php echo get_text($companyType); ?></td></tr>
+							<tr><th>업종</th><td><?php echo get_text($industry['k_code_name'] ?? ''); ?></td></tr>
+							<tr><th>주요제품</th><td><?php echo get_text($company['PD_NM'] ?? ''); ?></td></tr>
 						</table>
 					</div>
 					<!-- 거래 요청사항 -->
@@ -260,7 +492,7 @@ $companyDetailData = array(
 
 						<div class="req2-step">
 							<div class="req2-step-label">추가 문의 사항</div>
-							<textarea class="extra" id="reqExtraNote" maxlength="500">담당자님, 안녕하세요. 귀사를 확인하고 연락드립니다. 신규 거래처를 검토 중이며, 귀사와 적합한 경우 거래 진행을 희망합니다. 상세 조건은 협의를 통해 논의하고자 합니다.</textarea>
+							<textarea class="extra" id="reqExtraNote" maxlength="500"><?php echo get_text($defaultMessage); ?></textarea>
 						</div>
 					</div>
 				</div>
