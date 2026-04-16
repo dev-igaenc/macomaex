@@ -70,15 +70,34 @@ $mb_1           = isset($_POST['mb_1'])             ? trim($_POST['mb_1'])      
 $mb_2           = isset($_POST['mb_2'])             ? trim($_POST['mb_2'])           : "";
 $mb_3           = isset($_POST['mb_3'])             ? trim($_POST['mb_3'])           : "";
 $mb_4           = isset($_POST['mb_4'])             ? trim($_POST['mb_4'])           : "";
+$mb_open        = isset($_POST['mb_open'])          ? trim($_POST['mb_open'])        : "";
+$mb_open_default = isset($_POST['mb_open_default']) ? trim($_POST['mb_open_default']) : "";
+$mb_nick_default = isset($_POST['mb_nick_default']) ? trim($_POST['mb_nick_default']) : "";
+$mb_company     = isset($_POST['mb_company'])       ? trim($_POST['mb_company'])     : "";
 $mb_5           = isset($_POST['mb_5'])             ? trim($_POST['mb_5'])           : "";
 $mb_6           = isset($_POST['mb_6'])             ? trim($_POST['mb_6'])           : "";
 $mb_7           = isset($_POST['mb_7'])             ? trim($_POST['mb_7'])           : "";
 $mb_8           = isset($_POST['mb_8'])             ? trim($_POST['mb_8'])           : "";
-$mb_9           = isset($_POST['mb_9'])             ? trim($_POST['mb_9'])           : "";
-$mb_10          = isset($_POST['mb_10'])            ? trim($_POST['mb_10'])          : "";
+$mb_9_list      = (isset($_POST['mb_9']) && is_array($_POST['mb_9'])) ? $_POST['mb_9'] : array();
+$mb_10_list     = (isset($_POST['mb_10']) && is_array($_POST['mb_10'])) ? $_POST['mb_10'] : array();
 
-$_POST['mb_9']=array_filter($_POST['mb_9']);
-$mb_9=implode(":|:",$_POST['mb_9']);
+$mb_9_list = array_map('trim', $mb_9_list);
+$mb_10_list = array_map('trim', $mb_10_list);
+
+$mb_9_list = array_values(array_filter($mb_9_list, static function ($value) {
+    return $value !== '';
+}));
+$mb_10_list = array_values(array_filter($mb_10_list, static function ($value) {
+    return $value !== '';
+}));
+
+$mb_9 = implode(":|:", $mb_9_list);
+$mb_10 = implode(":|:", $mb_10_list);
+$comnum = $mb_4;
+
+if (!isset($default) || !is_array($default)) {
+    $default = array();
+}
 
 $mb_name        = clean_xss_tags($mb_name);
 $mb_email       = get_email_address($mb_email);
@@ -300,7 +319,7 @@ if ($w == '') {
         : 30;
     if ($signup_bonus > 0) {
         $membership_status = sql_fetch("select * from g5_membership_status where uid='{$mb_id}'");
-        if ($membership_status['uid']) {
+        if (is_array($membership_status) && !empty($membership_status['uid'])) {
             sql_query("update g5_membership_status set
                 matching_able_cnt = matching_able_cnt + {$signup_bonus},
                 matching_cnt = matching_cnt + {$signup_bonus}
@@ -643,7 +662,12 @@ if ($config['cf_use_email_certify'] && $old_email != $mb_email) {
 
 
 // 신규회원 쿠폰발생
-if($w == '' && $default['de_member_reg_coupon_use'] && $default['de_member_reg_coupon_term'] > 0 && $default['de_member_reg_coupon_price'] > 0) {
+if(
+    $w == '' &&
+    !empty($default['de_member_reg_coupon_use']) &&
+    !empty($default['de_member_reg_coupon_term']) &&
+    !empty($default['de_member_reg_coupon_price'])
+) {
     $j = 0;
     $create_coupon = false;
 

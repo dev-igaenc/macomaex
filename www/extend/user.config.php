@@ -17,6 +17,8 @@ function get_seo_data($file_name){
 		//$seo = sql_fetch("select * from " . G5_TABLE_PREFIX . "seo where file_name='default'");
 	}
 	$seo_data=json_decode($seo['seo_value'],true);
+	$seo_image_url = !empty($seo_data['seo_image']) ? '/data/file/seo/' . $seo_data['seo_image'] : '';
+	$seo_favicon_url = !empty($seo_data['seo_favicon']) ? '/data/file/seo/' . $seo_data['seo_favicon'] : '';
 	$seo_html = <<<HTML
 <link rel="canonical" href="{$seo_data['seo_url']}" />
 <meta name="title" content="{$seo_data['seo_title']}" />
@@ -25,14 +27,14 @@ function get_seo_data($file_name){
 <meta property="og:type" content="website">
 <meta property="og:title" content="{$seo_data['seo_title']}">
 <meta property="og:url" content="{$seo_data['seo_url']}">
-<meta property="og:image" content="/data/file/seo/{$seo_data['seo_image']}">
+<meta property="og:image" content="{$seo_image_url}">
 <meta property="og:description" content="{$seo_data['seo_description']}"/>
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="{$seo_data['seo_title']}">
 <meta name="twitter:url" content="{$seo_data['seo_url']}">
-<meta name="twitter:image" content="/data/file/seo/{$seo_data['seo_image']}">
+<meta name="twitter:image" content="{$seo_image_url}">
 <meta name="twitter:description" content="{$seo_data['seo_description']}"/>
-<link rel="shortcut icon" type="image/x-icon" href="/data/file/seo/{$seo_data['seo_favicon']}" />
+<link rel="shortcut icon" type="image/x-icon" href="{$seo_favicon_url}" />
 HTML;
 	return $seo_html;
 }

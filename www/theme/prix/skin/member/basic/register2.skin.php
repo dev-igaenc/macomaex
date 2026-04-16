@@ -78,10 +78,10 @@ if (!defined('_GNUBOARD_')) exit; // 개별 페이지 접근 불가
 				<input type="hidden" name="id" value="<?=$id?>">
 				<input type="hidden" name="password" value="<?=$password?>">
 				<input type="hidden" name="agree_chk" value="">
-				<input type="hidden" name="provider" value="<?php echo $provider; ?>">
-				<input type="hidden" name="cert_type" value="<?php echo $cert_type; ?>">
-				<input type="hidden" name="cert_no" value="<?php echo $cert_no; ?>">
-				<input type="hidden" name="mb_id" value="<?php echo $mb_id; ?>" id="reg_mb_id">
+				<input type="hidden" name="provider" value="<?php echo $provider ?? ''; ?>">
+                <input type="hidden" name="cert_type" value="<?php echo $cert_type ?? ''; ?>">
+                <input type="hidden" name="cert_no" value="<?php echo $cert_no ?? ''; ?>">
+                <input type="hidden" name="mb_id" value="<?php echo $mb_id ?? ''; ?>" id="reg_mb_id">
 			</form>
             <button type="button" class="agree">동의합니다</button>
             <button type="button" class="disagree">동의하지 않습니다</button>

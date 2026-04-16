@@ -131,10 +131,33 @@ switch ($type) {
 
 				//----------curl 실행----------
 				 $html_ori = curl_exec($ch);  //cURL 함수 실행 후 XML을 String으로 리턴
-				 //print_r($html_ori);
-				 //echo $html_ori;
-				  $xml=simplexml_load_string($html_ori, null, LIBXML_NOCDATA) or die("Error: Cannot create object");
-				  $json = json_encode($xml, JSON_UNESCAPED_UNICODE);
+				 $curl_error = curl_error($ch);
+				 $curl_errno = curl_errno($ch);
+				 curl_close($ch);
+
+				 if ($html_ori === false) {
+				 	macomaex_kodata_log('curl_failed', array(
+				 		'context' => 'get_set_main_comp_chk',
+				 		'comnum' => $comnum,
+				 		'curl_errno' => $curl_errno,
+				 		'curl_error' => $curl_error,
+				 	));
+				 	echo "500|CURL_ERROR|기업 정보 조회 중 통신 오류가 발생했습니다.";
+				 	exit;
+				 }
+
+				 $parsed = macomaex_parse_kodata_xml($html_ori, array(
+				 	'context' => 'get_set_main_comp_chk',
+				 	'comnum' => $comnum,
+				 ));
+
+				 if (!$parsed['success']) {
+				 	echo "500|".$parsed['error_code']."|".$parsed['error_message'];
+				 	exit;
+				 }
+
+				  $xml = $parsed['xml'];
+				  $json = $parsed['json'];
 				  $header = $xml -> HEADER;
 				  if($header->errcd!="00") {
 					  $error=$header->errctt;
@@ -172,14 +195,14 @@ switch ($type) {
 			$comnum=str_replace("-","",$comnum);
 					$chk=sql_fetch("select * from company where BZNO='$comnum'");
 
-					if($chk['KEDCD']) { 
+					if (!empty($chk['KEDCD'])) { 
 						if(!$chk['ENP_NM_TRD']) $chk['ENP_NM_TRD']=$chk['ENP_NM'];
 						echo "1000|".$chk['ENP_NM_TRD']."|".$chk['KEDCD'];
 					}else{
 						//등록된 정보가 없으면 API로 가져와서 등록함
 						//API 로그기록에 정보가 남아있는지 체크 있으면 해당 기록에서 그냥 가져오기
 						$log_chk=sql_fetch("select * from company_api_log where c_bizno='{$comnum}' and DATE(c_datetime)='".date("Y-m-d")."'");
-						if(!$log_chk['c_content']){
+						if (empty($log_chk['c_content'])) {
 							$com_d=getKODATA($comnum);
 							$com_data=explode("|",$com_d);
 							if($com_data[0]==1000){
@@ -251,6 +274,7 @@ switch ($type) {
 								echo "1000|".$enp_nm_trd."|".$KEDCD;
 							}else{
 								echo "501";
+								exit;
 							}
 						}else{
 								//API기록에서 정보가져옴
