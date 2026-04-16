@@ -4,11 +4,14 @@ on:
   push:
     branches:
       - develop
+    paths:
+      - 'www/**'
+      - '.github/workflows/deploy-develop-cafe24.yml'
   workflow_dispatch:
 
 concurrency:
   group: deploy-develop-cafe24
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   deploy:
@@ -19,6 +22,15 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get changed files
+        id: changed
+        uses: tj-actions/changed-files@v46
+        with:
+          files: |
+            www/**
 
       - name: Validate required secrets
         env:
@@ -39,32 +51,68 @@ jobs:
           exit "$missing"
 
       - name: Install lftp
+        if: steps.changed.outputs.any_changed == 'true'
         run: sudo apt-get update && sudo apt-get install -y lftp
 
-      - name: Deploy www to Cafe24
+      - name: Deploy changed files to Cafe24
+        if: steps.changed.outputs.any_changed == 'true'
         env:
           DEPLOY_HOST: ${{ secrets.CAFE24_SFTP_HOST }}
           DEPLOY_PORT: ${{ secrets.CAFE24_SFTP_PORT }}
           DEPLOY_USER: ${{ secrets.CAFE24_SFTP_USER }}
           DEPLOY_PASSWORD: ${{ secrets.CAFE24_SFTP_PASSWORD }}
           REMOTE_PATH: ${{ secrets.CAFE24_REMOTE_PATH }}
+          ADDED_MODIFIED_FILES: ${{ steps.changed.outputs.added_modified_files }}
+          DELETED_FILES: ${{ steps.changed.outputs.deleted_files }}
         run: |
-          cd "$GITHUB_WORKSPACE/www"
-          lftp -u "$DEPLOY_USER","$DEPLOY_PASSWORD" "sftp://$DEPLOY_HOST:$DEPLOY_PORT" <<EOF
-          set cmd:fail-exit yes
-          set sftp:auto-confirm yes
-          set net:max-retries 2
-          set net:timeout 20
-          set xfer:clobber on
-          mirror -R --only-newer --verbose=1 --parallel=2 \
-            --exclude-glob data \
-            --exclude-glob data/** \
-            --exclude-glob .DS_Store \
-            --exclude-glob .git/** \
-            --exclude-glob .github/** \
-            --exclude-glob .vscode/** \
-            --exclude-glob tmp \
-            --exclude-glob tmp/** \
-            . $REMOTE_PATH
-          bye
+          CMD_FILE="$RUNNER_TEMP/lftp_cmds.txt"
+          : > "$CMD_FILE"
+
+          {
+            echo "set cmd:fail-exit yes"
+            echo "set sftp:auto-confirm yes"
+            echo "set net:max-retries 2"
+            echo "set net:timeout 20"
+            echo "set xfer:clobber on"
+          } >> "$CMD_FILE"
+
+          if [ -n "$ADDED_MODIFIED_FILES" ]; then
+            for file in $ADDED_MODIFIED_FILES; do
+              [ -z "$file" ] && continue
+              case "$file" in
+                www/*) ;;
+                *) continue ;;
+              esac
+              rel="${file#www/}"
+              remote_file="$REMOTE_PATH/$rel"
+              remote_dir="$(dirname "$remote_file")"
+              local_file="$GITHUB_WORKSPACE/$file"
+              echo "mkdir -p \"$remote_dir\"" >> "$CMD_FILE"
+              echo "put -O \"$remote_dir\" \"$local_file\"" >> "$CMD_FILE"
+            done
+          fi
+
+          if [ -n "$DELETED_FILES" ]; then
+            for file in $DELETED_FILES; do
+              [ -z "$file" ] && continue
+              case "$file" in
+                www/*) ;;
+                *) continue ;;
+              esac
+              rel="${file#www/}"
+              remote_file="$REMOTE_PATH/$rel"
+              echo "rm -f \"$remote_file\"" >> "$CMD_FILE"
+            done
+          fi
+
+          echo "bye" >> "$CMD_FILE"
+
+          lftp "sftp://$DEPLOY_HOST:$DEPLOY_PORT" <<EOF
+          set sftp:connect-program "ssh -a -x -o PreferredAuthentications=password -o PubkeyAuthentication=no -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
+          user "$DEPLOY_USER" "$DEPLOY_PASSWORD"
+          source "$CMD_FILE"
           EOF
+
+      - name: Skip deploy (no www changes)
+        if: steps.changed.outputs.any_changed != 'true'
+        run: echo "No changes under www/. Deploy skipped."
