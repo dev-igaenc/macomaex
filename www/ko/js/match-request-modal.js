@@ -94,6 +94,7 @@ if (goToTypeBtn) {
 }
 
 /* ---- TYPE_DATA & FIELDS ---- */
+// 거래 방향별 선택 UI는 화면용 id를 사용하고, 서버에서는 이 값을 trade_purpose 코드로 다시 매핑한다.
 var TYPE_DATA = {
     buy: [
         { id: 'buy1', label: '제품·상품 매입' },
@@ -175,6 +176,7 @@ if (backToRequestBtn) {
 }
 
 /* ---- 거래 요청 제출 ---- */
+// 최종 제출은 현재 상세 페이지로 POST 하여 PHP가 검증/insert/차감/마스킹 해제까지 한 번에 처리하게 한다.
 function collectDynamicFields() {
     var itemField = document.getElementById('reqItemField');
     var val = itemField ? itemField.value.trim() : '';
@@ -230,6 +232,7 @@ if (confirmTypeBtn) {
             closeModal('modalType');
             closeModal('modalRequest');
 
+            // 거래 요청이 정상 완료되면 새로고침하여 마스킹 해제 상태를 다시 그린다.
             if (data && data.unlock_detail) {
                 window.location.reload();
             }

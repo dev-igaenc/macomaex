@@ -36,6 +36,7 @@ function trade_request_log($stage, $data = array()) {
 	error_log('[trade_request] ' . json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
 }
 
+// 상세 페이지 해제 상태에서 값이 비어 있으면 공통 대체 문구로 보여준다.
 function trade_request_display_value($value) {
 	$value = trim((string)$value);
 	return ($value !== '') ? $value : '정보 준비중';
@@ -211,7 +212,7 @@ $companyTitleDisplay = trade_request_display_value($company['ENP_NM'] ?? '');
 $companyAddressDisplay = trade_request_display_value(trim(($company['LOC_ADDRA'] ?? '') . ' ' . ($company['LOC_ADDRB'] ?? '')));
 $companyHomepageDisplay = trade_request_display_value($company['HPAGE_URL'] ?? '');
 
-// 거래 요청서 저장 요청 처리
+// 거래 요청 모달 제출 시: 입력 검증 → 거래 요청 저장 → 크레딧 차감 → 응답 반환 순서로 처리한다.
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'trade_request_insert') {
 	trade_request_log('request_received', array(
 		'member_id' => $member['mb_id'] ?? '',
@@ -230,6 +231,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 	$messageContent = isset($_POST['message_content']) ? trim((string)$_POST['message_content']) : '';
 	$tradeTypeRaw = isset($_POST['trade_type']) ? trim((string)$_POST['trade_type']) : '';
 
+	// 화면에서 선택한 값들을 DB 저장 코드와 차감 정책으로 변환하기 위한 매핑 테이블
 	$directionMap = array(
 		'buy' => 'P',
 		'supply' => 'S',
@@ -322,7 +324,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 		trade_request_json_response(false, '거래 목적을 다시 선택해 주세요.');
 	}
 
-	// 사용자 입력값 서버 측 최종 검증
+	// 로그인 회원 정보와 현재 상세 기업 정보를 기준으로 trade_request 저장용 서버 데이터를 확정한다.
 	$requestMemberId = trim((string)($member['mb_id'] ?? ''));
 	$requestCompanyName = trim((string)($member['mb_name'] ?? ''));
 	$requestBzno = preg_replace('/[^0-9]/', '', (string)($member['mb_4'] ?? ''));
@@ -360,6 +362,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 		trade_request_json_response(false, '거래 목적 처리 중 오류가 발생했습니다.');
 	}
 
+	// 거래 요청서를 저장하기 전에 현재 회원의 잔여 크레딧으로 요청 가능 여부를 먼저 확인한다.
 	$creditStatus = sql_fetch("select uid, matching_able_cnt from g5_membership_status where uid='" . sql_escape_string($requestMemberId) . "' order by no desc limit 1");
 	$remainCredit = isset($creditStatus['matching_able_cnt']) ? (int)$creditStatus['matching_able_cnt'] : 0;
 	if (empty($creditStatus['uid']) || $remainCredit < $creditAmount) {
@@ -385,7 +388,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 		'credit_amount' => $creditAmount,
 	));
 
-	// 거래 요청서 테이블 데이터 insert
+	// trade_request에는 먼저 요청 원본 데이터를 저장하고, credit_used는 차감 성공 후에만 1로 바꾼다.
 	$sql = "INSERT INTO trade_request SET
 		request_mb_id = '" . sql_escape_string($requestMemberId) . "',
 		target_mb_id = NULL,
@@ -423,6 +426,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 		'credit_amount' => $creditAmount,
 	));
 
+	// 거래 요청 원본 저장이 끝나면 실제 크레딧 차감과 원장 이력 적재를 이어서 수행한다.
 	$creditConsume = trade_request_consume_credit($requestMemberId, $insertId, $targetKedcd, $tradeType, $creditAmount);
 	if (empty($creditConsume['success'])) {
 		trade_request_log('credit_consume_failed', array(
@@ -440,6 +444,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 		));
 	}
 
+	// 크레딧 차감이 완료된 요청만 상세 페이지 마스킹 해제 조건에 사용하기 위해 credit_used를 1로 갱신한다.
 	$tradeRequestUpdateSql = "update trade_request set credit_used=1 where tr_no={$insertId}";
 	$tradeRequestUpdate = sql_query($tradeRequestUpdateSql, false);
 	if (!$tradeRequestUpdate) {
@@ -473,7 +478,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 	));
 }
 
-// JS 전달 전 화면용 데이터 구조 정리
+// 프론트 렌더링과 마스킹 분기에 필요한 상세 페이지 데이터 구조를 한 번에 정리해 JS로 내려준다.
 $companyDetailData = array(
 	'kedcd' => $company['KEDCD'] ?? '',
 	'title' => $company['ENP_NM'] ?? '',

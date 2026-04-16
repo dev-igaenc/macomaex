@@ -35,6 +35,7 @@ function renderDetailLeftCard(co, scoreHtml) {
         return value ? value : '정보 준비중';
     }
 
+    // 서버에서 내려준 해제 여부에 따라 기업명/주소/홈페이지를 마스킹 상태와 실제 값 상태로 분기한다.
     var isUnlocked = !!co.is_unlocked;
     var titleHtml = isUnlocked ? _esc(_displayOrPending(co.title_display || co.title)) : _maskName(co.title);
     var addressHtml = isUnlocked
