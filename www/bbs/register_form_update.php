@@ -326,7 +326,7 @@ if ($w == '') {
                 status='S'");
         }
 
-        $bonus_memo = addslashes('회원가입 기본 크레딧 지급');
+        $bonus_memo = addslashes('신규 가입 무료 크레딧 지급');
         sql_query("insert into g5_matching_credit_history set
             uid='{$mb_id}',
             tx_type='BONUS',

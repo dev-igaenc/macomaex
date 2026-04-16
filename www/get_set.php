@@ -19,6 +19,7 @@ $mtype = isset($_REQUEST['mtype']) ? sql_real_escape_string(trim((string)$_REQUE
 $coupon = isset($_REQUEST['coupon']) ? sql_real_escape_string(trim((string)$_REQUEST['coupon'])) : '';
 $request_type = isset($_REQUEST['request_type']) ? sql_real_escape_string(trim((string)$_REQUEST['request_type'])) : '';
 $match_content = isset($_REQUEST['match_content']) ? sql_real_escape_string(trim((string)$_REQUEST['match_content'])) : '';
+$pay_token = isset($_REQUEST['pay_token']) ? preg_replace('/[^0-9a-z_\.-]/i', '', (string)$_REQUEST['pay_token']) : '';
 
 if (!function_exists('membership_refund_lock_name')) {
 	function membership_refund_lock_name($order_no) {
@@ -542,41 +543,48 @@ switch ($type) {
 						// 표준산업분류 기본값 처리
 						if(!is_array($kssc9)) $kssc9 = array('k_code_name' => '-');
 						if(!is_array($kssc)) $kssc = array('k_code_name' => '-');
-						$matcing=sql_fetch("SELECT * from g5_matching where del != 'D' and  request_id='{$member['mb_id']}' and KEDCD='{$kedcd}'");//매칭요청
-					if($matcing['receive_approval']=="Y") $receve_info=getUserInfo($matcing['receive_id']);
-					if(!$matcing['receive_approval']) {
-						//$receve_info=getUserInfo($matcing['request_id']);
-						$matcing=sql_fetch("SELECT * from g5_matching where del != 'D' and  receive_id='{$member['mb_id']}' and KEDCD='{$kedcd}'");//받은매칭요청
-						if($matcing['receive_approval']=="Y") $receve_info=getUserInfo($matcing['request_id']);
-					}
-					if(!$matcing['receive_approval']) {
-						$matcing=sql_fetch("SELECT * from g5_matching where del != 'D' and  receive_id='{$member['mb_id']}' and request_id=(select mb_id from g5_member where mb_company='{$kedcd}')");//받은매칭요청
-						if($matcing['receive_approval']=="Y") $receve_info=getUserInfo($matcing['request_id']);
-					}
-						$favorite=sql_fetch("SELECT * from g5_favorite where mb_id='{$member['mb_id']}' and KEDCD='{$kedcd}'"); //북마크
-						$sales=getFinanceInfo($kedcd);
-						// 재무정보 기본값 처리
-						if(!is_array($sales)) $sales = array(array('SALES' => 0));
+							$matcing=sql_fetch("SELECT * from g5_matching where del != 'D' and  request_id='{$member['mb_id']}' and KEDCD='{$kedcd}'");//매칭요청
+							if(!is_array($matcing)) $matcing = array();
+							$receive_approval = isset($matcing['receive_approval']) ? (string)$matcing['receive_approval'] : '';
+						if($receive_approval=="Y") $receve_info=getUserInfo($matcing['receive_id']);
+						if(!$receive_approval) {
+							//$receve_info=getUserInfo($matcing['request_id']);
+							$matcing=sql_fetch("SELECT * from g5_matching where del != 'D' and  receive_id='{$member['mb_id']}' and KEDCD='{$kedcd}'");//받은매칭요청
+							if(!is_array($matcing)) $matcing = array();
+							$receive_approval = isset($matcing['receive_approval']) ? (string)$matcing['receive_approval'] : '';
+							if($receive_approval=="Y") $receve_info=getUserInfo($matcing['request_id']);
+						}
+						if(!$receive_approval) {
+							$matcing=sql_fetch("SELECT * from g5_matching where del != 'D' and  receive_id='{$member['mb_id']}' and request_id=(select mb_id from g5_member where mb_company='{$kedcd}')");//받은매칭요청
+							if(!is_array($matcing)) $matcing = array();
+							$receive_approval = isset($matcing['receive_approval']) ? (string)$matcing['receive_approval'] : '';
+							if($receive_approval=="Y") $receve_info=getUserInfo($matcing['request_id']);
+						}
+							$favorite=sql_fetch("SELECT * from g5_favorite where mb_id='{$member['mb_id']}' and KEDCD='{$kedcd}'"); //북마크
+							if(!is_array($favorite)) $favorite = array();
+							$sales=getFinanceInfo($kedcd);
+							// 재무정보 기본값 처리
+							if(!is_array($sales)) $sales = array(array('SALES' => 0));
 						
 
 ?>
 	<div class="cv-name">
 		<strong><?=$comp['ENP_NM']?></strong>
 		<div class="option">
-			<button type="button" star class="<?if($favorite['ms_id']){?>active<?}?> star_btn" kedcd="<?=$kedcd?>"><img src="/images/icon_star.svg" alt=""></button>
-			<a href="javascript:copyUrl('<?=simple_crypt($kedcd);?>')" link><img src="/images/icon_link.svg" alt=""></a>
-			<?if($matcing['receive_approval']=="N"){?>
-			<a href="javascript:jAlert('매칭 수락 대기중입니다.','알림')" request><span>수락대기</span></a>
-			<?}?>
-			<?if($matcing['receive_approval']=="Y"){?>
-			<a request class="accepted"><span>매칭완료</span></a>
-			<?}?>
-			<?if($matcing['receive_approval']=="R"){?>
-			<a request class="rejected"><span>매칭거절</span></a>
-			<?}?>
-			<?if(!$matcing['receive_approval']){?>
-			<a id="popup_open" kedcd="<?=$kedcd?>" request><span>매칭 요청</span></a>
-			<?}?>
+				<button type="button" star class="<?if(!empty($favorite['ms_id'])){?>active<?}?> star_btn" kedcd="<?=$kedcd?>"><img src="/images/icon_star.svg" alt=""></button>
+				<a href="javascript:copyUrl('<?=simple_crypt($kedcd);?>')" link><img src="/images/icon_link.svg" alt=""></a>
+				<?if($receive_approval=="N"){?>
+				<a href="javascript:jAlert('매칭 수락 대기중입니다.','알림')" request><span>수락대기</span></a>
+				<?}?>
+				<?if($receive_approval=="Y"){?>
+				<a request class="accepted"><span>매칭완료</span></a>
+				<?}?>
+				<?if($receive_approval=="R"){?>
+				<a request class="rejected"><span>매칭거절</span></a>
+				<?}?>
+				<?if(!$receive_approval){?>
+				<a id="popup_open" kedcd="<?=$kedcd?>" request><span>매칭 요청</span></a>
+				<?}?>
 			<!--a href="javascript:void(0);" request>매칭요청</a-->
 		</div>
 	</div>
@@ -1004,9 +1012,8 @@ switch ($type) {
 					if($mat['order_no']) sql_query("update g5_membership_status_history set matching_able_cnt={$mat['matching_able_cnt']} where uid='{$member['mb_id']}' and order_no='{$mat['order_no']}' ");
 
 					// 크레딧 원장 기록 (사용)
-					$memo_prefix = ($request_type === "TM") ? "TM 요청" : "기본 요청";
-					$memo = addslashes($memo_prefix." 사용({$matching_credit_cost} 차감)");
-					sql_query("insert into g5_matching_credit_history set uid='{$member['mb_id']}', tx_type='USE', credit_delta='-{$matching_credit_cost}', credit_after='{$mat['matching_able_cnt']}', order_no=NULL, matching_no='{$matching_no}', request_type='{$request_type}', memo='{$memo}', created_at=now()");
+						$memo = addslashes($request_type === "TM" ? "TM 서포트 거래 요청" : "일반 거래 요청");
+						sql_query("insert into g5_matching_credit_history set uid='{$member['mb_id']}', tx_type='USE', credit_delta='-{$matching_credit_cost}', credit_after='{$mat['matching_able_cnt']}', order_no=NULL, matching_no='{$matching_no}', request_type='{$request_type}', memo='{$memo}', created_at=now()");
 
 					sql_query("COMMIT");
 
@@ -1174,18 +1181,28 @@ switch ($type) {
 	break;
 
 	case "membership_credit_pay": //크레딧 일반결제 주문 생성
-		if($member['mb_id']) {
-				$stdpay_mid_for_order = (defined('_stdpay_mid') && trim((string)_stdpay_mid) !== '') ? trim((string)_stdpay_mid) : ((defined('_mid') && trim((string)_mid) !== '') ? trim((string)_mid) : '');
-				if(!$stdpay_mid_for_order){
-					echo "500|일반결제 MID가 설정되지 않았습니다.";
-					exit;
-				}
+			if($_SERVER['REQUEST_METHOD'] !== 'POST'){
+				echo "500|잘못된 요청 방식입니다.";
+				exit;
+			}
+			// plan.php 에서 발급한 결제 요청 토큰 검증
+			$session_pay_token = get_session('ss_membership_credit_pay_token');
+			if(!$pay_token || !$session_pay_token || $pay_token !== $session_pay_token){
+				echo "500|유효하지 않은 요청입니다.";
+				exit;
+			}
+			if($member['mb_id']) {
+					$stdpay_mid_for_order = (defined('_stdpay_mid') && trim((string)_stdpay_mid) !== '') ? trim((string)_stdpay_mid) : ((defined('_mid') && trim((string)_mid) !== '') ? trim((string)_mid) : '');
+					if(!$stdpay_mid_for_order){
+						echo "500|일반결제 MID가 설정되지 않았습니다.";
+						exit;
+					}
 
-				$minfo_manage = sql_fetch("select * from g5_membership_manage where no='{$idx}'");
-				if(!$minfo_manage['no']){
-					echo "500|상품 정보를 찾을 수 없습니다.";
-					exit;
-				}
+					$minfo_manage = sql_fetch("select * from g5_membership_manage where no='{$idx}'");
+					if(!is_array($minfo_manage) || empty($minfo_manage['no'])){
+						echo "500|상품 정보를 찾을 수 없습니다.";
+						exit;
+					}
 				$is_credit_manage = false;
 				if(($minfo_manage['title_en'] && strpos((string)$minfo_manage['title_en'], 'CREDIT_') === 0) || ((int)$minfo_manage['matching_cnt'] > 0 && (int)$minfo_manage['month'] === 0)){
 					$is_credit_manage = true;
@@ -1208,9 +1225,8 @@ switch ($type) {
 					exit;
 				}
 
-			sql_query("delete from g5_membership_payment where order_no!='{$orderid}' and uid='{$member['mb_id']}' and complete_yn='N'");
-			$pinfo=sql_fetch("select * from g5_membership_payment where order_no='{$orderid}' and uid='{$member['mb_id']}'");
-				if(!$pinfo['uid']) {
+					$pinfo=sql_fetch("select * from g5_membership_payment where order_no='{$orderid}' and uid='{$member['mb_id']}'");
+						if(!is_array($pinfo) || empty($pinfo['uid'])) {
 					$sql="insert g5_membership_payment set ";
 					$sql.="	uid='{$member['mb_id']}',";
 					$sql.="	order_no='{$orderid}',";

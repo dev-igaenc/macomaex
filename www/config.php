@@ -325,6 +325,15 @@ define('_iv',      macomaex_env('INIBILL_LIVE_IV', ''));
 define('_clientIp',      macomaex_env('INIBILL_LIVE_CLIENT_IP', ''));
 define('_test_pay',      macomaex_env('INIBILL_LIVE_TEST_PAY', 'N'));
 
+// 이니시스 일반결제(STDPAY) 키 설정
+define('_stdpay_mid_test',      macomaex_env('INICIS_STDPAY_TEST_MID', ''));
+define('_stdpay_signkey_test',  macomaex_env('INICIS_STDPAY_TEST_SIGN_KEY', ''));
+define('_stdpay_mid',           macomaex_env('INICIS_STDPAY_LIVE_MID', ''));
+define('_stdpay_signkey',       macomaex_env('INICIS_STDPAY_LIVE_SIGN_KEY', ''));
+// 환불 API용 키 (없으면 기존 INIBILL KEY 사용)
+define('_stdpay_api_key_test',  macomaex_env('INICIS_STDPAY_TEST_API_KEY', macomaex_env('INIBILL_TEST_KEY', '')));
+define('_stdpay_api_key_real',  macomaex_env('INICIS_STDPAY_LIVE_API_KEY', macomaex_env('INIBILL_LIVE_KEY', '')));
+
 /*
 if (empty($_SERVER['HTTPS']) || $_SERVER['HTTPS'] === 'off') {
     $redirect = 'https://' . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'];

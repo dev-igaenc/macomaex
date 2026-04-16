@@ -61,6 +61,7 @@ Thumbs.db
 # Backup files
 *.bak
 *.swp
+/php_error.log
 
 # Local Machine Files (repo root only)
 /.bash_history

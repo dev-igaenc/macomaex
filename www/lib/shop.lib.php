@@ -1386,6 +1386,11 @@ function get_new_od_id()
 function set_cart_id($direct)
 {
     global $g5, $default, $member;
+    $guest_cart_use = !empty($default['de_guest_cart_use']);
+    $cart_keep_term = isset($default['de_cart_keep_term']) ? (int)$default['de_cart_keep_term'] : 15;
+    if($cart_keep_term < 1) {
+        $cart_keep_term = 15;
+    }
 
     if ($direct) {
         $tmp_cart_id = get_session('ss_cart_direct');
@@ -1395,15 +1400,15 @@ function set_cart_id($direct)
         }
     } else {
         // 비회원장바구니 cart id 쿠키설정
-        if($default['de_guest_cart_use']) {
+        if($guest_cart_use) {
             $tmp_cart_id = preg_replace('/[^a-z0-9_\-]/i', '', get_cookie('ck_guest_cart_id'));
             if($tmp_cart_id) {
                 set_session('ss_cart_id', $tmp_cart_id);
-                //set_cookie('ck_guest_cart_id', $tmp_cart_id, ($default['de_cart_keep_term'] * 86400));
+                //set_cookie('ck_guest_cart_id', $tmp_cart_id, ($cart_keep_term * 86400));
             } else {
                 $tmp_cart_id = get_uniqid();
                 set_session('ss_cart_id', $tmp_cart_id);
-                set_cookie('ck_guest_cart_id', $tmp_cart_id, ($default['de_cart_keep_term'] * 86400));
+                set_cookie('ck_guest_cart_id', $tmp_cart_id, ($cart_keep_term * 86400));
             }
         } else {
             $tmp_cart_id = get_session('ss_cart_id');
@@ -2606,7 +2611,7 @@ function cart_item_clean()
     global $g5, $default;
 
     // 장바구니 보관일
-    $keep_term = $default['de_cart_keep_term'];
+    $keep_term = isset($default['de_cart_keep_term']) ? (int)$default['de_cart_keep_term'] : 15;
     if(!$keep_term)
         $keep_term = 15; // 기본값 15일
 
@@ -2747,7 +2752,7 @@ function is_inicis_order_pay($type){
     return false;
 }
 
-function get_item_images_info($it, $size=array(), $image_width, $image_height){
+function get_item_images_info($it, $size=array(), $image_width=0, $image_height=0){
     
     if( !(is_array($it) && $it) ) return array();
     $images = array();
