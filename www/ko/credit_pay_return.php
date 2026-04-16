@@ -39,18 +39,21 @@ try {
 	$signKey = ($stdpay_mid_test && $mid === $stdpay_mid_test) ? $stdpay_signkey_test : $stdpay_signkey;
 	$timestamp = $util->getTimestamp();
 	$authToken = $_REQUEST["authToken"];
-	$idc_name = $_REQUEST["idc_name"];
-	$authUrl = isset($_REQUEST["authUrl"]) ? $_REQUEST["authUrl"] : '';
+	$idc_name = isset($_REQUEST["idc_name"]) ? (string)$_REQUEST["idc_name"] : '';
+	$authUrl = isset($_REQUEST["authUrl"]) ? trim((string)$_REQUEST["authUrl"]) : '';
 	$charset = "UTF-8";
 	$format = "JSON";
 
 	$parsedAuthUrl = parse_url($authUrl);
-	$allowedHosts = array('stdpay.inicis.com', 'stgstdpay.inicis.com');
+	$authHost = (is_array($parsedAuthUrl) && isset($parsedAuthUrl['host'])) ? strtolower((string)$parsedAuthUrl['host']) : '';
+	$authPath = (is_array($parsedAuthUrl) && isset($parsedAuthUrl['path'])) ? (string)$parsedAuthUrl['path'] : '';
+	$isAllowedHost = (bool)preg_match('/^[a-z0-9-]*stdpay\.inicis\.com$/', $authHost);
+	$normalizedPath = rtrim($authPath, '/');
 	$isValidAuthUrl = is_array($parsedAuthUrl)
 		&& isset($parsedAuthUrl['scheme'], $parsedAuthUrl['host'], $parsedAuthUrl['path'])
 		&& strtolower($parsedAuthUrl['scheme']) === 'https'
-		&& in_array(strtolower($parsedAuthUrl['host']), $allowedHosts, true)
-		&& $parsedAuthUrl['path'] === '/api/payAuth';
+		&& $isAllowedHost
+		&& preg_match('#/api/payAuth$#', $normalizedPath);
 	if (!$isValidAuthUrl) {
 		credit_pay_fail("authUrl 형식 검증 실패");
 	}
