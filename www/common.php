@@ -308,6 +308,7 @@ if( !function_exists('shop_check_is_pay_page') ){
         $pg_checks_pages = array(
             $shop_dir.'/inicis/INIStdPayReturn.php',	// 영카트 5.2.9.5 이하에서 사용됨, 그 이상버전에서는 파일 삭제됨
             $shop_dir.'/inicis/inistdpay_return.php',	// 영카트 5.2.9.6 이상에서 사용됨
+            'ko/credit_pay_return.php',                // 커스텀 크레딧 일반결제 리턴
             $mobile_dir.'/'.$shop_dir.'/inicis/pay_return.php',
             $mobile_dir.'/'.$shop_dir.'/inicis/pay_approval.php',
             $shop_dir.'/lg/returnurl.php',
