@@ -737,7 +737,7 @@ if (!$open_group_slug && $current_cat === 'all') {
                         $starFull   = floor($scoreValue);
                         $starPart   = $scoreValue - $starFull;
                     ?>
-                    <a href="#"
+                    <a href="/ko/company_detail.php?cd=<?php echo urlencode(simple_crypt($c['kedcd'] ?? '')); ?>"
                     class="mCompanyCard detail_view"
                     data-type="<?php echo htmlspecialchars($c['type'] ?? 'buyer'); ?>"
                     data-rank="<?php echo (int)$idx; ?>"
@@ -1291,6 +1291,7 @@ $('body').on('input', '#match_content_extra', function () {
 if (window.CompanyDetailActions && typeof window.CompanyDetailActions.init === 'function') {
     window.CompanyDetailActions.init({
         getSetUrl: '/get_set.php',
+        detailTrigger: '.js-detail-popup',
         popupSelector: '.popup_submit',
         requestTypeSelector: '#request_type',
         receiverNameSelector: '#recv',

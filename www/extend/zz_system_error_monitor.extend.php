@@ -182,14 +182,19 @@ if (!function_exists('system_error_mask_value')) {
 if (!function_exists('system_error_fallback_file_log')) {
     function system_error_fallback_file_log($line)
     {
-        $log_dir = G5_DATA_PATH . '/log';
-        $log_file = $log_dir . '/system_error.log';
+        $legacy_log_dir = G5_DATA_PATH . '/log';
+        $legacy_log_file = $legacy_log_dir . '/system_error.log';
+        $php_error_log = trim((string)ini_get('error_log'));
 
-        if (!is_dir($log_dir)) {
-            @mkdir($log_dir, G5_DIR_PERMISSION, true);
+        if (!is_dir($legacy_log_dir)) {
+            @mkdir($legacy_log_dir, G5_DIR_PERMISSION, true);
         }
 
-        @error_log($line . PHP_EOL, 3, $log_file);
+        @error_log($line . PHP_EOL, 3, $legacy_log_file);
+
+        if ($php_error_log && $php_error_log !== $legacy_log_file) {
+            @error_log($line . PHP_EOL, 3, $php_error_log);
+        }
     }
 }
 

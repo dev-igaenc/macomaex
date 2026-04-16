@@ -9,7 +9,7 @@
  *
  * 의존:
  *   - css/company-detail-left.css (공통 스타일)
- *   - inc/badges.js (companyBadgesHtml 함수)
+ *   - js/badges.js (companyBadgesHtml 함수)
  *   - #leftCard 엘리먼트가 페이지에 존재해야 함
  */
 function renderDetailLeftCard(co, scoreHtml) {
@@ -29,6 +29,23 @@ function renderDetailLeftCard(co, scoreHtml) {
         var first = prefix ? name.substring(0, 1) : name.substring(0, 2);
         return _esc(prefix + first) + '****';
     }
+
+    function _displayOrPending(s) {
+        var value = String(s || '').trim();
+        return value ? value : '정보 준비중';
+    }
+
+    // 서버에서 내려준 해제 여부에 따라 기업명/주소/홈페이지를 마스킹 상태와 실제 값 상태로 분기한다.
+    var isUnlocked = !!co.is_unlocked;
+    var titleHtml = isUnlocked ? _esc(_displayOrPending(co.title_display || co.title)) : _maskName(co.title);
+    var addressHtml = isUnlocked
+        ? _esc(_displayOrPending(co.address_display || co.address))
+        : '*********************';
+    var homepageHtml = isUnlocked
+        ? _esc(_displayOrPending(co.homepage_display || co.homepage))
+        : '*********************';
+    var addressClass = isUnlocked ? '' : ' class="info-masked"';
+    var homepageClass = isUnlocked ? '' : ' class="info-masked"';
 
     var tagsHtml = '';
     (co.tags || []).forEach(function(t) {
@@ -55,7 +72,7 @@ function renderDetailLeftCard(co, scoreHtml) {
         '<div class="card-title-row"><span class="card-title-label">기업 핵심 정보</span></div>' +
         badgesHtml +
         '<div class="profile-head"><div>' +
-            '<h1>' + _maskName(co.title) + '</h1>' +
+            '<h1>' + titleHtml + '</h1>' +
             '<p class="sub">' + _esc(co.sub) + '</p>' +
         '</div></div>' +
         '<div class="industry-tags">' + tagsHtml + '</div>' +
@@ -66,8 +83,8 @@ function renderDetailLeftCard(co, scoreHtml) {
             '<dt>기업유형</dt><dd>' + _esc(co.corp_type || '법인기업') + '</dd>' +
             '<dt>주요제품</dt><dd class="info-product-line">' + _esc(co.product_line) + '</dd>' +
             '<dt>' + creditDt + '</dt><dd>' + _esc(co.credit) + '</dd>' +
-            '<dt>주소(도로명)</dt><dd class="info-masked">*********************</dd>' +
-            '<dt>홈페이지</dt><dd class="info-masked">*********************</dd>' +
+            '<dt>주소(도로명)</dt><dd' + addressClass + '>' + addressHtml + '</dd>' +
+            '<dt>홈페이지</dt><dd' + homepageClass + '>' + homepageHtml + '</dd>' +
         '</dl>' +
-        '<p class="info-mask-notice">거래 요청 및 수락 시 *** 으로 표시된 정보가 공개됩니다.</p>';
+        (isUnlocked ? '' : '<p class="info-mask-notice">거래 요청 및 수락 시 *** 으로 표시된 정보가 공개됩니다.</p>');
 }

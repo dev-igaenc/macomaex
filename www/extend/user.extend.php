@@ -22,6 +22,68 @@ function simple_crypt( $string, $action = 'e' ) {
     return $output;
 }
 
+if (!function_exists('macomaex_kodata_log')) {
+	function macomaex_kodata_log($stage, $context = array()) {
+		$payload = array(
+			'stage' => (string) $stage,
+			'context' => is_array($context) ? $context : array('value' => $context),
+		);
+
+		error_log('[macomaex_kodata] ' . json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+	}
+}
+
+if (!function_exists('macomaex_parse_kodata_xml')) {
+	function macomaex_parse_kodata_xml($rawXml, $context = array()) {
+		$rawXml = (string) $rawXml;
+		$trimmedXml = trim($rawXml);
+
+		if ($trimmedXml === '') {
+			macomaex_kodata_log('empty_response', array_merge($context, array(
+				'raw_preview' => '',
+			)));
+
+			return array(
+				'success' => false,
+				'error_code' => 'EMPTY_RESPONSE',
+				'error_message' => '기업 정보 응답이 비어 있습니다.',
+			);
+		}
+
+		$useErrorsBackup = libxml_use_internal_errors(true);
+		$xml = simplexml_load_string($trimmedXml, null, LIBXML_NOCDATA);
+		$libxmlErrors = libxml_get_errors();
+		libxml_clear_errors();
+		libxml_use_internal_errors($useErrorsBackup);
+
+		if ($xml === false) {
+			$errorMessages = array();
+
+			foreach ($libxmlErrors as $error) {
+				$message = trim((string) $error->message);
+				if ($message !== '') $errorMessages[] = $message;
+			}
+
+			macomaex_kodata_log('xml_parse_failed', array_merge($context, array(
+				'raw_preview' => substr($trimmedXml, 0, 500),
+				'libxml_errors' => $errorMessages,
+			)));
+
+			return array(
+				'success' => false,
+				'error_code' => 'XML_PARSE_ERROR',
+				'error_message' => '기업 정보 응답을 해석하지 못했습니다.',
+			);
+		}
+
+		return array(
+			'success' => true,
+			'xml' => $xml,
+			'json' => json_encode($xml, JSON_UNESCAPED_UNICODE),
+		);
+	}
+}
+
 //사업자등록증 하이픈
 function licenseNum($str=""){
 	$tmp="";
@@ -228,10 +290,32 @@ function getKODATA($comnum){ // 한국평가데이터 정보 가져오기 API
 
 			//----------curl 실행----------
 			 $html_ori = curl_exec($ch);  //cURL 함수 실행 후 XML을 String으로 리턴
-			 //print_r($html_ori);
-			 //echo $html_ori;
-			  $xml=simplexml_load_string($html_ori, null, LIBXML_NOCDATA) or die("Error: Cannot create object");
-			  $json = json_encode($xml, JSON_UNESCAPED_UNICODE);
+			 $curl_error = curl_error($ch);
+			 $curl_errno = curl_errno($ch);
+			 curl_close($ch);
+
+			 if ($html_ori === false) {
+			 	macomaex_kodata_log('curl_failed', array(
+			 		'context' => 'getKODATA',
+			 		'comnum' => $comnum,
+			 		'curl_errno' => $curl_errno,
+			 		'curl_error' => $curl_error,
+			 	));
+
+			 	return "500|CURL_ERROR|기업 정보 조회 중 통신 오류가 발생했습니다.";
+			 }
+
+			 $parsed = macomaex_parse_kodata_xml($html_ori, array(
+			 	'context' => 'getKODATA',
+			 	'comnum' => $comnum,
+			 ));
+
+			 if (!$parsed['success']) {
+			 	return "500|".$parsed['error_code']."|".$parsed['error_message'];
+			 }
+
+			  $xml = $parsed['xml'];
+			  $json = $parsed['json'];
 			  $header = $xml -> HEADER;
 			  if($header->errcd!="00") {
 				  $error=$header->errctt;
