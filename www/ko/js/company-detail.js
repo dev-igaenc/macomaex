@@ -36,8 +36,22 @@ function calcYearsInBusiness(foundedStr) {
 	var co = window.COMPANY_DETAIL_DATA || null;
 	if (!co) return;
 
+	function maskedTitle(title) {
+		var raw = String(title || '').trim();
+		if (!raw) return '기업 상세';
+		var m = raw.match(/^(\(주\)|\(유\)|\(사\))?(.*)$/);
+		var prefix = m[1] || '';
+		var name = m[2] || '';
+		var visible = prefix ? name.substring(0, 1) : name.substring(0, 2);
+		return prefix + visible + '****';
+	}
+
+	var pageTitleText = co.is_unlocked
+		? String(co.title_display || co.title || '기업 상세')
+		: maskedTitle(co.title);
+
 	// Update page title
-	document.title = co.title + ' · 기업 상세 — 매커멕스';
+	document.title = pageTitleText + ' · 기업 상세 — 매커멕스';
 
 	// 기업 핵심 정보 카드 (공통 모듈)
 	renderDetailLeftCard(co, '');

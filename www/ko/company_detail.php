@@ -36,6 +36,87 @@ function trade_request_log($stage, $data = array()) {
 	error_log('[trade_request] ' . json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
 }
 
+function trade_request_display_value($value) {
+	$value = trim((string)$value);
+	return ($value !== '') ? $value : '정보 준비중';
+}
+
+// 거래 요청 크레딧 차감 + 이력 적재 공통 처리
+function trade_request_consume_credit($memberId, $trNo, $targetKedcd, $tradeType, $creditAmount) {
+	$memberId = trim((string)$memberId);
+	$trNo = (int)$trNo;
+	$targetKedcd = trim((string)$targetKedcd);
+	$tradeType = strtoupper(trim((string)$tradeType));
+	$creditAmount = (int)$creditAmount;
+
+	if ($memberId === '' || $trNo < 1 || $creditAmount < 1) {
+		return array(
+			'success' => false,
+			'message' => '크레딧 차감 파라미터가 올바르지 않습니다.',
+		);
+	}
+
+	$status = sql_fetch("select * from g5_membership_status where uid='" . sql_escape_string($memberId) . "' order by no desc limit 1");
+	$currentCredit = isset($status['matching_able_cnt']) ? (int)$status['matching_able_cnt'] : 0;
+	if (empty($status['uid']) || $currentCredit < $creditAmount) {
+		return array(
+			'success' => false,
+			'message' => '매칭 가능 크레딧이 부족합니다. (필요: ' . $creditAmount . ')',
+			'plan_required' => true,
+		);
+	}
+
+	$deductSql = "update g5_membership_status set matching_able_cnt=matching_able_cnt-{$creditAmount} where uid='" . sql_escape_string($memberId) . "' and matching_able_cnt >= {$creditAmount}";
+	$deductResult = sql_query($deductSql, false);
+	$affected = sql_fetch("select row_count() as cnt");
+	if (!$deductResult || (int)$affected['cnt'] < 1) {
+		return array(
+			'success' => false,
+			'message' => '매칭 가능 크레딧이 부족합니다. (필요: ' . $creditAmount . ')',
+			'plan_required' => true,
+		);
+	}
+
+	$afterStatus = sql_fetch("select * from g5_membership_status where uid='" . sql_escape_string($memberId) . "' order by no desc limit 1");
+	$creditAfter = isset($afterStatus['matching_able_cnt']) ? (int)$afterStatus['matching_able_cnt'] : 0;
+	$memoPrefix = ($tradeType === 'TM') ? '거래 요청(TM)' : '거래 요청(BASIC)';
+	$memo = addslashes($memoPrefix . " 사용({$creditAmount} 차감)");
+
+	$historySql = "insert into g5_matching_credit_history set
+		uid='" . sql_escape_string($memberId) . "',
+		tx_type='USE',
+		service_code='TRADE_REQUEST',
+		credit_delta='-{$creditAmount}',
+		credit_after='{$creditAfter}',
+		order_no=NULL,
+		matching_no='{$trNo}',
+		target_kedcd='" . sql_escape_string($targetKedcd) . "',
+		once_key=NULL,
+		memo='{$memo}',
+		created_at=now(),
+		request_type='" . sql_escape_string($tradeType) . "'";
+
+	$historyResult = sql_query($historySql, false);
+	if (!$historyResult) {
+		sql_query("update g5_membership_status set matching_able_cnt=matching_able_cnt+{$creditAmount} where uid='" . sql_escape_string($memberId) . "'", false);
+
+		return array(
+			'success' => false,
+			'message' => '크레딧 이력 저장에 실패했습니다.',
+		);
+	}
+
+	if (!empty($afterStatus['order_no'])) {
+		sql_query("update g5_membership_status_history set matching_able_cnt='{$creditAfter}' where uid='" . sql_escape_string($memberId) . "' and order_no='" . sql_escape_string($afterStatus['order_no']) . "'", false);
+	}
+
+	return array(
+		'success' => true,
+		'credit_after' => $creditAfter,
+		'order_no' => $afterStatus['order_no'] ?? '',
+	);
+}
+
 // 진입 시 암호화 기업코드 복호화 후 조회하기 위함
 $cd = isset($_GET['cd']) ? trim((string)$_GET['cd']) : '';
 $kedcd = $cd ? simple_crypt($cd, 'd') : '';
@@ -109,6 +190,26 @@ if (!empty($company['ENP_TYP']) && isset($enp_typt[$company['ENP_TYP']])) {
 
 // 거래 요청서 기본 안내 문구는 PHP/JS에서 공통으로 사용
 $defaultMessage = '담당자님, 안녕하세요. 귀사를 확인하고 연락드립니다. 신규 거래처를 검토 중이며, 귀사와 적합한 경우 거래 진행을 희망합니다. 상세 조건은 협의를 통해 논의하고자 합니다.';
+
+// 현재 로그인 회원이 이 기업에 대해 크레딧 사용 완료한 거래 요청이 있으면 마스킹 해제
+$isDetailUnlocked = false;
+if (!empty($member['mb_id'])) {
+	$unlockRow = sql_fetch("
+		SELECT tr_no
+		FROM trade_request
+		WHERE request_mb_id = '" . sql_escape_string($member['mb_id']) . "'
+		  AND target_kedcd = '" . sql_escape_string($company['KEDCD']) . "'
+		  AND credit_used = 1
+		ORDER BY tr_no DESC
+		LIMIT 1
+	");
+
+	$isDetailUnlocked = !empty($unlockRow['tr_no']);
+}
+
+$companyTitleDisplay = trade_request_display_value($company['ENP_NM'] ?? '');
+$companyAddressDisplay = trade_request_display_value(trim(($company['LOC_ADDRA'] ?? '') . ' ' . ($company['LOC_ADDRB'] ?? '')));
+$companyHomepageDisplay = trade_request_display_value($company['HPAGE_URL'] ?? '');
 
 // 거래 요청서 저장 요청 처리
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'trade_request_insert') {
@@ -259,6 +360,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 		trade_request_json_response(false, '거래 목적 처리 중 오류가 발생했습니다.');
 	}
 
+	$creditStatus = sql_fetch("select uid, matching_able_cnt from g5_membership_status where uid='" . sql_escape_string($requestMemberId) . "' order by no desc limit 1");
+	$remainCredit = isset($creditStatus['matching_able_cnt']) ? (int)$creditStatus['matching_able_cnt'] : 0;
+	if (empty($creditStatus['uid']) || $remainCredit < $creditAmount) {
+		trade_request_log('validation_failed', array(
+			'reason' => 'insufficient_credit_before_insert',
+			'request_mb_id' => $requestMemberId,
+			'credit_amount' => $creditAmount,
+			'remain_credit' => $remainCredit,
+		));
+		trade_request_json_response(false, '매칭 가능 크레딧이 부족합니다. (필요: ' . $creditAmount . ')', array(
+			'plan_required' => true,
+			'remain_credit' => $remainCredit,
+		));
+	}
+
 	trade_request_log('insert_prepare', array(
 		'request_mb_id' => $requestMemberId,
 		'target_kedcd' => $targetKedcd,
@@ -307,8 +423,53 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 		'credit_amount' => $creditAmount,
 	));
 
+	$creditConsume = trade_request_consume_credit($requestMemberId, $insertId, $targetKedcd, $tradeType, $creditAmount);
+	if (empty($creditConsume['success'])) {
+		trade_request_log('credit_consume_failed', array(
+			'tr_no' => $insertId,
+			'request_mb_id' => $requestMemberId,
+			'target_kedcd' => $targetKedcd,
+			'trade_type' => $tradeType,
+			'credit_amount' => $creditAmount,
+			'message' => $creditConsume['message'] ?? '',
+		));
+
+		trade_request_json_response(false, $creditConsume['message'] ?? '크레딧 차감 중 오류가 발생했습니다.', array(
+			'tr_no' => $insertId,
+			'plan_required' => !empty($creditConsume['plan_required']),
+		));
+	}
+
+	$tradeRequestUpdateSql = "update trade_request set credit_used=1 where tr_no={$insertId}";
+	$tradeRequestUpdate = sql_query($tradeRequestUpdateSql, false);
+	if (!$tradeRequestUpdate) {
+		trade_request_log('trade_request_credit_update_failed', array(
+			'tr_no' => $insertId,
+			'request_mb_id' => $requestMemberId,
+			'target_kedcd' => $targetKedcd,
+			'trade_type' => $tradeType,
+			'credit_amount' => $creditAmount,
+		));
+
+		trade_request_json_response(false, '거래 요청서 상태 업데이트 중 오류가 발생했습니다.', array(
+			'tr_no' => $insertId,
+		));
+	}
+
+	trade_request_log('credit_consume_success', array(
+		'tr_no' => $insertId,
+		'request_mb_id' => $requestMemberId,
+		'target_kedcd' => $targetKedcd,
+		'trade_type' => $tradeType,
+		'credit_amount' => $creditAmount,
+		'credit_after' => $creditConsume['credit_after'] ?? null,
+	));
+
 	trade_request_json_response(true, '거래 요청서가 저장되었습니다.', array(
 		'tr_no' => $insertId,
+		'credit_after' => $creditConsume['credit_after'] ?? null,
+		'credit_amount' => $creditAmount,
+		'unlock_detail' => true,
 	));
 }
 
@@ -316,6 +477,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 $companyDetailData = array(
 	'kedcd' => $company['KEDCD'] ?? '',
 	'title' => $company['ENP_NM'] ?? '',
+	'title_display' => $companyTitleDisplay,
 	'sub' => $industry['k_code_name'] ?? '',
 	'tags' => array(),
 	'founded' => $foundedYear,
@@ -326,7 +488,10 @@ $companyDetailData = array(
 	'bzno' => $company['BZNO'] ?? '',
 	'defaultRequestMessage' => $defaultMessage,
 	'address' => trim(($company['LOC_ADDRA'] ?? '') . ' ' . ($company['LOC_ADDRB'] ?? '')),
+	'address_display' => $companyAddressDisplay,
 	'homepage' => $company['HPAGE_URL'] ?? '',
+	'homepage_display' => $companyHomepageDisplay,
+	'is_unlocked' => $isDetailUnlocked,
 	'badge_growth' => format_badge_percent_detail($score['badge_growth'] ?? null),
 	'badge_stability' => format_badge_percent_detail($score['badge_stability'] ?? null),
 	'badge_venture' => strtoupper(trim((string)($score['badge_venture'] ?? ''))),

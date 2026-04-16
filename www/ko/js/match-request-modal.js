@@ -216,13 +216,23 @@ if (confirmTypeBtn) {
         .then(function (response) { return response.json(); })
         .then(function (data) {
             if (!data || !data.success) {
-                alert(data && data.message ? data.message : '거래 요청서 저장 중 오류가 발생했습니다.');
+                var errorMessage = data && data.message ? data.message : '거래 요청서 저장 중 오류가 발생했습니다.';
+                if (data && data.plan_required) {
+                    alert(errorMessage);
+                    window.location.href = '/ko/plan.php';
+                    return;
+                }
+                alert(errorMessage);
                 return;
             }
 
             alert(data.message || '거래 요청서가 저장되었습니다.');
             closeModal('modalType');
             closeModal('modalRequest');
+
+            if (data && data.unlock_detail) {
+                window.location.reload();
+            }
         })
         .catch(function () {
             alert('서버 통신 중 오류가 발생했습니다.');
