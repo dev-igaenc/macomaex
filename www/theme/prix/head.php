@@ -294,17 +294,6 @@ include_once(G5_LIB_PATH.'/popular.lib.php');
                     <?if($member['mb_level']>9) {?>
                     <li class="one"><a href="/backoffice/" class="menu_txt"><span>관리자</span></a></li>
                     <?}else{?>
-                    <!-- <li><a href="<?php echo G5_BBS_URL ?>/member_confirm.php?url=/bbs/register_form.php" class="menu_txt"><span>마이페이지</span></a></li>
-                    <li>
-                        <a href="#">마이페이지</a>
-                        <ul class="gnbSub d2">
-                            <li><a href="<?=$link_1101?>"><span>매칭 히스토리</span></a></li>
-                            <li><a href="<?=$link_1102?>"><span>관심기업</span></a></li>
-                            <li><a href="<?=$link_1103?>"><span>회원 정보 수정</span></a></li>
-                            <li><a href="<?=$link_1104?>"><span>결제정보</span></a></li>
-                        </ul>
-                    </li>
-					 -->
                     <?}?>
                 <?php }  ?>
             </ul>
@@ -326,44 +315,42 @@ include_once(G5_LIB_PATH.'/popular.lib.php');
 	<div id="container_wr">
 
 
-		<?php if($depth_1 == 3){ ?>
-			<div id="sVisual" class="bg_<?=$depth_1?>" style="display: none;">
+			<?php if (empty($hide_theme_svisual)) { ?>
+				<?php if($depth_1 == 3){ ?>
+					<div id="sVisual" class="bg_<?=$depth_1?>" style="display: none;">
 
-			<?php if (!empty($sub_visual_video)) { ?>
-    <video class="svisual-video" autoplay muted loop playsinline preload="metadata">
-        <source src="<?= $sub_visual_video ?>" type="video/mp4">
-    </video>
-<?php } ?>
-<h2>
+					<?php if (!empty($sub_visual_video)) { ?>
+	    <video class="svisual-video" autoplay muted loop playsinline preload="metadata">
+	        <source src="<?= $sub_visual_video ?>" type="video/mp4">
+	    </video>
+					<?php } ?>
+					<h2>
+						<strong data-aos="fade-down"><?=$gr_subject?></strong>
+						<span data-aos="fade-up" data-aos-delay="100"><?=$gr_text?></span>
+					</h2>
 
-
-				<h2>
-					<strong data-aos="fade-down"><?=$gr_subject?></strong>
-					<span data-aos="fade-up" data-aos-delay="100"><?=$gr_text?></span>
-				</h2>
-
-				<div class="matching mVisual_search bxShadow">
-					<form action="/ko/matching_list.php" method="POST" id="match">
-					<input type="hidden" name="cominfo" id="cominfo">
-					</form>
-					<input type="text" name="comnum" id="comnum" class="comnum_chk" placeholder="법인 사업자번호를 입력하세요" maxlength="12">
-					<button type="submit" id="sub_submit">확인</button>
-				</div>
-			</div>
-		<?php }else{ ?>
-			<div id="sVisual" class="bg_<?=$depth_1?>">
-			<?php if (!empty($sub_visual_video)) { ?>
-    <video class="svisual-video" autoplay muted loop playsinline preload="metadata">
-        <source src="<?= $sub_visual_video ?>" type="video/mp4">
-    </video>
-<?php } ?>
-<h2>
-				<h2>
-					<strong data-aos="fade-down"><?=$gr_subject?></strong>
-					<span data-aos="fade-up" data-aos-delay="100"><?=$gr_text?></span>
-				</h2>
-			</div>
-		<?php } ?>
+					<div class="matching mVisual_search bxShadow">
+						<form action="/ko/matching_list.php" method="POST" id="match">
+						<input type="hidden" name="cominfo" id="cominfo">
+						</form>
+						<input type="text" name="comnum" id="comnum" class="comnum_chk" placeholder="법인 사업자번호를 입력하세요" maxlength="12">
+						<button type="submit" id="sub_submit">확인</button>
+					</div>
+					</div>
+				<?php }else{ ?>
+					<div id="sVisual" class="bg_<?=$depth_1?>">
+					<?php if (!empty($sub_visual_video)) { ?>
+	    <video class="svisual-video" autoplay muted loop playsinline preload="metadata">
+	        <source src="<?= $sub_visual_video ?>" type="video/mp4">
+	    </video>
+	<?php } ?>
+					<h2>
+						<strong data-aos="fade-down"><?=$gr_subject?></strong>
+						<span data-aos="fade-up" data-aos-delay="100"><?=$gr_text?></span>
+					</h2>
+					</div>
+				<?php } ?>
+			<?php } ?>
 
 		<!-- <div id="snb" <?php if($board['bo_7'] != ""){ ?>class="four"<?php }?>><div class="inConts">
 			<ul id="nav">
@@ -378,8 +365,9 @@ include_once(G5_LIB_PATH.'/popular.lib.php');
 				</script>
 			</ul>
 		</div></div> -->
-		<div id="pageTop">
-            <div class="inConts">
+			<?php if (empty($hide_theme_pagetop)) { ?>
+			<div id="pageTop">
+	            <div class="inConts">
                 <div class="pageTop_text">
                     <h3><?php echo $bo_subject ?></h3>
                     <p></p>
@@ -399,8 +387,9 @@ include_once(G5_LIB_PATH.'/popular.lib.php');
                     </script>
                 </div>
             </div>
-		</div>
-		<div id="container">
+			</div>
+			<?php } ?>
+			<div id="container">
 	<?php } ?>
 
 <!-- 사업자 확인 모달 (돋보기 클릭 후 표시) -->

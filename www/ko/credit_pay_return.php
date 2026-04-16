@@ -39,18 +39,21 @@ try {
 	$signKey = ($stdpay_mid_test && $mid === $stdpay_mid_test) ? $stdpay_signkey_test : $stdpay_signkey;
 	$timestamp = $util->getTimestamp();
 	$authToken = $_REQUEST["authToken"];
-	$idc_name = $_REQUEST["idc_name"];
-	$authUrl = isset($_REQUEST["authUrl"]) ? $_REQUEST["authUrl"] : '';
+	$idc_name = isset($_REQUEST["idc_name"]) ? (string)$_REQUEST["idc_name"] : '';
+	$authUrl = isset($_REQUEST["authUrl"]) ? trim((string)$_REQUEST["authUrl"]) : '';
 	$charset = "UTF-8";
 	$format = "JSON";
 
 	$parsedAuthUrl = parse_url($authUrl);
-	$allowedHosts = array('stdpay.inicis.com', 'stgstdpay.inicis.com');
+	$authHost = (is_array($parsedAuthUrl) && isset($parsedAuthUrl['host'])) ? strtolower((string)$parsedAuthUrl['host']) : '';
+	$authPath = (is_array($parsedAuthUrl) && isset($parsedAuthUrl['path'])) ? (string)$parsedAuthUrl['path'] : '';
+	$isAllowedHost = (bool)preg_match('/^[a-z0-9-]*stdpay\.inicis\.com$/', $authHost);
+	$normalizedPath = rtrim($authPath, '/');
 	$isValidAuthUrl = is_array($parsedAuthUrl)
 		&& isset($parsedAuthUrl['scheme'], $parsedAuthUrl['host'], $parsedAuthUrl['path'])
 		&& strtolower($parsedAuthUrl['scheme']) === 'https'
-		&& in_array(strtolower($parsedAuthUrl['host']), $allowedHosts, true)
-		&& $parsedAuthUrl['path'] === '/api/payAuth';
+		&& $isAllowedHost
+		&& preg_match('#/api/payAuth$#', $normalizedPath);
 	if (!$isValidAuthUrl) {
 		credit_pay_fail("authUrl 형식 검증 실패");
 	}
@@ -190,7 +193,17 @@ try {
 	$current_credit = (int)$status['matching_able_cnt'];
 	$credit_after = $current_credit + $charge_credit;
 
-	$memo = addslashes('사용자 일반결제 충전');
+	$plan_title_en = trim((string)$minfo['title_en']);
+	$plan_title_for_memo = preg_replace('/^CREDIT_/i', '', $plan_title_en);
+	$plan_title_for_memo = str_replace('_', ' ', $plan_title_for_memo);
+	if (preg_match('/^[A-Za-z0-9 ]+$/', $plan_title_for_memo)) {
+		$plan_title_for_memo = ucwords(strtolower($plan_title_for_memo));
+	}
+	if ($plan_title_for_memo === '') {
+		$plan_title_for_memo = '크레딧';
+	}
+	$charge_memo_text = $plan_title_for_memo . ' 플랜 충전';
+	$memo = addslashes($charge_memo_text);
 	$history_sql = "insert into g5_matching_credit_history set
 		uid='{$pinfo['uid']}',
 		tx_type='CHARGE',
@@ -222,7 +235,7 @@ try {
 	}
 
 	$snapshot = sql_fetch("select * from g5_membership_status where uid='{$pinfo['uid']}'");
-	$memo_text = addslashes("사용자 일반결제 충전\n");
+	$memo_text = addslashes($charge_memo_text . "\n");
 	$history_status_sql = "insert g5_membership_status_history set
 		uid='{$pinfo['uid']}',
 		order_no='{$order_no}',

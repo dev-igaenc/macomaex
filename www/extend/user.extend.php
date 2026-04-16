@@ -141,7 +141,8 @@ function getFinanceInfo($no,$year=''){
 
 //맴버쉽 정보 가져오기
 function get_membership(){
-	$sql="select * from g5_membership_manage";
+	$membership_list = array();
+	$sql="select * from g5_membership_manage order by no asc";
 	$result=sql_query($sql);
 	 for ($i=0; $row=sql_fetch_array($result); $i++) {
 		 $membership_list[]=$row;
