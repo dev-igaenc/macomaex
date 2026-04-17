@@ -31,6 +31,62 @@ jobs:
         with:
           files: |
             www/**
+          separator: "\n"
+
+      - name: Show changed files for deploy
+        if: steps.changed.outputs.any_changed == 'true'
+        env:
+          ALL_CHANGED_FILES: ${{ steps.changed.outputs.all_changed_files }}
+          ADDED_MODIFIED_FILES: ${{ steps.changed.outputs.added_modified_files }}
+          DELETED_FILES: ${{ steps.changed.outputs.deleted_files }}
+        run: |
+          ADDED_FILE_LIST="$RUNNER_TEMP/added_modified_files.txt"
+          DELETED_FILE_LIST="$RUNNER_TEMP/deleted_files.txt"
+          ALL_FILE_LIST="$RUNNER_TEMP/all_changed_files.txt"
+
+          printf '%s\n' "$ADDED_MODIFIED_FILES" | sed '/^[[:space:]]*$/d' > "$ADDED_FILE_LIST"
+          printf '%s\n' "$DELETED_FILES" | sed '/^[[:space:]]*$/d' > "$DELETED_FILE_LIST"
+          printf '%s\n' "$ALL_CHANGED_FILES" | sed '/^[[:space:]]*$/d' > "$ALL_FILE_LIST"
+
+          echo "Added/Modified files:"
+          if [ -s "$ADDED_FILE_LIST" ]; then
+            nl -ba "$ADDED_FILE_LIST"
+          else
+            echo "(none)"
+          fi
+
+          echo ""
+          echo "Deleted files:"
+          if [ -s "$DELETED_FILE_LIST" ]; then
+            nl -ba "$DELETED_FILE_LIST"
+          else
+            echo "(none)"
+          fi
+
+          added_modified_count=0
+          deleted_count=0
+          all_changed_count=0
+
+          if [ -s "$ADDED_FILE_LIST" ]; then
+            added_modified_count=$(wc -l < "$ADDED_FILE_LIST" | tr -d ' ')
+          fi
+          if [ -s "$DELETED_FILE_LIST" ]; then
+            deleted_count=$(wc -l < "$DELETED_FILE_LIST" | tr -d ' ')
+          fi
+          if [ -s "$ALL_FILE_LIST" ]; then
+            all_changed_count=$(wc -l < "$ALL_FILE_LIST" | tr -d ' ')
+          fi
+
+          {
+            echo "### Deploy file summary"
+            echo ""
+            echo "- Event: $GITHUB_EVENT_NAME"
+            echo "- Ref: $GITHUB_REF"
+            echo "- SHA: $GITHUB_SHA"
+            echo "- All changed under filter: $all_changed_count"
+            echo "- Added/Modified: $added_modified_count"
+            echo "- Deleted: $deleted_count"
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Validate required secrets
         env:
@@ -67,6 +123,12 @@ jobs:
         run: |
           CMD_FILE="$RUNNER_TEMP/lftp_cmds.txt"
           : > "$CMD_FILE"
+          DEPLOY_LIST_FILE="$RUNNER_TEMP/deploy_file_list.txt"
+          : > "$DEPLOY_LIST_FILE"
+          UPLOAD_LIST_FILE="$RUNNER_TEMP/upload_list.txt"
+          : > "$UPLOAD_LIST_FILE"
+          DELETE_LIST_FILE="$RUNNER_TEMP/delete_list.txt"
+          : > "$DELETE_LIST_FILE"
 
           {
             echo "set cmd:fail-exit yes"
@@ -77,7 +139,7 @@ jobs:
           } >> "$CMD_FILE"
 
           if [ -n "$ADDED_MODIFIED_FILES" ]; then
-            for file in $ADDED_MODIFIED_FILES; do
+            while IFS= read -r file; do
               [ -z "$file" ] && continue
               case "$file" in
                 www/*) ;;
@@ -87,13 +149,20 @@ jobs:
               remote_file="$REMOTE_PATH/$rel"
               remote_dir="$(dirname "$remote_file")"
               local_file="$GITHUB_WORKSPACE/$file"
+              if [ ! -f "$local_file" ]; then
+                echo "::error ::Local file missing: $local_file"
+                exit 1
+              fi
+              file_size=$(wc -c < "$local_file" | tr -d ' ')
               echo "mkdir -p \"$remote_dir\"" >> "$CMD_FILE"
               echo "put -O \"$remote_dir\" \"$local_file\"" >> "$CMD_FILE"
-            done
+              echo "UPLOAD $file -> $remote_file (bytes=$file_size)" >> "$DEPLOY_LIST_FILE"
+              echo "$file" >> "$UPLOAD_LIST_FILE"
+            done <<< "$ADDED_MODIFIED_FILES"
           fi
 
           if [ -n "$DELETED_FILES" ]; then
-            for file in $DELETED_FILES; do
+            while IFS= read -r file; do
               [ -z "$file" ] && continue
               case "$file" in
                 www/*) ;;
@@ -102,10 +171,41 @@ jobs:
               rel="${file#www/}"
               remote_file="$REMOTE_PATH/$rel"
               echo "rm -f \"$remote_file\"" >> "$CMD_FILE"
-            done
+              echo "DELETE $file -> $remote_file" >> "$DEPLOY_LIST_FILE"
+              echo "$file" >> "$DELETE_LIST_FILE"
+            done <<< "$DELETED_FILES"
           fi
 
           echo "bye" >> "$CMD_FILE"
+
+          echo "Planned deploy operations:"
+          if [ -s "$DEPLOY_LIST_FILE" ]; then
+            cat "$DEPLOY_LIST_FILE"
+          else
+            echo "(none)"
+          fi
+
+          echo ""
+          echo "Generated lftp command file:"
+          cat "$CMD_FILE"
+
+          upload_count=0
+          delete_count=0
+          if [ -s "$UPLOAD_LIST_FILE" ]; then
+            upload_count=$(wc -l < "$UPLOAD_LIST_FILE" | tr -d ' ')
+          fi
+          if [ -s "$DELETE_LIST_FILE" ]; then
+            delete_count=$(wc -l < "$DELETE_LIST_FILE" | tr -d ' ')
+          fi
+
+          {
+            echo ""
+            echo "### Deploy command summary"
+            echo ""
+            echo "- Upload commands: $upload_count"
+            echo "- Delete commands: $delete_count"
+            echo "- lftp command file: \`$CMD_FILE\`"
+          } >> "$GITHUB_STEP_SUMMARY"
 
           lftp "sftp://$DEPLOY_HOST:$DEPLOY_PORT" <<EOF
           set sftp:connect-program "ssh -a -x -o PreferredAuthentications=password -o PubkeyAuthentication=no -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
