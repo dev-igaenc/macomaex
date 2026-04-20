@@ -17,7 +17,59 @@ include_once(G5_LIB_PATH.'/popular.lib.php');
 ?>
 
 <link rel="stylesheet" href="<?php echo G5_URL; ?>/ko/css/ai-loading.css">
+<link rel="stylesheet" href="<?php echo G5_THEME_URL; ?>/css/design-tokens.css?v=20260421">
+<link rel="stylesheet" href="<?php echo G5_THEME_URL; ?>/css/header-core.css?v=20260421">
+<?php if (!defined('_INDEX_')) { ?>
+<link rel="stylesheet" href="<?php echo G5_THEME_URL; ?>/css/header-search.css?v=20260421">
+<?php } ?>
+<style>
+/* G5 템플릿 구조 브릿지: 시안 CSS를 그대로 쓰되 기존 구조 차이만 보정 */
+#wrapper { padding-top: 60px; }
+.menuLayer { top: 60px; }
+.list-header_logo_img { height: 28px !important; width: auto !important; display: block !important; }
+#header .inConts { max-width: 1200px !important; padding: 0 24px !important; margin: 0 auto !important; box-sizing: border-box !important; height: 60px !important; display: flex !important; align-items: center !important; justify-content: space-between !important; gap: 24px !important; }
+#header .inConts > * { align-items: center !important; }
+#header h1 { display: inline-flex !important; align-items: center !important; }
+#header .header-left { flex: 1 !important; min-width: 0 !important; display: flex !important; align-items: center !important; gap: 24px !important; }
+#header h1 a { width: auto !important; }
+#header h1 a img { height: 28px; width: auto; display: block; }
+#header #pcMenu { flex: 1; min-width: 0; }
+#header #pcMenu #list > li:nth-of-type(1) { display: inline-block !important; }
+#header #hd_search { flex: 1; min-width: 0; display: flex; justify-content: center; margin: 0; }
+#header #hd_search .header-search-form { width: 100%; max-width: 500px; margin-left: 0; }
+#header .right-utill { display: flex !important; gap: 20px !important; align-items: center !important; margin-left: auto !important; margin-right: 12px !important; }
+#header .right-utill a { font-size: 14px !important; font-weight: 500 !important; color: #555 !important; text-decoration: none !important; }
+#sideMenuArea { position: fixed !important; top: 0 !important; left: 0 !important; width: 100% !important; height: 100% !important; right: auto !important; opacity: 0 !important; visibility: hidden !important; pointer-events: none !important; transition: opacity .26s ease, visibility .26s ease !important; }
+#sideMenuArea.open { opacity: 1 !important; visibility: visible !important; pointer-events: all !important; }
+#sideMenu { padding: 0 !important; display: flex !important; flex-direction: column !important; max-width: 290px !important; width: 80vw !important; box-shadow: -8px 0 32px rgba(0,0,0,.1) !important; position: absolute !important; top: 0 !important; right: 0 !important; height: 100% !important; transform: translateX(100%) !important; transition: transform .28s cubic-bezier(0.4,0,0.2,1) !important; }
+#sideMenuArea.open #sideMenu { transform: translateX(0) !important; }
+.mMenu { overflow: visible !important; width: 36px !important; height: 36px !important; }
+.mMenu::before { top: calc(50% - 5px) !important; left: 50% !important; width: 70% !important; }
+.mMenu::after { top: calc(50% + 5px) !important; left: 50% !important; width: 45% !important; }
+#sideMenuArea .all_layout > li::after { content: none !important; display: none !important; }
+#header .mMenu > span,
+#sideMenuArea .mMenu > span { display: none; }
 
+@media (max-width: 1280px) {
+  #header #pcMenu { display: none; }
+}
+@media (max-width: 1024px) {
+  #header #hd_search { display: none; }
+  #header .right-utill a { display: none; }
+  #header .right-utill { gap: 0; margin-right: 0; }
+}
+@media (max-width: 768px) {
+  .list-header_logo_img { height: 20px !important; }
+  #header .inConts { height: 56px; }
+  #header h1 a img { height: 20px; }
+  #wrapper { padding-top: 56px; }
+  .menuLayer { top: 56px; }
+}
+@media (max-width: 480px) {
+  .list-header_logo_img { height: 16px !important; }
+  #header h1 a img { height: 16px; }
+}
+</style>
 <!-- 상단 시작 { -->
 <div id="hd">
 	<div id="hd_h1"><?php echo $g5['title'] ?></div>
@@ -110,123 +162,33 @@ include_once(G5_LIB_PATH.'/popular.lib.php');
 	} ?>
 
 	<div id="header" class="hh"><!-- class="hh" --><p class="gnbBg"></p><div class="inConts">
-		<h1><a href="<?php echo G5_URL ?>/index.php">
-			<img src="/img/logo.svg" alt="<?php echo $config['cf_title']; ?>">
-		</a></h1>
+			<div class="header-left">
+				<h1><a href="<?php echo G5_URL ?>/index.php">
+					<img src="/img/logo.svg" onerror="this.onerror=null;this.src='/img/logo.png';" alt="<?php echo $config['cf_title']; ?>" class="list-header_logo_img">
+				</a></h1>
 
-		<?php if(defined('_INDEX_')) { ?>
-		<div id="pcMenu">
-			<ul id="list">
-				<script type="text/javascript">globalNavigationBar();</script>
-				<?php // include(G5_THEME_PATH.'/menu.php'); ?>
-			</ul>
-		</div>
-		<?php } else { ?>
-	<div id="hd_search">
-			<div class="mVisual_searchWrap bxShadow">
-				<form action="/ko/matching_list.php" method="POST" id="match_hd">
-					<input type="hidden" name="cominfo" id="cominfo_hd">
-					<input type="text" name="comnum" id="comnum_hd" class="comnum_chk" placeholder="사업자등록번호를 입력해보세요" maxlength="12" value="<?php echo isset($_REQUEST['comnum']) ? htmlspecialchars($_REQUEST['comnum']) : ''; ?>">
-					<button type="button" id="hd_submit" class="search_btn" aria-label="AI 추천받기">
-						<span class="sparkle"><svg viewBox="0 0 24 24"><use href="#icon-magic-wand"></use></svg></span>
-						<span>AI 추천받기</span>
-					</button>
-				</form>
+			<?php if(defined('_INDEX_')) { ?>
+			<div id="pcMenu">
+				<ul id="list">
+					<li class="one"><a href="<?php echo $link_0301; ?>"><span>기업거래</span></a></li>
+					<li class="one"><a href="<?php echo $link_0201; ?>"><span>기업홍보관</span></a></li>
+					<li class="one"><a href="<?php echo $link_0401; ?>"><span>멤버십 요금제</span></a></li>
+					<li class="one"><a href="<?php echo $link_0501; ?>"><span>커뮤니티</span></a></li>
+				</ul>
 			</div>
+			<?php } else { ?>
+				<div id="hd_search">
+					<form action="/ko/matching_list.php" method="POST" id="match_hd" class="header-search-form">
+						<input type="hidden" name="cominfo" id="cominfo_hd">
+						<input type="text" name="comnum" id="comnum_hd" class="comnum_chk header-search-input" placeholder="사업자등록번호를 입력해보세요" maxlength="12" value="<?php echo isset($_REQUEST['comnum']) ? htmlspecialchars($_REQUEST['comnum']) : ''; ?>">
+						<button type="button" id="hd_submit" class="search_btn header-search-btn" aria-label="AI 추천받기">
+							<span class="sparkle ai-magic-wand"><svg viewBox="0 0 24 24"><use href="#icon-magic-wand"></use></svg></span>
+							<span>AI 추천받기</span>
+						</button>
+					</form>
+				</div>
+				<?php } ?>
 		</div>
-		<style>
-
-            /* 1. 헤더 레이아웃: 로고와 메뉴를 양 끝으로, 검색창을 중앙으로 */
-			#header h1 { 
-				flex: 1 !important; 
-				display: flex !important; 
-				align-items: center !important; 
-			}
-
-			#header .right-utill { 
-				flex: 1 !important; 
-				display: flex !important; 
-				justify-content: flex-end !important; 
-				align-items: center !important; 
-			}
-
-			#header .inConts #hd_search { 
-				flex: 0 1 auto !important; 
-				display: flex !important; 
-				justify-content: center !important; 
-				align-items: center !important; 
-				width: 100% !important;
-				max-width: 500px !important;
-				margin: 0 40px !important; 
-			}
-
-			/* 2. 검색바 배경 및 테두리 (Glassmorphism 효과) */
-			#hd_search .mVisual_searchWrap { 
-                width: 100% !important;
-                max-width: none !important;
-				margin-bottom: 0; 
-				background: rgba(245, 245, 245, 0.9); /* 배경 투명도 */
-				border-radius: 30px; /* 둥글기 */
-				border: 1px solid #ddd;
-				box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05); /* 그림자 */
-			}
-
-			/* 3. 입력창 (텍스트 입력 부분) */
-			#hd_search .mVisual_searchWrap input { 
-				height: 44px; /* 높이 조절 */
-				padding: 0 140px 0 20px; /* 우측 버튼 공간 확보 */
-				font-size: 14px; /* 글자 크기 */
-				background: transparent;
-			}
-
-			/* 4. [AI 추천받기] 버튼 스타일 */
-			#hd_search .mVisual_searchWrap .search_btn { 
-				height: 34px; /* 버튼 높이 */
-				padding: 0 15px; 
-				font-size: 13px; /* 버튼 글자 크기 */
-				border-radius: 20px; 
-				right: 5px; 
-				background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%); /* 버튼 색상 */
-				color: #fff;
-			}
-
-			/* 5. 버튼 내 아이콘 크기 */
-			#hd_search .mVisual_searchWrap .search_btn svg {
-				width: 14px;
-				height: 14px;
-				fill: #fff;
-			}
-
-			/* 6. 아이콘 흔들림/빛남 애니메이션 (모든 페이지 공통 적용을 위해 head에 추가) */
-			@keyframes wandWiggle {
-				0%, 100% { transform: rotate(-10deg) translateY(0); }
-				35% { transform: rotate(4deg) translateY(-1px); }
-				70% { transform: rotate(-2deg) translateY(0); }
-			}
-			@keyframes wandGlow {
-				0%, 100% { filter: drop-shadow(0 0 2px rgba(255,255,255,0.45)); }
-				50% { filter: drop-shadow(0 0 6px rgba(255,255,255,0.95)); }
-			}
-			#hd_search .search_btn .sparkle {
-				width: 16px;
-				height: 16px;
-				display: flex;
-				align-items: center;
-				justify-content: center;
-				animation: wandWiggle 1.6s ease-in-out infinite;
-			}
-			#hd_search .search_btn svg {
-				animation: wandGlow 1.6s ease-in-out infinite;
-			}
-
-			#header .inConts { justify-content: space-between; }
-
-			/* 반응형: 태블릿/모바일에서는 헤더 검색창 숨김 */
-			@media (max-width: 1024px) {
-				#hd_search { display: none; }
-			}
-		</style>
-		<?php } ?>
 
 		<div class="right-utill">
             <?php if (!$is_member) {  ?>
@@ -246,43 +208,120 @@ include_once(G5_LIB_PATH.'/popular.lib.php');
 	</div></div>
 
     <div id="sideMenuArea">
-        <ul id="sideMenu">
+        <div id="sideMenu">
             <div class="sideMenu_top">
-                <div class="logo"><img src="/img/logo.svg" alt=""></div>
-                <button type="button" class="mMenu"><span></span></button>
+                <div class="logo"><img src="/img/logo.svg" onerror="this.onerror=null;this.src='/img/logo.png';" alt="<?php echo $config['cf_title']; ?>" style="height:24px;width:auto;display:block;"></div>
+                <button type="button" class="sideMenu_close_btn" aria-label="닫기">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" width="16" height="16">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
             </div>
 
-            <div class="all_user all_layout">
+            <div class="all_user">
                 <?php if (!$is_member) {  ?>
-                    <li class="one"><a href="<?php echo G5_BBS_URL ?>/login.php?url=<?=$_SERVER['REQUEST_URI']?>" class="menu_txt">로그인</a></li>
-                    <li class="one"><a href="<?php echo G5_BBS_URL ?>/register.php" class="menu_txt">회원가입</a></li>
-                <?php }else{  ?>
-                    <li class="one"><a href="<?php echo G5_BBS_URL ?>/logout.php" class="menu_txt">로그아웃</a></li>
-
-                    <?if($member['mb_level']>9) {?>
-                    <li><a href="/backoffice/" class="menu_txt"><span>관리자</span></a></li>
-                    <?}else{?>
-						<!--
-                    <li>
-                        <a href="#">마이페이지</a>
-                        <ul class="gnbSub d2">
-							<li><a href="<?=$link_0601?>"><span>내 회사 정보</span></a></li>
-                            <li><a href="<?=$link_0602?>"><span>매칭 히스토리</span></a></li>
-                            <li><a href="<?=$link_0603?>"><span>관심기업</span></a></li>
-                            <li><a href="<?=$link_0604?>"><span>회원 정보 수정</span></a></li>
-                            <li><a href="<?=$link_0605?>"><span>결제정보</span></a></li>
-                        </ul>
-                    </li>
-					 -->
-                    <?}?>
-                <?php }  ?>
+                    <a href="<?php echo G5_BBS_URL ?>/login.php?url=<?=$_SERVER['REQUEST_URI']?>" class="side-auth side-login">로그인</a>
+                    <a href="<?php echo G5_BBS_URL ?>/register.php" class="side-auth side-signup">회원가입</a>
+                <?php } else { ?>
+                    <a href="<?php echo G5_BBS_URL ?>/logout.php" class="side-auth side-login">로그아웃</a>
+                    <?php if($member['mb_level']>9) { ?>
+                        <a href="/backoffice/" class="side-auth side-signup">관리자</a>
+                    <?php } ?>
+                <?php } ?>
             </div>
 
-			<div class="all_menu all_layout">
-                <script type="text/javascript">globalNavigationBar();</script>
-            </div>
-        </ul>
+			<ul class="all_menu all_layout">
+                <li class="one">
+                    <a href="<?php echo G5_URL; ?>/index.php">
+                        <span class="snav-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg></span>홈
+                    </a>
+                </li>
+                <li class="one">
+                    <a href="<?php echo $link_0302; ?>">
+                        <span class="snav-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"></rect><rect x="14" y="3" width="7" height="7" rx="1.5"></rect><rect x="3" y="14" width="7" height="7" rx="1.5"></rect><rect x="14" y="14" width="7" height="7" rx="1.5"></rect></svg></span>기업 목록
+                    </a>
+                </li>
+                <li class="one">
+                    <a href="<?php echo $link_0301; ?>">
+                        <span class="snav-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg></span>AI 추천
+                    </a>
+                </li>
+
+                <li class="side-divider"></li>
+
+                <li class="one">
+                    <a href="<?php echo $link_0101; ?>">
+                        <span class="snav-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg></span>매커멕스란
+                    </a>
+                </li>
+                <li class="one">
+                    <a href="<?php echo $link_0401; ?>">
+                        <span class="snav-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 16L3 6l5.5 5L12 2l3.5 9L21 6l-2 10H5z"></path><line x1="5" y1="20" x2="19" y2="20"></line></svg></span>멤버십 요금제
+                    </a>
+                </li>
+
+                <li class="side-divider"></li>
+
+                <li class="side-toggle" data-group="support">
+                    <span class="side-toggle-left">
+                        <span class="snav-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v4M12 16h.01"></path></svg></span>
+                        이용자 지원
+                    </span>
+                    <span class="side-chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><polyline points="6 9 12 15 18 9"></polyline></svg></span>
+                </li>
+                <li class="sub one" data-gi="support" style="display:none"><a href="<?php echo $link_0501; ?>">공지사항</a></li>
+                <li class="sub one" data-gi="support" style="display:none"><a href="<?php echo $link_0502; ?>">자주 묻는 질문</a></li>
+                <li class="sub one" data-gi="support" style="display:none"><a href="<?php echo $link_0503; ?>">고객문의</a></li>
+
+                <li class="side-divider"></li>
+
+                <li class="side-toggle" data-group="mypage">
+                    <span class="side-toggle-left">
+                        <span class="snav-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg></span>
+                        마이페이지
+                    </span>
+                    <span class="side-chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><polyline points="6 9 12 15 18 9"></polyline></svg></span>
+                </li>
+                <li class="sub one" data-gi="mypage" style="display:none"><a href="<?php echo $link_0601; ?>">내 회사 정보</a></li>
+                <li class="sub one" data-gi="mypage" style="display:none"><a href="<?php echo $link_0602; ?>">거래 히스토리</a></li>
+                <li class="sub one" data-gi="mypage" style="display:none"><a href="<?php echo $link_0606; ?>">셀렉티드</a></li>
+                <li class="sub one" data-gi="mypage" style="display:none"><a href="<?php echo $link_0603; ?>">관심기업</a></li>
+                <li class="sub one" data-gi="mypage" style="display:none"><a href="<?php echo $link_0604; ?>">회원정보수정</a></li>
+                <li class="sub one" data-gi="mypage" style="display:none"><a href="<?php echo $link_0605; ?>">결제정보</a></li>
+            </ul>
+        </div>
     </div>
+    <script>
+    (function() {
+        var closeBtn = document.querySelector('#sideMenuArea .sideMenu_close_btn');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                if (typeof sideMenuClose === 'function') {
+                    sideMenuClose();
+                    return;
+                }
+                document.documentElement.classList.remove('hide');
+                document.querySelectorAll('.mMenu').forEach(function(el) { el.classList.remove('open'); });
+                var area = document.getElementById('sideMenuArea');
+                if (area) area.classList.remove('open');
+            });
+        }
+
+        document.querySelectorAll('#sideMenuArea .side-toggle').forEach(function(toggle) {
+            toggle.addEventListener('click', function() {
+                var group = toggle.getAttribute('data-group');
+                var isOpen = toggle.classList.contains('open');
+                var subs = document.querySelectorAll('#sideMenuArea .sub[data-gi="' + group + '"]');
+                toggle.classList.toggle('open', !isOpen);
+                subs.forEach(function(item) {
+                    item.style.display = isOpen ? 'none' : 'block';
+                });
+            });
+        });
+    })();
+    </script>
 
 	<div id="menuArea" class="menuLayer">
 		<div id="menu" class="gnb">

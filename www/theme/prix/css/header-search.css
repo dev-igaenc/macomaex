@@ -1,0 +1,143 @@
+/* ===== 헤더 검색폼 (사업자번호 입력) ===== */
+.header-search-form {
+    flex: 1;
+    min-width: 0;
+    max-width: 500px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    position: relative;
+    margin-left: 150px;
+    border-radius: 12px;
+    background: #fff;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+    box-sizing: border-box;
+}
+.header-search-form::before {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, #a78bfa, #818cf8, #60a5fa, #f472b6, #c084fc, #818cf8);
+    background-size: 300% 300%;
+    animation: headerAuroraShift 4s ease infinite;
+    z-index: -1;
+    opacity: 0.35;
+}
+@keyframes headerAuroraShift {
+    0%, 100% { background-position: 0% 50%; }
+    50%       { background-position: 100% 50%; }
+}
+.header-search-form:focus-within {
+    box-shadow: 0 4px 16px rgba(0,0,0,0.10);
+}
+.header-search-form:focus-within::before {
+    opacity: 0.7;
+}
+.header-search-input {
+    width: 100%;
+    height: 100%;
+    padding: 0 140px 0 16px;
+    border: none;
+    border-radius: 12px;
+    font-size: 14px;
+    color: #222;
+    background: transparent;
+    outline: none;
+    box-sizing: border-box;
+    font-family: inherit;
+}
+.header-search-input::placeholder {
+    color: #999;
+}
+@keyframes headerBtnAurora {
+    0%, 100% { background-position: 0% 50%; }
+    50%       { background-position: 100% 50%; }
+}
+.header-search-btn {
+    position: absolute;
+    right: 4px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 0 16px;
+    height: 34px;
+    background: linear-gradient(135deg, #a78bfa, #818cf8, #60a5fa, #f472b6, #c084fc);
+    background-size: 300% 300%;
+    animation: headerBtnAurora 4s ease infinite;
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    box-shadow: 0 3px 12px rgba(167,139,250,0.45);
+    transition: box-shadow 0.2s, transform 0.2s;
+    font-family: inherit;
+}
+.header-search-btn:hover {
+    box-shadow: 0 5px 18px rgba(167,139,250,0.65);
+    transform: translateY(-50%) scale(1.02);
+}
+/* ===== AI 매직봉 공통 모듈 ===== */
+@keyframes aiWandWiggle {
+    0%, 100% { transform: rotate(-10deg) translateY(0); }
+    35%       { transform: rotate(4deg) translateY(-1px); }
+    70%       { transform: rotate(-2deg) translateY(0); }
+}
+@keyframes aiWandGlow {
+    0%, 100% { filter: drop-shadow(0 0 2px rgba(255,255,255,0.45)); }
+    50%       { filter: drop-shadow(0 0 6px rgba(255,255,255,0.95)); }
+}
+.ai-magic-wand {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transform-origin: 30% 80%;
+    animation: aiWandWiggle 1.6s ease-in-out infinite;
+    flex-shrink: 0;
+}
+.ai-magic-wand svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+    fill: currentColor;
+    filter: drop-shadow(0 0 2px rgba(255,255,255,0.5));
+    animation: aiWandGlow 1.6s ease-in-out infinite;
+}
+/* 컨텍스트별 사이즈 */
+.header-search-btn .ai-magic-wand { width: 14px; height: 14px; }
+
+/* 모바일: 검색바 숨김 */
+@media (max-width: 768px) {
+    .header-search-form { display: none; }
+}
+@media (min-width: 769px) and (max-width: 900px) {
+    .header-search-form {
+        margin-left: 16px;
+        max-width: none;
+    }
+    .header-search-input {
+        font-size: 13px;
+        padding: 0 120px 0 12px;
+    }
+    .header-search-btn {
+        font-size: 12px;
+        padding: 0 12px;
+        height: 30px;
+    }
+}
+@media (min-width: 901px) and (max-width: 1100px) {
+    .header-search-form {
+        margin-left: 40px;
+        max-width: none;
+    }
+}
+@media (max-width: 480px) {
+    .header-search-form { display: none; }
+}
