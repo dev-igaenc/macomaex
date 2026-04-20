@@ -1,6 +1,7 @@
 <?php
 if (!defined('_INDEX_')) define('_INDEX_', true);
 if (!defined('_GNUBOARD_')) exit;
+// 모바일은 모바일 전용 인덱스 사용
 if (G5_IS_MOBILE) {
     include_once(G5_THEME_MOBILE_PATH . '/index.php');
     return;
@@ -21,6 +22,7 @@ include_once(G5_THEME_PATH . '/head.php');
 <link rel="stylesheet" href="<?php echo G5_THEME_URL; ?>/css/index.css?ver=<?php echo G5_CSS_VER; ?>&rev=20260417-1610">
 <?php
 
+// 점수를 0~5 범위로 보정
 function clamp_score_5($value) {
     $num = (float)$value;
     if ($num < 0) return 0.0;
@@ -28,6 +30,7 @@ function clamp_score_5($value) {
     return $num;
 }
 
+// 레이더 차트 점 좌표 계산
 function radar_point($cx, $cy, $r, $idx, $count = 5) {
     $angle = (M_PI * 2 * $idx / $count) - (M_PI / 2);
     return array(
@@ -36,6 +39,7 @@ function radar_point($cx, $cy, $r, $idx, $count = 5) {
     );
 }
 
+// 카드용 레이더 SVG 생성
 function render_company_radar_svg($scores) {
     $labels = array('성장성', '수익성', '재무안정', '업력', '고용규모');
     $num = 5;
@@ -98,6 +102,7 @@ function render_company_radar_svg($scores) {
     return $html;
 }
 
+// 평점을 별 아이콘 문자열로 변환
 function render_score_stars($score) {
     $score = clamp_score_5($score);
     $full = (int)floor($score);
@@ -110,6 +115,7 @@ function render_score_stars($score) {
     return str_repeat($star, $count);
 }
 
+// 리스트 노출용 회사명 마스킹
 function mask_company_name_for_list($name) {
     $name = trim((string)$name);
     if ($name === '') return '';
@@ -139,6 +145,7 @@ function mask_company_name_for_list($name) {
     return $prefix . $visible . '****';
 }
 
+// 상단 카드에 쓸 기업 데이터 조회/가공
 function get_processed_companies($order_by_col, $limit = 3) {
     $allowed_order_cols = array('growth_score_5', 'stability_score_5');
     if (!in_array($order_by_col, $allowed_order_cols, true)) {
@@ -192,6 +199,7 @@ function get_processed_companies($order_by_col, $limit = 3) {
     return $list;
 }
 
+// 상단 카드 데이터(성장/안정) 준비
 $company_list = get_processed_companies('growth_score_5', 3); 
 $stable_list = get_processed_companies('stability_score_5', 3);
 ?>

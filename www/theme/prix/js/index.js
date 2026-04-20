@@ -347,6 +347,7 @@
     }
 })();
 
+    // 매칭 요청 템플릿(유통사/제조사)
     var matchingMessageTemplates = {
         distributor: [
             { title: '신규 제품 소싱', body: '판매 가능한 신규 제품을 공급할 제조사를 찾고 있습니다. 테스트 거래 후 지속적인 거래를 희망합니다.' },
@@ -364,11 +365,13 @@
         ]
     };
 
+    // 현재 선택된 업종 역할 확인
     function getCurrentBizRole() {
         var selected = $('input[name="biz_role_ui"]:checked').val();
         return selected === 'manufacturer' ? 'manufacturer' : 'distributor';
     }
 
+    // 선택 역할에 맞는 템플릿 카드 렌더링
     function renderMatchingTemplateCards() {
         var role = getCurrentBizRole();
         var rows = matchingMessageTemplates[role] || [];
@@ -387,6 +390,7 @@
         $('#reqTplGrid').html(html);
     }
 
+    // 선택 템플릿 + 추가 입력을 합쳐 최종 메시지 생성
     function updateMatchingMessageContent() {
         var role = getCurrentBizRole();
         var rows = matchingMessageTemplates[role] || [];
@@ -401,6 +405,7 @@
         $('#match_content').val(merged);
     }
 
+    // 요청 방식(BASIC/TM) 버튼 처리
     $('body').on('click', '.requestTypeBtn', function () {
         var value = $(this).data('value') === 'TM' ? 'TM' : 'BASIC';
         $('#request_type').val(value);
@@ -423,26 +428,31 @@
         }
     });
 
+    // 역할 변경 시 템플릿 새로 구성
     $('body').on('change', 'input[name="biz_role_ui"]', function () {
         renderMatchingTemplateCards();
         updateMatchingMessageContent();
     });
 
+    // 카드 클릭으로 체크 토글
     $('body').on('click', '.req-tpl-card', function (e) {
         if ($(e.target).is('input')) return;
         var $chk = $(this).find('.reqTplChk');
         $chk.prop('checked', !$chk.prop('checked')).trigger('change');
     });
 
+    // 체크박스 변경 시 메시지 동기화
     $('body').on('change', '.reqTplChk', function () {
         $(this).closest('.req-tpl-card').toggleClass('is-on', $(this).is(':checked'));
         updateMatchingMessageContent();
     });
 
+    // 추가 요청사항 입력 반영
     $('body').on('input', '#match_content_extra', function () {
         updateMatchingMessageContent();
     });
 
+    // 상세/요청 팝업 공통 액션 초기화
     if (window.CompanyDetailActions && typeof window.CompanyDetailActions.init === 'function') {
         window.CompanyDetailActions.init({
             getSetUrl: '/get_set.php',
