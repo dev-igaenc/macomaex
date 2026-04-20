@@ -16,6 +16,8 @@ include_once(G5_LIB_PATH.'/popular.lib.php');
 //header (){Authorization: '[ ACCES TOKEN KEY ]'}
 ?>
 
+<link rel="stylesheet" href="<?php echo G5_URL; ?>/ko/css/ai-loading.css">
+
 <!-- 상단 시작 { -->
 <div id="hd">
 	<div id="hd_h1"><?php echo $g5['title'] ?></div>
@@ -425,6 +427,41 @@ include_once(G5_LIB_PATH.'/popular.lib.php');
     </div>
 </div>
 
+<!-- AI 분석 로딩 오버레이 -->
+<div class="ai-loading_overlay" id="aiLoadingOverlay">
+    <div class="ai-loading_card">
+        <div class="ai-loading_spinner"></div>
+        <h3 class="ai-loading_title">AI가 거래처를 분석하고 있습니다</h3>
+        <div class="ai-loading_steps">
+            <div class="ai-loading_step" data-step="0">
+                <span class="ai-loading_step_icon"><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"></path></svg></span>
+                <span class="ai-loading_step_text" data-pending="공급망 근접도 분석 중..." data-done="공급망 근접도 분석 완료 ✓">공급망 근접도 분석 중...</span>
+            </div>
+            <div class="ai-loading_step" data-step="1">
+                <span class="ai-loading_step_icon"><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"></path></svg></span>
+                <span class="ai-loading_step_text" data-pending="거래처 유사성 분석 중..." data-done="거래처 유사성 분석 완료 ✓">거래처 유사성 분석 중...</span>
+            </div>
+            <div class="ai-loading_step" data-step="2">
+                <span class="ai-loading_step_icon"><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"></path></svg></span>
+                <span class="ai-loading_step_text" data-pending="거래 활성도 분석 중..." data-done="거래 활성도 분석 완료 ✓">거래 활성도 분석 중...</span>
+            </div>
+            <div class="ai-loading_step" data-step="3">
+                <span class="ai-loading_step_icon"><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"></path></svg></span>
+                <span class="ai-loading_step_text" data-pending="재무 안정성 분석 중..." data-done="재무 안정성 분석 완료 ✓">재무 안정성 분석 중...</span>
+            </div>
+            <div class="ai-loading_step" data-step="4">
+                <span class="ai-loading_step_icon"><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"></path></svg></span>
+                <span class="ai-loading_step_text" data-pending="지역 접근성 분석 중..." data-done="지역 접근성 분석 완료 ✓">지역 접근성 분석 중...</span>
+            </div>
+            <div class="ai-loading_step" data-step="5">
+                <span class="ai-loading_step_icon"><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"></path></svg></span>
+                <span class="ai-loading_step_text" data-pending="규모 적합도 분석 중..." data-done="규모 적합도 분석 완료 ✓">규모 적합도 분석 중...</span>
+            </div>
+        </div>
+        <div class="ai-loading_bar"><div class="ai-loading_bar_fill" id="aiLoadingBarFill"></div></div>
+    </div>
+</div>
+
 	<script>
 // 모달 열기/닫기 함수들
 function openAiGuideModal(opts) {
@@ -456,6 +493,49 @@ function closeVerifyModal() {
 	}
 }
 
+function runAiLoading(onComplete) {
+	var overlay = document.getElementById("aiLoadingOverlay");
+	if (!overlay) {
+		if (typeof onComplete === "function") onComplete();
+		return;
+	}
+
+	var steps = overlay.querySelectorAll(".ai-loading_step");
+	var bar = document.getElementById("aiLoadingBarFill");
+
+	if (bar) bar.style.width = "0%";
+	steps.forEach(function(step) {
+		step.classList.remove("done");
+		var textEl = step.querySelector(".ai-loading_step_text");
+		if (textEl && textEl.dataset.pending) textEl.textContent = textEl.dataset.pending;
+	});
+
+	overlay.classList.add("is_open");
+
+	var idx = 0;
+	var stepDelay = 280;
+
+	function progress() {
+		if (idx >= steps.length) {
+			window.setTimeout(function() {
+				overlay.classList.remove("is_open");
+				if (typeof onComplete === "function") onComplete();
+			}, 180);
+			return;
+		}
+
+		var step = steps[idx];
+		step.classList.add("done");
+		var textEl = step.querySelector(".ai-loading_step_text");
+		if (textEl && textEl.dataset.done) textEl.textContent = textEl.dataset.done;
+		if (bar) bar.style.width = (((idx + 1) / steps.length) * 100) + "%";
+		idx += 1;
+		window.setTimeout(progress, stepDelay);
+	}
+
+	window.setTimeout(progress, 220);
+}
+
 function requestMainCompCheck(comnum, $form, opts) {
 	opts = opts || {};
 
@@ -479,7 +559,13 @@ function requestMainCompCheck(comnum, $form, opts) {
 				}
 				if ($form && $form.length) {
 					$form.find("input[name='cominfo']").val(parts[1] || "");
-					$form.submit();
+					if (opts.useLoading) {
+						runAiLoading(function() {
+							$form.submit();
+						});
+					} else {
+						$form.submit();
+					}
 				}
 			} else {
 				alert("기업 정보를 분석하는 중 오류가 발생했습니다.\n" + (parts[2] || parts[1] || "다시 시도해 주세요."));
@@ -496,7 +582,7 @@ function requestMainCompCheck(comnum, $form, opts) {
 }
 
 // 공통 검색 처리 로직
-$(document).on("click", "#main_submit, #hd_submit, #sub_submit", function(e){
+$(document).on("click", "#main_submit, #main_submit_index, #hd_submit, #sub_submit", function(e){
 	e.preventDefault();
 	var $this = $(this);
 	
@@ -505,6 +591,9 @@ $(document).on("click", "#main_submit, #hd_submit, #sub_submit", function(e){
 	if ($this.attr('id') === 'hd_submit') {
 		$input = $("#comnum_hd");
 		$form = $("#match_hd");
+	} else if ($this.attr('id') === 'main_submit_index') {
+		$input = $("#comnum_index");
+		$form = $("#match_index");
 	} else if ($this.attr('id') === 'main_submit') {
 		$input = $("#comnum");
 		$form = $("#match");
@@ -600,7 +689,9 @@ $(document).on("click", "#modal_verify_btn_ai", function() {
 				overlay.classList.remove("is_open");
 				overlay.setAttribute("aria-hidden", "true");
 			}
-			$form.submit();
+			runAiLoading(function() {
+				$form.submit();
+			});
 			return;
 		}
 
@@ -611,7 +702,8 @@ $(document).on("click", "#modal_verify_btn_ai", function() {
 			requestMainCompCheck(comnum, $form, {
 				overlay: overlay,
 				button: btn,
-				originalHtml: originalHtml
+				originalHtml: originalHtml,
+				useLoading: true
 			});
 		} else {
 			alert("사업자 번호를 다시 확인해 주세요.");
