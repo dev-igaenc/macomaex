@@ -27,18 +27,18 @@
         return div.innerHTML;
     }
 
-    // 현재 URL 파라미터를 유지한 카테고리 링크 생성
+    // 카테고리 이동 시 정렬은 항상 랭킹순으로 고정
     function buildCategoryHref(catSlug) {
         var params = new URLSearchParams(window.location.search);
         params.set('cat', catSlug);
         params.delete('offset');
         if (!params.get('type')) params.set('type', currentType);
-        if (!params.get('sort')) params.set('sort', 'rank');
+        params.set('sort', 'rank');
         return '?' + params.toString();
     }
 
     // 사이드바/모바일 카테고리 링크의 type/sort 파라미터 동기화
-    function syncNavLinkParams(sortValue) {
+    function syncNavLinkParams() {
         var selectors = [
             '.list-sidebar a[href]',
             '.list-cat-tabs a[href]',
@@ -59,7 +59,7 @@
             }
 
             url.searchParams.set('type', currentType);
-            url.searchParams.set('sort', sortValue || 'rank');
+            url.searchParams.set('sort', 'rank');
             url.searchParams.delete('offset');
 
             a.setAttribute('href', url.pathname + '?' + url.searchParams.toString());
@@ -407,7 +407,7 @@
             url.searchParams.set('type', type);
             window.history.replaceState({ type: type }, '', url.toString());
 
-            syncNavLinkParams(sortSelect ? (sortSelect.value || 'rank') : 'rank');
+            syncNavLinkParams();
         }
 
         btns.forEach(function (btn) {
@@ -435,12 +435,12 @@
                 showCount[currentType] = pageSize;
                 sortCards(sortSelect.value || 'rank');
                 renderType(currentType);
-                syncNavLinkParams(sortSelect.value || 'rank');
+                syncNavLinkParams();
             });
 
             if (!isServerPaged) sortCards(sortSelect.value || 'rank');
             renderType(currentType);
-            syncNavLinkParams(sortSelect.value || 'rank');
+            syncNavLinkParams();
         }
 
         if (moreBtn) {

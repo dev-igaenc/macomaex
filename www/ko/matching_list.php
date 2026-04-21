@@ -114,6 +114,10 @@ $mq = '';
 if (isset($_GET['section'])) $mq .= 'section=' . urlencode($_GET['section']) . '&';
 $mq .= 'type=' . urlencode($current_type) . '&';
 $mq .= 'sort=' . urlencode($current_sort) . '&';
+$mq_cat = '';
+if (isset($_GET['section'])) $mq_cat .= 'section=' . urlencode($_GET['section']) . '&';
+$mq_cat .= 'type=' . urlencode($current_type) . '&';
+$mq_cat .= 'sort=rank&';
 
 // 사업자번호 처리
 $input_comnum = !empty($_POST['comnum']) ? $_POST['comnum'] : (!empty($_GET['comnum']) ? $_GET['comnum'] : '');
@@ -809,7 +813,7 @@ $sidebar_icon_map = [
                                     <use href="#<?php echo htmlspecialchars($group_icon); ?>"></use>
                                 </svg>
                             </span>
-                            <a href="?<?php echo $mq; ?>cat=<?php echo urlencode($lg['slug']); ?>"
+                            <a href="?<?php echo $mq_cat; ?>cat=<?php echo urlencode($lg['slug']); ?>"
                                class="list-sidebar_group_name list-sidebar_group_title_link">
                                 <?php echo htmlspecialchars($lg['label']); ?>
                             </a>
@@ -825,7 +829,7 @@ $sidebar_icon_map = [
                          id="sidebar-body-<?php echo htmlspecialchars($lg['slug']); ?>">
                         <div class="list-sidebar_sub_wrap">
                             <?php foreach ($lg['sub'] as $sub): ?>
-                            <a href="?<?php echo $mq; ?>cat=<?php echo urlencode($sub['slug']); ?>"
+                            <a href="?<?php echo $mq_cat; ?>cat=<?php echo urlencode($sub['slug']); ?>"
                                class="list-sidebar_sub <?php echo ($current_cat === $sub['slug']) ? 'on' : ''; ?>">
                                 <?php echo htmlspecialchars($sub['label']); ?>
                             </a>
