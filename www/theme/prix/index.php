@@ -145,8 +145,37 @@ function mask_company_name_for_list($name) {
     return $prefix . $visible . '****';
 }
 
+// 사업자번호 비교를 위해 숫자만 남긴다.
+function normalize_bzno_for_unlock($bzno) {
+    return preg_replace('/[^0-9]/', '', (string)$bzno);
+}
+
+// 로그인 회원이 크레딧 사용 완료한 거래요청의 target_bzno 목록을 조회한다.
+function fetch_unlocked_bzno_map_for_member($memberId) {
+    $memberId = trim((string)$memberId);
+    if ($memberId === '') return array();
+
+    $map = array();
+    $res = sql_query("
+        SELECT target_bzno
+        FROM trade_request
+        WHERE request_mb_id = '" . sql_escape_string($memberId) . "'
+          AND credit_used = 1
+          AND target_bzno != ''
+    ");
+
+    while ($row = sql_fetch_array($res)) {
+        $normalized = normalize_bzno_for_unlock($row['target_bzno'] ?? '');
+        if ($normalized !== '') {
+            $map[$normalized] = true;
+        }
+    }
+
+    return $map;
+}
+
 // 상단 카드에 쓸 기업 데이터 조회/가공
-function get_processed_companies($order_by_col, $limit = 3) {
+function get_processed_companies($order_by_col, $limit = 3, $unlocked_bzno_map = array()) {
     $allowed_order_cols = array('growth_score_5', 'stability_score_5');
     if (!in_array($order_by_col, $allowed_order_cols, true)) {
         $order_by_col = 'growth_score_5';
@@ -155,7 +184,7 @@ function get_processed_companies($order_by_col, $limit = 3) {
     $limit = (int)$limit;
     if ($limit < 1) $limit = 3;
 
-    $sql = "SELECT a.KEDCD, a.ENP_NM, a.ENP_NM_TRD, a.PD_NM, a.VENP_YN,
+    $sql = "SELECT a.KEDCD, a.BZNO, a.ENP_NM, a.ENP_NM_TRD, a.PD_NM, a.VENP_YN,
                    COALESCE(b.growth_score_5, 0) AS growth_score_5,
                    COALESCE(b.profit_score_5, 0) AS profit_score_5,
                    COALESCE(b.stability_score_5, 0) AS stability_score_5,
@@ -173,7 +202,9 @@ function get_processed_companies($order_by_col, $limit = 3) {
 
     while($row = sql_fetch_array($result)) {
         $rawName = trim((string)$row['ENP_NM_TRD']) !== '' ? $row['ENP_NM_TRD'] : $row['ENP_NM'];
-        $row['display_name'] = mask_company_name_for_list($rawName);
+        $normalizedBzno = normalize_bzno_for_unlock($row['BZNO'] ?? '');
+        $isUnlocked = ($normalizedBzno !== '' && !empty($unlocked_bzno_map[$normalizedBzno]));
+        $row['display_name'] = $isUnlocked ? $rawName : mask_company_name_for_list($rawName);
         $row['growth_score_5'] = clamp_score_5($row['growth_score_5']);
         $row['profit_score_5'] = clamp_score_5($row['profit_score_5']);
         $row['stability_score_5'] = clamp_score_5($row['stability_score_5']);
@@ -200,8 +231,9 @@ function get_processed_companies($order_by_col, $limit = 3) {
 }
 
 // 상단 카드 데이터(성장/안정) 준비
-$company_list = get_processed_companies('growth_score_5', 3); 
-$stable_list = get_processed_companies('stability_score_5', 3);
+$unlocked_bzno_map = fetch_unlocked_bzno_map_for_member($member['mb_id'] ?? '');
+$company_list = get_processed_companies('growth_score_5', 3, $unlocked_bzno_map);
+$stable_list = get_processed_companies('stability_score_5', 3, $unlocked_bzno_map);
 ?>
 
 

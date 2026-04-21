@@ -190,6 +190,48 @@ function mask_company_name_like_mock($name) {
     return $prefix . $visible . '****';
 }
 
+// 사업자번호 비교를 위해 숫자만 남긴다.
+function normalize_bzno_for_unlock($bzno) {
+    return preg_replace('/[^0-9]/', '', (string)$bzno);
+}
+
+// 로그인 회원이 크레딧 사용 완료한 거래요청의 target_bzno 목록을 조회한다.
+function fetch_unlocked_bzno_map_for_member($memberId) {
+    $memberId = trim((string)$memberId);
+    if ($memberId === '') return [];
+
+    $map = [];
+    $res = sql_query("
+        SELECT target_bzno
+        FROM trade_request
+        WHERE request_mb_id = '" . sql_escape_string($memberId) . "'
+          AND credit_used = 1
+          AND target_bzno != ''
+    ");
+
+    while ($row = sql_fetch_array($res)) {
+        $normalized = normalize_bzno_for_unlock($row['target_bzno'] ?? '');
+        if ($normalized !== '') {
+            $map[$normalized] = true;
+        }
+    }
+
+    return $map;
+}
+
+// 해제 목록 여부에 따라 회사명을 서버에서 확정한다(마스킹 대상은 원본 미노출).
+function build_company_title_for_list($rawName, $bzno, $unlocked_bzno_map) {
+    $rawName = trim((string)$rawName);
+    if ($rawName === '') return '';
+
+    $normalizedBzno = normalize_bzno_for_unlock($bzno);
+    if ($normalizedBzno !== '' && !empty($unlocked_bzno_map[$normalizedBzno])) {
+        return $rawName;
+    }
+
+    return mask_company_name_like_mock($rawName);
+}
+
 // 레이더 점 좌표 계산
 function radar_polar_point($cx, $cy, $r, $index, $num_axis) {
     $angle = (M_PI * 2 * $index / $num_axis) - (M_PI / 2);
@@ -410,7 +452,7 @@ function resolve_where_clause_for_general_list($query_type, $current_cat, $list_
 }
 
 // 일반 리스트 카드와 총 개수 조회
-function fetch_general_cards_by_where($where_clause, $query_type, $show_count_req, $sort_key = 'rank', $offset = 0) {
+function fetch_general_cards_by_where($where_clause, $query_type, $show_count_req, $sort_key = 'rank', $offset = 0, $unlocked_bzno_map = []) {
     $cards = [];
 
     $count_row = sql_fetch("
@@ -423,7 +465,7 @@ function fetch_general_cards_by_where($where_clause, $query_type, $show_count_re
     $order_clause = build_company_order_clause($sort_key);
 
     $sql_list = "
-        SELECT A.KEDCD, A.ENP_NM, A.LOC_ADDRA, A.BZC_CD, A.PD_NM, A.VENP_YN, B.k_code_name,
+        SELECT A.KEDCD, A.BZNO, A.ENP_NM, A.LOC_ADDRA, A.BZC_CD, A.PD_NM, A.VENP_YN, B.k_code_name,
             S.growth_score_5, S.profit_score_5, S.stability_score_5, S.final_total_score_5,
             S.badge_growth, S.badge_stability, S.badge_venture
         FROM   company A
@@ -436,15 +478,16 @@ function fetch_general_cards_by_where($where_clause, $query_type, $show_count_re
 
     $res_list = sql_query($sql_list);
     while ($row = sql_fetch_array($res_list)) {
+        $title = build_company_title_for_list($row['ENP_NM'] ?? '', $row['BZNO'] ?? '', $unlocked_bzno_map);
         $cards[] = [
             'type'    => $query_type,
-            'title'   => $row['ENP_NM'],
+            'title'   => $title,
             'tags'    => parse_pd_nm($row['PD_NM']),
             'score'   => calc_score_avg($row['final_total_score_5']),
             'grow'    => $row['growth_score_5'],
             'profit'  => $row['profit_score_5'],
             'stable'  => $row['stability_score_5'],
-            'company' => $row['ENP_NM'],
+            'company' => $title,
             'kedcd'   => $row['KEDCD'],
             'venp_yn' => $row['VENP_YN'],
             'badge_growth' => $row['badge_growth'],
@@ -460,6 +503,7 @@ function fetch_general_cards_by_where($where_clause, $query_type, $show_count_re
 }
 
 $seller_category_code_map = include __DIR__ . "/matching_seller_category_codes.php";
+$unlocked_bzno_map = fetch_unlocked_bzno_map_for_member($member['mb_id'] ?? '');
 
 $cards = [];
 $cards_total_count = 0;
@@ -468,7 +512,7 @@ if (!$has_comnum) {
     // 7-1. 사업자번호 미입력: 탭/카테고리 기준 기업 조회
     $query_type = ($current_type === 'seller') ? 'seller' : 'buyer';
     $where_clause = resolve_where_clause_for_general_list($query_type, $current_cat, $list_categories, $seller_category_code_map);
-    $general_result = fetch_general_cards_by_where($where_clause, $query_type, $show_count_req, $current_sort, $offset_req);
+    $general_result = fetch_general_cards_by_where($where_clause, $query_type, $show_count_req, $current_sort, $offset_req, $unlocked_bzno_map);
     $cards = $general_result['cards'];
     $cards_total_count = (int)$general_result['total_count'];
 } else {
@@ -608,7 +652,7 @@ if (!$has_comnum) {
             if (!empty($REC_KEDCD)) {
                 $REC        = implode("','", $REC_KEDCD);
                 $client_res = sql_query("
-                    SELECT A.*, B.BZC_CD, B.LOC_ADDRA, B.PD_NM, B.VENP_YN, C.k_code_name,
+                    SELECT A.*, B.BZNO, B.BZC_CD, B.LOC_ADDRA, B.PD_NM, B.VENP_YN, C.k_code_name,
                            S.growth_score_5, S.profit_score_5, S.stability_score_5, S.final_total_score_5,
                            MAX(S.badge_growth) AS badge_growth,
                            MAX(S.badge_stability) AS badge_stability,
@@ -660,19 +704,20 @@ if (!$has_comnum) {
     }
 
     // 7-2-5. 거래처 배열 → 카드 배열로 변환
-    $map_cards = function($rows, $type) {
+    $map_cards = function($rows, $type) use ($unlocked_bzno_map) {
         $out = [];
         foreach ($rows as $row) {
             if (empty($row['TXPL_KEDCD']) || empty($row['TXPL_NM'])) continue;
+            $title = build_company_title_for_list($row['TXPL_NM'] ?? '', $row['BZNO'] ?? '', $unlocked_bzno_map);
             $out[] = [
                 'type'    => $type,
-                'title'   => $row['TXPL_NM'],
+                'title'   => $title,
                 'tags'    => parse_pd_nm($row['PD_NM']),
                 'score'   => calc_score_avg($row['final_total_score_5']),
                 'grow'    => $row['growth_score_5'],
                 'profit'  => $row['profit_score_5'],
                 'stable'  => $row['stability_score_5'],
-                'company' => $row['TXPL_NM'],
+                'company' => $title,
                 'kedcd'   => $row['TXPL_KEDCD'],
                 'venp_yn' => $row['VENP_YN'],
                 'badge_growth' => $row['badge_growth'],
@@ -945,7 +990,7 @@ $sidebar_icon_map = [
                                 }
                                 ?>
                             </div>
-                            <h3 class="mCompanyCard_title"><?php echo htmlspecialchars(mask_company_name_like_mock($c['title'] ?? '')); ?></h3>
+                            <h3 class="mCompanyCard_title"><?php echo htmlspecialchars($c['title'] ?? ''); ?></h3>
 
                             <p class="mCompanyCard_desc">
                                 <?php foreach ($displayTags as $t): ?>
