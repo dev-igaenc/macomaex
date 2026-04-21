@@ -45,7 +45,7 @@ if($member[mb_11]=='dev'){
 */
 $link_0601 = "/ko/my_company.php"; // 내 회사 정보
 $link_0602 = "/ko/my_matching.php"; // 매칭 히스토리
-$link_0603 = "/ko/my_interested.php"; // 관심기업
+$link_0603 = "/ko/my_matching.php#interested"; // 관심기업
 $link_0604 = G5_BBS_URL."/member_confirm.php?url=".G5_BBS_URL."/register_form.php";
 //else $link_0604 = "/ko/my_info.php"; // 회원 정보 수정
 $link_0605 = "/ko/my_plan.php"; // 결제정보

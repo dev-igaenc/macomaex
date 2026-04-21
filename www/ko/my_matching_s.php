@@ -106,7 +106,7 @@ $favorite=getFavorite($member['mb_id']);
 </div></div>
 
 <div class="matching-tab">
-	<a href="my_interested.php">관심기업</a>
+	<a href="my_matching.php#interested">관심기업</a>
 	<a href="my_matching_r.php">받은매칭</a><!-- 활성화 -->
 	<a href="my_matching_s.php"class="active">보낸매칭</a>
 	<a href="my_selected.php">셀렉티드</a>
