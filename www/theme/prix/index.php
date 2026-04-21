@@ -424,50 +424,6 @@ $stable_list = get_processed_companies('stability_score_5', 3);
     </div>
 </div>
 
-<div id="chatDemoOverlay">
-    <div class="chat-demo-modal">
-        <div class="chat-sidebar">
-            <div class="chat-sidebar-head">
-                <span class="chat-sidebar-title">메시지</span>
-                <div style="display:flex;align-items:center;gap:4px;">
-                    <button class="chat-sidebar-new" title="새 대화">
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                    </button>
-                    <button class="chat-demo-close chat-sidebar-close" id="closeChatSidebar" aria-label="닫기">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                    </button>
-                </div>
-            </div>
-            <div class="chat-sidebar-search">
-                <input type="text" placeholder="대화 검색...">
-            </div>
-            <div class="chat-room-list" id="chatRoomList"></div>
-        </div>
-        <div class="chat-main">
-            <div class="chat-main-header">
-                <button class="chat-back-btn" id="chatBackBtn" aria-label="목록으로">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
-                </button>
-                <div class="chat-main-avatar" id="chatMainAvatar">대</div>
-                <div class="chat-main-info">
-                    <div class="chat-main-name" id="chatMainName">대원스틸 담당자</div>
-                    <div class="chat-main-status">● 온라인</div>
-                </div>
-                <button class="chat-demo-close" id="closeChatDemo" aria-label="닫기">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                </button>
-            </div>
-            <div class="chat-demo-messages" id="chatMessages"></div>
-            <div class="chat-demo-input-row">
-                <input class="chat-demo-input" id="chatInput" type="text" placeholder="메시지를 입력하세요…">
-                <button class="chat-demo-send" id="chatSendBtn" aria-label="전송">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
 <div id="mHookSections">
     <div class="mHookSection" id="hkGrowth">
         <div class="section-inner">
