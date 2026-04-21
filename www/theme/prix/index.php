@@ -1,15 +1,167 @@
 <?php
 if (!defined('_INDEX_')) define('_INDEX_', true);
 if (!defined('_GNUBOARD_')) exit;
+// 모바일은 모바일 전용 인덱스 사용
 if (G5_IS_MOBILE) {
     include_once(G5_THEME_MOBILE_PATH . '/index.php');
     return;
 }
-include_once(G5_THEME_PATH . '/head.php');
 
-function get_processed_companies($order_by_col, $limit = 4, $default_tags = []) {
+include_once(G5_THEME_PATH . '/head.php');
+?>
+<link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" rel="stylesheet" />
+<link href="<?php echo G5_THEME_URL; ?>/font/SUIT-Variable.css" rel="stylesheet">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;500;600&display=swap">
+<link href="<?php echo G5_THEME_URL; ?>/mont/font.css" rel="stylesheet">
+<link rel="stylesheet" href="<?php echo G5_URL; ?>/ko/css/design-tokens.css?ver=<?php echo G5_CSS_VER; ?>">
+<link rel="stylesheet" href="<?php echo G5_URL; ?>/ko/css/company-card.css?ver=<?php echo G5_CSS_VER; ?>">
+<link rel="stylesheet" href="<?php echo G5_URL; ?>/ko/css/section-header.css?ver=<?php echo G5_CSS_VER; ?>">
+<link rel="stylesheet" href="<?php echo G5_URL; ?>/ko/css/auth-toggle.css?ver=<?php echo G5_CSS_VER; ?>">
+<link rel="stylesheet" href="<?php echo G5_URL; ?>/ko/css/verify-modal.css?ver=<?php echo G5_CSS_VER; ?>">
+<link rel="stylesheet" href="<?php echo G5_URL; ?>/ko/css/ai-loading.css?ver=<?php echo G5_CSS_VER; ?>">
+<link rel="stylesheet" href="<?php echo G5_THEME_URL; ?>/css/index.css?ver=<?php echo G5_CSS_VER; ?>&rev=20260417-1610">
+<?php
+
+// 점수를 0~5 범위로 보정
+function clamp_score_5($value) {
+    $num = (float)$value;
+    if ($num < 0) return 0.0;
+    if ($num > 5) return 5.0;
+    return $num;
+}
+
+// 레이더 차트 점 좌표 계산
+function radar_point($cx, $cy, $r, $idx, $count = 5) {
+    $angle = (M_PI * 2 * $idx / $count) - (M_PI / 2);
+    return array(
+        $cx + ($r * cos($angle)),
+        $cy + ($r * sin($angle))
+    );
+}
+
+// 카드용 레이더 SVG 생성
+function render_company_radar_svg($scores) {
+    $labels = array('성장성', '수익성', '재무안정', '업력', '고용규모');
+    $num = 5;
+    $cx = 105;
+    $cy = 100;
+    $maxR = 48;
+    $labelR = 62;
+    $gridLevels = array(0.2, 0.4, 0.6, 0.8, 1.0);
+
+    $html = '';
+
+    foreach ($gridLevels as $lv) {
+        $pts = array();
+        for ($i = 0; $i < $num; $i++) {
+            list($x, $y) = radar_point($cx, $cy, $maxR * $lv, $i, $num);
+            $pts[] = round($x, 2) . ',' . round($y, 2);
+        }
+        $html .= '<polygon points="' . implode(' ', $pts) . '" class="radar-grid"></polygon>';
+    }
+
+    for ($i = 0; $i < $num; $i++) {
+        list($x, $y) = radar_point($cx, $cy, $maxR, $i, $num);
+        $html .= '<line x1="' . $cx . '" y1="' . $cy . '" x2="' . round($x, 2) . '" y2="' . round($y, 2) . '" stroke="#E8EBF0" stroke-width="0.5"></line>';
+    }
+
+    $dataPts = array();
+    for ($i = 0; $i < $num; $i++) {
+        $score = isset($scores[$i]) ? clamp_score_5($scores[$i]) : 0.0;
+        $norm = $score / 5.0;
+        list($x, $y) = radar_point($cx, $cy, $maxR * $norm, $i, $num);
+        $dataPts[] = round($x, 2) . ',' . round($y, 2);
+    }
+    $html .= '<polygon points="' . implode(' ', $dataPts) . '" class="radar-shape"></polygon>';
+
+    for ($i = 0; $i < $num; $i++) {
+        $score = isset($scores[$i]) ? clamp_score_5($scores[$i]) : 0.0;
+        $norm = $score / 5.0;
+        list($x, $y) = radar_point($cx, $cy, $maxR * $norm, $i, $num);
+        $html .= '<circle cx="' . round($x, 2) . '" cy="' . round($y, 2) . '" class="radar-dot"></circle>';
+    }
+
+    for ($i = 0; $i < $num; $i++) {
+        list($x, $y) = radar_point($cx, $cy, $labelR, $i, $num);
+        $anchor = 'middle';
+        $dx = 0;
+        if ($x < $cx - 5) {
+            $anchor = 'end';
+            $dx = -2;
+        } else if ($x > $cx + 5) {
+            $anchor = 'start';
+            $dx = 2;
+        }
+        $dy = 0;
+        if ($y < $cy - 10) $dy = -3;
+        else if ($y > $cy + 10) $dy = 8;
+        else $dy = 3;
+        $html .= '<text x="' . round($x + $dx, 2) . '" y="' . round($y + $dy, 2) . '" text-anchor="' . $anchor . '" class="radar-label">' . $labels[$i] . '</text>';
+    }
+
+    return $html;
+}
+
+// 평점을 별 아이콘 문자열로 변환
+function render_score_stars($score) {
+    $score = clamp_score_5($score);
+    $full = (int)floor($score);
+    $part = $score - $full;
+    $count = $full + ($part >= 0.3 ? 1 : 0);
+    if ($count < 1) $count = 1;
+    if ($count > 5) $count = 5;
+
+    $star = '<svg viewBox="0 0 24 24" width="14" height="14" fill="#ffc107"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg>';
+    return str_repeat($star, $count);
+}
+
+// 리스트 노출용 회사명 마스킹
+function mask_company_name_for_list($name) {
+    $name = trim((string)$name);
+    if ($name === '') return '';
+
+    // 이미 마스킹된 값이면 그대로 사용
+    if (preg_match('/\*{2,}/u', $name)) {
+        return $name;
+    }
+
+    $prefix = '';
+    $base = $name;
+    if (preg_match('/^(\(주\)|\(유\)|\(사\))(.*)$/u', $name, $m)) {
+        $prefix = $m[1];
+        $base = trim($m[2]);
+    }
+
+    if ($base === '') {
+        return $prefix . '****';
+    }
+
+    // 법인 접두사가 있으면 1글자, 없으면 2글자 노출
+    $visibleLen = ($prefix !== '') ? 1 : 2;
+    $visible = function_exists('mb_substr')
+        ? mb_substr($base, 0, $visibleLen, 'UTF-8')
+        : substr($base, 0, $visibleLen);
+
+    return $prefix . $visible . '****';
+}
+
+// 상단 카드에 쓸 기업 데이터 조회/가공
+function get_processed_companies($order_by_col, $limit = 3) {
+    $allowed_order_cols = array('growth_score_5', 'stability_score_5');
+    if (!in_array($order_by_col, $allowed_order_cols, true)) {
+        $order_by_col = 'growth_score_5';
+    }
+
+    $limit = (int)$limit;
+    if ($limit < 1) $limit = 3;
+
     $sql = "SELECT a.KEDCD, a.ENP_NM, a.ENP_NM_TRD, a.PD_NM, a.VENP_YN,
-                   b.growth_score_5, b.profit_score_5, b.stability_score_5, b.final_total_score_5
+                   COALESCE(b.growth_score_5, 0) AS growth_score_5,
+                   COALESCE(b.profit_score_5, 0) AS profit_score_5,
+                   COALESCE(b.stability_score_5, 0) AS stability_score_5,
+                   COALESCE(b.age_score_5, 0) AS age_score_5,
+                   COALESCE(b.emp_score_5, 0) AS emp_score_5,
+                   COALESCE(b.final_total_score_5, 0) AS final_total_score_5
             FROM company a
             LEFT JOIN company_score_final_dedup b ON a.KEDCD = b.KEDCD
             WHERE b.{$order_by_col} IS NOT NULL
@@ -20,87 +172,185 @@ function get_processed_companies($order_by_col, $limit = 4, $default_tags = []) 
     $list = array();
 
     while($row = sql_fetch_array($result)) {
-        $row['display_name'] = $row['ENP_NM_TRD'] ?: $row['ENP_NM'];
-        $row['final_score']  = number_format($row['final_total_score_5'], 1);
-        
-        // [수정] PD_NM을 콤마로 잘라 배열로 저장
-        $row['PD_NM_TAGS'] = []; 
+        $rawName = trim((string)$row['ENP_NM_TRD']) !== '' ? $row['ENP_NM_TRD'] : $row['ENP_NM'];
+        $row['display_name'] = mask_company_name_for_list($rawName);
+        $row['growth_score_5'] = clamp_score_5($row['growth_score_5']);
+        $row['profit_score_5'] = clamp_score_5($row['profit_score_5']);
+        $row['stability_score_5'] = clamp_score_5($row['stability_score_5']);
+        $row['age_score_5'] = clamp_score_5($row['age_score_5']);
+        $row['emp_score_5'] = clamp_score_5($row['emp_score_5']);
+        $row['final_score_num'] = clamp_score_5($row['final_total_score_5']);
+        $row['final_score'] = number_format($row['final_score_num'], 1);
+
+        $tags = array();
         if (!empty($row['PD_NM'])) {
             $raw_tags = explode(',', $row['PD_NM']);
             foreach($raw_tags as $rt) {
                 $trimmed = trim($rt);
                 if($trimmed) {
-                    // ' 외' 문구 제거 후 배열에 추가
-                    $row['PD_NM_TAGS'][] = str_replace(' 외', '', $trimmed);
+                    $tags[] = str_replace(' 외', '', $trimmed);
                 }
             }
         }
+        $row['PD_NM_TAGS'] = array_values(array_unique($tags));
 
         $list[] = $row;
     }
     return $list;
 }
 
-$company_list = get_processed_companies('growth_score_5', 4); 
-$stable_list = get_processed_companies('stability_score_5', 4);
+// 상단 카드 데이터(성장/안정) 준비
+$company_list = get_processed_companies('growth_score_5', 3); 
+$stable_list = get_processed_companies('stability_score_5', 3);
 ?>
 
 
 <div id="container" class="full">
 
 <div id="mVisual">
-    <video class="mVisual_bgVideo" autoplay="" loop="" muted="" playsinline="" preload="auto">
-        <source src="/theme/prix/video/circle-loop.mp4" type="video/mp4">
-        비디오를 로드할 수 없습니다.
-    </video>
-    <div class="inner">
-        <div class="mVisual_main">
-            <div class="mVisual_left">
-                <h1 class="mVisual_heading">사업자번호 입력하고 <br>AI 거래처 추천받기!</h1>
-                <div class="mVisual_searchWrap bxShadow">
-                    <form action="/ko/matching_list.php" method="POST" id="match">
-                        <input type="hidden" name="cominfo" id="cominfo">
-                        <input type="text" name="comnum" id="comnum" placeholder="사업자등록번호를 입력해보세요" class="comnum_chk" maxlength="12">
-                        <button type="submit" id="main_submit" class="search_btn" aria-label="AI 추천받기">
-                            <span class="sparkle"><svg viewBox="0 0 24 24"><use href="#icon-magic-wand"></use></svg></span>
-                            <span>AI 추천받기</span>
-                        </button>
-                    </form>
-                </div>
+    <div class="mVisual_main">
+        <div class="mVisual_left">
+            <span class="mVisual_topbanner">실거래 데이터 기반으로, 거래 확률 UP</span>
+            <h1 class="mVisual_heading">연결되는 거래에는<br>성공 공식이 있다</h1>
+            <div class="mVisual_searchWrap bxShadow">
+                <form action="/ko/matching_list.php" method="POST" id="match_index">
+                    <input type="hidden" name="cominfo" id="cominfo_index">
+                    <input type="text" name="comnum" id="comnum_index" placeholder="사업자등록번호를 입력해보세요" class="comnum_chk" maxlength="12" autocomplete="off">
+                    <button type="submit" id="main_submit_index" class="search_btn" aria-label="AI 추천받기">
+                        <span class="sparkle"><svg viewBox="0 0 24 24"><use href="#icon-magic-wand"></use></svg></span>
+                        <span>AI 추천받기</span>
+                    </button>
+                </form>
             </div>
-            <div class="mVisual_promo">
-                <div class="mVisual_promo_head">
-                    <span class="mVisual_promo_head_title">실시간 매칭현황</span>
-                    <span class="mVisual_promo_clock"><span class="clock-dot"></span><span id="promo-live-clock">2026. 02. 11. 오전 08:17:37</span></span>
-                </div>
-                <div class="mVisual_promo_card">
-                    <div class="mVisual_promo_card_top">
-                        <span class="mVisual_promo_card_title">매칭 요청률</span>
-                        <span class="mVisual_promo_card_right">
-                            <span class="mVisual_promo_card_q_wrap">
-                                <span class="mVisual_promo_card_q" aria-label="도움말">?</span>
-                                <span class="mVisual_promo_card_q_tooltip">전체 회원 중 매칭을 요청한 비율입니다.</span>
-                            </span>
-                        </span>
+        </div>
+        <div class="mVisual_right">
+            <div class="mVisual_quick">
+                <a href="/ko/my_matching_r.php" class="mVisual_quick_item mVisual_quick_item--request">
+                    <div class="mVisual_quick_icon">
+                        <svg viewBox="0 0 48 48">
+                            <path fill="#3b82f6" d="M8 26 L40 26 L36 22 L4 22 Z"></path>
+                            <path fill="#1e40af" d="M40 26 L40 40 L36 37 L36 22 Z"></path>
+                            <path fill="#2563eb" d="M8 26 L40 26 L40 40 L8 40 Z"></path>
+                            <path fill="#1e3a8a" d="M8 26 L8 40 L4 37 L4 22 Z"></path>
+                            <path fill="#1d4ed8" d="M12 29 L36 29 L36 37 L12 37 Z"></path>
+                            <path fill="#bfdbfe" d="M18 7 L30 7 L30 22 L18 22 Z"></path>
+                            <path fill="#93c5fd" d="M26 7 L30 7 L30 11 Z"></path>
+                            <path fill="#60a5fa" d="M20 13 L28 13 L28 14.5 L20 14.5 Z"></path>
+                            <path fill="#60a5fa" d="M20 16 L26 16 L26 17.5 L20 17.5 Z"></path>
+                            <path fill="#60a5fa" d="M21 22 L27 22 L27 29 L21 29 Z"></path>
+                            <path fill="#3b82f6" d="M16 27 L24 35 L32 27 Z"></path>
+                        </svg>
                     </div>
-                    <div class="mVisual_promo_card_value" id="percent-request">28.47%</div>
-                    <div class="mVisual_promo_card_compare up" id="promo-request-compare">
-                        <span>지난 주 대비</span> <span class="compare_val"><span class="arrow">↑</span> 0.7%P</span>
+                    <div class="mVisual_quick_body">
+                        <strong>받은 요청</strong>
+                        <span>수락 · 거절</span>
                     </div>
-                </div>
-                <div class="mVisual_promo_card">
-                    <div class="mVisual_promo_card_top">
-                        <span class="mVisual_promo_card_title">매칭 수락률</span>
-                        <span class="mVisual_promo_card_right">
-                            <span class="mVisual_promo_card_q_wrap">
-                                <span class="mVisual_promo_card_q" aria-label="도움말">?</span>
-                                <span class="mVisual_promo_card_q_tooltip">요청 건수 중 수락한 비율입니다.</span>
-                            </span>
-                        </span>
+                    <svg class="mVisual_quick_arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                </a>
+                <button type="button" class="mVisual_quick_item mVisual_quick_item--chat" id="openChatDemo">
+                    <div class="mVisual_quick_icon">
+                        <svg viewBox="0 0 48 48">
+                            <path fill="#a78bfa" d="M8 10 L40 10 L36 6 L4 6 Z"></path>
+                            <path fill="#5b21b6" d="M40 10 L40 30 L36 27 L36 6 Z"></path>
+                            <path fill="#7c3aed" d="M8 10 L40 10 L40 30 L8 30 Z"></path>
+                            <path fill="#4c1d95" d="M8 10 L8 30 L4 27 L4 6 Z"></path>
+                            <path fill="#6d28d9" d="M10 30 L18 40 L22 30 Z"></path>
+                            <path fill="#4c1d95" d="M10 30 L12 32 L18 40 Z"></path>
+                            <circle fill="#ddd6fe" cx="17" cy="20" r="3"></circle>
+                            <circle fill="#ede9fe" cx="24" cy="20" r="3"></circle>
+                            <circle fill="#ddd6fe" cx="31" cy="20" r="3"></circle>
+                        </svg>
                     </div>
-                    <div class="mVisual_promo_card_value" id="percent-accept">31.20%</div>
-                    <div class="mVisual_promo_card_compare up" id="promo-accept-compare">
-                        <span>지난 주 대비</span> <span class="compare_val"><span class="arrow">↑</span> 0.2%P</span>
+                    <div class="mVisual_quick_body">
+                        <strong>채팅창</strong>
+                        <span>담당자 대화</span>
+                    </div>
+                    <svg class="mVisual_quick_arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                </button>
+            </div>
+
+            <div class="mVisual_preview">
+                <div class="mVisual_preview_cards" id="previewBanner">
+                    <div class="mVisual_preview_slide active">
+                        <div class="mVisual_preview_card">
+                            <div class="mSlide_header">
+                                <span class="mSlide_label">AI 적합도 예측</span>
+                                <span class="mSlide_sub">A기업 ⇄ B기업</span>
+                                <span class="mSlide_score">87<span class="mSlide_score_unit">%</span></span>
+                            </div>
+                            <div class="mSlide_body mSlide_body--center">
+                                <svg viewBox="0 0 300 270" class="detail-radar-svg"><polygon points="150,115 163,122.5 163,137.5 150,145 137,137.5 137,122.5" fill="none" stroke="#e5e7eb" stroke-width="0.8"></polygon><polygon points="150,100 176,115 176,145 150,160 124,145 124,115" fill="none" stroke="#e5e7eb" stroke-width="0.8"></polygon><polygon points="150,85 189,107.5 189,152.5 150,175 111,152.5 111,107.5" fill="none" stroke="#e5e7eb" stroke-width="0.8"></polygon><polygon points="150,70 202,100 202,160 150,190 98,160 98,100" fill="none" stroke="#e5e7eb" stroke-width="0.8"></polygon><line x1="150" y1="130" x2="150" y2="70" stroke="#e5e7eb" stroke-width="0.6"></line><line x1="150" y1="130" x2="202" y2="100" stroke="#e5e7eb" stroke-width="0.6"></line><line x1="150" y1="130" x2="202" y2="160" stroke="#e5e7eb" stroke-width="0.6"></line><line x1="150" y1="130" x2="150" y2="190" stroke="#e5e7eb" stroke-width="0.6"></line><line x1="150" y1="130" x2="98" y2="160" stroke="#e5e7eb" stroke-width="0.6"></line><line x1="150" y1="130" x2="98" y2="100" stroke="#e5e7eb" stroke-width="0.6"></line><polygon points="150,74.8 194.2,104.5 190.5,153.4 150,184 107.4,154.6 100.6,101.5" fill="rgba(109,40,217,0.12)" stroke="rgba(109,40,217,0.6)" stroke-width="1.8"></polygon><circle cx="150" cy="74.8" r="3.5" fill="rgba(109,40,217,0.8)"></circle><circle cx="194.2" cy="104.5" r="3.5" fill="rgba(109,40,217,0.8)"></circle><circle cx="190.5" cy="153.4" r="3.5" fill="rgba(109,40,217,0.8)"></circle><circle cx="150" cy="184" r="3.5" fill="rgba(109,40,217,0.8)"></circle><circle cx="107.4" cy="154.6" r="3.5" fill="rgba(109,40,217,0.8)"></circle><circle cx="100.6" cy="101.5" r="3.5" fill="rgba(109,40,217,0.8)"></circle><text x="150" y="43" text-anchor="middle" font-size="19" font-weight="700" fill="#333">공급망 근접도</text><text x="229.7" y="89" text-anchor="start" font-size="19" font-weight="700" fill="#333">거래처 유사성</text><text x="229.7" y="181" text-anchor="start" font-size="19" font-weight="700" fill="#333">거래 활성도</text><text x="150" y="227" text-anchor="middle" font-size="19" font-weight="700" fill="#333">재무 안정성</text><text x="70.3" y="181" text-anchor="end" font-size="19" font-weight="700" fill="#333">지역 접근성</text><text x="70.3" y="89" text-anchor="end" font-size="19" font-weight="700" fill="#333">규모 적합도</text></svg>
+                                <p class="mSlide_caption">6가지 지표 기반 AI 거래 적합도 분석 결과</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mVisual_preview_slide">
+                        <div class="mVisual_preview_card">
+                            <div class="mSlide_header">
+                                <span class="mSlide_label">6가지 분석 지표</span>
+                                <span class="mSlide_sub">A기업 ⇄ B기업</span>
+                                <span class="mSlide_score">87<span class="mSlide_score_unit">%</span></span>
+                            </div>
+                            <div class="mSlide_body">
+                                <div class="mSlide2_list">
+                                    <div class="mSlide2_item"><span class="mSlide2_label">공급망 근접도</span><div class="mSlide2_track"><div class="mSlide2_fill" style="width:92%"></div></div><span class="mSlide2_score">92</span></div>
+                                    <div class="mSlide2_item"><span class="mSlide2_label">거래처 유사성</span><div class="mSlide2_track"><div class="mSlide2_fill" style="width:85%"></div></div><span class="mSlide2_score">85</span></div>
+                                    <div class="mSlide2_item"><span class="mSlide2_label">거래 활성도</span><div class="mSlide2_track"><div class="mSlide2_fill" style="width:78%"></div></div><span class="mSlide2_score">78</span></div>
+                                    <div class="mSlide2_item"><span class="mSlide2_label">재무 안정성</span><div class="mSlide2_track"><div class="mSlide2_fill" style="width:90%"></div></div><span class="mSlide2_score">90</span></div>
+                                    <div class="mSlide2_item"><span class="mSlide2_label">지역 접근성</span><div class="mSlide2_track"><div class="mSlide2_fill" style="width:82%"></div></div><span class="mSlide2_score">82</span></div>
+                                    <div class="mSlide2_item"><span class="mSlide2_label">규모 적합도</span><div class="mSlide2_track"><div class="mSlide2_fill" style="width:95%"></div></div><span class="mSlide2_score">95</span></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mVisual_preview_slide">
+                        <div class="mVisual_preview_card">
+                            <div class="mSlide_header">
+                                <span class="mSlide_label">AI 분석 보고서</span>
+                                <span class="mSlide_sub">A기업 ⇄ B기업</span>
+                                <span class="mSlide_score">87<span class="mSlide_score_unit">%</span></span>
+                            </div>
+                            <div class="mSlide_body">
+                                <div class="mVisual_report_card">
+                                    <div class="mVisual_report_oneline">
+                                        <span class="mVisual_report_oneline_label">한줄 요약</span>
+                                        <p>기존 거래망과 유사한 구조의 협력 후보입니다.</p>
+                                    </div>
+                                    <div class="mVisual_report_divider"></div>
+                                    <div class="mVisual_report_reason_row">
+                                        <div class="mVisual_report_reason_item">
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                            <span>공급망 근접도가 높아 거래 전환 가능성 우수</span>
+                                        </div>
+                                        <div class="mVisual_report_reason_item">
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                            <span>공동 거래처 네트워크 72% 중복</span>
+                                        </div>
+                                        <div class="mVisual_report_reason_item">
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                            <span>최근 3년 연평균 매출 18% 성장</span>
+                                        </div>
+                                    </div>
+                                    <div class="mVisual_report_divider"></div>
+                                    <div class="mVisual_report_more">
+                                        <div class="mVisual_report_more_items">
+                                            <span>거래처 유사성 분석</span>
+                                            <span>재무 안정성 평가</span>
+                                            <span>지역·물류 시너지</span>
+                                        </div>
+                                        <p class="mVisual_report_more_hint">외 총 6개 항목의 상세분석이 포함됩니다.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mVisual_preview_indicator">
+                        <button class="mVisual_preview_dot active" data-slide="0"></button>
+                        <button class="mVisual_preview_dot" data-slide="1"></button>
+                        <button class="mVisual_preview_dot" data-slide="2"></button>
                     </div>
                 </div>
             </div>
@@ -114,99 +364,101 @@ $stable_list = get_processed_companies('stability_score_5', 4);
             <div class="mCategories_primary">
         <!-- 데스크탑/태블릿: 그리드 (대분류 8개) -->
         <div class="mCategories_grid">
-            <a href="/ko/matching_list.php?cat=metal" class="mCategories_item" title="금속·소재"><div class="cat_inner"><div class="cat_icon"><svg viewBox="0 0 48 48" data-inline-ready="1"><circle cx="24" cy="24" r="14" fill="#ECEFF1"></circle><path d="M14 20 L32 16 L36 22 L18 26 Z" fill="#B0BEC5"></path><path d="M14 20 L14 28 L18 34 L18 26 Z" fill="#90A4AE"></path><path d="M18 26 L36 22 L36 30 L18 34 Z" fill="#78909C"></path><path d="M15.5 20.8 L31.5 17.4 L34.2 21.4 L18.2 24.8 Z" fill="#CFD8DC"></path><circle cx="19.5" cy="23.5" r="0.9" fill="#ECEFF1"></circle><circle cx="25.5" cy="22.3" r="0.9" fill="#ECEFF1"></circle><circle cx="30.8" cy="21.3" r="0.9" fill="#ECEFF1"></circle><circle cx="21.2" cy="28.4" r="0.9" fill="#ECEFF1"></circle><circle cx="27.5" cy="26.9" r="0.9" fill="#ECEFF1"></circle><path d="M19 30 H33" stroke="#B0BEC5" stroke-width="0.8" stroke-linecap="round" opacity="0.8"></path><path d="M19.5 31.6 H31.5" stroke="#B0BEC5" stroke-width="0.7" stroke-linecap="round" opacity="0.7"></path></svg></div><span class="cat_label">금속·소재</span></div></a>
-            <a href="/ko/matching_list.php?cat=chemical" class="mCategories_item" title="화학·케미컬·원료"><div class="cat_inner"><div class="cat_icon"><svg viewBox="0 0 48 48" data-inline-ready="1"><circle fill="#e9f5ff" cx="24" cy="24" r="14"></circle><rect x="20" y="10" width="8" height="8" rx="2" fill="#455a64"></rect><rect x="21" y="11" width="6" height="6" rx="1.5" fill="#607d8b"></rect><path d="M18 18 H30 L31.5 24 C32 26 31.6 28.2 30.5 30 L27 35 C26 36.5 25 37 24 37 C23 37 22 36.5 21 35 L17.5 30 C16.4 28.2 16 26 16.5 24 Z" fill="#37474f"></path><path d="M18.5 25 H29.5 C30 27.2 29.6 29 28.7 30.3 L26 33.6 C25.3 34.5 24.6 35 24 35 C23.4 35 22.7 34.5 22 33.6 L19.3 30.3 C18.4 29 18 27.2 18.5 25 Z" fill="#26a69a"></path><path d="M19.5 26.2 C21.2 25.3 22.8 25 24 25 C25.2 25 26.8 25.3 28.5 26.2 L28 27.4 C26.6 26.8 25.3 26.5 24 26.5 C22.7 26.5 21.4 26.8 20 27.4 Z" fill="#4db6ac"></path><circle cx="21" cy="23" r="1.2" fill="#b2ebf2"></circle><circle cx="26.5" cy="25.5" r="1" fill="#b2ebf2"></circle><circle cx="23.4" cy="21.2" r="0.9" fill="#b2ebf2"></circle><path d="M22 19.5 C23 18.8 23.9 18.5 25 18.5 C25.6 18.5 26.2 18.6 26.8 18.8" fill="none" stroke="#ffffff" stroke-width="1.2" stroke-linecap="round" opacity="0.7"></path></svg></div><span class="cat_label">화학·케미컬·원료</span></div></a>
-            <a href="/ko/matching_list.php?cat=electronics" class="mCategories_item" title="전자·전기·반도체"><div class="cat_inner"><div class="cat_icon"><svg viewBox="0 0 48 48" data-inline-ready="1"><circle fill="#eaf2ff" cx="24" cy="24" r="14"></circle><rect fill="#1e88e5" x="16" y="16" width="16" height="16" rx="2"></rect><rect fill="#90caf9" x="20" y="20" width="8" height="8" rx="1.2"></rect><path fill="#42a5f5" d="M14 19 H16 V21 H14 Z M14 23 H16 V25 H14 Z M14 27 H16 V29 H14 Z M32 19 H34 V21 H32 Z M32 23 H34 V25 H32 Z M32 27 H34 V29 H32 Z M19 14 H21 V16 H19 Z M23 14 H25 V16 H23 Z M27 14 H29 V16 H27 Z M19 32 H21 V34 H19 Z M23 32 H25 V34 H23 Z M27 32 H29 V34 H27 Z"></path><path fill="#ffd54f" d="M24 18 L27.5 23 H24.8 L27 29 L21 24.5 H23.8 L22 18 Z"></path></svg></div><span class="cat_label">전자·전기·반도체</span></div></a>
-            <a href="/ko/matching_list.php?cat=machinery" class="mCategories_item" title="기계·설비·산업장비"><div class="cat_inner"><div class="cat_icon"><svg viewBox="0 0 48 48" data-inline-ready="1"><circle fill="#edf2f7" cx="24" cy="24" r="14"></circle><rect fill="#78909c" x="10" y="30" width="28" height="4" rx="1.2"></rect><path fill="#607d8b" d="M12 26 L36 26 L34 30 L14 30 Z"></path><circle fill="#546e7a" cx="20" cy="22" r="6.5"></circle><circle fill="#cfd8dc" cx="20" cy="22" r="2.4"></circle><rect fill="#90a4ae" x="19.4" y="12.5" width="1.2" height="3.8" rx="0.6"></rect><rect fill="#90a4ae" x="19.4" y="27.7" width="1.2" height="3.8" rx="0.6"></rect><rect fill="#90a4ae" x="10.5" y="21.4" width="3.8" height="1.2" rx="0.6"></rect><rect fill="#90a4ae" x="25.7" y="21.4" width="3.8" height="1.2" rx="0.6"></rect><path fill="#90a4ae" d="M13.7 16.6 L14.6 15.7 L17.3 18.4 L16.4 19.3 Z"></path><path fill="#90a4ae" d="M23.6 26.5 L24.5 25.6 L27.2 28.3 L26.3 29.2 Z"></path><path fill="#90a4ae" d="M23.6 17.5 L26.3 14.8 L27.2 15.7 L24.5 18.4 Z"></path><path fill="#90a4ae" d="M13.7 27.4 L16.4 24.7 L17.3 25.6 L14.6 28.3 Z"></path><circle fill="#455a64" cx="31.5" cy="27.5" r="4.2"></circle><circle fill="#b0bec5" cx="31.5" cy="27.5" r="1.5"></circle><path fill="#5f6f7a" d="M30 19 L35.5 13.5 L37.2 15.2 L31.7 20.7 Z"></path></svg></div><span class="cat_label">기계·설비·산업장비</span></div></a>
-            <a href="/ko/matching_list.php?cat=auto" class="mCategories_item" title="자동차·모빌리티"><div class="cat_inner"><div class="cat_icon"><svg viewBox="0 0 48 48" data-inline-ready="1"><rect fill="#e1f5fe" x="8" y="20" width="32" height="12" rx="4"></rect><path fill="#29b6f6" d="M14 18 L34 18 L38 22 L10 22 Z"></path><circle fill="#37474f" cx="16" cy="30" r="3.5"></circle><circle fill="#37474f" cx="32" cy="30" r="3.5"></circle><rect fill="#ffffff" x="16" y="19" width="8" height="4" rx="1"></rect><rect fill="#ffffff" x="24" y="19" width="8" height="4" rx="1"></rect></svg></div><span class="cat_label">자동차·모빌리티</span></div></a>
-            <a href="/ko/matching_list.php?cat=food" class="mCategories_item" title="식자재·식품 B2B"><div class="cat_inner"><div class="cat_icon"><svg viewBox="0 0 48 48" data-inline-ready="1"><circle fill="#ffb74d" cx="24" cy="22" r="11"></circle><path fill="#ffa726" d="M24 11 Q21 14 24 17 Q27 14 24 11"></path><path fill="#ffe082" d="M18 22 Q20 18 24 20 Q28 18 30 22 Q28 26 24 24 Q20 26 18 22"></path><path fill="#8bc34a" d="M22 12 Q23 10 25 10 Q24 12 24 14 Q23 13 22 12"></path></svg></div><span class="cat_label">식자재·식품 B2B</span></div></a>
-            <a href="/ko/matching_list.php?cat=medical" class="mCategories_item" title="의료·헬스케어"><div class="cat_inner"><div class="cat_icon"><svg viewBox="0 0 48 48" data-inline-ready="1"><circle fill="#ffebee" cx="24" cy="24" r="14"></circle><circle fill="#e53935" cx="24" cy="24" r="9"></circle><path fill="#ffffff" d="M23 18 L25 18 L25 22 L29 22 L29 24 L25 24 L25 28 L23 28 L23 24 L19 24 L19 22 L23 22 Z"></path></svg></div><span class="cat_label">의료·헬스케어</span></div></a>
-            <a href="/ko/matching_list.php?cat=packaging" class="mCategories_item" title="포장재·소모성 자재"><div class="cat_inner"><div class="cat_icon"><svg viewBox="0 0 48 48" data-inline-ready="1"><path fill="#ede7f6" d="M10 16 L38 16 L38 34 L10 34 Z"></path><path fill="#d1c4e9" d="M10 16 L24 10 L38 16 L24 22 Z"></path><path fill="#b39ddb" d="M24 22 L38 16 L38 34 L24 40 Z"></path><path fill="#9575cd" d="M24 22 L10 16 L10 34 L24 40 Z"></path><path fill="#7e57c2" d="M20 18 L24 20 L28 18 L24 16 Z"></path></svg></div><span class="cat_label">포장재·소모성 자재</span></div></a>
+            <a href="/ko/matching_list.php?cat=metal" class="mCategories_item" title="금속·소재"><div class="cat_inner"><div class="cat_icon"><svg viewBox="0 0 48 48"><use href="#cat-iso-7"/></svg></div><span class="cat_label">금속·소재</span></div></a>
+            <a href="/ko/matching_list.php?cat=chemical" class="mCategories_item" title="화학·케미컬·원료"><div class="cat_inner"><div class="cat_icon"><svg viewBox="0 0 48 48"><use href="#cat-iso-5"/></svg></div><span class="cat_label">화학·케미컬·원료</span></div></a>
+            <a href="/ko/matching_list.php?cat=electronics" class="mCategories_item" title="전자·전기·반도체"><div class="cat_inner"><div class="cat_icon"><svg viewBox="0 0 48 48"><use href="#cat-iso-10"/></svg></div><span class="cat_label">전자·전기·반도체</span></div></a>
+            <a href="/ko/matching_list.php?cat=machinery" class="mCategories_item" title="기계·설비·산업장비"><div class="cat_inner"><div class="cat_icon"><svg viewBox="0 0 48 48"><use href="#cat-iso-6"/></svg></div><span class="cat_label">기계·설비·산업장비</span></div></a>
+            <a href="/ko/matching_list.php?cat=auto" class="mCategories_item" title="자동차·모빌리티"><div class="cat_inner"><div class="cat_icon"><svg viewBox="0 0 48 48"><use href="#cat-iso-11"/></svg></div><span class="cat_label">자동차·모빌리티</span></div></a>
+            <a href="/ko/matching_list.php?cat=food" class="mCategories_item" title="식자재·식품 B2B"><div class="cat_inner"><div class="cat_icon"><svg viewBox="0 0 48 48"><use href="#cat-iso-4"/></svg></div><span class="cat_label">식자재·식품 B2B</span></div></a>
+            <a href="/ko/matching_list.php?cat=medical" class="mCategories_item" title="의료·헬스케어"><div class="cat_inner"><div class="cat_icon"><svg viewBox="0 0 48 48"><use href="#cat-iso-17"/></svg></div><span class="cat_label">의료·헬스케어</span></div></a>
+            <a href="/ko/matching_list.php?cat=packaging" class="mCategories_item" title="포장재·소모성 자재"><div class="cat_inner"><div class="cat_icon"><svg viewBox="0 0 48 48"><use href="#cat-iso-12"/></svg></div><span class="cat_label">포장재·소모성 자재</span></div></a>
         </div>
         <!-- 모바일 전용: 대분류 8개 2줄 스와이프 캐러셀 -->
         <div class="mCategories_carousel_wrap">
             <div class="mCategories_carousel_card">
-            <div class="mCategories_swiper swiper swiper-backface-hidden">
-                <div class="swiper-wrapper" id="swiper-wrapper-4924dd818a341e8e" aria-live="polite">
-                    <div class="swiper-slide" role="group" aria-label="1 / 8" style=""><a href="/ko/matching_list.php?cat=metal" class="mCategories_item" title="금속·소재"><div class="cat_inner"><div class="cat_icon"><svg viewBox="0 0 48 48" data-inline-ready="1"><circle cx="24" cy="24" r="14" fill="#ECEFF1"></circle><path d="M14 20 L32 16 L36 22 L18 26 Z" fill="#B0BEC5"></path><path d="M14 20 L14 28 L18 34 L18 26 Z" fill="#90A4AE"></path><path d="M18 26 L36 22 L36 30 L18 34 Z" fill="#78909C"></path><path d="M15.5 20.8 L31.5 17.4 L34.2 21.4 L18.2 24.8 Z" fill="#CFD8DC"></path><circle cx="19.5" cy="23.5" r="0.9" fill="#ECEFF1"></circle><circle cx="25.5" cy="22.3" r="0.9" fill="#ECEFF1"></circle><circle cx="30.8" cy="21.3" r="0.9" fill="#ECEFF1"></circle><circle cx="21.2" cy="28.4" r="0.9" fill="#ECEFF1"></circle><circle cx="27.5" cy="26.9" r="0.9" fill="#ECEFF1"></circle><path d="M19 30 H33" stroke="#B0BEC5" stroke-width="0.8" stroke-linecap="round" opacity="0.8"></path><path d="M19.5 31.6 H31.5" stroke="#B0BEC5" stroke-width="0.7" stroke-linecap="round" opacity="0.7"></path></svg></div><span class="cat_label">금속·소재</span></div></a></div>
-                    <div class="swiper-slide" role="group" aria-label="2 / 8" style=""><a href="/ko/matching_list.php?cat=chemical" class="mCategories_item" title="화학·케미컬·원료"><div class="cat_inner"><div class="cat_icon"><svg viewBox="0 0 48 48" data-inline-ready="1"><circle fill="#e9f5ff" cx="24" cy="24" r="14"></circle><rect x="20" y="10" width="8" height="8" rx="2" fill="#455a64"></rect><rect x="21" y="11" width="6" height="6" rx="1.5" fill="#607d8b"></rect><path d="M18 18 H30 L31.5 24 C32 26 31.6 28.2 30.5 30 L27 35 C26 36.5 25 37 24 37 C23 37 22 36.5 21 35 L17.5 30 C16.4 28.2 16 26 16.5 24 Z" fill="#37474f"></path><path d="M18.5 25 H29.5 C30 27.2 29.6 29 28.7 30.3 L26 33.6 C25.3 34.5 24.6 35 24 35 C23.4 35 22.7 34.5 22 33.6 L19.3 30.3 C18.4 29 18 27.2 18.5 25 Z" fill="#26a69a"></path><path d="M19.5 26.2 C21.2 25.3 22.8 25 24 25 C25.2 25 26.8 25.3 28.5 26.2 L28 27.4 C26.6 26.8 25.3 26.5 24 26.5 C22.7 26.5 21.4 26.8 20 27.4 Z" fill="#4db6ac"></path><circle cx="21" cy="23" r="1.2" fill="#b2ebf2"></circle><circle cx="26.5" cy="25.5" r="1" fill="#b2ebf2"></circle><circle cx="23.4" cy="21.2" r="0.9" fill="#b2ebf2"></circle><path d="M22 19.5 C23 18.8 23.9 18.5 25 18.5 C25.6 18.5 26.2 18.6 26.8 18.8" fill="none" stroke="#ffffff" stroke-width="1.2" stroke-linecap="round" opacity="0.7"></path></svg></div><span class="cat_label">화학·케미컬·원료</span></div></a></div>
-                    <div class="swiper-slide" role="group" aria-label="3 / 8" style=""><a href="/ko/matching_list.php?cat=electronics" class="mCategories_item" title="전자·전기·반도체"><div class="cat_inner"><div class="cat_icon"><svg viewBox="0 0 48 48" data-inline-ready="1"><circle fill="#eaf2ff" cx="24" cy="24" r="14"></circle><rect fill="#1e88e5" x="16" y="16" width="16" height="16" rx="2"></rect><rect fill="#90caf9" x="20" y="20" width="8" height="8" rx="1.2"></rect><path fill="#42a5f5" d="M14 19 H16 V21 H14 Z M14 23 H16 V25 H14 Z M14 27 H16 V29 H14 Z M32 19 H34 V21 H32 Z M32 23 H34 V25 H32 Z M32 27 H34 V29 H32 Z M19 14 H21 V16 H19 Z M23 14 H25 V16 H23 Z M27 14 H29 V16 H27 Z M19 32 H21 V34 H19 Z M23 32 H25 V34 H23 Z M27 32 H29 V34 H27 Z"></path><path fill="#ffd54f" d="M24 18 L27.5 23 H24.8 L27 29 L21 24.5 H23.8 L22 18 Z"></path></svg></div><span class="cat_label">전자·전기·반도체</span></div></a></div>
-                    <div class="swiper-slide" role="group" aria-label="4 / 8" style=""><a href="/ko/matching_list.php?cat=machinery" class="mCategories_item" title="기계·설비·산업장비"><div class="cat_inner"><div class="cat_icon"><svg viewBox="0 0 48 48" data-inline-ready="1"><circle fill="#edf2f7" cx="24" cy="24" r="14"></circle><rect fill="#78909c" x="10" y="30" width="28" height="4" rx="1.2"></rect><path fill="#607d8b" d="M12 26 L36 26 L34 30 L14 30 Z"></path><circle fill="#546e7a" cx="20" cy="22" r="6.5"></circle><circle fill="#cfd8dc" cx="20" cy="22" r="2.4"></circle><rect fill="#90a4ae" x="19.4" y="12.5" width="1.2" height="3.8" rx="0.6"></rect><rect fill="#90a4ae" x="19.4" y="27.7" width="1.2" height="3.8" rx="0.6"></rect><rect fill="#90a4ae" x="10.5" y="21.4" width="3.8" height="1.2" rx="0.6"></rect><rect fill="#90a4ae" x="25.7" y="21.4" width="3.8" height="1.2" rx="0.6"></rect><path fill="#90a4ae" d="M13.7 16.6 L14.6 15.7 L17.3 18.4 L16.4 19.3 Z"></path><path fill="#90a4ae" d="M23.6 26.5 L24.5 25.6 L27.2 28.3 L26.3 29.2 Z"></path><path fill="#90a4ae" d="M23.6 17.5 L26.3 14.8 L27.2 15.7 L24.5 18.4 Z"></path><path fill="#90a4ae" d="M13.7 27.4 L16.4 24.7 L17.3 25.6 L14.6 28.3 Z"></path><circle fill="#455a64" cx="31.5" cy="27.5" r="4.2"></circle><circle fill="#b0bec5" cx="31.5" cy="27.5" r="1.5"></circle><path fill="#5f6f7a" d="M30 19 L35.5 13.5 L37.2 15.2 L31.7 20.7 Z"></path></svg></div><span class="cat_label">기계·설비·산업장비</span></div></a></div>
-                    <div class="swiper-slide" role="group" aria-label="5 / 8" style=""><a href="/ko/matching_list.php?cat=auto" class="mCategories_item" title="자동차·모빌리티"><div class="cat_inner"><div class="cat_icon"><svg viewBox="0 0 48 48" data-inline-ready="1"><rect fill="#e1f5fe" x="8" y="20" width="32" height="12" rx="4"></rect><path fill="#29b6f6" d="M14 18 L34 18 L38 22 L10 22 Z"></path><circle fill="#37474f" cx="16" cy="30" r="3.5"></circle><circle fill="#37474f" cx="32" cy="30" r="3.5"></circle><rect fill="#ffffff" x="16" y="19" width="8" height="4" rx="1"></rect><rect fill="#ffffff" x="24" y="19" width="8" height="4" rx="1"></rect></svg></div><span class="cat_label">자동차·모빌리티</span></div></a></div>
-                    <div class="swiper-slide" role="group" aria-label="6 / 8" style=""><a href="/ko/matching_list.php?cat=food" class="mCategories_item" title="식자재·식품 B2B"><div class="cat_inner"><div class="cat_icon"><svg viewBox="0 0 48 48" data-inline-ready="1"><circle fill="#ffb74d" cx="24" cy="22" r="11"></circle><path fill="#ffa726" d="M24 11 Q21 14 24 17 Q27 14 24 11"></path><path fill="#ffe082" d="M18 22 Q20 18 24 20 Q28 18 30 22 Q28 26 24 24 Q20 26 18 22"></path><path fill="#8bc34a" d="M22 12 Q23 10 25 10 Q24 12 24 14 Q23 13 22 12"></path></svg></div><span class="cat_label">식자재·식품 B2B</span></div></a></div>
-                    <div class="swiper-slide" role="group" aria-label="7 / 8" style=""><a href="/ko/matching_list.php?cat=medical" class="mCategories_item" title="의료·헬스케어"><div class="cat_inner"><div class="cat_icon"><svg viewBox="0 0 48 48" data-inline-ready="1"><circle fill="#ffebee" cx="24" cy="24" r="14"></circle><circle fill="#e53935" cx="24" cy="24" r="9"></circle><path fill="#ffffff" d="M23 18 L25 18 L25 22 L29 22 L29 24 L25 24 L25 28 L23 28 L23 24 L19 24 L19 22 L23 22 Z"></path></svg></div><span class="cat_label">의료·헬스케어</span></div></a></div>
-                    <div class="swiper-slide" role="group" aria-label="8 / 8" style=""><a href="/ko/matching_list.php?cat=packaging" class="mCategories_item" title="포장재·소모성 자재"><div class="cat_inner"><div class="cat_icon"><svg viewBox="0 0 48 48" data-inline-ready="1"><path fill="#ede7f6" d="M10 16 L38 16 L38 34 L10 34 Z"></path><path fill="#d1c4e9" d="M10 16 L24 10 L38 16 L24 22 Z"></path><path fill="#b39ddb" d="M24 22 L38 16 L38 34 L24 40 Z"></path><path fill="#9575cd" d="M24 22 L10 16 L10 34 L24 40 Z"></path><path fill="#7e57c2" d="M20 18 L24 20 L28 18 L24 16 Z"></path></svg></div><span class="cat_label">포장재·소모성 자재</span></div></a></div>
+            <div class="mCategories_swiper swiper">
+                <div class="swiper-wrapper">
+                    <div class="swiper-slide"><a href="/ko/matching_list.php?cat=metal" class="mCategories_item" title="금속·소재"><div class="cat_inner"><div class="cat_icon"><svg viewBox="0 0 48 48"><use href="#cat-iso-7"/></svg></div><span class="cat_label">금속·소재</span></div></a></div>
+                    <div class="swiper-slide"><a href="/ko/matching_list.php?cat=chemical" class="mCategories_item" title="화학·케미컬·원료"><div class="cat_inner"><div class="cat_icon"><svg viewBox="0 0 48 48"><use href="#cat-iso-5"/></svg></div><span class="cat_label">화학·케미컬·원료</span></div></a></div>
+                    <div class="swiper-slide"><a href="/ko/matching_list.php?cat=electronics" class="mCategories_item" title="전자·전기·반도체"><div class="cat_inner"><div class="cat_icon"><svg viewBox="0 0 48 48"><use href="#cat-iso-10"/></svg></div><span class="cat_label">전자·전기·반도체</span></div></a></div>
+                    <div class="swiper-slide"><a href="/ko/matching_list.php?cat=machinery" class="mCategories_item" title="기계·설비·산업장비"><div class="cat_inner"><div class="cat_icon"><svg viewBox="0 0 48 48"><use href="#cat-iso-6"/></svg></div><span class="cat_label">기계·설비·산업장비</span></div></a></div>
+                    <div class="swiper-slide"><a href="/ko/matching_list.php?cat=auto" class="mCategories_item" title="자동차·모빌리티"><div class="cat_inner"><div class="cat_icon"><svg viewBox="0 0 48 48"><use href="#cat-iso-11"/></svg></div><span class="cat_label">자동차·모빌리티</span></div></a></div>
+                    <div class="swiper-slide"><a href="/ko/matching_list.php?cat=food" class="mCategories_item" title="식자재·식품 B2B"><div class="cat_inner"><div class="cat_icon"><svg viewBox="0 0 48 48"><use href="#cat-iso-4"/></svg></div><span class="cat_label">식자재·식품 B2B</span></div></a></div>
+                    <div class="swiper-slide"><a href="/ko/matching_list.php?cat=medical" class="mCategories_item" title="의료·헬스케어"><div class="cat_inner"><div class="cat_icon"><svg viewBox="0 0 48 48"><use href="#cat-iso-17"/></svg></div><span class="cat_label">의료·헬스케어</span></div></a></div>
+                    <div class="swiper-slide"><a href="/ko/matching_list.php?cat=packaging" class="mCategories_item" title="포장재·소모성 자재"><div class="cat_inner"><div class="cat_icon"><svg viewBox="0 0 48 48"><use href="#cat-iso-12"/></svg></div><span class="cat_label">포장재·소모성 자재</span></div></a></div>
                 </div>
-                <div class="swiper-pagination mCategories_carousel_pagination swiper-pagination-lock"><span class="swiper-pagination-progressbar-fill" style="transform: translate3d(0px, 0px, 0px) scaleX(1) scaleY(1); transition-duration: 300ms;"></span></div>
+                <div class="swiper-pagination mCategories_carousel_pagination"></div>
             </div>
             </div>
         </div>
             </div>
             <div class="mVisual_banner_wrap mVisual_banner_compact">
-                <div class="mVisual_banner_swiper swiper swiper-initialized swiper-horizontal swiper-backface-hidden">
-                    <div class="swiper-wrapper" id="swiper-wrapper-231a4b9bd65dda47" aria-live="off" style="transition-duration: 0ms; transform: translate3d(-280px, 0px, 0px); transition-delay: 0ms;">
-                        <div class="swiper-slide swiper-slide-prev" role="group" aria-label="1 / 3" data-swiper-slide-index="0" style="width: 280px;">
+                <div class="mVisual_banner_swiper swiper">
+                    <div class="swiper-wrapper">
+                        <div class="swiper-slide">
                             <aside class="mVisual_banner mVisual_banner_card">
                                 <div class="mVisual_banner_inner">
-                                    <span class="mVisual_banner_status">테스트 운영 중 · 3월 말 런칭</span>
+                                    <span class="mVisual_banner_status">테스트 운영 중 · 4월 말 런칭</span>
                                     <p class="mVisual_banner_main">거래 빈도가 높은<br>핵심 산업 집중</p>
                                     <p class="mVisual_banner_sub">제조·유통 기반 추천 모델 고도화</p>
                                 </div>
                             </aside>
                         </div>
-                        <div class="swiper-slide swiper-slide-active" role="group" aria-label="2 / 3" data-swiper-slide-index="1" style="width: 280px;">
+                        <div class="swiper-slide">
                             <aside class="mVisual_banner mVisual_banner_card">
                                 <div class="mVisual_banner_inner">
-                                    <span class="mVisual_banner_status">오픈 기념 · 첫 달 무료</span>
-                                    <p class="mVisual_banner_main">프리미엄 멤버십 오픈기념<br>첫 달 무료 체험</p>
-                                    <p class="mVisual_banner_sub">지금 가입하고 프리미엄을 무료로 경험하세요</p>
-                                </div>
-                            </aside>
-                        </div>
-                        <div class="swiper-slide swiper-slide-next" role="group" aria-label="3 / 3" data-swiper-slide-index="2" style="width: 280px;">
-                            <aside class="mVisual_banner mVisual_banner_card">
-                                <div class="mVisual_banner_inner">
-                                    <span class="mVisual_banner_status">테스트 운영 중 · 3월 말 런칭</span>
-                                    <p class="mVisual_banner_main">거래 빈도가 높은<br>핵심 산업 집중</p>
-                                    <p class="mVisual_banner_sub">제조·유통 기반 추천 모델 고도화</p>
+                                    <span class="mVisual_banner_status">오픈 기념 · 크레딧 즉시 지급</span>
+                                    <p class="mVisual_banner_main">가입만 해도<br>무료 크레딧 제공</p>
+                                    <p class="mVisual_banner_sub">지금 가입하고 거래를 시작하세요</p>
                                 </div>
                             </aside>
                         </div>
                     </div>
                 <div class="mVisual_banner_pagination" aria-hidden="true">
-                    <span class="mVisual_banner_page_current">2</span>/<span class="mVisual_banner_page_total">3</span>
-                    <button type="button" class="mVisual_banner_next" aria-label="다음 배너">&gt;</button>
+                    <span class="mVisual_banner_page_current">1</span>/<span class="mVisual_banner_page_total">2</span>
+                    <button type="button" class="mVisual_banner_next" aria-label="다음 배너"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg></button>
                 </div>
-                <span class="swiper-notification" aria-live="assertive" aria-atomic="true"></span></div>
+                </div>
             </div>
         </div>
     </div>
 </div>
 
 <div id="mHookSections">
-    <div class="inner">
-        <div class="mHookSection">
+    <div class="mHookSection" id="hkGrowth">
+        <div class="section-inner">
             <div class="mHookSection_header">
-                <h2 class="mHookSection_title"><span class="mHookSection_title_highlight">3년 연속 성장 기업</span></h2>
-                <a href="/ko/matching_list.php" class="mHookSection_more">더보기</a>
+                <div class="mHookSection_label mHookSection_label--growth">
+                    <span>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+                            <polyline points="17 6 23 6 23 12"></polyline>
+                        </svg>
+                    </span>
+                    <span>GROWTH</span>
+                </div>
+                <div class="mHookSection_titleRow">
+                    <h2 class="mHookSection_title">3년 연속 성장 기업</h2>
+                    <a href="/ko/matching_list.php?sort=grow" class="mHookSection_more">더보기</a>
+                </div>
+                <p class="mHookSection_subtitle">매출과 고용이 꾸준히 성장하고 있는 검증된 기업들</p>
             </div>
-            <div class="mCompanyGrid swiper swiper-backface-hidden">
-                <div class="swiper-wrapper" id="swiper-wrapper-1094e3f103adebb89f" aria-live="polite">
-                
+            <div class="card-grid" id="hkGrowthGrid">
                 <?php foreach ($company_list as $index => $com): 
-                    // 태그 계산 로직 추가
                     $allTags = $com['PD_NM_TAGS'] ?? [];
                     $totalCount = count($allTags);
-                    $showNum = 2; // 보여줄 개수
+                    $showNum = 2;
                     $displayTags = array_slice($allTags, 0, $showNum);
-                    $restCount = $totalCount - $showNum;
+                    $restCount = max($totalCount - $showNum, 0);
+                    $growthTop = (int)round($com['growth_score_5'] * 20);
+                    $detailUrl = '/ko/company_detail.php?cd=' . urlencode(simple_crypt($com['KEDCD']));
                 ?>
-                <div class="mCompanyCard swiper-slide detail_view" kedcd="<?= $com['KEDCD'] ?>" role="group" aria-label="<?= ($index+1) ?> / 4">
+                <div class="mCompanyCard detail_view" kedcd="<?= $com['KEDCD'] ?>" data-kedcd="<?= $com['KEDCD'] ?>" data-detail-url="<?= htmlspecialchars($detailUrl, ENT_QUOTES) ?>">
                     <div class="mCompanyCard_content">
-                        <div class="mCompanyCard_badges">
-                            <span class="mCompanyCard_badge mCompanyCard_badge_growth">성장성높은</span>
+                        <div class="hk-badges">
+                            <span class="hk-badge hk-badge--growth">성장TOP<?= $growthTop ?>%</span>
                             <?php if (($com['VENP_YN'] ?? 'N') === 'Y'): ?>
-                            <span class="mCompanyCard_badge">벤처인증기업</span>
+                            <span class="hk-badge hk-badge--venture">벤처인증</span>
                             <?php endif; ?>
                         </div>
 
@@ -217,157 +469,113 @@ $stable_list = get_processed_companies('stability_score_5', 4);
                                 <?php foreach ($displayTags as $tag): ?>
                                     <span class="mCompanyCard_desc_tag"><?= htmlspecialchars($tag) ?></span>
                                 <?php endforeach; ?>
-                                
                                 <?php if ($restCount > 0): ?>
                                     <span class="mCompanyCard_desc_more">+<?= $restCount ?></span>
                                 <?php endif; ?>
                             <?php endif; ?>
                         </p>
 
-                        <div class="mCompanyCard_rating">
-                            <div class="mCompanyCard_rating_left">
-                                <span class="mCompanyCard_rating_label">종합</span>
-                                <span class="mCompanyCard_rating_score"><?= $com['final_score'] ?></span>
-                                <div class="mCompanyCard_rating_stars">
-                                    <?php 
-                                    $full_stars = floor($com['final_total_score_5']);
-                                    for($i=1; $i<=5; $i++): 
-                                        if($i <= $full_stars):
-                                    ?>
-                                        <svg viewBox="0 0 24 24" fill="#ffc107"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg>
-                                    <?php else: ?>
-                                        <svg viewBox="0 0 24 24" fill="#e0e0e0"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg>
-                                    <?php endif; endfor; ?>
-                                </div>
+                        <div class="radar-card">
+                            <div class="radar-card_chart">
+                                <svg viewBox="0 0 210 200" class="radar-svg">
+                                    <?= render_company_radar_svg(array(
+                                        $com['growth_score_5'],
+                                        $com['profit_score_5'],
+                                        $com['stability_score_5'],
+                                        $com['age_score_5'],
+                                        $com['emp_score_5']
+                                    )) ?>
+                                </svg>
                             </div>
+                        </div>
 
-                            <div class="mCompanyCard_rating_right">
-                                <div class="mCompanyCard_rating_bar">
-                                    <span class="mCompanyCard_rating_bar_label">성장성</span>
-                                    <div class="mCompanyCard_rating_bar_chart">
-                                        <div class="mCompanyCard_rating_bar_fill" style="width: <?= ($com['growth_score_5'] / 5 * 100) ?>%;"></div>
-                                    </div>
-                                    <span class="mCompanyCard_rating_bar_count"><?= number_format($com['growth_score_5'], 1) ?></span>
-                                </div>
-                                <div class="mCompanyCard_rating_bar">
-                                    <span class="mCompanyCard_rating_bar_label">수익성</span>
-                                    <div class="mCompanyCard_rating_bar_chart">
-                                        <div class="mCompanyCard_rating_bar_fill" style="width: <?= ($com['profit_score_5'] / 5 * 100) ?>%;"></div>
-                                    </div>
-                                    <span class="mCompanyCard_rating_bar_count"><?= number_format($com['profit_score_5'], 1) ?></span>
-                                </div>
-                                <div class="mCompanyCard_rating_bar">
-                                    <span class="mCompanyCard_rating_bar_label">재무안정</span>
-                                    <div class="mCompanyCard_rating_bar_chart">
-                                        <div class="mCompanyCard_rating_bar_fill" style="width: <?= ($com['stability_score_5'] / 5 * 100) ?>%;"></div>
-                                    </div>
-                                    <span class="mCompanyCard_rating_bar_count"><?= number_format($com['stability_score_5'], 1) ?></span>
-                                </div>
-                            </div>
+                        <div class="mCompanyCard_footer_stars">
+                            <span class="mCompanyCard_footer_stars_wrap"><?= render_score_stars($com['final_score_num']) ?></span>
+                            <span class="mCompanyCard_footer_score"><?= $com['final_score'] ?></span>
+                            <span class="mCompanyCard_footer_max">/ 5.0</span>
                         </div>
                     </div>
                 </div>
                 <?php endforeach; ?>
-                </div>
             </div>
-        </div><!-- /.mHookSection (성장성) -->
+        </div>
+    </div>
 
-        <div class="mHookSection mHookSection_stable">
-                <div class="mHookSection_header">
-                    <h2 class="mHookSection_title"><span class="mHookSection_title_highlight mHookSection_title_highlight_green">안정성이 높은 기업</span></h2>
-                    <a href="/ko/matching_list.php" class="mHookSection_more">더보기</a>
+    <div class="mHookSection mHookSection_stable" id="hkStable">
+        <div class="section-inner">
+            <div class="mHookSection_header">
+                <div class="mHookSection_label mHookSection_label--stable">
+                    <span>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                        </svg>
+                    </span>
+                    <span>STABILITY</span>
                 </div>
-                <div class="mCompanyGrid swiper swiper-backface-hidden">
-                    <div class="swiper-wrapper" id="swiper-wrapper-d6e6dd9b107565ec8" aria-live="polite">
+                <div class="mHookSection_titleRow">
+                    <h2 class="mHookSection_title">안정성이 높은 기업</h2>
+                    <a href="/ko/matching_list.php?sort=stable" class="mHookSection_more">더보기</a>
+                </div>
+                <p class="mHookSection_subtitle">지역 접근성과 업력이 탄탄한 신뢰할 수 있는 파트너</p>
+            </div>
+            <div class="card-grid" id="hkStableGrid">
+                <?php foreach ($stable_list as $idx => $com): 
+                    $allTags = $com['PD_NM_TAGS'] ?? [];
+                    $totalCount = count($allTags);
+                    $showNum = 2;
+                    $displayTags = array_slice($allTags, 0, $showNum);
+                    $restCount = max($totalCount - $showNum, 0);
+                    $stableTop = (int)round($com['stability_score_5'] * 20);
+                    $detailUrl = '/ko/company_detail.php?cd=' . urlencode(simple_crypt($com['KEDCD']));
+                ?>
+                <div class="mCompanyCard detail_view" kedcd="<?= $com['KEDCD'] ?>" data-kedcd="<?= $com['KEDCD'] ?>" data-detail-url="<?= htmlspecialchars($detailUrl, ENT_QUOTES) ?>">
+                    <div class="mCompanyCard_content">
+                        <div class="hk-badges">
+                            <span class="hk-badge hk-badge--stable">재무안정TOP<?= $stableTop ?>%</span>
+                            <?php if (($com['VENP_YN'] ?? 'N') === 'Y'): ?>
+                            <span class="hk-badge hk-badge--venture">벤처인증</span>
+                            <?php endif; ?>
+                        </div>
                         
-                        <?php foreach ($stable_list as $idx => $com): 
-                            // 태그 계산 로직 추가
-                            $allTags = $com['PD_NM_TAGS'] ?? [];
-                            $totalCount = count($allTags);
-                            $showNum = 2; // 보여줄 개수
-                            $displayTags = array_slice($allTags, 0, $showNum);
-                            $restCount = $totalCount - $showNum;
-                        ?>
-                        <div class="mCompanyCard swiper-slide detail_view" kedcd="<?= $com['KEDCD'] ?>" role="group" aria-label="<?= ($idx+1) ?> / 4">
-                            <div class="mCompanyCard_content">
-                                <div class="mCompanyCard_badges">
-                                    <span class="mCompanyCard_badge mCompanyCard_badge_stable">안정성높은</span>
-                                    <?php if (($com['VENP_YN'] ?? 'N') === 'Y'): ?>
-                                    <span class="mCompanyCard_badge">벤처인증기업</span>
-                                    <?php endif; ?>
-                                </div>
-                                
-                                <h3 class="mCompanyCard_title"><?= htmlspecialchars($com['display_name']) ?></h3>
-                                
-                                <p class="mCompanyCard_desc">
-                                    <?php if ($totalCount > 0): ?>
-                                        <?php foreach ($displayTags as $tag): ?>
-                                            <span class="mCompanyCard_desc_tag"><?= htmlspecialchars($tag) ?></span>
-                                        <?php endforeach; ?>
-                                        
-                                        <?php if ($restCount > 0): ?>
-                                            <span class="mCompanyCard_desc_more">+<?= $restCount ?></span>
-                                        <?php endif; ?>
-                                    <?php endif; ?>
-                                </p>
+                        <h3 class="mCompanyCard_title"><?= htmlspecialchars($com['display_name']) ?></h3>
+                        
+                        <p class="mCompanyCard_desc">
+                            <?php if ($totalCount > 0): ?>
+                                <?php foreach ($displayTags as $tag): ?>
+                                    <span class="mCompanyCard_desc_tag"><?= htmlspecialchars($tag) ?></span>
+                                <?php endforeach; ?>
+                                <?php if ($restCount > 0): ?>
+                                    <span class="mCompanyCard_desc_more">+<?= $restCount ?></span>
+                                <?php endif; ?>
+                            <?php endif; ?>
+                        </p>
 
-                                <div class="mCompanyCard_rating">
-                                    <div class="mCompanyCard_rating_left">
-                                        <span class="mCompanyCard_rating_label">종합</span>
-                                        <span class="mCompanyCard_rating_score"><?= $com['final_score'] ?></span>
-                                        <div class="mCompanyCard_rating_stars">
-                                            <?php 
-                                            $full_stars = floor($com['final_total_score_5']);
-                                            for($i=1; $i<=5; $i++): 
-                                                if($i <= $full_stars):
-                                            ?>
-                                                <svg viewBox="0 0 24 24" fill="#ffc107"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg>
-                                            <?php else: ?>
-                                                <svg viewBox="0 0 24 24" fill="#e0e0e0"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg>
-                                            <?php endif; endfor; ?>
-                                        </div>
-                                    </div>
-                                    <div class="mCompanyCard_rating_right">
-                                        <div class="mCompanyCard_rating_bar">
-                                            <span class="mCompanyCard_rating_bar_label">성장성</span>
-                                            <div class="mCompanyCard_rating_bar_chart">
-                                                <div class="mCompanyCard_rating_bar_fill" style="width: <?= ($com['growth_score_5'] / 5 * 100) ?>%;"></div>
-                                            </div>
-                                            <span class="mCompanyCard_rating_bar_count"><?= number_format($com['growth_score_5'], 1) ?></span>
-                                        </div>
-                                        <div class="mCompanyCard_rating_bar">
-                                            <span class="mCompanyCard_rating_bar_label">수익성</span>
-                                            <div class="mCompanyCard_rating_bar_chart">
-                                                <div class="mCompanyCard_rating_bar_fill" style="width: <?= ($com['profit_score_5'] / 5 * 100) ?>%;"></div>
-                                            </div>
-                                            <span class="mCompanyCard_rating_bar_count"><?= number_format($com['profit_score_5'], 1) ?></span>
-                                        </div>
-                                        <div class="mCompanyCard_rating_bar">
-                                            <span class="mCompanyCard_rating_bar_label">재무안정</span>
-                                            <div class="mCompanyCard_rating_bar_chart">
-                                                <div class="mCompanyCard_rating_bar_fill" style="width: <?= ($com['stability_score_5'] / 5 * 100) ?>%;"></div>
-                                            </div>
-                                            <span class="mCompanyCard_rating_bar_count"><?= number_format($com['stability_score_5'], 1) ?></span>
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <div class="mCompanyCard_footer">
-                                    <span class="mCompanyCard_price">
-                                        <span class="mCompanyCard_price_icon"><svg viewBox="0 0 48 48"><use href="#cat-iso-<?= (5 + $idx) ?>"></use></svg></span>
-                                    </span>
-                                    <div class="mCompanyCard_provider">
-                                        <span class="mCompanyCard_provider_name"><?= htmlspecialchars($com['display_name']) ?></span>
-                                    </div>
-                                </div>
+                        <div class="radar-card">
+                            <div class="radar-card_chart">
+                                <svg viewBox="0 0 210 200" class="radar-svg">
+                                    <?= render_company_radar_svg(array(
+                                        $com['growth_score_5'],
+                                        $com['profit_score_5'],
+                                        $com['stability_score_5'],
+                                        $com['age_score_5'],
+                                        $com['emp_score_5']
+                                    )) ?>
+                                </svg>
                             </div>
                         </div>
-                        <?php endforeach; ?>
+                        
+                        <div class="mCompanyCard_footer_stars">
+                            <span class="mCompanyCard_footer_stars_wrap"><?= render_score_stars($com['final_score_num']) ?></span>
+                            <span class="mCompanyCard_footer_score"><?= $com['final_score'] ?></span>
+                            <span class="mCompanyCard_footer_max">/ 5.0</span>
+                        </div>
                     </div>
+                </div>
+                <?php endforeach; ?>
             </div>
-        </div><!-- /.mHookSection_stable -->
-    </div><!-- /.inner -->
-</div><!-- /#mHookSections -->
+        </div>
+    </div>
+</div>
 
     <div id="company-view-lay" class="layer-base layer-main company-view">
         <div class="layer-in new"></div>
@@ -379,357 +587,7 @@ $stable_list = get_processed_companies('stability_score_5', 4);
     ?>
 
 
-<script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
-<script>
-// 카테고리 태그 선택 토글 (프론트 전용)
-document.querySelectorAll('.mVisual_tag').forEach(function(btn) {
-    btn.addEventListener('click', function() { this.classList.toggle('selected'); });
-});
-// 카테고리 아이콘: <use> 참조를 실제 요소로 펼쳐서(path/circle/rect) 개별 애니메이션 가능하게 처리
-(function() {
-    function inlineCategoryIcons() {
-        var svgs = document.querySelectorAll('.mCategories_item .cat_icon svg');
-        svgs.forEach(function(svg) {
-            if (svg.getAttribute('data-inline-ready') === '1') return;
-            var useEl = svg.querySelector('use');
-            if (!useEl) return;
-
-            var ref = useEl.getAttribute('href') || useEl.getAttribute('xlink:href');
-            if (!ref || ref.charAt(0) !== '#') return;
-
-            var symbol = document.querySelector(ref);
-            if (!symbol) return;
-
-            var viewBox = symbol.getAttribute('viewBox');
-            if (viewBox && !svg.getAttribute('viewBox')) {
-                svg.setAttribute('viewBox', viewBox);
-            }
-
-            while (svg.firstChild) {
-                svg.removeChild(svg.firstChild);
-            }
-
-            Array.prototype.forEach.call(symbol.childNodes, function(node) {
-                if (node.nodeType === 1) {
-                    svg.appendChild(node.cloneNode(true));
-                }
-            });
-
-            svg.setAttribute('data-inline-ready', '1');
-        });
-    }
-
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', inlineCategoryIcons);
-    } else {
-        inlineCategoryIcons();
-    }
-})();
-// 모바일 전용: 카테고리 2줄 스와이프 캐러셀 (대분류 8개)
-(function() {
-    var wrap = document.querySelector('.mCategories_carousel_wrap');
-    var el = document.querySelector('.mCategories_swiper');
-    var catSwiper = null;
-    function initCategoriesCarousel() {
-        if (!el || !wrap) return;
-        if (window.innerWidth > 640) {
-            if (catSwiper) {
-                catSwiper.destroy(true, true);
-                catSwiper = null;
-            }
-            return;
-        }
-        if (catSwiper) return;
-        catSwiper = new Swiper(el, {
-            slidesPerView: 4.15,
-            spaceBetween: 14,
-            grid: { rows: 2, fill: 'row' },
-            freeMode: true,
-            resistance: true,
-            resistanceRatio: 0.85,
-            grabCursor: true,
-            pagination: {
-                el: '.mCategories_carousel_pagination',
-                type: 'progressbar',
-            },
-        });
-    }
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initCategoriesCarousel);
-    } else {
-        initCategoriesCarousel();
-    }
-    window.addEventListener('resize', function() {
-        var w = window.innerWidth;
-        if (w <= 640 && !catSwiper) initCategoriesCarousel();
-        else if (w > 640 && catSwiper) {
-            catSwiper.destroy(true, true);
-            catSwiper = null;
-        }
-    });
-})();
-
-// 매칭 요청률/수락률 물음표 툴팁: 호버 + 클릭 토글
-document.querySelectorAll('.mVisual_promo_card_q_wrap').forEach(function(wrap) {
-    var q = wrap.querySelector('.mVisual_promo_card_q');
-    if (!q) return;
-    q.addEventListener('click', function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        document.querySelectorAll('.mVisual_promo_card_q_wrap.open').forEach(function(o) {
-            if (o !== wrap) o.classList.remove('open');
-        });
-        wrap.classList.toggle('open');
-    });
-});
-document.addEventListener('click', function(ev) {
-    if (ev.target.closest && ev.target.closest('#mCategories')) return;
-    document.querySelectorAll('.mVisual_promo_card_q_wrap.open').forEach(function(w) { w.classList.remove('open'); });
-});
-
-// 사업자 확인 모달: 오버레이 클릭 시 닫기
-    // 비주얼 배너 캐러셀: 3장 겹침, 4초 자동 로테이션, 1/3> 페이지네이션
-    (function() {
-        var wrap = document.querySelector('.mVisual_banner_wrap');
-        var swiperEl = wrap && wrap.querySelector('.mVisual_banner_swiper');
-        var paginationEl = wrap && wrap.querySelector('.mVisual_banner_pagination');
-        var nextBtn = wrap && wrap.querySelector('.mVisual_banner_next');
-        if (!swiperEl || !paginationEl) return;
-        var total = 3;
-        function updatePagination(swiper) {
-            var cur = paginationEl.querySelector('.mVisual_banner_page_current');
-            var tot = paginationEl.querySelector('.mVisual_banner_page_total');
-            if (cur) cur.textContent = (swiper.realIndex + 1);
-            if (tot) tot.textContent = total;
-        }
-        var bannerSwiper = new Swiper(swiperEl, {
-            slidesPerView: 1,
-            spaceBetween: 0,
-            loop: true,
-            autoplay: { delay: 4000, disableOnInteraction: false },
-            on: {
-                init: updatePagination,
-                slideChange: updatePagination,
-            },
-        });
-        if (nextBtn) nextBtn.addEventListener('click', function() { bannerSwiper.slideNext(); });
-    })();
-    // 모바일 뷰에서 기업카드 캐러셀 초기화
-    function initCompanyCardCarousel() {
-        document.querySelectorAll('.mCompanyGrid.swiper').forEach(function(grid) {
-            // 기존 Swiper 인스턴스가 있으면 먼저 제거
-            if (grid.swiperInstance) {
-                grid.swiperInstance.destroy(true, true);
-                grid.swiperInstance = null;
-            }
-            
-            if (window.innerWidth <= 640) {
-                // 모바일에서만 Swiper 초기화
-                grid.swiperInstance = new Swiper(grid, {
-                    slidesPerView: 1.2,
-                    spaceBetween: 16,
-                    freeMode: true,
-                    resistance: true,
-                    resistanceRatio: 0.85,
-                });
-            }
-        });
-    }
-
-    // 초기화 및 리사이즈 이벤트
-    initCompanyCardCarousel();
-    let resizeTimer;
-    window.addEventListener('resize', function() {
-        clearTimeout(resizeTimer);
-        resizeTimer = setTimeout(initCompanyCardCarousel, 250);
-    });
-
-    // 실시간 매칭 현황 업데이트 (live_stats.php 연결)
-    (function() {
-        const updateInterval = 10000; // 10초마다 서버에서 최신 데이터 가져옴
-        
-        function updateUI(data) {
-            if (!data || !data.rates) return;
-            
-            const reqRateEl = document.getElementById('percent-request');
-            const accRateEl = document.getElementById('percent-accept');
-
-            if (reqRateEl) reqRateEl.textContent = data.rates.request_rate.toFixed(2) + '%';
-            if (accRateEl) accRateEl.textContent = data.rates.accept_rate.toFixed(2) + '%';
-
-            // 지난 주 대비 수치 업데이트
-            const reqDiffEl = document.querySelector('#promo-request-compare .compare_val');
-            const accDiffEl = document.querySelector('#promo-accept-compare .compare_val');
-
-            if (reqDiffEl && data.rates.request_diff !== undefined) {
-                const arrow = data.rates.request_diff >= 0 ? '↑' : '↓';
-                reqDiffEl.innerHTML = `<span class="arrow">${arrow}</span> ${Math.abs(data.rates.request_diff).toFixed(2)}%P`;
-                const parent = document.getElementById('promo-request-compare');
-                if (parent) parent.className = `mVisual_promo_card_compare ${data.rates.request_diff >= 0 ? 'up' : 'down'}`;
-            }
-            if (accDiffEl && data.rates.accept_diff !== undefined) {
-                const arrow = data.rates.accept_diff >= 0 ? '↑' : '↓';
-                accDiffEl.innerHTML = `<span class="arrow">${arrow}</span> ${Math.abs(data.rates.accept_diff).toFixed(2)}%P`;
-                const parent = document.getElementById('promo-accept-compare');
-                if (parent) parent.className = `mVisual_promo_card_compare ${data.rates.accept_diff >= 0 ? 'up' : 'down'}`;
-            }
-        }
-
-        function fetchLiveStats() {
-            fetch('/live_stats.php?t=' + Date.now())
-                .then(response => response.json())
-                .then(data => {
-                    updateUI(data);
-                })
-                .catch(error => console.error('Live stats fetch failed:', error));
-        }
-
-        function updateClock() {
-            const now = new Date();
-            const options = { 
-                year: 'numeric', month: '2-digit', day: '2-digit',
-                hour: '2-digit', minute: '2-digit', second: '2-digit',
-                hour12: true 
-            };
-            const clockStr = now.toLocaleString('ko-KR', options);
-            const clockEl = document.getElementById('promo-live-clock');
-            if (clockEl) clockEl.textContent = clockStr;
-        }
-
-        // 초기 실행
-        fetchLiveStats();
-        updateClock();
-        
-    // 주기적 실행
-        setInterval(fetchLiveStats, updateInterval);
-        setInterval(updateClock, 1000);
-    })();
-
-    var matchingMessageTemplates = {
-        distributor: [
-            { title: '신규 제품 소싱', body: '판매 가능한 신규 제품을 공급할 제조사를 찾고 있습니다. 테스트 거래 후 지속적인 거래를 희망합니다.' },
-            { title: '제조 파트너 발굴', body: '안정적인 제품 공급이 가능한 제조사를 찾고 있습니다. 협의를 통해 장기 거래를 검토하고자 합니다.' },
-            { title: 'OEM/ODM 생산 협력', body: '자체 브랜드 제품 생산을 위해 OEM 또는 ODM 협력 가능한 제조사를 찾고 있습니다.' },
-            { title: '신규 상품 발굴', body: '판매 경쟁력 있는 신규 제품을 발굴하기 위해 협력 가능한 제조 파트너를 찾고 있습니다.' },
-            { title: '안정적인 공급처 확보', body: '지속적으로 제품 공급이 가능한 제조사를 찾고 있습니다. 상호 협의를 통해 거래 조건을 논의하고자 합니다.' }
-        ],
-        manufacturer: [
-            { title: '유통 파트너 발굴', body: '자사 제품의 판매 확대를 위해 유통 및 판매 협력 가능한 기업을 찾고 있습니다. 안정적이고 장기적인 거래 파트너를 희망합니다.' },
-            { title: '신규 판매 채널 확보', body: '제품 판매처를 확대하기 위해 협업 가능한 유통사를 찾고 있습니다. 상호 협의를 통해 거래 조건을 논의하고자 합니다.' },
-            { title: '수출/해외 유통 협력', body: '자사 제품의 해외 시장 진출을 위해 유통 및 판매 협력 가능한 파트너를 찾고 있습니다.' },
-            { title: '신규 브랜드 유통 협력', body: '신제품 출시와 함께 판매 확대가 가능한 유통사를 찾고 있습니다. 초기 협의 후 장기적인 거래를 희망합니다.' },
-            { title: '안정적인 판매 파트너 확보', body: '지속적인 제품 공급이 가능한 유통 및 판매 파트너를 찾고 있습니다. 안정적인 거래 관계 구축을 희망합니다.' }
-        ]
-    };
-
-    function getCurrentBizRole() {
-        var selected = $('input[name="biz_role_ui"]:checked').val();
-        return selected === 'manufacturer' ? 'manufacturer' : 'distributor';
-    }
-
-    function renderMatchingTemplateCards() {
-        var role = getCurrentBizRole();
-        var rows = matchingMessageTemplates[role] || [];
-        var html = '';
-        for (var i = 0; i < rows.length; i++) {
-            var n = i + 1;
-            html += ''
-                + '<div class="req-tpl-card" data-idx="' + i + '">'
-                + '  <div class="req-tpl-head">'
-                + '    <input type="checkbox" class="reqTplChk" value="' + i + '" id="reqTplChk_' + i + '">'
-                + '    <h6>' + n + '. ' + rows[i].title + '</h6>'
-                + '  </div>'
-                + '  <p>' + rows[i].body + '</p>'
-                + '</div>';
-        }
-        $('#reqTplGrid').html(html);
-    }
-
-    function updateMatchingMessageContent() {
-        var role = getCurrentBizRole();
-        var rows = matchingMessageTemplates[role] || [];
-        var selectedTexts = [];
-        $('.reqTplChk:checked').each(function () {
-            var idx = parseInt($(this).val(), 10);
-            if (!isNaN(idx) && rows[idx]) selectedTexts.push(rows[idx].body);
-        });
-        var extra = $.trim($('#match_content_extra').val() || '');
-        var merged = selectedTexts.join("\n\n");
-        if (extra) merged = merged ? (merged + "\n\n" + extra) : extra;
-        $('#match_content').val(merged);
-    }
-
-    $('body').on('click', '.requestTypeBtn', function () {
-        var value = $(this).data('value') === 'TM' ? 'TM' : 'BASIC';
-        $('#request_type').val(value);
-
-        $('.requestTypeBtn').removeClass('is-active').css({
-            borderColor: '#d9dce3',
-            background: '#fff',
-            color: '#333'
-        });
-        $(this).addClass('is-active').css({
-            borderColor: '#3856ff',
-            background: '#3856ff',
-            color: '#fff'
-        });
-
-        if (value === 'TM') {
-            $('#requestTypeDesc').text('TM 요청은 1건당 30크레딧이 차감되며, 24시간 동안 상대 기업 응답이 없으면 운영팀이 오프라인 연락을 지원합니다.');
-        } else {
-            $('#requestTypeDesc').text('기본 요청은 상대 기업에 매칭 요청만 전달되며 1건당 10크레딧이 차감됩니다.');
-        }
-    });
-
-    $('body').on('change', 'input[name="biz_role_ui"]', function () {
-        renderMatchingTemplateCards();
-        updateMatchingMessageContent();
-    });
-
-    $('body').on('click', '.req-tpl-card', function (e) {
-        if ($(e.target).is('input')) return;
-        var $chk = $(this).find('.reqTplChk');
-        $chk.prop('checked', !$chk.prop('checked')).trigger('change');
-    });
-
-    $('body').on('change', '.reqTplChk', function () {
-        $(this).closest('.req-tpl-card').toggleClass('is-on', $(this).is(':checked'));
-        updateMatchingMessageContent();
-    });
-
-    $('body').on('input', '#match_content_extra', function () {
-        updateMatchingMessageContent();
-    });
-
-    if (window.CompanyDetailActions && typeof window.CompanyDetailActions.init === 'function') {
-        window.CompanyDetailActions.init({
-            getSetUrl: '/get_set.php',
-            popupSelector: '.popup_submit',
-            requestTypeSelector: '#request_type',
-            receiverNameSelector: '#recv',
-            planUrl: '/ko/plan.php',
-            loginUrl: function () {
-                return '/bbs/login.php?url=' + encodeURIComponent(location.pathname + location.search);
-            },
-            beforeSubmit: function () {
-                updateMatchingMessageContent();
-                if (!$.trim($('#match_content').val())) {
-                    if (typeof jAlert === 'function') jAlert('매칭 메시지 선택(선택) 또는 추가 요청사항(선택) 중 1개 이상 입력해 주세요.', '알림');
-                    else alert('매칭 메시지 선택(선택) 또는 추가 요청사항(선택) 중 1개 이상 입력해 주세요.');
-                    return false;
-                }
-                return true;
-            },
-            onPopupReady: function (kedcd, parts) {
-                $('#match_content_extra').val('');
-                renderMatchingTemplateCards();
-                updateMatchingMessageContent();
-                if (parts && parts[2]) $('#recv').text(parts[2]);
-            }
-        });
-    }
-
-</script>
+<script src="<?php echo G5_THEME_JS_URL; ?>/index.js?ver=<?php echo G5_JS_VER; ?>&rev=20260417-1550"></script>
 
 	</div>
 <?php

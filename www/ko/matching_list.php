@@ -20,7 +20,19 @@ $board['bo_9']  = "1"; // 2뎁스
 // ----------------------------------------------------------
 // 2. CSS / 헤더
 // ----------------------------------------------------------
-add_stylesheet('<link rel="stylesheet" href="'.G5_THEME_URL.'/css/pages/matching_list.css?ver='.G5_CSS_VER.'">', 200);
+$matching_list_css_ver = @filemtime(G5_PATH.'/ko/css/matching_list.css');
+$matching_list_js_ver  = @filemtime(G5_PATH.'/ko/js/matching_list.js');
+if (!$matching_list_css_ver) $matching_list_css_ver = G5_CSS_VER;
+if (!$matching_list_js_ver)  $matching_list_js_ver  = G5_JS_VER;
+
+add_stylesheet('<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">', 180);
+add_stylesheet('<link rel="stylesheet" href="'.G5_URL.'/ko/css/design-tokens.css?ver='.G5_CSS_VER.'">', 185);
+add_stylesheet('<link rel="stylesheet" href="'.G5_URL.'/ko/css/badges.css?ver='.G5_CSS_VER.'">', 210);
+add_stylesheet('<link rel="stylesheet" href="'.G5_URL.'/ko/css/company-card.css?ver='.G5_CSS_VER.'">', 211);
+add_stylesheet('<link rel="stylesheet" href="'.G5_URL.'/ko/css/favorite.css?ver='.G5_CSS_VER.'">', 212);
+add_stylesheet('<link rel="stylesheet" href="'.G5_URL.'/ko/css/section-header.css?ver='.G5_CSS_VER.'">', 213);
+add_stylesheet('<link rel="stylesheet" href="'.G5_URL.'/ko/css/list-sidebar.css?ver='.G5_CSS_VER.'">', 214);
+add_stylesheet('<link rel="stylesheet" href="'.G5_URL.'/ko/css/matching_list.css?ver='.$matching_list_css_ver.'">', 220);
 include_once(G5_THEME_PATH.'/head.php');
 
 // ----------------------------------------------------------
@@ -102,6 +114,10 @@ $mq = '';
 if (isset($_GET['section'])) $mq .= 'section=' . urlencode($_GET['section']) . '&';
 $mq .= 'type=' . urlencode($current_type) . '&';
 $mq .= 'sort=' . urlencode($current_sort) . '&';
+$mq_cat = '';
+if (isset($_GET['section'])) $mq_cat .= 'section=' . urlencode($_GET['section']) . '&';
+$mq_cat .= 'type=' . urlencode($current_type) . '&';
+$mq_cat .= 'sort=rank&';
 
 // 사업자번호 처리
 $input_comnum = !empty($_POST['comnum']) ? $_POST['comnum'] : (!empty($_GET['comnum']) ? $_GET['comnum'] : '');
@@ -138,11 +154,12 @@ $show_count_req = $page_size;
 // 7. 카드 데이터 빌드
 // ----------------------------------------------------------
 
-// 점수 계산 헬퍼 (NULL 방어 포함)
+// 점수 표시값 만들기
 function calc_score_avg($val) {
     return ($val !== null && $val !== '') ? number_format($val, 1) : '-';
 }
 
+// 뱃지 퍼센트 글자 정리 (10.00 -> 10)
 function format_badge_percent($value) {
     if ($value === null || $value === '') return '';
     $str = trim((string)$value);
@@ -154,7 +171,112 @@ function format_badge_percent($value) {
     return rtrim(rtrim(number_format($num, 2, '.', ''), '0'), '.');
 }
 
-// PD_NM 문자열을 태그 배열로 변환
+// 시안대로 회사명 마스킹
+function mask_company_name_like_mock($name) {
+    $source = (string)$name;
+    if (preg_match('/^(\(주\)|\(유\)|\(사\))?(.*)$/u', $source, $m)) {
+        $prefix = isset($m[1]) ? $m[1] : '';
+        $body   = isset($m[2]) ? $m[2] : '';
+    } else {
+        $prefix = '';
+        $body   = $source;
+    }
+
+    $keep_len = ($prefix !== '') ? 1 : 2;
+    $visible  = function_exists('mb_substr')
+        ? mb_substr($body, 0, $keep_len, 'UTF-8')
+        : substr($body, 0, $keep_len);
+
+    return $prefix . $visible . '****';
+}
+
+// 레이더 점 좌표 계산
+function radar_polar_point($cx, $cy, $r, $index, $num_axis) {
+    $angle = (M_PI * 2 * $index / $num_axis) - (M_PI / 2);
+    return [
+        'x' => $cx + $r * cos($angle),
+        'y' => $cy + $r * sin($angle),
+    ];
+}
+
+// 5축 레이더 SVG 만들기
+function build_radar_svg_5($scores) {
+    $labels = ['성장성', '수익성', '재무안정', '업력', '고용규모'];
+    $num_axis = 5;
+    $cx = 105;
+    $cy = 100;
+    $max_r = 48;
+    $label_r = 68;
+    $grid_levels = [0.2, 0.4, 0.6, 0.8, 1.0];
+
+    $safe_scores = [];
+    for ($i = 0; $i < $num_axis; $i++) {
+        $safe_scores[] = isset($scores[$i]) && is_numeric($scores[$i]) ? (float)$scores[$i] : 0.0;
+    }
+
+    $svg = '';
+
+    foreach ($grid_levels as $lv) {
+        $pts = [];
+        for ($i = 0; $i < $num_axis; $i++) {
+            $p = radar_polar_point($cx, $cy, $max_r * $lv, $i, $num_axis);
+            $pts[] = round($p['x'], 2) . ',' . round($p['y'], 2);
+        }
+        $svg .= '<polygon points="' . implode(' ', $pts) . '" class="radar-grid"/>';
+    }
+
+    for ($i = 0; $i < $num_axis; $i++) {
+        $p = radar_polar_point($cx, $cy, $max_r, $i, $num_axis);
+        $svg .= '<line x1="' . $cx . '" y1="' . $cy . '" x2="' . round($p['x'], 2) . '" y2="' . round($p['y'], 2) . '" stroke="#E8EBF0" stroke-width="0.5"/>';
+    }
+
+    $shape_points = [];
+    for ($i = 0; $i < $num_axis; $i++) {
+        $p = radar_polar_point($cx, $cy, $max_r * ($safe_scores[$i] / 5), $i, $num_axis);
+        $shape_points[] = round($p['x'], 2) . ',' . round($p['y'], 2);
+    }
+    $svg .= '<polygon points="' . implode(' ', $shape_points) . '" class="radar-shape"/>';
+
+    for ($i = 0; $i < $num_axis; $i++) {
+        $p = radar_polar_point($cx, $cy, $max_r * ($safe_scores[$i] / 5), $i, $num_axis);
+        $svg .= '<circle cx="' . round($p['x'], 2) . '" cy="' . round($p['y'], 2) . '" class="radar-dot"/>';
+    }
+
+    for ($i = 0; $i < $num_axis; $i++) {
+        $p = radar_polar_point($cx, $cy, $label_r, $i, $num_axis);
+        $x = $p['x'];
+        $y = $p['y'];
+        $anchor = 'middle';
+        $dx = 0;
+        if ($x < $cx - 5) {
+            $anchor = 'end';
+            $dx = -2;
+        } elseif ($x > $cx + 5) {
+            $anchor = 'start';
+            $dx = 2;
+        }
+
+        $dy = 0;
+        if ($y < $cy - 10) $dy = -3;
+        elseif ($y > $cy + 10) $dy = 8;
+        else $dy = 3;
+
+        $svg .= '<text x="' . round($x + $dx, 2) . '" y="' . round($y + $dy, 2) . '" text-anchor="' . $anchor . '" class="radar-label">' . htmlspecialchars($labels[$i]) . '</text>';
+    }
+
+    return $svg;
+}
+
+// 평점을 별 모양으로 변환
+function render_stars_html($score) {
+    $score = isset($score) && is_numeric($score) ? (float)$score : 0.0;
+    $full = (int)floor($score);
+    $part = $score - $full;
+    $star = '<svg viewBox="0 0 24 24" width="14" height="14" fill="#ffc107"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>';
+    return str_repeat($star, $full) . (($part >= 0.3) ? $star : '');
+}
+
+// 품목 문자열을 태그 배열로 변경
 function parse_pd_nm($pd_nm) {
     if (empty($pd_nm)) return [];
     $tags = explode(',', $pd_nm);
@@ -168,6 +290,7 @@ function parse_pd_nm($pd_nm) {
     return $result;
 }
 
+// 현재 카테고리의 구매 코드 찾기
 function get_target_codes_by_category($list_categories, $current_cat) {
     if (empty($current_cat) || $current_cat === 'all') return [];
     $target_codes = [];
@@ -188,6 +311,7 @@ function get_target_codes_by_category($list_categories, $current_cat) {
     return $target_codes;
 }
 
+// company 조회 WHERE 만들기
 function build_company_where_clause($target_codes, $restrict_cg_prefix = false) {
     $where_clause = "WHERE A.KEDCD != '' AND A.ENP_NM != ''";
     if ($restrict_cg_prefix) {
@@ -203,6 +327,7 @@ function build_company_where_clause($target_codes, $restrict_cg_prefix = false) 
     return $where_clause;
 }
 
+// 정렬 기준에 맞는 ORDER BY 만들기
 function build_company_order_clause($sort_key) {
     switch ($sort_key) {
         case 'grow':
@@ -239,8 +364,9 @@ function build_company_order_clause($sort_key) {
     }
 }
 
+// 현재 카테고리의 판매 코드 찾기
 function get_seller_codes_by_category($list_categories, $current_cat, $seller_category_code_map) {
-    // 전체보기: 현재 등록된 판매 코드셋 전체를 합산
+    // 전체면 모든 판매 코드 사용
     if (empty($current_cat) || $current_cat === 'all') {
         $all = [];
         foreach ($seller_category_code_map as $codes) {
@@ -249,12 +375,12 @@ function get_seller_codes_by_category($list_categories, $current_cat, $seller_ca
         return array_values(array_unique($all));
     }
 
-    // 하위 카테고리 직접 선택
+    // 소분류 직접 선택
     if (isset($seller_category_code_map[$current_cat])) {
         return array_values(array_unique($seller_category_code_map[$current_cat]));
     }
 
-    // 대분류 선택: 하위 카테고리 판매 코드셋을 합산
+    // 대분류면 하위 코드 합치기
     foreach ($list_categories as $lg) {
         if ($lg['slug'] === $current_cat) {
             $merged = [];
@@ -271,6 +397,7 @@ function get_seller_codes_by_category($list_categories, $current_cat, $seller_ca
     return [];
 }
 
+// buyer/seller에 맞는 WHERE 결정
 function resolve_where_clause_for_general_list($query_type, $current_cat, $list_categories, $seller_category_code_map) {
     if ($query_type === 'seller') {
         $seller_codes = get_seller_codes_by_category($list_categories, $current_cat, $seller_category_code_map);
@@ -282,6 +409,7 @@ function resolve_where_clause_for_general_list($query_type, $current_cat, $list_
     return build_company_where_clause($buyer_codes, false);
 }
 
+// 일반 리스트 카드와 총 개수 조회
 function fetch_general_cards_by_where($where_clause, $query_type, $show_count_req, $sort_key = 'rank', $offset = 0) {
     $cards = [];
 
@@ -608,61 +736,68 @@ foreach ($list_categories as $lg) {
 // 만약 아무것도 선택되지 않은 'all' 상태라면 첫 번째 그룹을 열어두거나 null 유지
 if (!$open_group_slug && $current_cat === 'all') {
 }
+
+$sort_labels = [
+    'rank' => '랭킹순',
+    'grow' => '성장성순',
+    'profit' => '수익성순',
+    'stable' => '안정성순',
+];
+$current_sort_label = isset($sort_labels[$current_sort]) ? $sort_labels[$current_sort] : $sort_labels['rank'];
+
+$sidebar_icon_map = [
+    'all' => 'cat-iso-all',
+    'metal' => 'cat-iso-7',
+    'chemical' => 'cat-iso-5',
+    'electronics' => 'cat-iso-10',
+    'machinery' => 'cat-iso-6',
+    'auto' => 'cat-iso-11',
+    'food' => 'cat-iso-4',
+    'medical' => 'cat-iso-17',
+    'packaging' => 'cat-iso-12',
+];
 ?>
 
+<div id="listWrap">
 <!-- =========================================================
-     모바일 전용: 업종별 카테고리 Swiper (대분류)
+     모바일 전용: 업종별 카테고리 탭
      ========================================================= -->
-<div class="list-cat-swiper-wrap">
-    <div class="list-cat-swiper swiper">
-        <div class="swiper-wrapper">
-            <div class="swiper-slide">
-                <a href="?<?php echo $mq; ?>cat=all"
-                   class="<?php echo ($current_cat === 'all' || $current_cat === '') ? 'on' : ''; ?>">
-                    전체
-                </a>
-            </div>
-            <?php foreach ($list_categories as $lg): ?>
-            <div class="swiper-slide">
-                <a href="?<?php echo $mq; ?>cat=<?php echo urlencode($lg['slug']); ?>"
-                   class="<?php echo ($current_cat === $lg['slug']) ? 'on' : ''; ?>">
-                    <?php echo htmlspecialchars($lg['label']); ?>
-                </a>
-            </div>
-            <?php endforeach; ?>
-        </div>
-    </div>
+<div class="list-cat-tab-wrap">
+    <div class="list-cat-tabs" id="catTabs"></div>
+    <div class="list-cat-sub" id="catSubSwiper"></div>
 </div>
 
 <!-- =========================================================
      본문 레이아웃
      ========================================================= -->
-     <div class="list-body">
+<div class="list-body">
     <div class="inner">
 
         <aside class="list-sidebar">
 
-            <a href="?cat=all&type=ai" class="list-sidebar_ai <?php echo $has_comnum ? 'on' : ''; ?>">
-                <span class="list-sidebar_ai_icon">
-                    <svg viewBox="0 0 24 24" aria-hidden="true">
-                        <path d="M12 2L13.8 7.2L19.2 7.5L14.6 10.8L16.2 16L12 12.9L7.8 16L9.4 10.8L4.8 7.5L10.2 7.2Z" fill="currentColor"/>
-                    </svg>
-                </span>
-                <span>AI 추천받기</span>
-            </a>
+            <div class="list-sidebar_ai_section">
+                <a href="?cat=all&type=ai" class="list-sidebar_ai <?php echo $has_comnum ? 'on' : ''; ?>">
+                    <span class="list-sidebar_ai_icon"><span class="ai-magic-wand"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16.8 2.2l1.1 2.3 2.3 1.1-2.3 1.1-1.1 2.3-1.1-2.3-2.3-1.1 2.3-1.1 1.1-2.3zm3.2 2.8.6 1.1 1.1.6-1.1.6-.6 1.1-.6-1.1-1.1-.6 1.1-.6.6-1.1zM7.4 17.4 16.1 8.7l2.6 2.6-8.7 8.7-2.6-2.6zm-1 2.4 1.3 1.3-3.1 1 .8-2.9z"/></svg></span></span>
+                    <div class="list-sidebar_ai_body">
+                        <span class="list-sidebar_ai_label">AI 추천받기</span>
+                        <span class="list-sidebar_ai_sub">실거래 기반 맞춤 추천</span>
+                    </div>
+                    <span class="list-sidebar_ai_arrow" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M5 12h14M12 5l7 7-7 7"/>
+                        </svg>
+                    </span>
+                </a>
+            </div>
 
-            <h2 class="list-sidebar_title">업종별</h2>
+            <div class="list-sidebar_or"><span>업종별 탐색</span></div>
 
             <nav class="list-sidebar_nav">
-                <a href="?<?php echo $mq; ?>cat=all"
-                   class="<?php echo ($current_cat === 'all' || $current_cat === '') ? 'on' : ''; ?>">
-                    전체보기
-                </a>
-
                 <?php foreach ($list_categories as $lg):
                     // 수정된 로직: 현재 카테고리가 본인이거나 하위 카테고리인 경우 그룹을 엽니다.
                     $is_open          = ($open_group_slug === $lg['slug']);
-                    $is_current_group = ($current_cat    === $lg['slug']);
+                    $is_current_group = ($current_cat === $lg['slug']);
+                    $group_icon = isset($sidebar_icon_map[$lg['slug']]) ? $sidebar_icon_map[$lg['slug']] : 'cat-iso-all';
                 ?>
                 <div class="list-sidebar_group <?php echo $is_open ? 'is-open' : ''; ?>"
                      data-group="<?php echo htmlspecialchars($lg['slug']); ?>">
@@ -672,10 +807,17 @@ if (!$open_group_slug && $current_cat === 'all') {
                          tabindex="0"
                          aria-expanded="<?php echo $is_open ? 'true' : 'false'; ?>"
                          aria-controls="sidebar-body-<?php echo htmlspecialchars($lg['slug']); ?>">
-                        <a href="?<?php echo $mq; ?>cat=<?php echo urlencode($lg['slug']); ?>"
-                           class="list-sidebar_group_title list-sidebar_group_title_link">
-                            <?php echo htmlspecialchars($lg['label']); ?>
-                        </a>
+                        <div class="list-sidebar_group_left">
+                            <span class="list-sidebar_group_icon">
+                                <svg viewBox="0 0 48 48" width="26" height="26" aria-hidden="true">
+                                    <use href="#<?php echo htmlspecialchars($group_icon); ?>"></use>
+                                </svg>
+                            </span>
+                            <a href="?<?php echo $mq_cat; ?>cat=<?php echo urlencode($lg['slug']); ?>"
+                               class="list-sidebar_group_name list-sidebar_group_title_link">
+                                <?php echo htmlspecialchars($lg['label']); ?>
+                            </a>
+                        </div>
                         <span class="list-sidebar_group_toggle" aria-hidden="true">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <path d="M9 18l6-6-6-6"/>
@@ -685,12 +827,14 @@ if (!$open_group_slug && $current_cat === 'all') {
 
                     <div class="list-sidebar_group_body"
                          id="sidebar-body-<?php echo htmlspecialchars($lg['slug']); ?>">
-                        <?php foreach ($lg['sub'] as $sub): ?>
-                        <a href="?<?php echo $mq; ?>cat=<?php echo urlencode($sub['slug']); ?>"
-                           class="list-sidebar_sub <?php echo ($current_cat === $sub['slug']) ? 'on' : ''; ?>">
-                            <?php echo htmlspecialchars($sub['label']); ?>
-                        </a>
-                        <?php endforeach; ?>
+                        <div class="list-sidebar_sub_wrap">
+                            <?php foreach ($lg['sub'] as $sub): ?>
+                            <a href="?<?php echo $mq_cat; ?>cat=<?php echo urlencode($sub['slug']); ?>"
+                               class="list-sidebar_sub <?php echo ($current_cat === $sub['slug']) ? 'on' : ''; ?>">
+                                <?php echo htmlspecialchars($sub['label']); ?>
+                            </a>
+                            <?php endforeach; ?>
+                        </div>
                     </div>
                 </div>
                 <?php endforeach; ?>
@@ -712,17 +856,34 @@ if (!$open_group_slug && $current_cat === 'all') {
                             사업자번호 <?php echo htmlspecialchars($_GET['comnum']); ?> 검색 ·&nbsp;
                         </span>
                         <?php endif; ?>
-                        <strong><?php echo (int)$cards_total_count; ?></strong>개의 기업
+                        <strong><?php echo (int)($current_type === 'seller' ? $seller_total_count : $buyer_total_count); ?></strong>개의 기업
                     </p>
                 </div>
                 <div class="list-sort">
-                    <label for="sortSelect">정렬</label>
                     <select id="sortSelect" aria-label="정렬 기준">
                         <option value="rank" <?php echo $current_sort === 'rank' ? 'selected' : ''; ?>>랭킹순</option>
                         <option value="grow" <?php echo $current_sort === 'grow' ? 'selected' : ''; ?>>성장성순</option>
                         <option value="profit" <?php echo $current_sort === 'profit' ? 'selected' : ''; ?>>수익성순</option>
-                        <option value="stable" <?php echo $current_sort === 'stable' ? 'selected' : ''; ?>>재무안정순</option>
+                        <option value="stable" <?php echo $current_sort === 'stable' ? 'selected' : ''; ?>>안정성순</option>
                     </select>
+                    <div class="sort-dropdown" id="sortDropdown">
+                        <button type="button"
+                                class="sort-dropdown-btn"
+                                id="sortDropdownBtn"
+                                aria-haspopup="listbox"
+                                aria-expanded="false">
+                            <span id="sortDropdownLabel"><?php echo htmlspecialchars($current_sort_label); ?></span>
+                            <svg class="sort-dropdown-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="6 9 12 15 18 9"/>
+                            </svg>
+                        </button>
+                        <ul class="sort-dropdown-menu" id="sortDropdownMenu" role="listbox">
+                            <li class="sort-dropdown-item<?php echo $current_sort === 'rank' ? ' selected' : ''; ?>" role="option" data-val="rank">랭킹순</li>
+                            <li class="sort-dropdown-item<?php echo $current_sort === 'grow' ? ' selected' : ''; ?>" role="option" data-val="grow">성장성순</li>
+                            <li class="sort-dropdown-item<?php echo $current_sort === 'profit' ? ' selected' : ''; ?>" role="option" data-val="profit">수익성순</li>
+                            <li class="sort-dropdown-item<?php echo $current_sort === 'stable' ? ' selected' : ''; ?>" role="option" data-val="stable">안정성순</li>
+                        </ul>
+                    </div>
                 </div>
             </div>
 
@@ -733,9 +894,20 @@ if (!$open_group_slug && $current_cat === 'all') {
                     </div>
                 <?php else: ?>
                     <?php foreach ($cards as $idx => $c):
-                        $scoreValue = (float)$c['score'];
-                        $starFull   = floor($scoreValue);
-                        $starPart   = $scoreValue - $starFull;
+                        $scoreValue = isset($c['score']) && is_numeric($c['score']) ? (float)$c['score'] : 0.0;
+                        $growScore = isset($c['grow']) && is_numeric($c['grow']) ? (float)$c['grow'] : 0.0;
+                        $profitScore = isset($c['profit']) && is_numeric($c['profit']) ? (float)$c['profit'] : 0.0;
+                        $stableScore = isset($c['stable']) && is_numeric($c['stable']) ? (float)$c['stable'] : 0.0;
+
+                        $careerScore = min(5, max(2.5, $stableScore * 0.9 + (($idx % 3) * 0.3)));
+                        $employScore = min(5, max(2.5, $growScore * 0.8 + (($idx % 4) * 0.25)));
+                        $radarScores = [$growScore, $profitScore, $stableScore, $careerScore, $employScore];
+                        $radarSvg = build_radar_svg_5($radarScores);
+                        $starsHtml = render_stars_html($scoreValue);
+
+                        $allTags = is_array($c['tags'] ?? null) ? $c['tags'] : [];
+                        $showNum = 3;
+                        $displayTags = array_slice($allTags, 0, $showNum);
                     ?>
                     <a href="/ko/company_detail.php?cd=<?php echo urlencode(simple_crypt($c['kedcd'] ?? '')); ?>"
                     class="mCompanyCard detail_view"
@@ -749,7 +921,7 @@ if (!$open_group_slug && $current_cat === 'all') {
                     style="text-decoration:none;color:inherit;">
 
                         <div class="mCompanyCard_content">
-                            <div class="mCompanyCard_venture_slot">
+                            <div class="mCompanyCard_badges">
                                 <?php
                                 $has_badge = false;
                                 $badge_growth = format_badge_percent($c['badge_growth'] ?? null);
@@ -758,77 +930,39 @@ if (!$open_group_slug && $current_cat === 'all') {
 
                                 if ($badge_growth !== '') {
                                     $has_badge = true;
-                                    echo '<span class="mCompanyCard_badge mCompanyCard_badge_growth_top" style="font-size:11px;font-weight:500;padding:3px 8px;border-radius:4px;background:#dbeafe;color:#1e40af;">성장TOP' . htmlspecialchars($badge_growth) . '%</span>';
+                                    echo '<span class="mCompanyCard_badge mCompanyCard_badge_top_growth">성장TOP' . htmlspecialchars($badge_growth) . '%</span>';
                                 }
                                 if ($badge_stability !== '') {
                                     $has_badge = true;
-                                    echo '<span class="mCompanyCard_badge mCompanyCard_badge_stability_top" style="font-size:11px;font-weight:500;padding:3px 8px;border-radius:4px;background:#ede9fe;color:#5b21b6;">재무안정TOP' . htmlspecialchars($badge_stability) . '%</span>';
+                                    echo '<span class="mCompanyCard_badge mCompanyCard_badge_top_stability">재무안정TOP' . htmlspecialchars($badge_stability) . '%</span>';
                                 }
                                 if ($badge_venture === 'Y') {
                                     $has_badge = true;
-                                    echo '<span class="mCompanyCard_badge mCompanyCard_badge_venture" style="font-size:11px;font-weight:500;padding:3px 8px;border-radius:4px;background:#10b981;color:#fff;">벤처인증</span>';
+                                    echo '<span class="mCompanyCard_badge mCompanyCard_badge_venture">벤처인증</span>';
                                 }
                                 if (!$has_badge) {
-                                    echo '<span class="mCompanyCard_badge mCompanyCard_badge_pending" style="font-size:11px;font-weight:500;padding:3px 8px;border-radius:4px;background:#f3f4f6;color:#9ca3af;">뱃지 준비중</span>';
+                                    echo '<span class="mCompanyCard_badge mCompanyCard_badge_placeholder">뱃지 준비중</span>';
                                 }
                                 ?>
                             </div>
-                            <h3 class="mCompanyCard_title"><?php echo htmlspecialchars($c['title']); ?></h3>
+                            <h3 class="mCompanyCard_title"><?php echo htmlspecialchars(mask_company_name_like_mock($c['title'] ?? '')); ?></h3>
 
                             <p class="mCompanyCard_desc">
-                                <?php 
-                                $allTags = $c['tags']; 
-                                $totalCount = count($allTags);
-                                $showNum = 2; 
-                                
-                                if ($totalCount > 0):
-                                    $displayTags = array_slice($allTags, 0, $showNum);
-                                    $restCount = $totalCount - $showNum;
-
-                                    foreach ($displayTags as $t): 
-                                ?>
+                                <?php foreach ($displayTags as $t): ?>
                                     <span class="mCompanyCard_desc_tag"><?php echo htmlspecialchars($t); ?></span>
-                                <?php 
-                                    endforeach; 
-
-                                    if ($restCount > 0): 
-                                ?>
-                                    <span class="mCompanyCard_desc_more">+<?php echo $restCount; ?></span>
-                                <?php 
-                                    endif; 
-                                endif; 
-                                ?>
+                                <?php endforeach; ?>
                             </p>
 
-                            <div class="mCompanyCard_rating">
-                                <div class="mCompanyCard_rating_left">
-                                    <span class="mCompanyCard_rating_label">종합</span>
-                                    <span class="mCompanyCard_rating_score"><?php echo $c['score']; ?></span>
-                                    <div class="mCompanyCard_rating_stars">
-                                        <?php for ($i = 1; $i <= 5; $i++):
-                                            if ($i <= $starFull): ?>
-                                        <svg viewBox="0 0 24 24" fill="#ffc107"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-                                        <?php elseif ($i == $starFull + 1 && $starPart > 0): ?>
-                                        <span class="star-partial">
-                                            <svg viewBox="0 0 24 24" fill="#ffc107" style="position:absolute; left:0; top:0; clip-path: inset(0 <?php echo (1 - $starPart) * 100; ?>% 0 0);"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-                                            <svg viewBox="0 0 24 24" fill="#e0e0e0" style="position:absolute; left:0; top:0;"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-                                        </span>
-                                        <?php else: ?>
-                                        <svg viewBox="0 0 24 24" fill="#e0e0e0"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-                                        <?php endif; endfor; ?>
-                                    </div>
+                            <div class="radar-card">
+                                <div class="radar-card_chart">
+                                    <svg viewBox="0 0 210 200" class="radar-svg"><?php echo $radarSvg; ?></svg>
                                 </div>
-                                <div class="mCompanyCard_rating_right">
-                                    <?php foreach (['grow' => '성장성', 'profit' => '수익성', 'stable' => '재무안정'] as $key => $label): ?>
-                                    <div class="mCompanyCard_rating_bar">
-                                        <span class="mCompanyCard_rating_bar_label"><?php echo $label; ?></span>
-                                        <div class="mCompanyCard_rating_bar_chart">
-                                            <div class="mCompanyCard_rating_bar_fill" style="width:<?php echo ($c[$key] !== null ? ($c[$key] / 5 * 100) : 0); ?>%;"></div>
-                                        </div>
-                                        <span class="mCompanyCard_rating_bar_count"><?php echo ($c[$key] !== null ? number_format($c[$key], 1) : '-'); ?></span>
-                                    </div>
-                                    <?php endforeach; ?>
-                                </div>
+                            </div>
+
+                            <div class="mCompanyCard_footer_stars">
+                                <span class="mCompanyCard_footer_stars_wrap"><?php echo $starsHtml; ?></span>
+                                <span class="mCompanyCard_footer_score"><?php echo number_format($scoreValue, 1); ?></span>
+                                <span class="mCompanyCard_footer_max">/ 5.0</span>
                             </div>
                         </div>
                     </a>
@@ -836,13 +970,13 @@ if (!$open_group_slug && $current_cat === 'all') {
                 <?php endif; ?>
             </div>
 
-            <div class="list-more-wrap">
-                <button type="button" id="listMoreBtn" class="list-more-btn">더보기</button>
+            <div class="list-grid_more_wrap">
+                <button type="button" id="listMoreBtn" class="list-grid_more_btn">더보기</button>
             </div>
         </main>
     </div>
 </div>
-
+</div>
 
 
 <!-- =========================================================
@@ -860,462 +994,42 @@ $company_detail_popup_variant = 'advanced';
 include_once(G5_THEME_PATH . '/partials/company-detail-matching-popup.php');
 ?>
 
-<!-- =========================================================
-     JavaScript
-     ========================================================= -->
-<script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
-<script>
-// ----------------------------------------------------------
-// Swiper: 모바일 카테고리 탭
-// ----------------------------------------------------------
-(function () {
-    var catEl = document.querySelector('.list-cat-swiper');
-    if (!catEl) return;
-    new Swiper('.list-cat-swiper', {
-        slidesPerView: 'auto',
-        spaceBetween: 8,
-        freeMode: true,
-        grabCursor: true,
-        resistanceRatio: 0.85
-    });
-})();
-
-// ----------------------------------------------------------
-// 사이드바 대분류 아코디언
-// ----------------------------------------------------------
-(function () {
-    var groups = document.querySelectorAll('.list-sidebar_group');
-    if (!groups.length) return;
-
-    function openOnlyThis(targetGroup) {
-        groups.forEach(function (g) {
-            var isThis = (g === targetGroup);
-            g.classList.toggle('is-open', isThis);
-            var h = g.querySelector('.list-sidebar_group_header');
-            if (h) h.setAttribute('aria-expanded', isThis ? 'true' : 'false');
-        });
+<?php
+$list_categories_for_js = [];
+foreach ($list_categories as $lg) {
+    $subs = [];
+    foreach ($lg['sub'] as $sub) {
+        $subs[] = [
+            'slug' => $sub['slug'],
+            'label' => $sub['label'],
+        ];
     }
 
-    groups.forEach(function (group) {
-        var header = group.querySelector('.list-sidebar_group_header');
-        if (!header) return;
+    $list_categories_for_js[] = [
+        'slug' => $lg['slug'],
+        'label' => $lg['label'],
+        'sub' => $subs,
+    ];
+}
 
-        header.addEventListener('click', function (e) {
-            var toggleEl = e.target.closest('.list-sidebar_group_toggle');
-            var linkEl = header.querySelector('.list-sidebar_group_title_link');
-
-            if (toggleEl) {
-                if (group.classList.contains('is-open')) {
-                    group.classList.remove('is-open');
-                    header.setAttribute('aria-expanded', 'false');
-                } else {
-                    openOnlyThis(group);
-                }
-                return;
-            }
-
-            if (linkEl && linkEl.href) {
-                location.href = linkEl.href;
-            }
-        });
-
-        header.addEventListener('keydown', function (e) {
-            if (e.key === 'Enter') {
-                var linkEl = header.querySelector('.list-sidebar_group_title_link');
-                if (linkEl && linkEl.href) {
-                    e.preventDefault();
-                    location.href = linkEl.href;
-                }
-            } else if (e.key === ' ') {
-                e.preventDefault();
-                var toggleEl = header.querySelector('.list-sidebar_group_toggle');
-                if (toggleEl) toggleEl.click();
-            }
-        });
-    });
-})();
-
-// ----------------------------------------------------------
-// 구매하기/판매하기 탭 스위치
-// ----------------------------------------------------------
-(function () {
-    var wrap = document.querySelector('.list-type-switch');
-    if (!wrap) return;
-
-    var slider      = wrap.querySelector('.list-type-slider');
-    var btns        = wrap.querySelectorAll('.list-type-btn');
-    var moreBtn     = document.getElementById('listMoreBtn');
-    var sortSelect  = document.getElementById('sortSelect');
-    var grid        = document.querySelector('.list-grid');
-    var pageSize    = <?php echo (int)$free_limit; ?>;
-    var canLoadMore = <?php echo $can_load_more ? 'true' : 'false'; ?>;
-    var isServerPaged = <?php echo !$has_comnum ? 'true' : 'false'; ?>;
-    var totalByType = {
-        buyer: <?php echo (int)$buyer_total_count; ?>,
-        seller: <?php echo (int)$seller_total_count; ?>
-    };
-    var showCount   = { buyer: pageSize, seller: pageSize };
-    var currentType = <?php echo json_encode($current_type === 'seller' ? 'seller' : 'buyer'); ?>;
-    var isLoadingMore = false;
-
-    function updateSlider() {
-        var active = wrap.querySelector('.list-type-btn.on');
-        if (!slider || !active) return;
-        var wrapRect = wrap.getBoundingClientRect();
-        var btnRect  = active.getBoundingClientRect();
-        slider.style.width = btnRect.width + 'px';
-        slider.style.left  = (btnRect.left - wrapRect.left) + 'px';
-    }
-
-    function renderType(type) {
-        currentType = type;
-        var cards   = document.querySelectorAll('.list-grid .mCompanyCard');
-        var matched = [];
-
-        cards.forEach(function (card) {
-            if (card.getAttribute('data-type') === type) matched.push(card);
-            card.style.display = 'none';
-        });
-
-        var visibleCount = isServerPaged ? matched.length : Math.min(showCount[type], matched.length);
-        for (var i = 0; i < visibleCount; i++) matched[i].style.display = '';
-
-        var countEl = document.querySelector('.list-count strong');
-        if (countEl) {
-            var totalCountForType = totalByType[type] || 0;
-            countEl.textContent = totalCountForType;
-        }
-
-        if (moreBtn) {
-            var totalCountForType = totalByType[type] || 0;
-            var shouldShowMoreBtn = totalCountForType > visibleCount;
-            moreBtn.style.display = shouldShowMoreBtn ? '' : 'none';
-        }
-    }
-
-    function getScore(card, key) {
-        var raw = card.getAttribute('data-' + key);
-        if (raw === null || raw === '') return null;
-        var n = parseFloat(raw);
-        return isNaN(n) ? null : n;
-    }
-
-    function sortCards(key) {
-        if (!grid) return;
-
-        var cards  = Array.from(grid.querySelectorAll('.mCompanyCard'));
-        var buyers = [];
-        var sellers = [];
-
-        cards.forEach(function (card) {
-            (card.getAttribute('data-type') === 'seller' ? sellers : buyers).push(card);
-        });
-
-        var cmp;
-        if (key === 'rank') {
-            cmp = function (a, b) {
-                var av = getScore(a, 'total');
-                var bv = getScore(b, 'total');
-                if (av === null && bv === null) return (parseInt(a.getAttribute('data-rank'), 10) || 0) - (parseInt(b.getAttribute('data-rank'), 10) || 0);
-                if (av === null) return 1;
-                if (bv === null) return -1;
-                if (bv === av) return (parseInt(a.getAttribute('data-rank'), 10) || 0) - (parseInt(b.getAttribute('data-rank'), 10) || 0);
-                return bv - av;
-            };
-        } else {
-            cmp = function (a, b) {
-                var av = getScore(a, key);
-                var bv = getScore(b, key);
-                if (av === null && bv === null) return (parseInt(a.getAttribute('data-rank'), 10) || 0) - (parseInt(b.getAttribute('data-rank'), 10) || 0);
-                if (av === null) return 1;
-                if (bv === null) return -1;
-                if (bv === av) return (parseInt(a.getAttribute('data-rank'), 10) || 0) - (parseInt(b.getAttribute('data-rank'), 10) || 0);
-                return bv - av;
-            };
-        }
-
-        buyers.sort(cmp);
-        sellers.sort(cmp);
-
-        grid.innerHTML = '';
-        buyers.concat(sellers).forEach(function (card) {
-            grid.appendChild(card);
-        });
-    }
-
-    function fetchAndReplaceGrid(url, preserveScroll) {
-        var prevScrollY = window.scrollY || window.pageYOffset || 0;
-        isLoadingMore = true;
-        if (moreBtn) moreBtn.disabled = true;
-
-        return fetch(url.toString(), { credentials: 'same-origin' })
-            .then(function (res) { return res.text(); })
-            .then(function (html) {
-                var doc = new DOMParser().parseFromString(html, 'text/html');
-                var nextGrid = doc.querySelector('.list-grid');
-                if (!nextGrid) throw new Error('list-grid not found');
-
-                grid.innerHTML = nextGrid.innerHTML;
-                if (!isServerPaged) {
-                    sortCards(sortSelect ? (sortSelect.value || 'rank') : 'rank');
-                }
-                renderType(currentType);
-                if (preserveScroll) window.scrollTo(0, prevScrollY);
-                history.replaceState({ type: currentType }, '', url.toString());
-            })
-            .catch(function () {
-                location.href = url.toString();
-            })
-            .finally(function () {
-                isLoadingMore = false;
-                if (moreBtn) moreBtn.disabled = false;
-            });
-    }
-
-    function fetchAndAppendGrid(url, preserveScroll) {
-        var prevScrollY = window.scrollY || window.pageYOffset || 0;
-        isLoadingMore = true;
-        if (moreBtn) moreBtn.disabled = true;
-
-        return fetch(url.toString(), { credentials: 'same-origin' })
-            .then(function (res) { return res.text(); })
-            .then(function (html) {
-                var doc = new DOMParser().parseFromString(html, 'text/html');
-                var nextGrid = doc.querySelector('.list-grid');
-                if (!nextGrid) throw new Error('list-grid not found');
-
-                var nodes = Array.from(nextGrid.querySelectorAll('.mCompanyCard'));
-                if (!nodes.length) return;
-                nodes.forEach(function (card) { grid.appendChild(card); });
-
-                if (!isServerPaged) {
-                    sortCards(sortSelect ? (sortSelect.value || 'rank') : 'rank');
-                }
-                renderType(currentType);
-                if (preserveScroll) window.scrollTo(0, prevScrollY);
-                history.replaceState({ type: currentType }, '', url.toString());
-            })
-            .catch(function () {
-                location.href = url.toString();
-            })
-            .finally(function () {
-                isLoadingMore = false;
-                if (moreBtn) moreBtn.disabled = false;
-            });
-    }
-
-    function setType(type) {
-        if (isServerPaged && type !== currentType) {
-            var moveUrl = new URL(location.href);
-            moveUrl.searchParams.set('type', type);
-            moveUrl.searchParams.delete('offset');
-            location.href = moveUrl.toString();
-            return;
-        }
-
-        btns.forEach(function (b) {
-            var isActive = b.getAttribute('data-type') === type;
-            b.classList.toggle('on', isActive);
-            b.setAttribute('aria-pressed', isActive ? 'true' : 'false');
-        });
-        updateSlider();
-        renderType(type);
-
-        var url = new URL(location.href);
-        url.searchParams.set('type', type);
-        history.replaceState({ type: type }, '', url);
-    }
-
-    // 초기화
-    btns.forEach(function (btn) {
-        btn.setAttribute('aria-pressed', btn.classList.contains('on') ? 'true' : 'false');
-        btn.addEventListener('click', function () {
-            setType(btn.getAttribute('data-type'));
-        });
-    });
-
-    var urlType = new URLSearchParams(location.search).get('type');
-    setType(urlType === 'seller' ? 'seller' : 'buyer');
-
-    if (sortSelect) {
-        sortSelect.addEventListener('change', function () {
-            if (isServerPaged) {
-                if (isLoadingMore) return;
-                var selectedSort = sortSelect.value || 'rank';
-                var url = new URL(location.href);
-                url.searchParams.set('sort', selectedSort);
-                url.searchParams.set('offset', 0);
-                fetchAndReplaceGrid(url, true);
-                return;
-            }
-            showCount[currentType] = pageSize;
-            sortCards(sortSelect.value || 'rank');
-            renderType(currentType);
-        });
-        if (!isServerPaged) sortCards(sortSelect.value || 'rank');
-        renderType(currentType);
-    }
-
-    if (moreBtn) {
-        moreBtn.addEventListener('click', function () {
-            if (!canLoadMore) {
-                jAlert("로그인 후 이용하세요.", "알림", function () {
-                    location.href = "/bbs/login.php?url=" + encodeURIComponent(location.pathname + location.search);
-                });
-                return;
-            }
-            if (isServerPaged) {
-                if (isLoadingMore) return;
-                var currentShown = document.querySelectorAll('.list-grid .mCompanyCard[data-type="' + currentType + '"]').length;
-                if (currentShown >= (totalByType[currentType] || 0)) {
-                    renderType(currentType);
-                    return;
-                }
-
-                var url = new URL(location.href);
-                url.searchParams.set('offset', currentShown);
-                url.searchParams.set('sort', sortSelect ? (sortSelect.value || 'rank') : 'rank');
-                fetchAndAppendGrid(url, true);
-                return;
-            }
-            showCount[currentType] += pageSize;
-            renderType(currentType);
-        });
-    }
-
-    window.addEventListener('resize', updateSlider);
-})();
-
-// ----------------------------------------------------------
-// 매칭 메시지 템플릿
-// ----------------------------------------------------------
-var matchingMessageTemplates = {
-    distributor: [
-        { title: '신규 제품 소싱', body: '판매 가능한 신규 제품을 공급할 제조사를 찾고 있습니다. 테스트 거래 후 지속적인 거래를 희망합니다.' },
-        { title: '제조 파트너 발굴', body: '안정적인 제품 공급이 가능한 제조사를 찾고 있습니다. 협의를 통해 장기 거래를 검토하고자 합니다.' },
-        { title: 'OEM/ODM 생산 협력', body: '자체 브랜드 제품 생산을 위해 OEM 또는 ODM 협력 가능한 제조사를 찾고 있습니다.' },
-        { title: '신규 상품 발굴', body: '판매 경쟁력 있는 신규 제품을 발굴하기 위해 협력 가능한 제조 파트너를 찾고 있습니다.' },
-        { title: '안정적인 공급처 확보', body: '지속적으로 제품 공급이 가능한 제조사를 찾고 있습니다. 상호 협의를 통해 거래 조건을 논의하고자 합니다.' }
+$matching_list_js_config = [
+    'freeLimit' => (int)$free_limit,
+    'canLoadMore' => (bool)$can_load_more,
+    'isServerPaged' => !$has_comnum,
+    'totalByType' => [
+        'buyer' => (int)$buyer_total_count,
+        'seller' => (int)$seller_total_count,
     ],
-    manufacturer: [
-        { title: '유통 파트너 발굴', body: '자사 제품의 판매 확대를 위해 유통 및 판매 협력 가능한 기업을 찾고 있습니다. 안정적이고 장기적인 거래 파트너를 희망합니다.' },
-        { title: '신규 판매 채널 확보', body: '제품 판매처를 확대하기 위해 협업 가능한 유통사를 찾고 있습니다. 상호 협의를 통해 거래 조건을 논의하고자 합니다.' },
-        { title: '수출/해외 유통 협력', body: '자사 제품의 해외 시장 진출을 위해 유통 및 판매 협력 가능한 파트너를 찾고 있습니다.' },
-        { title: '신규 브랜드 유통 협력', body: '신제품 출시와 함께 판매 확대가 가능한 유통사를 찾고 있습니다. 초기 협의 후 장기적인 거래를 희망합니다.' },
-        { title: '안정적인 판매 파트너 확보', body: '지속적인 제품 공급이 가능한 유통 및 판매 파트너를 찾고 있습니다. 안정적인 거래 관계 구축을 희망합니다.' }
-    ]
-};
-
-function getCurrentBizRole() {
-    var selected = $('input[name="biz_role_ui"]:checked').val();
-    return selected === 'manufacturer' ? 'manufacturer' : 'distributor';
-}
-
-function renderMatchingTemplateCards() {
-    var role = getCurrentBizRole();
-    var rows = matchingMessageTemplates[role] || [];
-    var html = '';
-    for (var i = 0; i < rows.length; i++) {
-        var n = i + 1;
-        html += ''
-            + '<div class="req-tpl-card" data-idx="' + i + '">'
-            + '  <div class="req-tpl-head">'
-            + '    <input type="checkbox" class="reqTplChk" value="' + i + '" id="reqTplChk_' + i + '">'
-            + '    <h6>' + n + '. ' + rows[i].title + '</h6>'
-            + '  </div>'
-            + '  <p>' + rows[i].body + '</p>'
-            + '</div>';
-    }
-    $('#reqTplGrid').html(html);
-}
-
-function updateMatchingMessageContent() {
-    var role = getCurrentBizRole();
-    var rows = matchingMessageTemplates[role] || [];
-    var selectedTexts = [];
-    $('.reqTplChk:checked').each(function () {
-        var idx = parseInt($(this).val(), 10);
-        if (!isNaN(idx) && rows[idx]) selectedTexts.push(rows[idx].body);
-    });
-    var extra = $.trim($('#match_content_extra').val() || '');
-    var merged = selectedTexts.join("\n\n");
-    if (extra) merged = merged ? (merged + "\n\n" + extra) : extra;
-    $('#match_content').val(merged);
-}
-
-// ----------------------------------------------------------
-// 요청 방식 선택 (기본/TM)
-// ----------------------------------------------------------
-$('body').on('click', '.requestTypeBtn', function () {
-    var value = $(this).data('value') === 'TM' ? 'TM' : 'BASIC';
-    $('#request_type').val(value);
-
-    $('.requestTypeBtn').removeClass('is-active').css({
-        borderColor: '#d9dce3',
-        background: '#fff',
-        color: '#333'
-    });
-    $(this).addClass('is-active').css({
-        borderColor: '#3856ff',
-        background: '#3856ff',
-        color: '#fff'
-    });
-
-    if (value === 'TM') {
-        $('#requestTypeDesc').text('TM 요청은 1건당 30크레딧이 차감되며, 24시간 동안 상대 기업 응답이 없으면 운영팀이 오프라인 연락을 지원합니다.');
-    } else {
-        $('#requestTypeDesc').text('기본 요청은 상대 기업에 매칭 요청만 전달되며 1건당 10크레딧이 차감됩니다.');
-    }
-});
-
-$('body').on('change', 'input[name="biz_role_ui"]', function () {
-    renderMatchingTemplateCards();
-    updateMatchingMessageContent();
-});
-
-$('body').on('click', '.req-tpl-card', function (e) {
-    if ($(e.target).is('input')) return;
-    var $chk = $(this).find('.reqTplChk');
-    $chk.prop('checked', !$chk.prop('checked')).trigger('change');
-});
-
-$('body').on('change', '.reqTplChk', function () {
-    $(this).closest('.req-tpl-card').toggleClass('is-on', $(this).is(':checked'));
-    updateMatchingMessageContent();
-});
-
-$('body').on('input', '#match_content_extra', function () {
-    updateMatchingMessageContent();
-});
-
-if (window.CompanyDetailActions && typeof window.CompanyDetailActions.init === 'function') {
-    window.CompanyDetailActions.init({
-        getSetUrl: '/get_set.php',
-        detailTrigger: '.js-detail-popup',
-        popupSelector: '.popup_submit',
-        requestTypeSelector: '#request_type',
-        receiverNameSelector: '#recv',
-        planUrl: '/ko/plan.php',
-        loginUrl: function () {
-            return '/bbs/login.php?url=' + encodeURIComponent(location.pathname + location.search);
-        },
-        beforeSubmit: function () {
-            updateMatchingMessageContent();
-            if (!$.trim($('#match_content').val())) {
-                if (typeof jAlert === 'function') jAlert('매칭 메시지 선택(선택) 또는 추가 요청사항(선택) 중 1개 이상 입력해 주세요.', '알림');
-                else alert('매칭 메시지 선택(선택) 또는 추가 요청사항(선택) 중 1개 이상 입력해 주세요.');
-                return false;
-            }
-            return true;
-        },
-        onPopupReady: function (kedcd, parts) {
-            $('#match_content_extra').val('');
-            renderMatchingTemplateCards();
-            updateMatchingMessageContent();
-            if (parts && parts[2]) $('#recv').text(parts[2]);
-        }
-    });
-}
+    'currentType' => ($current_type === 'seller') ? 'seller' : 'buyer',
+    'currentCat' => $current_cat,
+    'currentSort' => $current_sort,
+    'mq' => $mq,
+    'listCategories' => $list_categories_for_js,
+];
+?>
+<script>
+window.MATCHING_LIST_CONFIG = <?php echo json_encode($matching_list_js_config, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
 </script>
+<script src="<?php echo G5_URL; ?>/ko/js/matching_list.js?ver=<?php echo (int)$matching_list_js_ver; ?>"></script>
 
 <?php include_once(G5_THEME_PATH.'/tail.php'); ?>

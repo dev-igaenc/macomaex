@@ -13,6 +13,8 @@
         popupSelector: ".popup_submit",
         requestTypeSelector: "#request_type",
         receiverNameSelector: "#recv",
+        detailOpenMode: "modal",
+        detailUrlAttr: "data-detail-url",
         planUrl: "/ko/plan.php",
         loginUrl: function () {
             return "/bbs/login.php?url=" + encodeURIComponent(location.pathname + location.search);
@@ -251,7 +253,16 @@
                 event.preventDefault();
                 if (loadingDetail) return;
 
-                var kedcd = $(this).attr("kedcd");
+                var $trigger = $(this);
+                if (opts.detailOpenMode === "page") {
+                    var detailUrl = $trigger.attr(opts.detailUrlAttr) || $trigger.attr("href");
+                    if (detailUrl) {
+                        location.href = detailUrl;
+                        return;
+                    }
+                }
+
+                var kedcd = $trigger.attr("kedcd");
                 if (!kedcd) return;
                 loadingDetail = true;
 
