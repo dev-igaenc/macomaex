@@ -1,6 +1,9 @@
 <?php
 include_once("./_common.php");
 
+$favorite_css_ver = file_exists(__DIR__ . '/css/favorite.css') ? filemtime(__DIR__ . '/css/favorite.css') : time();
+$favorite_js_ver = file_exists(__DIR__ . '/js/favorite.js') ? filemtime(__DIR__ . '/js/favorite.js') : time();
+
 // badge 퍼센트 포맷 변환
 function format_badge_percent_detail($value) {
 	if ($value === null || $value === '') return '';
@@ -147,6 +150,16 @@ $company = sql_fetch("
 
 if (empty($company['KEDCD'])) {
 	alert('기업 정보를 찾을 수 없습니다.', '/ko/matching_list.php');
+}
+
+$favorite_company = array();
+if (!empty($member['mb_id'])) {
+	$favorite_company = sql_fetch("
+		SELECT ms_id
+		FROM g5_favorite
+		WHERE mb_id = '" . sql_escape_string($member['mb_id']) . "'
+		  AND KEDCD = '" . sql_escape_string($company['KEDCD']) . "'
+	");
 }
 
 // 기업의 업종코드(BZC_CD) 기준 업종명 조회
@@ -391,7 +404,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 	// trade_request에는 먼저 요청 원본 데이터를 저장하고, credit_used는 차감 성공 후에만 1로 바꾼다.
 	$sql = "INSERT INTO trade_request SET
 		request_mb_id = '" . sql_escape_string($requestMemberId) . "',
-		target_mb_id = NULL,
 		request_company_name = '" . sql_escape_string($requestCompanyName) . "',
 		target_company_name = '" . sql_escape_string($targetCompanyName) . "',
 		request_bzno = '" . sql_escape_string($requestBzno) . "',
@@ -518,8 +530,7 @@ $companyDetailData = array(
 	<link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" rel="stylesheet" />
 	<link rel="stylesheet" href="css/design-tokens.css" />
 	<link rel="stylesheet" href="css/badges.css" />
-	<link rel="stylesheet" href="css/favorite.css">
-    <!-- <link rel="stylesheet" href="css/auth-toggle.css"> -->
+	<link rel="stylesheet" href="css/favorite.css?ver=<?php echo $favorite_css_ver; ?>">
 	<link rel="stylesheet" href="css/confirm-modal.css">
 	<link rel="stylesheet" href="css/share.css">
 	<link rel="stylesheet" href="css/verify-modal.css" />
@@ -590,7 +601,7 @@ $companyDetailData = array(
 			<a class="btn-back" href="javascript:history.back();"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg> 돌아가기</a>
 			<div class="top-nav-actions">
 				<button type="button" class="btn-match-cta-top" id="openTypeModal2">거래 요청하기</button>
-				<button type="button" class="btn-favorite" data-favorite title="관심기업 등록" aria-label="관심기업 등록">
+				<button type="button" class="btn-favorite<?php echo !empty($favorite_company['ms_id']) ? ' is-active' : ''; ?>" data-favorite data-kedcd="<?php echo htmlspecialchars($company['KEDCD'], ENT_QUOTES, 'UTF-8'); ?>" title="관심기업 등록" aria-label="관심기업 등록">
 					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
 				</button>
 				<button type="button" class="btn-topnav-icon" data-share title="공유하기" aria-label="공유하기">
@@ -613,114 +624,7 @@ $companyDetailData = array(
 		</div>
 	</div>
 
-	<!-- 1) 거래 요청서 작성 -->
-	<div class="modal-overlay" id="modalRequest" aria-hidden="true">
-		<div class="modal" role="dialog" aria-labelledby="reqTitle">
-			<div class="modal-header">
-				<h2 id="reqTitle">거래 요청서 작성</h2>
-				<button type="button" class="modal-close" data-close="modalRequest" aria-label="닫기">&times;</button>
-			</div>
-			<div class="modal-body">
-				<div class="form-grid">
-					<div>
-						<div class="form-section-title">1. 거래요청기업 정보</div>
-						<table class="read-table">
-							<tr><th>회사명</th><td><?php echo get_text($company['ENP_NM'] ?? ''); ?></td></tr>
-							<tr><th>사업자번호</th><td><?php echo get_text(licenseNum($company['BZNO'] ?? '')); ?></td></tr>
-							<tr><th>설립</th><td><?php echo get_text($foundedYear); ?></td></tr>
-							<tr><th>고용인원</th><td><?php echo get_text(!empty($company['LABORER_SUM']) ? number_format((float)$company['LABORER_SUM']) . '명' : ''); ?></td></tr>
-							<tr><th>기업유형</th><td><?php echo get_text($companyType); ?></td></tr>
-							<tr><th>업종</th><td><?php echo get_text($industry['k_code_name'] ?? ''); ?></td></tr>
-							<tr><th>주요제품</th><td><?php echo get_text($company['PD_NM'] ?? ''); ?></td></tr>
-						</table>
-					</div>
-					<!-- 거래 요청사항 -->
-					<div id="reqSection">
-						<div class="form-section-title">2. 요청사항</div>
-
-						<div class="req2-step">
-							<div class="req2-step-label">거래 방향</div>
-							<div class="req2-chips" id="reqDirChips">
-								<label class="req2-chip active"><input type="radio" name="req_dir" value="buy" checked><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg> 구매</label>
-								<label class="req2-chip"><input type="radio" name="req_dir" value="supply"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0018 9h-1.26A8 8 0 103 16.3"/></svg> 판매</label>
-								<label class="req2-chip"><input type="radio" name="req_dir" value="collab"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg> 협업</label>
-							</div>
-						</div>
-
-						<div class="req2-step">
-							<div class="req2-step-label">거래 목적 선택 <span style="font-weight:400;color:#888">(복수 선택 가능)</span></div>
-							<div class="req2-chips" id="reqTypeChips"></div>
-						</div>
-
-						<div class="req2-step">
-							<div class="req2-step-label">거래 상세 정보</div>
-							<div class="req2-dynamic">
-								<label class="req2-required">거래 희망 품목</label>
-								<input type="text" id="reqItemField" name="req_item" placeholder="거래 희망 품목을 입력해 주세요.">
-							</div>
-						</div>
-
-						<div class="req2-step">
-							<div class="req2-step-label">추가 문의 사항</div>
-							<textarea class="extra" id="reqExtraNote" maxlength="500"><?php echo get_text($defaultMessage); ?></textarea>
-						</div>
-					</div>
-				</div>
-			</div>
-			<div class="modal-footer">
-				<button type="button" class="btn-gray" data-close="modalRequest">&#10005; 취소</button>
-				<button type="button" class="btn-primary" id="goToTypeStep">다음 &#10145;</button>
-			</div>
-		</div>
-	</div>
-
-	<!-- 2) 거래 타입 선택 -->
-	<div class="modal-overlay" id="modalType" aria-hidden="true">
-		<div class="modal modal-sm" role="dialog" aria-labelledby="typeTitle">
-			<div class="modal-header">
-				<h2 id="typeTitle">거래 타입 선택</h2>
-				<button type="button" class="modal-close" data-close="modalType" aria-label="닫기">&times;</button>
-			</div>
-			<div class="modal-body">
-				<div class="type-cards">
-					<div class="type-card selected" data-type="normal" role="button" tabindex="0">
-						<div class="type-card-head">
-							<input type="radio" name="match_type" value="normal" checked>
-							<div>
-								<div class="type-title">일반 거래</div>
-								<div class="type-cost">10 크레딧 차감</div>
-							</div>
-						</div>
-						<p class="type-desc">피거래기업의 응답을 기다리는 방식으로, 회신 시점이 불확실할 수 있습니다.</p>
-						<ul class="type-features">
-							<li>&#10003; 거래 수락 시 채팅방 오픈</li>
-							<li>&#9888; 수락/거절 응답 대기 필요</li>
-						</ul>
-					</div>
-					<div class="type-card" data-type="tm" role="button" tabindex="0">
-						<span class="badge-rec">추천</span>
-						<div class="type-card-head">
-							<input type="radio" name="match_type" value="tm">
-							<div>
-								<div class="type-title">TM 서포트 거래</div>
-								<div class="type-cost">30 크레딧 차감</div>
-							</div>
-						</div>
-						<p class="type-desc">24시간 무응답 시 전문 TM이 피거래기업을 직접 컨택하여 회신을 유도합니다.</p>
-						<ul class="type-features">
-							<li>&#10003; TM 거래 중계</li>
-							<li>&#10003; 무응답 시 직접 컨택</li>
-							<li>&#10003; 체계적 진행 보장</li>
-						</ul>
-					</div>
-				</div>
-			</div>
-			<div class="modal-footer">
-				<button type="button" class="btn-gray" id="backToRequest">&#8592; 뒤로</button>
-				<button type="button" class="btn-primary" id="confirmType" style="display:inline-flex;align-items:center;gap:6px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><polyline points="2,4 12,13 22,4"/></svg>거래요청하기</button>
-			</div>
-		</div>
-	</div>
+	<?php include __DIR__ . '/modal/match_request_modal.php'; ?>
 
 	<!-- floating bar removed -->
 
@@ -767,13 +671,28 @@ $companyDetailData = array(
 
 <script>
 window.COMPANY_DETAIL_DATA = <?php echo json_encode($companyDetailData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
+window.MATCH_REQUEST_CONTEXT = {
+	endpoint: "/get_set.php",
+	sourcePage: "company_detail",
+	defaultRequestMessage: <?php echo json_encode($defaultMessage, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>,
+	target: {
+		kedcd: <?php echo json_encode($company['KEDCD'] ?? '', JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>,
+		company: <?php echo json_encode($company['ENP_NM'] ?? '', JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>,
+		bzno: <?php echo json_encode(licenseNum($company['BZNO'] ?? ''), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>,
+		founded: <?php echo json_encode($foundedYear, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>,
+		employees: <?php echo json_encode(!empty($company['LABORER_SUM']) ? number_format((float)$company['LABORER_SUM']) . '명' : '', JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>,
+		corpType: <?php echo json_encode($companyType, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>,
+		industry: <?php echo json_encode($industry['k_code_name'] ?? '', JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>,
+		product: <?php echo json_encode($company['PD_NM'] ?? '', JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>
+	}
+};
 </script>
 <script src="js/badges.js"></script>
 <script src="js/company-detail-left.js"></script>
 <script src="js/company-detail.js"></script>
 <script src="js/ai-loading.js"></script>
 <script src="js/match-request-modal.js"></script>
-<script src="js/favorite.js"></script>
+<script src="js/favorite.js?ver=<?php echo $favorite_js_ver; ?>"></script>
 <script src="js/share.js"></script>
 <script src="js/confirm-modal.js"></script>
 <script src="js/verify-modal.js"></script>
