@@ -1,8 +1,29 @@
 <?php
 include_once("./_common.php");
 
+$g5['title'] = '기업 상세';
+
+$design_tokens_ver = file_exists(__DIR__ . '/css/design-tokens.css') ? filemtime(__DIR__ . '/css/design-tokens.css') : time();
+$badges_css_ver = file_exists(__DIR__ . '/css/badges.css') ? filemtime(__DIR__ . '/css/badges.css') : time();
 $favorite_css_ver = file_exists(__DIR__ . '/css/favorite.css') ? filemtime(__DIR__ . '/css/favorite.css') : time();
+$confirm_modal_css_ver = file_exists(__DIR__ . '/css/confirm-modal.css') ? filemtime(__DIR__ . '/css/confirm-modal.css') : time();
+$share_css_ver = file_exists(__DIR__ . '/css/share.css') ? filemtime(__DIR__ . '/css/share.css') : time();
+$verify_modal_css_ver = file_exists(__DIR__ . '/css/verify-modal.css') ? filemtime(__DIR__ . '/css/verify-modal.css') : time();
+$ai_loading_css_ver = file_exists(__DIR__ . '/css/ai-loading.css') ? filemtime(__DIR__ . '/css/ai-loading.css') : time();
+$company_detail_left_css_ver = file_exists(__DIR__ . '/css/company-detail-left.css') ? filemtime(__DIR__ . '/css/company-detail-left.css') : time();
+$company_detail_css_ver = file_exists(__DIR__ . '/css/company-detail.css') ? filemtime(__DIR__ . '/css/company-detail.css') : time();
+$match_request_modal_css_ver = file_exists(__DIR__ . '/css/match-request-modal.css') ? filemtime(__DIR__ . '/css/match-request-modal.css') : time();
+$top_nav_css_ver = file_exists(__DIR__ . '/css/top-nav.css') ? filemtime(__DIR__ . '/css/top-nav.css') : time();
+
 $favorite_js_ver = file_exists(__DIR__ . '/js/favorite.js') ? filemtime(__DIR__ . '/js/favorite.js') : time();
+$badges_js_ver = file_exists(__DIR__ . '/js/badges.js') ? filemtime(__DIR__ . '/js/badges.js') : time();
+$company_detail_left_js_ver = file_exists(__DIR__ . '/js/company-detail-left.js') ? filemtime(__DIR__ . '/js/company-detail-left.js') : time();
+$company_detail_js_ver = file_exists(__DIR__ . '/js/company-detail.js') ? filemtime(__DIR__ . '/js/company-detail.js') : time();
+$ai_loading_js_ver = file_exists(__DIR__ . '/js/ai-loading.js') ? filemtime(__DIR__ . '/js/ai-loading.js') : time();
+$match_request_modal_js_ver = file_exists(__DIR__ . '/js/match-request-modal.js') ? filemtime(__DIR__ . '/js/match-request-modal.js') : time();
+$share_js_ver = file_exists(__DIR__ . '/js/share.js') ? filemtime(__DIR__ . '/js/share.js') : time();
+$confirm_modal_js_ver = file_exists(__DIR__ . '/js/confirm-modal.js') ? filemtime(__DIR__ . '/js/confirm-modal.js') : time();
+$verify_modal_js_ver = file_exists(__DIR__ . '/js/verify-modal.js') ? filemtime(__DIR__ . '/js/verify-modal.js') : time();
 $defaultMessage = '담당자님, 안녕하세요. 귀사를 확인하고 연락드립니다. 신규 거래처를 검토 중이며, 귀사와 적합한 경우 거래 진행을 희망합니다. 상세 조건은 협의를 통해 논의하고자 합니다.';
 
 // badge 퍼센트 포맷 변환
@@ -525,40 +546,28 @@ $companyDetailData = array(
 	'empScore' => isset($score['emp_score_5']) ? (float)$score['emp_score_5'] : 0,
 	'score' => isset($score['final_total_score_5']) ? (float)$score['final_total_score_5'] : 0,
 );
-?>
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-	<meta charset="utf-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1">
-	<title>기업 상세 — 매커멕스</title>
-	<script>try { if (window.self !== window.top) document.documentElement.classList.add('in-iframe'); } catch(e) {}</script>
-	<link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" rel="stylesheet" />
-	<link rel="stylesheet" href="css/design-tokens.css" />
-	<link rel="stylesheet" href="css/badges.css" />
-	<link rel="stylesheet" href="css/favorite.css?ver=<?php echo $favorite_css_ver; ?>">
-	<link rel="stylesheet" href="css/confirm-modal.css">
-	<link rel="stylesheet" href="css/share.css">
-	<link rel="stylesheet" href="css/verify-modal.css" />
-	<link rel="stylesheet" href="css/ai-loading.css" />
-	<link rel="stylesheet" href="css/company-detail-left.css" />
-	<link rel="stylesheet" href="css/company-detail.css" />
-	<link rel="stylesheet" href="css/match-request-modal.css" />
-	<link rel="stylesheet" href="css/top-nav.css" />
-</head>
-<body>
-<div id="detailWrap">
+// 테마 헤더 사용, 상단 비주얼/페이지탑은 상세 레이아웃과 겹치지 않도록 숨김
+$hide_theme_svisual = true;
+$hide_theme_pagetop = true;
+$g5['body_script'] = ' class="page-company-detail"';
 
-	<!-- Header -->
-	<div id="site-header" data-variant="search"></div>
-	<script>
-	// In iframe mode, prevent header.js from injecting header and setting body paddingTop
-	if (document.documentElement.classList.contains('in-iframe')) {
-		var _sh = document.getElementById('site-header');
-		if (_sh) _sh.removeAttribute('id');
-	}
-	</script>
-	<script src="js/header.js"></script>
+add_stylesheet('<link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" rel="stylesheet" />', 180);
+add_stylesheet('<link rel="stylesheet" href="/ko/css/design-tokens.css?ver=' . $design_tokens_ver . '" />', 190);
+add_stylesheet('<link rel="stylesheet" href="/ko/css/badges.css?ver=' . $badges_css_ver . '" />', 200);
+add_stylesheet('<link rel="stylesheet" href="/ko/css/favorite.css?ver=' . $favorite_css_ver . '" />', 210);
+add_stylesheet('<link rel="stylesheet" href="/ko/css/confirm-modal.css?ver=' . $confirm_modal_css_ver . '" />', 220);
+add_stylesheet('<link rel="stylesheet" href="/ko/css/share.css?ver=' . $share_css_ver . '" />', 230);
+add_stylesheet('<link rel="stylesheet" href="/ko/css/verify-modal.css?ver=' . $verify_modal_css_ver . '" />', 240);
+add_stylesheet('<link rel="stylesheet" href="/ko/css/ai-loading.css?ver=' . $ai_loading_css_ver . '" />', 250);
+add_stylesheet('<link rel="stylesheet" href="/ko/css/company-detail-left.css?ver=' . $company_detail_left_css_ver . '" />', 260);
+add_stylesheet('<link rel="stylesheet" href="/ko/css/company-detail.css?ver=' . $company_detail_css_ver . '" />', 270);
+add_stylesheet('<link rel="stylesheet" href="/ko/css/match-request-modal.css?ver=' . $match_request_modal_css_ver . '" />', 280);
+add_stylesheet('<link rel="stylesheet" href="/ko/css/top-nav.css?ver=' . $top_nav_css_ver . '" />', 290);
+
+include_once(G5_THEME_PATH . '/head.php');
+?>
+<script>try { if (window.self !== window.top) document.documentElement.classList.add('in-iframe'); } catch(e) {}</script>
+<div id="detailWrap">
 	<script>
 	if (document.documentElement.classList.contains('in-iframe')) {
 		document.body.style.paddingTop = '0';
@@ -569,38 +578,6 @@ $companyDetailData = array(
 	}
 	</script>
 
-
-	<!-- Verify modal -->
-	<div class="modal_verify_overlay" id="modal_verify_overlay" aria-hidden="true">
-		<div class="modal_verify" role="dialog" aria-labelledby="modal_verify_company" aria-modal="true">
-			<button type="button" class="modal_verify_close" id="modal_verify_btn_close" aria-label="닫기">&times;</button>
-			<div class="modal_verify_icon" aria-hidden="true">
-				<svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>
-			</div>
-			<h2 class="modal_verify_company" id="modal_verify_company">(주)이가이엔씨</h2>
-			<p class="modal_verify_text">귀사는 데이터베이스 및 온라인 정보 제공업<br>법인기업으로 확인되었습니다.</p>
-			<p class="modal_verify_text2">본 서비스는 귀사와 동일·유사 업종의 실제 거래 데이터를 분석해 적합한 거래처를 추천해드립니다.</p>
-			<hr class="modal_verify_hr">
-			<p class="modal_verify_guide">추천 결과를 확인해보세요.</p>
-			<button type="button" class="modal_verify_btn" id="modal_verify_btn_ai">
-				<span class="sparkle" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-magic-wand"/></svg></span>
-				거래처 확인하기
-			</button>
-		</div>
-	</div>
-	<!-- AI guide modal -->
-	<div class="modal_verify_overlay" id="modal_ai_guide_overlay" aria-hidden="true">
-		<div class="modal_verify" role="dialog" aria-labelledby="modal_ai_guide_title" aria-modal="true">
-			<button type="button" class="modal_verify_close" id="modal_ai_guide_btn_close" aria-label="닫기">&times;</button>
-			<div class="modal_verify_icon" aria-hidden="true">
-				<svg viewBox="0 0 24 24"><path d="M12 17v-5M12 8h.01M4 12a8 8 0 1 0 16 0 8 8 0 1 0-16 0z"/></svg>
-			</div>
-			<h2 class="modal_verify_company" id="modal_ai_guide_title">AI 추천 안내</h2>
-			<p class="modal_verify_text" id="modal_ai_guide_text">사업자 번호를 입력하고 AI 추천받기를 눌러주세요.</p>
-			<p class="modal_verify_text2" id="modal_ai_guide_text2">AI 분석을 통해 업종/거래 데이터를 기반으로 적합한 거래처 판매처를 추천해드립니다.</p>
-			<button type="button" class="modal_verify_btn" id="modal_ai_guide_btn_ok">확인했어요</button>
-		</div>
-	</div>
 
 	<div class="page-wrap">
 		<nav class="top-nav">
@@ -693,16 +670,49 @@ window.MATCH_REQUEST_CONTEXT = {
 		product: <?php echo json_encode($company['PD_NM'] ?? '', JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>
 	}
 };
+window._isLoggedIn = function () {
+	return <?php echo !empty($member['mb_id']) ? 'true' : 'false'; ?>;
+};
+window._requireLogin = function (featureName) {
+	var targetFeature = featureName || '이 기능';
+	var loginUrl = '/bbs/login.php?url=' + encodeURIComponent(window.location.pathname + window.location.search + window.location.hash);
+
+	if (window._confirm) {
+		window._confirm({
+			icon: 'blue',
+			iconSvg: '<path d="M12 12a4 4 0 1 0 0-8a4 4 0 0 0 0 8Z"/><path d="M4 20a8 8 0 0 1 16 0"/>',
+			title: '로그인 후 이용 가능합니다',
+			desc: '<strong>' + targetFeature + '</strong> 기능은 로그인 후 이용하실 수 있습니다.<br>로그인 페이지로 이동하시겠어요?',
+			confirmText: '로그인',
+			cancelText: '닫기',
+			confirmClass: 'blue',
+			onConfirm: function () {
+				window.location.href = loginUrl;
+			}
+		});
+		return;
+	}
+
+	if (window.jAlert) {
+		window.jAlert('로그인 후 이용하세요.', '알림', function () {
+			window.location.href = loginUrl;
+		});
+		return;
+	}
+
+	if (window.confirm(targetFeature + ' 기능은 로그인 후 이용하실 수 있습니다. 로그인 페이지로 이동하시겠어요?')) {
+		window.location.href = loginUrl;
+	}
+};
 </script>
-<script src="js/badges.js"></script>
-<script src="js/company-detail-left.js"></script>
-<script src="js/company-detail.js"></script>
-<script src="js/ai-loading.js"></script>
-<script src="js/match-request-modal.js"></script>
-<script src="js/favorite.js?ver=<?php echo $favorite_js_ver; ?>"></script>
-<script src="js/share.js"></script>
-<script src="js/confirm-modal.js"></script>
-<script src="js/verify-modal.js"></script>
+<script src="/ko/js/badges.js?ver=<?php echo $badges_js_ver; ?>"></script>
+<script src="/ko/js/company-detail-left.js?ver=<?php echo $company_detail_left_js_ver; ?>"></script>
+<script src="/ko/js/company-detail.js?ver=<?php echo $company_detail_js_ver; ?>"></script>
+<script src="/ko/js/ai-loading.js?ver=<?php echo $ai_loading_js_ver; ?>"></script>
+<script src="/ko/js/match-request-modal.js?ver=<?php echo $match_request_modal_js_ver; ?>"></script>
+<script src="/ko/js/favorite.js?ver=<?php echo $favorite_js_ver; ?>"></script>
+<script src="/ko/js/share.js?ver=<?php echo $share_js_ver; ?>"></script>
+<script src="/ko/js/confirm-modal.js?ver=<?php echo $confirm_modal_js_ver; ?>"></script>
+<script src="/ko/js/verify-modal.js?ver=<?php echo $verify_modal_js_ver; ?>"></script>
 <!-- <script src="inc/auth-toggle.js"></script> -->
-</body>
-</html>
+<?php include_once(G5_THEME_PATH . '/tail.php'); ?>
