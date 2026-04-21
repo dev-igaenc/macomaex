@@ -10,10 +10,37 @@
 (function () {
 'use strict';
 
-// 기본 안내 문구는 PHP에서 내려준 값을 우선 사용하고, 없으면 현재 textarea 값을 사용
-var DEFAULT_NOTE = (window.COMPANY_DETAIL_DATA && window.COMPANY_DETAIL_DATA.defaultRequestMessage)
-    ? String(window.COMPANY_DETAIL_DATA.defaultRequestMessage)
-    : '';
+function initMatchRequestModal() {
+
+var MATCH_REQUEST_CONTEXT = window.MATCH_REQUEST_CONTEXT || {};
+var DEFAULT_NOTE = MATCH_REQUEST_CONTEXT.defaultRequestMessage
+    ? String(MATCH_REQUEST_CONTEXT.defaultRequestMessage)
+    : ((window.COMPANY_DETAIL_DATA && window.COMPANY_DETAIL_DATA.defaultRequestMessage)
+        ? String(window.COMPANY_DETAIL_DATA.defaultRequestMessage)
+        : '');
+var REQUEST_ENDPOINT = MATCH_REQUEST_CONTEXT.endpoint || '/get_set.php';
+
+function setText(id, value) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = value || '정보 준비중';
+}
+
+function setRequestTarget(target) {
+    MATCH_REQUEST_CONTEXT.target = target || null;
+    window.MATCH_REQUEST_CONTEXT = MATCH_REQUEST_CONTEXT;
+
+    target = MATCH_REQUEST_CONTEXT.target || {};
+    setText('matchTargetCompanyName', target.company || target.title || '');
+    setText('matchTargetBzno', target.bzno || '');
+    setText('matchTargetFounded', target.founded || '');
+    setText('matchTargetEmployees', target.employees || '');
+    setText('matchTargetCorpType', target.corpType || '');
+    setText('matchTargetIndustry', target.industry || '');
+    setText('matchTargetProduct', target.product || '');
+}
+
+window.setMatchRequestTarget = setRequestTarget;
 
 /* ---- 모달 열기/닫기 (전역 노출 — 페이지 내 다른 코드에서도 사용 가능) ---- */
 window.openModal = function (id) {
@@ -39,6 +66,7 @@ var openMatchBtn = document.getElementById('openTypeModal2');
 if (openMatchBtn) {
     openMatchBtn.addEventListener('click', function () {
         if (window._isLoggedIn && !window._isLoggedIn()) { window._requireLogin('거래 요청'); return; }
+        setRequestTarget(MATCH_REQUEST_CONTEXT.target || null);
         openModal('modalRequest');
     });
 }
@@ -155,6 +183,7 @@ dirChips.querySelectorAll('input[name="req_dir"]').forEach(function (r) {
     r.addEventListener('change', function () { if (r.checked) renderTypes(r.value); });
 });
 renderTypes('buy');
+setRequestTarget(MATCH_REQUEST_CONTEXT.target || null);
 
 /* ---- 추가 문의사항: 포커스 시 기본 텍스트 지우기 ---- */
 (function () {
@@ -197,7 +226,11 @@ if (confirmTypeBtn) {
         if (!dir || !matchType) { alert('거래 요청 정보를 다시 확인해 주세요.'); return; }
 
         var formData = new URLSearchParams();
-        formData.set('action', 'trade_request_insert');
+        var target = MATCH_REQUEST_CONTEXT.target || {};
+        if (!target.kedcd) { alert('대상 기업 정보를 다시 확인해 주세요.'); return; }
+
+        formData.set('type', 'trade_request_insert');
+        formData.set('target_kedcd', target.kedcd);
         formData.set('trade_direction', dir.value);
         typeChecks.forEach(function (c) { formData.append('trade_purpose[]', c.value); });
         formData.set('desired_item', result.data.req_item);
@@ -207,7 +240,7 @@ if (confirmTypeBtn) {
         confirmTypeBtn.disabled = true;
 
         // 거래 요청서 저장 fetch로 전송
-        fetch(window.location.pathname + window.location.search, {
+        fetch(REQUEST_ENDPOINT, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
@@ -232,8 +265,12 @@ if (confirmTypeBtn) {
             closeModal('modalType');
             closeModal('modalRequest');
 
-            // 거래 요청이 정상 완료되면 새로고침하여 마스킹 해제 상태를 다시 그린다.
-            if (data && data.unlock_detail) {
+            if (typeof window.onTradeRequestCreated === 'function') {
+                window.onTradeRequestCreated(data, target);
+                return;
+            }
+
+            if (MATCH_REQUEST_CONTEXT.sourcePage === 'company_detail' && data && data.unlock_detail) {
                 window.location.reload();
             }
         })
@@ -244,6 +281,14 @@ if (confirmTypeBtn) {
             confirmTypeBtn.disabled = false;
         });
     });
+}
+
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initMatchRequestModal);
+} else {
+    initMatchRequestModal();
 }
 
 })();
