@@ -804,4 +804,115 @@ function AutoHypen(companyNum){
 		return tempNum;
 	}
 }
+
+// 시안과 동일한 검색창 placeholder 타이핑 효과 (헤더/메인)
+function initComnumPlaceholderTyping() {
+	var selector = '#comnum_hd, #comnum_index, #comnum';
+	var inputs = document.querySelectorAll(selector);
+	if (!inputs.length) return;
+
+	inputs.forEach(function (input) {
+		if (!input || input.dataset.typingInit === '1') return;
+		input.dataset.typingInit = '1';
+
+		var fullText = (input.getAttribute('placeholder') || '').trim();
+		if (!fullText) return;
+
+		var timer = null;
+		var charIndex = 0;
+		var mode = 'typing'; // typing -> pauseFull -> deleting -> pauseEmpty
+
+		function clearTimer() {
+			if (timer) {
+				clearTimeout(timer);
+				timer = null;
+			}
+		}
+
+		function schedule(delay) {
+			clearTimer();
+			timer = setTimeout(tick, delay);
+		}
+
+		function shouldPause() {
+			return document.activeElement === input || !!input.value;
+		}
+
+		function resetAndResume() {
+			charIndex = 0;
+			mode = 'typing';
+			input.placeholder = '';
+			schedule(260);
+		}
+
+		function tick() {
+			if (shouldPause()) {
+				input.placeholder = '';
+				schedule(280);
+				return;
+			}
+
+			if (mode === 'typing') {
+				charIndex += 1;
+				input.placeholder = fullText.slice(0, charIndex);
+				if (charIndex >= fullText.length) {
+					mode = 'pauseFull';
+					schedule(1200);
+					return;
+				}
+				schedule(90);
+				return;
+			}
+
+			if (mode === 'pauseFull') {
+				mode = 'deleting';
+				schedule(45);
+				return;
+			}
+
+			if (mode === 'deleting') {
+				charIndex -= 1;
+				input.placeholder = fullText.slice(0, Math.max(0, charIndex));
+				if (charIndex <= 0) {
+					charIndex = 0;
+					mode = 'pauseEmpty';
+					schedule(320);
+					return;
+				}
+				schedule(45);
+				return;
+			}
+
+			mode = 'typing';
+			schedule(90);
+		}
+
+		input.addEventListener('focus', function () {
+			clearTimer();
+			input.placeholder = '';
+		});
+
+		input.addEventListener('blur', function () {
+			if (!input.value) resetAndResume();
+		});
+
+		input.addEventListener('input', function () {
+			if (input.value) {
+				clearTimer();
+				input.placeholder = '';
+			} else if (document.activeElement !== input) {
+				resetAndResume();
+			}
+		});
+
+			setTimeout(function () {
+				resetAndResume();
+			}, 200);
+		});
+}
+
+initComnumPlaceholderTyping();
+if (document.readyState === 'loading') {
+	document.addEventListener('DOMContentLoaded', initComnumPlaceholderTyping, { once: true });
+}
 </script>
