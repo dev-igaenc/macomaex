@@ -34,6 +34,20 @@ include_once(G5_LIB_PATH.'/popular.lib.php');
 #header h1 a { width: auto !important; }
 #header h1 a img { height: 28px; width: auto; display: block; }
 #header #pcMenu { flex: 1; min-width: 0; }
+#header #pcMenu #list { gap: 64px !important; }
+#header #pcMenu #list .gnbSub {
+  width: auto !important;
+  min-width: 150px !important;
+  padding-left: 8px !important;
+  padding-right: 8px !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+}
+#header #pcMenu #list .gnbSub > li > a,
+#header #pcMenu #list .gnbSub > li > a > span {
+  white-space: nowrap !important;
+  word-break: keep-all !important;
+}
 #header #hd_search { flex: 1; min-width: 0; display: flex; justify-content: center; margin: 0; }
 #header #hd_search .header-search-form { width: 100%; max-width: 500px; margin-left: 0; }
 #header .right-utill { display: flex !important; gap: 20px !important; align-items: center !important; margin-left: auto !important; margin-right: 12px !important; }
