@@ -54,8 +54,11 @@
 					</div>
 
 					<div class="req2-step">
-						<div class="req2-step-label">추가 문의 사항</div>
-						<textarea class="trm-extra" id="reqExtraNote" maxlength="500"></textarea>
+						<div class="req2-step-head">
+							<div class="req2-step-label">추가 문의 사항</div>
+							<button type="button" class="trm-auto-note-btn" id="reqAutoMessageBtn">자동 메시지</button>
+						</div>
+						<textarea class="trm-extra" id="reqExtraNote" maxlength="500" placeholder="추가 문의 사항을 직접 입력해 주세요."></textarea>
 					</div>
 				</div>
 			</div>

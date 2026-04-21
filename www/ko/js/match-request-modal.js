@@ -224,14 +224,20 @@ renderTypes('buy');
 setRequesterCompany(MATCH_REQUEST_CONTEXT.requesterCompany || null);
 setRequestTarget(MATCH_REQUEST_CONTEXT.target || null);
 
-/* ---- 추가 문의사항: 포커스 시 기본 텍스트 지우기 ---- */
+/* ---- 추가 문의사항: 자동 메시지 버튼 ---- */
 (function () {
     var ta = document.getElementById('reqExtraNote');
+    var autoBtn = document.getElementById('reqAutoMessageBtn');
     if (!ta) return;
-    if (!DEFAULT_NOTE) DEFAULT_NOTE = ta.value;
-    if (ta.value === DEFAULT_NOTE) ta.style.color = '#a0aec0';
-    ta.addEventListener('focus', function () { if (ta.value === DEFAULT_NOTE) { ta.value = ''; ta.style.color = ''; } });
-    ta.addEventListener('blur',  function () { if (!ta.value.trim()) { ta.value = DEFAULT_NOTE; ta.style.color = '#a0aec0'; } });
+    if (!autoBtn) return;
+
+    autoBtn.addEventListener('click', function () {
+        ta.value = DEFAULT_NOTE || '';
+        ta.focus();
+        if (typeof ta.setSelectionRange === 'function') {
+            ta.setSelectionRange(ta.value.length, ta.value.length);
+        }
+    });
 })();
 
 /* ---- 뒤로가기: 거래 타입 → 요청서 작성 ---- */
