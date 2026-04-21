@@ -143,10 +143,62 @@ function my_matching_build_item($row, $starred = false) {
 	);
 }
 
+function my_matching_requester_company_data($memberBzno) {
+	$memberBzno = preg_replace('/[^0-9]/', '', (string)$memberBzno);
+	if ($memberBzno === '') return array();
+
+	$company = sql_fetch("
+		SELECT
+			KEDCD,
+			ENP_NM,
+			BZNO,
+			BZC_CD,
+			ESTB_DT,
+			LABORER_SUM,
+			ENP_TYP,
+			PD_NM,
+			HPAGE_URL
+		FROM company
+		WHERE BZNO = '" . sql_escape_string($memberBzno) . "'
+		LIMIT 1
+	");
+	if (empty($company['KEDCD'])) return array();
+
+	$industry = sql_fetch("
+		SELECT k_code_name
+		FROM kssc
+		WHERE k_code = '" . sql_escape_string($company['BZC_CD']) . "'
+		LIMIT 1
+	");
+
+	$founded = '';
+	if (!empty($company['ESTB_DT']) && strlen($company['ESTB_DT']) >= 4) {
+		$founded = substr($company['ESTB_DT'], 0, 4) . '년';
+	}
+
+	$corpType = '';
+	if (!empty($company['ENP_TYP']) && isset($GLOBALS['enp_typt'][$company['ENP_TYP']])) {
+		$corpType = $GLOBALS['enp_typt'][$company['ENP_TYP']];
+	}
+
+	return array(
+		'company' => trim((string)($company['ENP_NM'] ?? '')),
+		'bzno' => !empty($company['BZNO']) ? licenseNum($company['BZNO']) : '',
+		'founded' => $founded,
+		'employees' => !empty($company['LABORER_SUM']) ? number_format((float)$company['LABORER_SUM']) . '명' : '',
+		'corpType' => $corpType,
+		'industry' => trim((string)($industry['k_code_name'] ?? '')),
+		'product' => trim((string)($company['PD_NM'] ?? '')),
+		'homepage' => trim((string)($company['HPAGE_URL'] ?? '')),
+	);
+}
+
 $memberBzno = preg_replace('/[^0-9]/', '', (string)($member['mb_4'] ?? ''));
 if ($memberBzno === '') {
 	alert('회원 사업자번호 정보가 없어 거래 히스토리를 확인할 수 없습니다.', '/');
 }
+
+$requesterCompanyData = my_matching_requester_company_data($memberBzno);
 
 $memberBznoSql = sql_escape_string($memberBzno);
 
@@ -305,7 +357,7 @@ if ($matchingPageDataJson === false) {
 }
 
 add_javascript('<script>window.__MATCHING_PAGE_DATA = ' . $matchingPageDataJson . ';</script>', 239);
-add_javascript('<script>window.MATCH_REQUEST_CONTEXT = { defaultRequestMessage: ' . json_encode($defaultMessage, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . ', endpoint: "/get_set.php", sourcePage: "my_matching", target: null };</script>', 238);
+add_javascript('<script>window.MATCH_REQUEST_CONTEXT = { defaultRequestMessage: ' . json_encode($defaultMessage, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . ', endpoint: "/ko/company_detail.php", sourcePage: "my_matching", requesterCompany: ' . json_encode($requesterCompanyData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . ', target: null };</script>', 238);
 ?>
 
 <div id="myMatchingPage">

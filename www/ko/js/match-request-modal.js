@@ -26,21 +26,58 @@ function setText(id, value) {
     el.textContent = value || '정보 준비중';
 }
 
+function escapeHtml(value) {
+    var div = document.createElement('div');
+    div.appendChild(document.createTextNode(String(value || '')));
+    return div.innerHTML;
+}
+
+function normalizeHomepageUrl(value) {
+    var url = String(value || '').trim();
+    if (!url) return '';
+    if (!/^https?:\/\//i.test(url)) {
+        url = 'https://' + url.replace(/^\/+/, '');
+    }
+    return url;
+}
+
+function setRequesterCompany(company) {
+    var requester = company || MATCH_REQUEST_CONTEXT.requesterCompany || {};
+    var homepageRow = document.getElementById('matchRequesterHomepageRow');
+    var homepageCell = document.getElementById('matchRequesterHomepage');
+    var homepageText = String(requester.homepage || '').trim();
+    var homepageUrl = normalizeHomepageUrl(homepageText);
+
+    MATCH_REQUEST_CONTEXT.requesterCompany = requester;
+    window.MATCH_REQUEST_CONTEXT = MATCH_REQUEST_CONTEXT;
+
+    setText('matchRequesterCompanyName', requester.company || requester.title || '');
+    setText('matchRequesterBzno', requester.bzno || '');
+    setText('matchRequesterFounded', requester.founded || '');
+    setText('matchRequesterEmployees', requester.employees || '');
+    setText('matchRequesterCorpType', requester.corpType || '');
+    setText('matchRequesterIndustry', requester.industry || '');
+    setText('matchRequesterProduct', requester.product || '');
+
+    if (!homepageRow || !homepageCell) return;
+
+    if (!homepageText) {
+        homepageRow.hidden = true;
+        homepageCell.textContent = '정보 준비중';
+        return;
+    }
+
+    homepageRow.hidden = false;
+    homepageCell.innerHTML = '<a href="' + escapeHtml(homepageUrl) + '" target="_blank" rel="noopener noreferrer">' + escapeHtml(homepageText) + '</a>';
+}
+
 function setRequestTarget(target) {
     MATCH_REQUEST_CONTEXT.target = target || null;
     window.MATCH_REQUEST_CONTEXT = MATCH_REQUEST_CONTEXT;
-
-    target = MATCH_REQUEST_CONTEXT.target || {};
-    setText('matchTargetCompanyName', target.company || target.title || '');
-    setText('matchTargetBzno', target.bzno || '');
-    setText('matchTargetFounded', target.founded || '');
-    setText('matchTargetEmployees', target.employees || '');
-    setText('matchTargetCorpType', target.corpType || '');
-    setText('matchTargetIndustry', target.industry || '');
-    setText('matchTargetProduct', target.product || '');
 }
 
 window.setMatchRequestTarget = setRequestTarget;
+window.setMatchRequesterCompany = setRequesterCompany;
 
 /* ---- 모달 열기/닫기 (전역 노출 — 페이지 내 다른 코드에서도 사용 가능) ---- */
 window.openModal = function (id) {
@@ -66,15 +103,16 @@ var openMatchBtn = document.getElementById('openTypeModal2');
 if (openMatchBtn) {
     openMatchBtn.addEventListener('click', function () {
         if (window._isLoggedIn && !window._isLoggedIn()) { window._requireLogin('거래 요청'); return; }
+        setRequesterCompany(MATCH_REQUEST_CONTEXT.requesterCompany || null);
         setRequestTarget(MATCH_REQUEST_CONTEXT.target || null);
         openModal('modalRequest');
     });
 }
 
 /* ---- 거래 타입 카드 라디오 동기화 ---- */
-document.querySelectorAll('.type-card').forEach(function (card) {
+document.querySelectorAll('.trm-type-card').forEach(function (card) {
     card.addEventListener('click', function () {
-        document.querySelectorAll('.type-card').forEach(function (c) { c.classList.remove('selected'); });
+        document.querySelectorAll('.trm-type-card').forEach(function (c) { c.classList.remove('selected'); });
         card.classList.add('selected');
         var r = card.querySelector('input[type="radio"]');
         if (r) r.checked = true;
@@ -88,7 +126,7 @@ function showReqWarning(msg) {
         warn = document.createElement('div');
         warn.id = 'reqWarning';
         warn.style.cssText = 'color:#e03131;font-size:13px;font-weight:600;margin-top:8px;padding:8px 12px;background:#fff5f5;border:1px solid #ffc9c9;border-radius:6px;text-align:center;';
-        var footer = document.querySelector('#modalRequest .modal-footer');
+        var footer = document.querySelector('#modalRequest .trm-footer');
         footer.parentNode.insertBefore(warn, footer);
     }
     warn.textContent = '⚠ ' + msg;
@@ -183,6 +221,7 @@ dirChips.querySelectorAll('input[name="req_dir"]').forEach(function (r) {
     r.addEventListener('change', function () { if (r.checked) renderTypes(r.value); });
 });
 renderTypes('buy');
+setRequesterCompany(MATCH_REQUEST_CONTEXT.requesterCompany || null);
 setRequestTarget(MATCH_REQUEST_CONTEXT.target || null);
 
 /* ---- 추가 문의사항: 포커스 시 기본 텍스트 지우기 ---- */
@@ -229,7 +268,7 @@ if (confirmTypeBtn) {
         var target = MATCH_REQUEST_CONTEXT.target || {};
         if (!target.kedcd) { alert('대상 기업 정보를 다시 확인해 주세요.'); return; }
 
-        formData.set('type', 'trade_request_insert');
+        formData.set('action', 'trade_request_insert');
         formData.set('target_kedcd', target.kedcd);
         formData.set('trade_direction', dir.value);
         typeChecks.forEach(function (c) { formData.append('trade_purpose[]', c.value); });
@@ -265,13 +304,19 @@ if (confirmTypeBtn) {
             closeModal('modalType');
             closeModal('modalRequest');
 
+            if (window._showToast) {
+                window._showToast('✓', '거래 요청서가 저장되었습니다', 'success');
+            }
+
             if (typeof window.onTradeRequestCreated === 'function') {
                 window.onTradeRequestCreated(data, target);
                 return;
             }
 
             if (MATCH_REQUEST_CONTEXT.sourcePage === 'company_detail' && data && data.unlock_detail) {
-                window.location.reload();
+                setTimeout(function () {
+                    window.location.reload();
+                }, window._showToast ? 1200 : 0);
             }
         })
         .catch(function () {
