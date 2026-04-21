@@ -836,9 +836,14 @@ body.page-my-matching #container {
     background: transparent;
 }
 
+body.page-my-matching #wrapper {
+    background: #f3f5f9;
+}
+
 body.page-my-matching #myMatchingPage {
     width: 100%;
-    background: var(--bg, #FAFBFD);
+    min-height: calc(100dvh - 60px);
+    background: #f3f5f9;
 }
 
 body.page-my-matching #matchingContent {
@@ -846,7 +851,7 @@ body.page-my-matching #matchingContent {
     width: 100vw;
     margin-left: calc(50% - 50vw);
     margin-right: calc(50% - 50vw);
-    background: #fafbfd;
+    background: #f3f5f9;
 }
 
 body.page-my-matching #myMatchingPage .matching-main-tabs {
@@ -959,6 +964,7 @@ body.page-my-matching #myMatchingPage .tab-panel {
 
 body.page-my-matching #myMatchingPage .tab-panel.active {
     display: block;
+    min-height: clamp(420px, 56vh, 720px);
 }
 
 body.page-my-matching #myMatchingPage .matching-list {
@@ -969,6 +975,14 @@ body.page-my-matching #myMatchingPage .matching-list {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 20px;
+}
+
+body.page-my-matching #myMatchingPage .NoData {
+    min-height: clamp(320px, 44vh, 520px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #9aa3b2;
 }
 
 body.page-my-matching #myMatchingPage .matching-item {
@@ -1134,6 +1148,14 @@ body.page-my-matching #myMatchingPage .rejected-list.open {
         grid-template-columns: 1fr;
         padding: 16px 16px 48px;
         gap: 14px;
+    }
+
+    body.page-my-matching #myMatchingPage .tab-panel.active {
+        min-height: clamp(280px, 45vh, 420px);
+    }
+
+    body.page-my-matching #myMatchingPage .NoData {
+        min-height: clamp(210px, 36vh, 320px);
     }
 
     body.page-my-matching #myMatchingPage .matching-item {
