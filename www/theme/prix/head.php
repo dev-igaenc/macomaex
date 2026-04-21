@@ -34,7 +34,6 @@ include_once(G5_LIB_PATH.'/popular.lib.php');
 #header h1 a { width: auto !important; }
 #header h1 a img { height: 28px; width: auto; display: block; }
 #header #pcMenu { flex: 1; min-width: 0; }
-#header #pcMenu #list > li:nth-of-type(1) { display: inline-block !important; }
 #header #hd_search { flex: 1; min-width: 0; display: flex; justify-content: center; margin: 0; }
 #header #hd_search .header-search-form { width: 100%; max-width: 500px; margin-left: 0; }
 #header .right-utill { display: flex !important; gap: 20px !important; align-items: center !important; margin-left: auto !important; margin-right: 12px !important; }
@@ -170,10 +169,7 @@ include_once(G5_LIB_PATH.'/popular.lib.php');
 			<?php if(defined('_INDEX_')) { ?>
 			<div id="pcMenu">
 				<ul id="list">
-					<li class="one"><a href="<?php echo $link_0301; ?>"><span>기업거래</span></a></li>
-					<li class="one"><a href="<?php echo $link_0201; ?>"><span>기업홍보관</span></a></li>
-					<li class="one"><a href="<?php echo $link_0401; ?>"><span>멤버십 요금제</span></a></li>
-					<li class="one"><a href="<?php echo $link_0501; ?>"><span>커뮤니티</span></a></li>
+					<script type="text/javascript">globalNavigationBar();</script>
 				</ul>
 			</div>
 			<?php } else { ?>
