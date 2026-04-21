@@ -167,8 +167,8 @@ if (!function_exists('send_matching_accept_mail')) {
         $receive_track_token = isset($receive_log_context['track_token']) ? trim((string) $receive_log_context['track_token']) : '';
         $request_site_url = G5_URL;
         $receive_site_url = G5_URL;
-        $request_matching_url = G5_URL.'/ko/my_matching_s.php';
-        $receive_matching_url = G5_URL.'/ko/my_matching_r.php';
+        $request_matching_url = G5_URL.'/ko/my_matching.php#sent';
+        $receive_matching_url = G5_URL.'/ko/my_matching.php#received';
 
         if (function_exists('mailer_tracking_click_url')) {
             if ($request_track_token !== '') {

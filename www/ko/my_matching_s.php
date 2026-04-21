@@ -1,5 +1,6 @@
 <?
 include_once("./_common.php");
+goto_url('/ko/my_matching.php#sent');
 
 $board['bo_10']="6"; // 1뎁스
 $board['bo_9']="2"; // 2뎁스

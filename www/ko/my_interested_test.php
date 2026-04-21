@@ -55,8 +55,8 @@ $total_cnt=mysqli_num_rows($result);
 
 <div class="matching-tab">
 	<a href="my_interested_test.php" class="active">관심기업</a><!-- 활성화 -->
-	<a href="my_matching_r.php">받은매칭</a>
-	<a href="my_matching_s.php">보낸매칭</a>
+	<a href="my_matching.php#received">받은매칭</a>
+	<a href="my_matching.php#sent">보낸매칭</a>
 	<a href="my_selected.php">셀렉티드</a>
 </div>
 

@@ -257,7 +257,7 @@ $stable_list = get_processed_companies('stability_score_5', 3, $unlocked_bzno_ma
         </div>
         <div class="mVisual_right">
             <div class="mVisual_quick">
-                <a href="/ko/my_matching_r.php" class="mVisual_quick_item mVisual_quick_item--request">
+                <a href="/ko/my_matching.php#received" class="mVisual_quick_item mVisual_quick_item--request">
                     <div class="mVisual_quick_icon">
                         <svg viewBox="0 0 48 48">
                             <path fill="#3b82f6" d="M8 26 L40 26 L36 22 L4 22 Z"></path>
