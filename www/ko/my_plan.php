@@ -467,11 +467,6 @@ for($i=0; $i<count($history_rows); $i++){
                                         <td>결제 후 7일 이내 크레딧을 전혀 사용하지 않은 경우 전액 환불<br><span style="font-size:11px;color:#9ca3af;">전자상거래법 제17조 적용</span></td>
                                     </tr>
                                     <tr>
-                                        <td>중도 해지<br><span style="font-size:11px;color:#9ca3af;">7일 경과 또는 일부 사용</span></td>
-                                        <td><span class="tag-partial">수수료 제외 환불</span></td>
-                                        <td>잔여 유료 크레딧 기준, 수수료 10% 제외 후 환불<br><span style="font-size:11px;color:#9ca3af;">예: 잔여 유료 150cr(₩15,000) → 수수료 ₩1,500 제외 → 환불액 ₩13,500</span></td>
-                                    </tr>
-                                    <tr>
                                         <td>사용된 크레딧<br><span style="font-size:11px;color:#9ca3af;">거래 요청 · AI 분석</span></td>
                                         <td><span class="tag-blocked">불가</span></td>
                                         <td>첫 사용 시점에 서비스 제공이 개시된 것으로 간주<br><span style="font-size:11px;color:#9ca3af;">상대방의 거절·무응답 여부와 무관하게 적용</span></td>
@@ -497,7 +492,7 @@ for($i=0; $i<count($history_rows); $i++){
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
                                 <ul>
                                     <li>보너스 크레딧 잔여 내역은 마이페이지 &gt; 결제정보에서 확인하실 수 있습니다.</li>
-                                    <li>AI 분석(0.5 크레딧)은 동일 기업 기준 6개월 내 재열람 시 크레딧이 차감되지 않습니다.</li>
+                                    <li>AI 분석(1 크레딧)은 동일 기업 기준 2개월 내 재열람 시 크레딧이 차감되지 않습니다.</li>
                                     <li>결제 오류 문의: 고객센터 접수 후 영업일 기준 3일 이내 처리됩니다.</li>
                                 </ul>
                             </div>
