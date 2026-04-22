@@ -1,4 +1,4 @@
-<?
+<?php
 	$sub_menu = '700100';
 	include_once('./_common.php');
 
@@ -153,29 +153,29 @@ $rnumber=($total_count-($page-1)*$rows)+1;
 		<td class="td_center"><?=$row['date_begin']?></td>
 		<td class="td_center"><?=$row['date_end']?></td>
 		<td class="td_center">
-			<?if($row['expert_consulting_cnt']>0 and ($row['status']=="S" or  $row['status']=="T")){?>
-				<?if(!$row['expert_consulting_able_cnt']){?>
+			<?php if($row['expert_consulting_cnt']>0 and ($row['status']=="S" or  $row['status']=="T")){?>
+				<?php if(!$row['expert_consulting_able_cnt']){?>
 				<button type="button" class="btn btn-sm btn-info euse" idx="<?=$row['no']?>">사용</button>
-				<?}else{?>
+				<?php }else{?>
 				<button type="button" class="btn btn-sm btn-secondary euse" idx="<?=$row['no']?>">미사용</button>
-				<?}?>
-			<?}else{?>
+				<?php }?>
+			<?php }else{?>
 				-
-			<?}?>
+			<?php }?>
 		</td>
 		<td class="td_center td_mng" title="열람 <?=$row['open_able_cnt']?> / <?=$row['open_cnt']?><br>매칭 <?=$row['matching_able_cnt']?> / <?=$row['matching_cnt']?>">			<!--//상태(S:유지, C:취소, E:종료)-->
 			<span class="btn btn-sm <?=$status_btn_class?>">
 				<?=$status_text?>
 			</span>
-			<?if($row['coupon']){?><p  class="btn btn-sm bg-dark text-light">쿠폰사용</p><?}?>
+			<?php if($row['coupon']){?><p  class="btn btn-sm bg-dark text-light">쿠폰사용</p><?php }?>
 		</td>
 		<td class="td_center"><?=$membershipInfo['title']?></td>
         <td class="td_mng td_mng_l">
-			<?if($is_refunded){?>
+			<?php if($is_refunded){?>
 			<span class="btn btn-sm btn-secondary">환불완료</span><br>
-			<?}else if($row['status']=="S" or $row['status']=="T"){?>
+			<?php }else if($row['status']=="S" or $row['status']=="T"){?>
 			<a class="btn btn-danger text-light pay_cancel" oid="<?=$row['order_no']?>" is_credit="<?=$is_credit_goods?>">결제취소</a><br>
-			<?}?>
+			<?php }?>
             <a href="./regular_payment.view.php?no=<?=$row['no']?>&amp;<?=$qstr?>" class="btn btn_03">확인</a>
             <a href="./regular_payment.list_update.php?w=d&amp;no=<?php echo $row['no']; ?>&amp;<?=$qstr?>" onclick="return delete_confirm(this);" class="btn btn_02"><span class="sound_only"><?php echo htmlspecialchars2($row['title']); ?> </span>삭제</a>
         </td>
@@ -244,6 +244,6 @@ $(".euse").click(function(){
 
 })
 </script>
-<?
+<?php
 include_once (G5_ADMIN_PATH.'/admin.tail.php');
 ?>

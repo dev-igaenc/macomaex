@@ -1,4 +1,4 @@
-<?
+<?php
 include_once('./_common.php');
 include_once(G5_LIB_PATH.'/connect.lib.php');
 include_once(G5_LIB_PATH.'/matching_mail.lib.php');
@@ -595,20 +595,20 @@ switch ($type) {
 	<div class="cv-name">
 		<strong><?=$comp['ENP_NM']?></strong>
 		<div class="option">
-				<button type="button" star class="<?if(!empty($favorite['ms_id'])){?>active<?}?> star_btn" kedcd="<?=$kedcd?>"><img src="/images/icon_star.svg" alt=""></button>
+				<button type="button" star class="<?php if(!empty($favorite['ms_id'])){?>active<?php }?> star_btn" kedcd="<?=$kedcd?>"><img src="/images/icon_star.svg" alt=""></button>
 				<a href="javascript:copyUrl('<?=simple_crypt($kedcd);?>')" link><img src="/images/icon_link.svg" alt=""></a>
-				<?if($receive_approval=="N"){?>
+				<?php if($receive_approval=="N"){?>
 				<a href="javascript:jAlert('매칭 수락 대기중입니다.','알림')" request><span>수락대기</span></a>
-				<?}?>
-				<?if($receive_approval=="Y"){?>
+				<?php }?>
+				<?php if($receive_approval=="Y"){?>
 				<a request class="accepted"><span>매칭완료</span></a>
-				<?}?>
-				<?if($receive_approval=="R"){?>
+				<?php }?>
+				<?php if($receive_approval=="R"){?>
 				<a request class="rejected"><span>매칭거절</span></a>
-				<?}?>
-				<?if(!$receive_approval){?>
+				<?php }?>
+				<?php if(!$receive_approval){?>
 				<a id="popup_open" kedcd="<?=$kedcd?>" request><span>매칭 요청</span></a>
-				<?}?>
+				<?php }?>
 			<!--a href="javascript:void(0);" request>매칭요청</a-->
 		</div>
 	</div>
@@ -677,21 +677,21 @@ switch ($type) {
 				<dl>
 					<dt>전화번호</dt>
 					<dd>
-					<?if(!$matcing or $matcing['receive_approval']=="N"){?>
+					<?php if(!$matcing or $matcing['receive_approval']=="N"){?>
 					수락 후 공개
-					<?}else{?>
+					<?php }else{?>
 					<a href="tel:<?=$receve_info['mb_8']?>"><?=$receve_info['mb_8']?></a>
-					<?}?>
+					<?php }?>
 					</dd>
 				</dl>
 				<dl>
 					<dt>이메일</dt>
 					<dd>
-					<?if(!$matcing or $matcing['receive_approval']=="N"){?>
+					<?php if(!$matcing or $matcing['receive_approval']=="N"){?>
 					수락 후 공개
-					<?}else{?>
+					<?php }else{?>
 					<a href="mailto:<?=$receve_info['mb_5']?>" u><?=$receve_info['mb_5']?></a>
-					<?}?>
+					<?php }?>
 					</dd>
 				</dl>
 				<dl>
@@ -717,33 +717,33 @@ switch ($type) {
 			<div class="step-re">
 				<p class="step"><strong>STEP 1</strong><span><img src="/images/arr_message_r.png" alt=""></span></p>
 				<p class="icon"><img src="/images/icon_connection.png" alt=""></p>
-				<?if(trim($comp['EMAIL'])){?>
+				<?php if(trim($comp['EMAIL'])){?>
 				<p class="tit pVar">직접 연결</p>
 				<div class="conts tel pVar">
 					<span class="point">대표 이메일</span>로 연결됩니다.
 					<p class="btn"><a href="mailto:<?=$comp['EMAIL']?>"><?=format_phone_number($comp['TEL_NO'])?></a></p>
 				</div> 
-				<?}else{?>
+				<?php }else{?>
 				<p class="tit pVar">직접 연결</p>
 				<div class="conts tel pVar">
 					<span class="point">대표 이메일</span>로 연결됩니다.
-					<?if($comp['TEL_NO']){?><p class="btn"><a><?=format_phone_number($comp['TEL_NO'])?></a></p><?}?>
+					<?php if($comp['TEL_NO']){?><p class="btn"><a><?=format_phone_number($comp['TEL_NO'])?></a></p><?php }?>
 					<p class="btn">등록된 이메일 정보가 없습니다.</p>
 				</div>
-				<?}?>
-				<?if(trim($comp['TEL_NO'])){?>
+				<?php }?>
+				<?php if(trim($comp['TEL_NO'])){?>
 				<p class="tit tmVar">직접 연결</p>
 				<div class="conts tel tmVar">
 					<span class="point">대표 전화번호</span>로 연결됩니다.
 					<p class="btn"><a href="tel:<?=$comp['TEL_NO']?>"><?=format_phone_number($comp['TEL_NO'])?></a></p>
 				</div>
-				<?}else{?>
+				<?php }else{?>
 				<p class="tit tmVar">직접 연결</p>
 				<div class="conts tel tmVar">
 					<span class="point">대표 전화번호</span>로 연결됩니다.
 					<p class="btn">등록된 전화번호 정보가 없습니다.</p>
 				</div>
-				<?}?>
+				<?php }?>
 			</div>
 		</div>
 		<div class="step-right">
@@ -772,7 +772,7 @@ switch ($type) {
 			</div>
 		</div>
 	</div>
-<?
+<?php
 			}
 		}else{
 			echo "500|로그인 후 이용하세요.";
@@ -1742,61 +1742,105 @@ switch ($type) {
 						}
 
 						$refund_credit = (int)$minfo['matching_cnt'];
-						if($refund_credit < 1){
-							echo "500|취소 오류: 환불 크레딧 정보가 없습니다.";
+
+						// 결제 승인일시를 기준으로 7일 환불 가능 기간을 계산한다.
+						$app_date_digits = preg_replace('/[^0-9]/', '', (string)$pinfo['app_date']);
+						$app_time_digits = preg_replace('/[^0-9]/', '', (string)$pinfo['appl_time']);
+						$paid_at_time = 0;
+						if(strlen($app_date_digits) === 8){
+							$app_time_digits = str_pad(substr($app_time_digits, 0, 6), 6, '0', STR_PAD_LEFT);
+							$paid_at_datetime = substr($app_date_digits, 0, 4)."-".substr($app_date_digits, 4, 2)."-".substr($app_date_digits, 6, 2)." ".substr($app_time_digits, 0, 2).":".substr($app_time_digits, 2, 2).":".substr($app_time_digits, 4, 2);
+							$paid_at_time = strtotime($paid_at_datetime);
+						}
+						if(!$paid_at_time && !empty($pinfo['regdate'])){
+							$paid_at_time = strtotime((string)$pinfo['regdate']);
+						}
+						if(!$paid_at_time && !empty($chk['date_begin'])){
+							$paid_at_time = strtotime($chk['date_begin']." 00:00:00");
+						}
+						if(!$paid_at_time){
+							echo "500|취소 오류: 결제 일시 정보를 확인할 수 없어 환불이 불가합니다.";
 							exit;
 						}
-
+						$refund_deadline = strtotime("+7 days", $paid_at_time);
+						if(time() > $refund_deadline){
+							echo "500|취소 오류: 결제 후 7일이 지나 환불이 불가합니다.";
+							exit;
+						}
+						// 해당 결제 충전분의 사용 여부를 FIFO 기준으로 판정한다.
 						$history_summary = sql_fetch("select
-							IFNULL(sum(if(tx_type='CHARGE', credit_delta, 0)), 0) as total_charge,
 							IFNULL(sum(if(tx_type='BONUS', credit_delta, 0)), 0) as total_bonus,
-							IFNULL(sum(if(tx_type='USE', -credit_delta, 0)), 0) as total_used,
-							IFNULL(sum(if(tx_type='REFUND', -credit_delta, 0)), 0) as total_refund
+							IFNULL(sum(if(tx_type='USE', -credit_delta, 0)), 0) as total_used
 							from g5_matching_credit_history
 							where uid='{$member['mb_id']}'");
-						$payable_credit = (int)$history_summary['total_charge'] - (int)$history_summary['total_refund'];
 						$paid_used_credit = (int)$history_summary['total_used'] - (int)$history_summary['total_bonus'];
 						if($paid_used_credit < 0){
 							$paid_used_credit = 0;
 						}
-						$payable_credit -= $paid_used_credit;
-						if($payable_credit < 0){
-							$payable_credit = 0;
+						$refund_map = array();
+						$refund_result = sql_query("select order_no, IFNULL(sum(-credit_delta), 0) as refunded_credit
+							from g5_matching_credit_history
+							where uid='{$member['mb_id']}'
+							and tx_type='REFUND'
+							and order_no!=''
+							group by order_no");
+						for($ri=0; $refund_row=sql_fetch_array($refund_result); $ri++){
+							$refund_map[(string)$refund_row['order_no']] = (int)$refund_row['refunded_credit'];
 						}
-						$refund_credit = min($refund_credit, $payable_credit);
+						$charge_result = sql_query("select order_no, IFNULL(sum(credit_delta), 0) as charge_credit, MIN(created_at) as first_created_at
+							from g5_matching_credit_history
+							where uid='{$member['mb_id']}'
+							and tx_type='CHARGE'
+							and order_no!=''
+							group by order_no
+							order by first_created_at asc, order_no asc");
+						$target_order_no = (string)$chk['order_no'];
+						$target_charge_credit = 0;
+						$target_consumed_credit = 0;
+						$remaining_paid_used = $paid_used_credit;
+						for($ci=0; $charge_row=sql_fetch_array($charge_result); $ci++){
+							$order_no = (string)$charge_row['order_no'];
+							$charge_credit = (int)$charge_row['charge_credit'];
+							if($charge_credit < 1){
+								continue;
+							}
+							$refunded_credit = isset($refund_map[$order_no]) ? (int)$refund_map[$order_no] : 0;
+							$effective_credit = $charge_credit - $refunded_credit;
+							if($effective_credit < 0){
+								$effective_credit = 0;
+							}
+							$consumed_credit = 0;
+							if($remaining_paid_used > 0 && $effective_credit > 0){
+								$consumed_credit = min($effective_credit, $remaining_paid_used);
+								$remaining_paid_used -= $consumed_credit;
+							}
+							if($order_no === $target_order_no){
+								$target_charge_credit = $charge_credit;
+								$target_consumed_credit = $consumed_credit;
+								break;
+							}
+						}
+						if($target_charge_credit > 0){
+							$refund_credit = $target_charge_credit;
+						}
 						if($refund_credit < 1){
-							echo "500|취소 오류: 환불 가능한 크레딧이 없습니다.";
+							echo "500|취소 오류: 환불 크레딧 정보가 없습니다.";
 							exit;
 						}
-
-						$unit_plan = sql_fetch("select price_sale, price_origin, vat
-							from g5_membership_manage
-							where ((title_en like 'CREDIT_%') or (matching_cnt > 0 and month = 0))
-							and matching_cnt = 100
-							order by no asc
-							limit 1");
-						$unit_base_price = 0;
-						if((int)$unit_plan['price_sale'] > 0){
-							$unit_base_price = (int)$unit_plan['price_sale'];
-						}else if((int)$unit_plan['price_origin'] > 0){
-							$unit_base_price = (int)$unit_plan['price_origin'];
-						}
-						if($unit_base_price > 0 && strpos((string)$unit_plan['vat'], '별도') !== false){
-							$unit_base_price = (int)round($unit_base_price * 1.1);
-						}
-						$unit_credit_price = 0;
-						if($unit_base_price > 0){
-							$unit_credit_price = ((float)$unit_base_price / 100);
-						}
-						if($unit_credit_price <= 0){
-							echo "500|취소 오류: 100크레딧 기준 환불 단가 정보를 찾을 수 없습니다.";
+						if($target_charge_credit < 1){
+							echo "500|취소 오류: 해당 결제의 충전 이력을 찾을 수 없습니다.";
 							exit;
 						}
-						$refund_amount_before_fee = (int)floor($refund_credit * $unit_credit_price);
-						$refund_fee = (int)floor($refund_amount_before_fee * 0.1);
-						$refund_amount = $refund_amount_before_fee - $refund_fee;
-						if($refund_amount < 1000){
-							echo "500|취소 오류: 최소 환불 금액(1,000원) 미만입니다.";
+						if($target_consumed_credit > 0){
+							echo "500|취소 오류: 해당 결제 충전분의 사용 이력이 있어 환불이 불가합니다.";
+							exit;
+						}
+						$refund_amount = (int)$pinfo['card_appl_price'];
+						if($refund_amount < 1){
+							$refund_amount = (int)$pinfo['price'];
+						}
+						if($refund_amount < 1){
+							echo "500|취소 오류: 환불 금액 정보가 없습니다.";
 							exit;
 						}
 
@@ -1917,7 +1961,7 @@ switch ($type) {
 						}
 
 						$credit_after = $current_credit - $refund_credit;
-						$memo_refund = addslashes("사용자 일반결제 환불 (수수료10% 차감, {$refund_amount}원)");
+						$memo_refund = addslashes("사용자 일반결제 전액 환불 ({$refund_amount}원)");
 						$refund_history_sql = "insert into g5_matching_credit_history set
 							uid='{$member['mb_id']}',
 							tx_type='REFUND',

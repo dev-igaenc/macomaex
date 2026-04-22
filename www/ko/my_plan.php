@@ -1,4 +1,4 @@
-<?
+<?php
 include_once("./_common.php");
 
 $board['bo_10']="6"; // 1뎁스
@@ -223,7 +223,7 @@ for($i=0; $i<count($history_rows); $i++){
                     </div>
 
                     <div id="chargeList" class="card-list">
-                        <?for($i=0; $i<count($payment_rows); $i++){
+                        <?php for($i=0; $i<count($payment_rows); $i++){
                             $row = $payment_rows[$i];
                             $tx_type = strtoupper(trim((string)$row['tx_type']));
                             $amount = (float)$row['credit_delta'];
@@ -298,26 +298,26 @@ for($i=0; $i<count($history_rows); $i++){
                         ?>
                         <div class="pay-card" data-type="<?=$filter_type?>">
                             <div class="pay-card-icon <?=$icon_class?>">
-                                <?if($icon_class=="free"){?>
+                                <?php if($icon_class=="free"){?>
                                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5" rx="1"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 010-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 000-5C13 2 12 7 12 7z"/></svg>
-                                <?}else{?>
+                                <?php }else{?>
                                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
-                                <?}?>
+                                <?php }?>
                             </div>
                             <div class="pay-card-info">
                                 <div class="title"><?=htmlspecialchars($title, ENT_QUOTES)?></div>
                                 <div class="meta">
-                                    <?if($is_signup_free){?>
+                                    <?php if($is_signup_free){?>
                                     <span><?=substr((string)$row['event_date'],0,10)?></span>
                                     <span class="dot"></span>
                                     <span>Free 플랜 · 서비스 체험용 · 청약철회 제외</span>
-                                    <?}else{?>
+                                    <?php }else{?>
                                     <span><?=substr((string)$row['event_date'],0,10)?></span>
                                     <span class="dot"></span>
                                     <span><?=htmlspecialchars($meta_credit_text, ENT_QUOTES)?></span>
                                     <span class="dot"></span>
                                     <span><?=htmlspecialchars($meta_method_text, ENT_QUOTES)?></span>
-                                    <?}?>
+                                    <?php }?>
                                 </div>
                             </div>
                             <div class="pay-card-right">
@@ -326,15 +326,15 @@ for($i=0; $i<count($history_rows); $i++){
                                 <span class="status-badge <?=$status_class?>"><?=$status_text?></span>
                             </div>
                         </div>
-                        <?}?>
-                        <?if(!count($payment_rows)){?>
+                        <?php }?>
+                        <?php if(!count($payment_rows)){?>
                         <div class="pay-card">
                             <div class="pay-card-info">
                                 <div class="title">결제 내역이 없습니다.</div>
                                 <div class="meta"><span>결제 또는 지급 이력이 없습니다.</span></div>
                             </div>
                         </div>
-                        <?}?>
+                        <?php }?>
                     </div>
                     <div class="load-more-wrap" id="chargeMoreWrap">
                         <button class="load-more-btn" id="chargeMoreBtn" type="button">
@@ -359,7 +359,7 @@ for($i=0; $i<count($history_rows); $i++){
                         </div>
 
                         <div id="useList" class="card-list">
-                            <?for($i=0; $i<count($use_rows); $i++){
+                            <?php for($i=0; $i<count($use_rows); $i++){
                                 $row = $use_rows[$i];
                                 $amount = (float)$row['credit_delta'];
                                 $amount_abs = abs($amount);
@@ -392,28 +392,28 @@ for($i=0; $i<count($history_rows); $i++){
                             ?>
                             <div class="pay-card" data-type="<?=$use_type?>">
                                 <div class="pay-card-icon <?=$use_type?>">
-                                    <?if($use_type=="analyze"){?>
+                                    <?php if($use_type=="analyze"){?>
                                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z"/></svg>
-                                    <?}else{?>
+                                    <?php }else{?>
                                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
-                                    <?}?>
+                                    <?php }?>
                                 </div>
                                 <div class="pay-card-info">
                                     <div class="title"><?=htmlspecialchars($title, ENT_QUOTES)?></div>
                                     <div class="meta">
-                                        <?if($use_type=="match"){?>
+                                        <?php if($use_type=="match"){?>
                                         <span><?=substr((string)$row['event_date'],0,10)?></span>
                                         <span class="dot"></span>
                                         <span>거래 방향 : <?=htmlspecialchars($direction_label, ENT_QUOTES)?></span>
                                         <span class="dot"></span>
                                         <span><?=htmlspecialchars($service_label, ENT_QUOTES)?></span>
-                                        <?}else{?>
+                                        <?php }else{?>
                                         <span><?=substr((string)$row['event_date'],0,10)?></span>
-                                        <?if($row['matching_no']){?>
+                                        <?php if($row['matching_no']){?>
                                         <span class="dot"></span>
                                         <span>매칭번호 <?=htmlspecialchars($row['matching_no'], ENT_QUOTES)?></span>
-                                        <?}?>
-                                        <?}?>
+                                        <?php }?>
+                                        <?php }?>
                                     </div>
                                 </div>
                                 <div class="pay-card-right">
@@ -421,15 +421,15 @@ for($i=0; $i<count($history_rows); $i++){
                                     <span class="status-badge used">사용</span>
                                 </div>
                             </div>
-                            <?}?>
-                            <?if(!count($use_rows)){?>
+                            <?php }?>
+                            <?php if(!count($use_rows)){?>
                             <div class="pay-card">
                                 <div class="pay-card-info">
                                     <div class="title">크레딧 사용 내역이 없습니다.</div>
                                     <div class="meta"><span>사용 이력이 없습니다.</span></div>
                                 </div>
                             </div>
-                            <?}?>
+                            <?php }?>
                         </div>
                         <div class="load-more-wrap" id="useMoreWrap">
                             <button class="load-more-btn" id="useMoreBtn" type="button">
@@ -450,7 +450,7 @@ for($i=0; $i<count($history_rows); $i++){
                         <div class="policy-box-body">
                             <div class="policy-notice" style="margin-top:16px; background:#f0fdf4; border-color:#bbf7d0;">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-                                <span style="color:#14532d;">크레딧은 디지털 콘텐츠 이용권으로, <strong>첫 크레딧 사용 시점</strong>을 서비스 제공 개시로 봅니다. 결제 후 7일 이내 크레딧을 전혀 사용하지 않은 경우 전자상거래법 제17조에 따라 100% 환불이 가능합니다. 7일 경과 또는 일부 사용 후에는 잔여 유료 크레딧 기준으로 수수료(10%)를 제외한 금액이 환불됩니다.</span>
+                                <span style="color:#14532d;">크레딧은 디지털 콘텐츠 이용권으로, <strong>첫 크레딧 사용 시점</strong>을 서비스 제공 개시로 봅니다. 결제 후 7일 이내 해당 결제로 충전한 크레딧을 전혀 사용하지 않은 경우 전자상거래법 제17조에 따라 100% 환불이 가능합니다. 7일 경과 또는 일부 사용 후에는 환불이 불가합니다.</span>
                             </div>
                             <table class="policy-table">
                                 <thead>
@@ -462,9 +462,9 @@ for($i=0; $i<count($history_rows); $i++){
                                 </thead>
                                 <tbody>
                                     <tr>
-                                        <td>청약철회<br><span style="font-size:11px;color:#9ca3af;">결제 후 7일 이내 · 미사용</span></td>
+                                        <td>청약철회<br><span style="font-size:11px;color:#9ca3af;">결제 후 7일 이내 · 해당 결제 충전분 미사용</span></td>
                                         <td><span class="tag-allowed">100% 환불</span></td>
-                                        <td>결제 후 7일 이내 크레딧을 전혀 사용하지 않은 경우 전액 환불<br><span style="font-size:11px;color:#9ca3af;">전자상거래법 제17조 적용</span></td>
+                                        <td>결제 후 7일 이내 해당 결제로 충전한 크레딧을 전혀 사용하지 않은 경우 전액 환불<br><span style="font-size:11px;color:#9ca3af;">전자상거래법 제17조 적용</span></td>
                                     </tr>
                                     <tr>
                                         <td>사용된 크레딧<br><span style="font-size:11px;color:#9ca3af;">거래 요청 · AI 분석</span></td>
@@ -503,6 +503,6 @@ for($i=0; $i<count($history_rows); $i++){
 
 </div>
 
-<?
+<?php
 include_once(G5_THEME_PATH.'/tail.php');
 ?>
