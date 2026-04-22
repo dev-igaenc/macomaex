@@ -153,7 +153,62 @@ function get_membership(){
 //로그인 체크
 function login_chk(){
 	global $member;
-	if(!$member['mb_id']) ALERT("로그인 후 이용하세요.","/bbs/login.php?url=".$_SERVER["REQUEST_URI"]);
+	if(!$member['mb_id']) {
+		login_required_modal("로그인 후 이용하세요.", "/bbs/login.php?url=" . urlencode($_SERVER["REQUEST_URI"]));
+	}
+}
+
+function login_required_modal($msg = "로그인 후 이용하세요.", $loginUrl = "/bbs/login.php")
+{
+	$msg = trim(strip_tags((string)$msg, '<br>'));
+	if ($msg === '') $msg = "로그인 후 이용하세요.";
+
+	$loginUrl = trim((string)$loginUrl);
+	if ($loginUrl === '') $loginUrl = "/bbs/login.php";
+
+	header('Content-Type: text/html; charset=utf-8');
+	echo '<!doctype html>';
+	echo '<html lang="ko">';
+	echo '<head>';
+	echo '<meta charset="utf-8">';
+	echo '<meta name="viewport" content="width=device-width, initial-scale=1">';
+	echo '<title>로그인 안내</title>';
+	echo '<style>';
+	echo ':root{color-scheme:light;--bg:#f5f7fb;--card:#fff;--text:#1f2937;--muted:#6b7280;--line:#e5e7eb;--primary:#2563eb;--primary-dark:#1d4ed8;--shadow:0 24px 60px rgba(15,23,42,.16);}';
+	echo '*{box-sizing:border-box}html,body{height:100%}body{margin:0;font-family:Pretendard,Apple SD Gothic Neo,Noto Sans KR,sans-serif;background:linear-gradient(180deg,#f8fbff 0%,#f3f6fb 100%);color:var(--text);}';
+	echo '.login-guard{min-height:100%;display:flex;align-items:center;justify-content:center;padding:24px;}';
+	echo '.login-guard__overlay{position:fixed;inset:0;background:rgba(15,23,42,.18);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);}';
+	echo '.login-guard__modal{position:relative;width:min(420px,100%);background:var(--card);border-radius:24px;padding:36px 32px 28px;box-shadow:var(--shadow);text-align:center;animation:loginGuardFade .18s ease-out;}';
+	echo '@keyframes loginGuardFade{from{opacity:0;transform:translateY(10px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}';
+	echo '.login-guard__icon{width:60px;height:60px;margin:0 auto 18px;border-radius:999px;background:#eff6ff;display:flex;align-items:center;justify-content:center;color:var(--primary);}';
+	echo '.login-guard__icon svg{width:30px;height:30px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}';
+	echo '.login-guard__title{margin:0 0 10px;font-size:22px;font-weight:700;letter-spacing:-.02em;}';
+	echo '.login-guard__desc{margin:0 0 26px;font-size:15px;line-height:1.7;color:var(--muted);}';
+	echo '.login-guard__actions{display:flex;gap:10px;}';
+	echo '.login-guard__btn{flex:1;display:inline-flex;align-items:center;justify-content:center;height:48px;border-radius:14px;border:1px solid transparent;font-size:15px;font-weight:600;text-decoration:none;cursor:pointer;transition:.18s ease;}';
+	echo '.login-guard__btn--ghost{background:#f3f4f6;color:#4b5563;border-color:#e5e7eb;}';
+	echo '.login-guard__btn--ghost:hover{background:#e5e7eb;}';
+	echo '.login-guard__btn--primary{background:var(--primary);color:#fff;}';
+	echo '.login-guard__btn--primary:hover{background:var(--primary-dark);}';
+	echo '@media (max-width:480px){.login-guard{padding:18px}.login-guard__modal{border-radius:20px;padding:30px 20px 22px}.login-guard__title{font-size:19px}.login-guard__desc{font-size:14px}.login-guard__actions{flex-direction:column;}}';
+	echo '</style>';
+	echo '</head>';
+	echo '<body>';
+	echo '<div class="login-guard">';
+	echo '<div class="login-guard__overlay" aria-hidden="true"></div>';
+	echo '<div class="login-guard__modal" role="dialog" aria-modal="true" aria-labelledby="loginGuardTitle">';
+	echo '<div class="login-guard__icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 12a4 4 0 1 0 0-8a4 4 0 0 0 0 8Z"/><path d="M4 20a8 8 0 0 1 16 0"/></svg></div>';
+	echo '<h1 class="login-guard__title" id="loginGuardTitle">로그인 후 이용 가능합니다</h1>';
+	echo '<p class="login-guard__desc">' . $msg . '<br>로그인 페이지로 이동해 주세요.</p>';
+	echo '<div class="login-guard__actions">';
+	echo '<button type="button" class="login-guard__btn login-guard__btn--ghost" onclick="history.back();">이전으로</button>';
+	echo '<a class="login-guard__btn login-guard__btn--primary" href="' . htmlspecialchars($loginUrl, ENT_QUOTES, 'UTF-8') . '">로그인</a>';
+	echo '</div>';
+	echo '</div>';
+	echo '</div>';
+	echo '</body>';
+	echo '</html>';
+	exit;
 }
 
 //맴버쉽 정보가져오기

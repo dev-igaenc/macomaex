@@ -18,7 +18,7 @@ var DEFAULT_NOTE = MATCH_REQUEST_CONTEXT.defaultRequestMessage
     : ((window.COMPANY_DETAIL_DATA && window.COMPANY_DETAIL_DATA.defaultRequestMessage)
         ? String(window.COMPANY_DETAIL_DATA.defaultRequestMessage)
         : '');
-var REQUEST_ENDPOINT = MATCH_REQUEST_CONTEXT.endpoint || '/get_set.php';
+var REQUEST_ENDPOINT = MATCH_REQUEST_CONTEXT.endpoint || '/ko/company_detail.php';
 
 function setText(id, value) {
     var el = document.getElementById(id);
@@ -26,31 +26,73 @@ function setText(id, value) {
     el.textContent = value || '정보 준비중';
 }
 
+function escapeHtml(value) {
+    var div = document.createElement('div');
+    div.appendChild(document.createTextNode(String(value || '')));
+    return div.innerHTML;
+}
+
+function normalizeHomepageUrl(value) {
+    var url = String(value || '').trim();
+    if (!url) return '';
+    if (!/^https?:\/\//i.test(url)) {
+        url = 'https://' + url.replace(/^\/+/, '');
+    }
+    return url;
+}
+
+function setRequesterCompany(company) {
+    var requester = company || MATCH_REQUEST_CONTEXT.requesterCompany || {};
+    var homepageRow = document.getElementById('matchRequesterHomepageRow');
+    var homepageCell = document.getElementById('matchRequesterHomepage');
+    var homepageText = String(requester.homepage || '').trim();
+    var homepageUrl = normalizeHomepageUrl(homepageText);
+
+    MATCH_REQUEST_CONTEXT.requesterCompany = requester;
+    window.MATCH_REQUEST_CONTEXT = MATCH_REQUEST_CONTEXT;
+
+    setText('matchRequesterCompanyName', requester.company || requester.title || '');
+    setText('matchRequesterBzno', requester.bzno || '');
+    setText('matchRequesterFounded', requester.founded || '');
+    setText('matchRequesterEmployees', requester.employees || '');
+    setText('matchRequesterCorpType', requester.corpType || '');
+    setText('matchRequesterIndustry', requester.industry || '');
+    setText('matchRequesterProduct', requester.product || '');
+
+    if (!homepageRow || !homepageCell) return;
+
+    if (!homepageText) {
+        homepageRow.hidden = true;
+        homepageCell.textContent = '정보 준비중';
+        return;
+    }
+
+    // 홈페이지 값이 있으면 공통 모달에서도 링크 형태로만 렌더링한다.
+    homepageRow.hidden = false;
+    homepageCell.innerHTML = '<a href="' + escapeHtml(homepageUrl) + '" target="_blank" rel="noopener noreferrer">' + escapeHtml(homepageText) + '</a>';
+}
+
 function setRequestTarget(target) {
     MATCH_REQUEST_CONTEXT.target = target || null;
     window.MATCH_REQUEST_CONTEXT = MATCH_REQUEST_CONTEXT;
-
-    target = MATCH_REQUEST_CONTEXT.target || {};
-    setText('matchTargetCompanyName', target.company || target.title || '');
-    setText('matchTargetBzno', target.bzno || '');
-    setText('matchTargetFounded', target.founded || '');
-    setText('matchTargetEmployees', target.employees || '');
-    setText('matchTargetCorpType', target.corpType || '');
-    setText('matchTargetIndustry', target.industry || '');
-    setText('matchTargetProduct', target.product || '');
 }
 
 window.setMatchRequestTarget = setRequestTarget;
+window.setMatchRequesterCompany = setRequesterCompany;
 
 /* ---- 모달 열기/닫기 (전역 노출 — 페이지 내 다른 코드에서도 사용 가능) ---- */
 window.openModal = function (id) {
+    var modal = document.getElementById(id);
+    if (!modal) return;
     var sw = window.innerWidth - document.documentElement.clientWidth;
     document.documentElement.style.setProperty('--scrollbar-w', sw + 'px');
     document.documentElement.classList.add('hide-scroll');
-    document.getElementById(id).classList.add('open');
+    modal.classList.add('open');
 };
 window.closeModal = function (id) {
-    document.getElementById(id).classList.remove('open');
+    var modal = document.getElementById(id);
+    if (!modal) return;
+    modal.classList.remove('open');
     document.documentElement.classList.remove('hide-scroll');
     document.documentElement.style.setProperty('--scrollbar-w', '0px');
 };
@@ -65,16 +107,23 @@ document.querySelectorAll('[data-close]').forEach(function (btn) {
 var openMatchBtn = document.getElementById('openTypeModal2');
 if (openMatchBtn) {
     openMatchBtn.addEventListener('click', function () {
-        if (window._isLoggedIn && !window._isLoggedIn()) { window._requireLogin('거래 요청'); return; }
+        // 비로그인 진입은 각 페이지가 내려준 로그인 유도 URL로만 처리한다.
+        if (MATCH_REQUEST_CONTEXT.isLoggedIn === false) {
+            if (MATCH_REQUEST_CONTEXT.loginCheckUrl) {
+                window.location.href = MATCH_REQUEST_CONTEXT.loginCheckUrl;
+            }
+            return;
+        }
+        setRequesterCompany(MATCH_REQUEST_CONTEXT.requesterCompany || null);
         setRequestTarget(MATCH_REQUEST_CONTEXT.target || null);
         openModal('modalRequest');
     });
 }
 
 /* ---- 거래 타입 카드 라디오 동기화 ---- */
-document.querySelectorAll('.type-card').forEach(function (card) {
+document.querySelectorAll('.trm-type-card').forEach(function (card) {
     card.addEventListener('click', function () {
-        document.querySelectorAll('.type-card').forEach(function (c) { c.classList.remove('selected'); });
+        document.querySelectorAll('.trm-type-card').forEach(function (c) { c.classList.remove('selected'); });
         card.classList.add('selected');
         var r = card.querySelector('input[type="radio"]');
         if (r) r.checked = true;
@@ -88,7 +137,8 @@ function showReqWarning(msg) {
         warn = document.createElement('div');
         warn.id = 'reqWarning';
         warn.style.cssText = 'color:#e03131;font-size:13px;font-weight:600;margin-top:8px;padding:8px 12px;background:#fff5f5;border:1px solid #ffc9c9;border-radius:6px;text-align:center;';
-        var footer = document.querySelector('#modalRequest .modal-footer');
+        var footer = document.querySelector('#modalRequest .trm-footer');
+        if (!footer || !footer.parentNode) return;
         footer.parentNode.insertBefore(warn, footer);
     }
     warn.textContent = '⚠ ' + msg;
@@ -183,16 +233,33 @@ dirChips.querySelectorAll('input[name="req_dir"]').forEach(function (r) {
     r.addEventListener('change', function () { if (r.checked) renderTypes(r.value); });
 });
 renderTypes('buy');
+setRequesterCompany(MATCH_REQUEST_CONTEXT.requesterCompany || null);
 setRequestTarget(MATCH_REQUEST_CONTEXT.target || null);
 
-/* ---- 추가 문의사항: 포커스 시 기본 텍스트 지우기 ---- */
+if (MATCH_REQUEST_CONTEXT.autoOpenOnLoad) {
+    openModal('modalRequest');
+
+    if (window.history && typeof window.history.replaceState === 'function') {
+        var cleanedUrl = new URL(window.location.href);
+        cleanedUrl.searchParams.delete('trade_request_login');
+        window.history.replaceState({}, document.title, cleanedUrl.pathname + cleanedUrl.search + cleanedUrl.hash);
+    }
+}
+
+/* ---- 추가 문의사항: 자동 메시지 버튼 ---- */
 (function () {
     var ta = document.getElementById('reqExtraNote');
+    var autoBtn = document.getElementById('reqAutoMessageBtn');
     if (!ta) return;
-    if (!DEFAULT_NOTE) DEFAULT_NOTE = ta.value;
-    if (ta.value === DEFAULT_NOTE) ta.style.color = '#a0aec0';
-    ta.addEventListener('focus', function () { if (ta.value === DEFAULT_NOTE) { ta.value = ''; ta.style.color = ''; } });
-    ta.addEventListener('blur',  function () { if (!ta.value.trim()) { ta.value = DEFAULT_NOTE; ta.style.color = '#a0aec0'; } });
+    if (!autoBtn) return;
+
+    autoBtn.addEventListener('click', function () {
+        ta.value = DEFAULT_NOTE || '';
+        ta.focus();
+        if (typeof ta.setSelectionRange === 'function') {
+            ta.setSelectionRange(ta.value.length, ta.value.length);
+        }
+    });
 })();
 
 /* ---- 뒤로가기: 거래 타입 → 요청서 작성 ---- */
@@ -229,7 +296,7 @@ if (confirmTypeBtn) {
         var target = MATCH_REQUEST_CONTEXT.target || {};
         if (!target.kedcd) { alert('대상 기업 정보를 다시 확인해 주세요.'); return; }
 
-        formData.set('type', 'trade_request_insert');
+        formData.set('action', 'trade_request_insert');
         formData.set('target_kedcd', target.kedcd);
         formData.set('trade_direction', dir.value);
         typeChecks.forEach(function (c) { formData.append('trade_purpose[]', c.value); });
@@ -239,7 +306,7 @@ if (confirmTypeBtn) {
 
         confirmTypeBtn.disabled = true;
 
-        // 거래 요청서 저장 fetch로 전송
+        // 저장은 항상 상세 페이지 POST 로직으로 보내서 페이지별 처리 차이를 없앤다.
         fetch(REQUEST_ENDPOINT, {
             method: 'POST',
             headers: {
@@ -248,7 +315,12 @@ if (confirmTypeBtn) {
             },
             body: formData.toString()
         })
-        .then(function (response) { return response.json(); })
+        .then(function (response) {
+            if (!response.ok) {
+                throw new Error('HTTP_' + response.status);
+            }
+            return response.json();
+        })
         .then(function (data) {
             if (!data || !data.success) {
                 var errorMessage = data && data.message ? data.message : '거래 요청서 저장 중 오류가 발생했습니다.';
@@ -265,13 +337,20 @@ if (confirmTypeBtn) {
             closeModal('modalType');
             closeModal('modalRequest');
 
+            if (window._showToast) {
+                window._showToast('✓', '거래 요청서가 저장되었습니다', 'success');
+            }
+
             if (typeof window.onTradeRequestCreated === 'function') {
                 window.onTradeRequestCreated(data, target);
                 return;
             }
 
+            // 상세 페이지에서는 저장 직후 마스킹 해제 상태를 반영하기 위해 새로고침한다.
             if (MATCH_REQUEST_CONTEXT.sourcePage === 'company_detail' && data && data.unlock_detail) {
-                window.location.reload();
+                setTimeout(function () {
+                    window.location.reload();
+                }, window._showToast ? 1200 : 0);
             }
         })
         .catch(function () {

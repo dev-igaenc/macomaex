@@ -1,10 +1,11 @@
 <?php
 include_once(__DIR__ . '/_common.php');
+include_once(__DIR__ . '/helper/trade_request_helper.php');
 
 $g5['title'] = '거래 히스토리';
 $board['bo_10'] = '6';
 $board['bo_9'] = '2';
-$defaultMessage = '담당자님, 안녕하세요. 귀사를 확인하고 연락드립니다. 신규 거래처를 검토 중이며, 귀사와 적합한 경우 거래 진행을 희망합니다. 상세 조건은 협의를 통해 논의하고자 합니다.';
+$defaultMessage = trade_request_default_message();
 
 $design_tokens_ver = file_exists(__DIR__ . '/css/design-tokens.css') ? filemtime(__DIR__ . '/css/design-tokens.css') : time();
 $match_request_modal_ver = file_exists(__DIR__ . '/css/match-request-modal.css') ? filemtime(__DIR__ . '/css/match-request-modal.css') : time();
@@ -148,10 +149,14 @@ if ($memberBzno === '') {
 	alert('회원 사업자번호 정보가 없어 거래 히스토리를 확인할 수 없습니다.', '/');
 }
 
+// 관심기업 탭 공통 모달에서도 같은 "우리 기업 정보"를 쓰도록 로그인 기업 데이터를 미리 준비한다.
+$requesterCompanyData = trade_request_member_company_data($memberBzno);
+
+$memberIdSql = sql_escape_string($member['mb_id']);
 $memberBznoSql = sql_escape_string($memberBzno);
 
 $favoriteKedcdMap = array();
-$favoriteResult = sql_query("SELECT KEDCD FROM g5_favorite WHERE mb_id = '" . sql_escape_string($member['mb_id']) . "'", false);
+$favoriteResult = sql_query("SELECT KEDCD FROM g5_favorite WHERE mb_id = '{$memberIdSql}'", false);
 if ($favoriteResult) {
 	for ($i = 0; $fav = sql_fetch_array($favoriteResult); $i++) {
 		$favKedcd = trim((string)($fav['KEDCD'] ?? ''));
@@ -188,7 +193,7 @@ $receivedSql = "
 	WHERE TR.target_bzno = '{$memberBznoSql}'
 	ORDER BY TR.tr_no DESC
 ";
-// 받은요청 조회
+// 받은 요청은 요청 기업 기준으로 회사/담당자 정보를 매칭한다.
 $receivedResult = sql_query($receivedSql, false);
 if ($receivedResult) {
 	for ($i = 0; $row = sql_fetch_array($receivedResult); $i++) {
@@ -225,7 +230,7 @@ $sentSql = "
 	ORDER BY TR.tr_no DESC
 ";
 
-// 보낸요청 조회
+// 보낸 요청은 대상 기업 기준으로 회사 정보를 매칭한다.
 $sentResult = sql_query($sentSql, false);
 if ($sentResult) {
 	for ($i = 0; $row = sql_fetch_array($sentResult); $i++) {
@@ -259,11 +264,11 @@ $interestedSql = "
 		(SELECT k_code_name FROM kssc WHERE k_code = C.BZC_CD LIMIT 1) AS industry_name
 	FROM g5_favorite F
 	LEFT JOIN company C ON C.KEDCD = F.KEDCD
-	WHERE F.mb_id = '" . sql_escape_string($member['mb_id']) . "'
+	WHERE F.mb_id = '{$memberIdSql}'
 	ORDER BY F.ms_id DESC
 ";
 
-// 관심기업 조회
+// 관심기업은 기존 요청 상태를 함께 계산해 버튼 상태를 결정한다.
 $interestedResult = sql_query($interestedSql, false);
 if ($interestedResult) {
 	for ($i = 0; $row = sql_fetch_array($interestedResult); $i++) {
@@ -304,8 +309,19 @@ if ($matchingPageDataJson === false) {
 	$matchingPageDataJson = '{"received":[],"sent":[],"interested":[]}';
 }
 
+$defaultMessageJson = json_encode($defaultMessage, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+if ($defaultMessageJson === false) {
+	$defaultMessageJson = '""';
+}
+
+$requesterCompanyDataJson = json_encode($requesterCompanyData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+if ($requesterCompanyDataJson === false) {
+	$requesterCompanyDataJson = '{}';
+}
+
+// 공통 모달은 이 컨텍스트만 보고 company_detail 저장 로직을 공통으로 호출한다.
 add_javascript('<script>window.__MATCHING_PAGE_DATA = ' . $matchingPageDataJson . ';</script>', 239);
-add_javascript('<script>window.MATCH_REQUEST_CONTEXT = { defaultRequestMessage: ' . json_encode($defaultMessage, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . ', endpoint: "/get_set.php", sourcePage: "my_matching", target: null };</script>', 238);
+add_javascript('<script>window.MATCH_REQUEST_CONTEXT = { defaultRequestMessage: ' . $defaultMessageJson . ', endpoint: "/ko/company_detail.php", sourcePage: "my_matching", isLoggedIn: true, loginCheckUrl: "", autoOpenOnLoad: false, requesterCompany: ' . $requesterCompanyDataJson . ', target: null };</script>', 238);
 ?>
 
 <div id="myMatchingPage">

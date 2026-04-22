@@ -15,6 +15,8 @@
 function renderDetailLeftCard(co, scoreHtml) {
     var el = document.getElementById('leftCard');
     if (!el) return;
+    co = co || {};
+    scoreHtml = typeof scoreHtml === 'string' ? scoreHtml : '';
 
     function _esc(s) {
         var d = document.createElement('div');
@@ -35,7 +37,7 @@ function renderDetailLeftCard(co, scoreHtml) {
         return value ? value : '정보 준비중';
     }
 
-    // 서버에서 내려준 해제 여부에 따라 기업명/주소/홈페이지를 마스킹 상태와 실제 값 상태로 분기한다.
+    // 상세 공개 여부에 따라 카드 내부의 민감 정보 표시 방식을 통일한다.
     var isUnlocked = !!co.is_unlocked;
     var titleHtml = isUnlocked ? _esc(_displayOrPending(co.title_display || co.title)) : _maskName(co.title);
     var addressHtml = isUnlocked
@@ -48,7 +50,7 @@ function renderDetailLeftCard(co, scoreHtml) {
     var homepageClass = isUnlocked ? '' : ' class="info-masked"';
 
     var tagsHtml = '';
-    (co.tags || []).forEach(function(t) {
+    (Array.isArray(co.tags) ? co.tags : []).forEach(function(t) {
         tagsHtml += '<span class="tag-pill">' + _esc(t) + '</span>';
     });
 
@@ -76,7 +78,7 @@ function renderDetailLeftCard(co, scoreHtml) {
             '<p class="sub">' + _esc(co.sub) + '</p>' +
         '</div></div>' +
         '<div class="industry-tags">' + tagsHtml + '</div>' +
-        (scoreHtml || '') +
+        scoreHtml +
         '<dl class="info-grid">' +
             '<dt>설립</dt><dd>' + _esc(co.founded) + '</dd>' +
             '<dt>고용인원</dt><dd>' + _esc(co.employees) + '</dd>' +
