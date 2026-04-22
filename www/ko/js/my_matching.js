@@ -372,8 +372,8 @@ function syncFavoriteState(kedcd, active) {
    ====================================================== */
 var currentMainTab = 'received';
 var currentSubFilter = { received: 'all', sent: 'all' };
-var tradeRequestActionUrls = ['/get_set.php', '../get_set.php'];
-var sentStatusRequestUrls = ['/get_set.php', '../get_set.php'];
+var tradeRequestActionUrls = ['/ko/my_matching.php'];
+var sentStatusRequestUrls = ['/ko/my_matching.php'];
 var sentStatusPollTimer = null;
 
 function moveTabIndicator(tab) {
@@ -485,7 +485,7 @@ function approvalStatusToCode(status) {
 
 function requestTradeApproval(url, id, action) {
     var body = new URLSearchParams();
-    body.set('type', 'trade_request_approval');
+    body.set('action', 'trade_request_approval');
     body.set('idx', id);
     body.set('typ', action);
 
@@ -547,7 +547,7 @@ function updateReceivedItemStatus(id, nextStatus) {
 
 function requestSentStatuses(url) {
     var body = new URLSearchParams();
-    body.set('type', 'my_matching_sent_status');
+    body.set('action', 'my_matching_sent_status');
 
     return fetch(url, {
         method: 'POST',
