@@ -1235,8 +1235,7 @@ switch ($type) {
 
 		$after_status = sql_fetch("select * from g5_membership_status where uid='" . sql_real_escape_string($request_member_id) . "' order by no desc limit 1");
 		$credit_after = isset($after_status['matching_able_cnt']) ? (int)$after_status['matching_able_cnt'] : 0;
-		$memo_prefix = ($trade_type === 'TM') ? '거래 요청(TM)' : '거래 요청(BASIC)';
-		$memo = addslashes($memo_prefix . " 사용({$credit_amount} 차감)");
+		$memo = addslashes($trade_type === 'TM' ? 'TM 서포트 거래 요청' : '일반 거래 요청');
 		$history_sql = "insert into g5_matching_credit_history set
 			uid='" . sql_real_escape_string($request_member_id) . "',
 			tx_type='USE',

@@ -101,16 +101,14 @@ $sql = "select
 			MM.title_en as plan_title_en,
 			MM.sale as plan_bonus_rate,
 			MM.vat as plan_vat,
-			M.rq_kind as matching_rq_kind,
-			M.rc_kind as matching_rc_kind,
-			M.KEDCD as matching_kedcd,
-			C.ENP_NM as company_name
+			TR.trade_direction as trade_request_direction,
+			IFNULL(C2.ENP_NM, TR.target_company_name) as company_name
 		from g5_matching_credit_history H
 		left join g5_membership_paybill B on H.order_no=B.order_no
 		left join g5_membership_payment P on H.order_no=P.order_no
 		left join g5_membership_manage MM on P.membership_parent_no=MM.no
-		left join g5_matching M on H.matching_no=M.no
-		left join company C on M.KEDCD=C.KEDCD
+		left join trade_request TR on H.service_code='TRADE_REQUEST' and H.matching_no=TR.tr_no
+		left join company C2 on C2.KEDCD=TR.target_kedcd
 		where
 			LOWER(TRIM(H.uid))=LOWER(TRIM('{$member['mb_id']}'))
 			".($member['mb_email'] ? " or LOWER(TRIM(H.uid))=LOWER(TRIM('{$member['mb_email']}'))" : "")."
@@ -139,15 +137,13 @@ if(!$result){
 				MM.title_en as plan_title_en,
 				MM.sale as plan_bonus_rate,
 				MM.vat as plan_vat,
-				M.rq_kind as matching_rq_kind,
-				M.rc_kind as matching_rc_kind,
-				M.KEDCD as matching_kedcd,
-				C.ENP_NM as company_name
+				TR.trade_direction as trade_request_direction,
+				IFNULL(C2.ENP_NM, TR.target_company_name) as company_name
 			from g5_matching_credit_history H
 			left join g5_membership_payment P on H.order_no=P.order_no
 			left join g5_membership_manage MM on P.membership_parent_no=MM.no
-			left join g5_matching M on H.matching_no=M.no
-			left join company C on M.KEDCD=C.KEDCD
+			left join trade_request TR on H.service_code='TRADE_REQUEST' and H.matching_no=TR.tr_no
+			left join company C2 on C2.KEDCD=TR.target_kedcd
 			where
 				LOWER(TRIM(H.uid))=LOWER(TRIM('{$member['mb_id']}'))
 				".($member['mb_email'] ? " or LOWER(TRIM(H.uid))=LOWER(TRIM('{$member['mb_email']}'))" : "")."
@@ -173,27 +169,6 @@ for($i=0; $i<count($history_rows); $i++){
 	else $payment_rows[] = $row;
 }
 
-$matching_company_map = array();
-$matching_rq_kind_map = array();
-$matching_rc_kind_map = array();
-$matching_no_list = array();
-// 매칭번호로 회사명 보강
-for($i=0; $i<count($use_rows); $i++){
-	$mn = (int)$use_rows[$i]['matching_no'];
-	if($mn > 0) $matching_no_list[$mn] = $mn;
-}
-if(count($matching_no_list) > 0){
-	$matching_no_in = implode(',', $matching_no_list);
-	$company_result = sql_query("select M.no as matching_no, C.ENP_NM as company_name, M.rq_kind, M.rc_kind from g5_matching M left join company C on M.KEDCD=C.KEDCD where M.no in ({$matching_no_in})", false);
-	if($company_result){
-		while($crow = sql_fetch_array($company_result)){
-			$key = (string)$crow['matching_no'];
-			$matching_company_map[$key] = trim((string)$crow['company_name']);
-			$matching_rq_kind_map[$key] = strtoupper(trim((string)$crow['rq_kind']));
-			$matching_rc_kind_map[$key] = strtoupper(trim((string)$crow['rc_kind']));
-		}
-	}
-}
 ?>
 
 
@@ -393,14 +368,6 @@ if(count($matching_no_list) > 0){
 
                                 $title = $row['memo'] ? $row['memo'] : "[크레딧] 매칭 요청 {$delta} 크레딧 차감";
                                 $company_name = trim((string)$row['company_name']);
-                                $rq_kind = strtoupper(trim((string)$row['matching_rq_kind']));
-                                $rc_kind = strtoupper(trim((string)$row['matching_rc_kind']));
-                                if(!$company_name && (int)$row['matching_no'] > 0){
-                                    $map_key = (string)((int)$row['matching_no']);
-                                    if(isset($matching_company_map[$map_key])) $company_name = $matching_company_map[$map_key];
-                                    if(!$rq_kind && isset($matching_rq_kind_map[$map_key])) $rq_kind = $matching_rq_kind_map[$map_key];
-                                    if(!$rc_kind && isset($matching_rc_kind_map[$map_key])) $rc_kind = $matching_rc_kind_map[$map_key];
-                                }
 
                                 $is_tm_request = (strpos((string)$title, "TM") !== false);
                                 $request_type_local = strtoupper(trim((string)$row['request_type']));
@@ -408,11 +375,11 @@ if(count($matching_no_list) > 0){
                                     $request_type_local = $is_tm_request ? "TM" : "BASIC";
                                 }
                                 $service_label = ($request_type_local === "TM") ? "TM 서포트" : "일반 거래";
+                                $direction_raw = strtoupper(trim((string)$row['trade_request_direction']));
                                 $direction_label = "구매";
-                                if($rq_kind === "M" && $rc_kind === "D") $direction_label = "판매";
-                                else if($rq_kind === "D" && $rc_kind === "M") $direction_label = "구매";
-                                else if($rq_kind === "M") $direction_label = "판매";
-                                else if($rq_kind === "D") $direction_label = "구매";
+                                if($direction_raw === "P") $direction_label = "구매";
+                                else if($direction_raw === "S") $direction_label = "판매";
+                                else if($direction_raw === "C") $direction_label = "협업";
                                 $is_match_request_memo = (
                                     strpos((string)$title, "일반 거래 요청") !== false ||
                                     strpos((string)$title, "TM 서포트 거래 요청") !== false
