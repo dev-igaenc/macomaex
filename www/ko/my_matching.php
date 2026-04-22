@@ -1,6 +1,7 @@
 <?php
 include_once(__DIR__ . '/_common.php');
 include_once(__DIR__ . '/helper/trade_request_helper.php');
+include_once(__DIR__ . '/helper/my_matching_helper.php');
 
 $g5['title'] = '거래 히스토리';
 $board['bo_10'] = '6';
@@ -36,6 +37,18 @@ add_javascript('<script src="/ko/js/match-request-modal.js?ver=' . $match_reques
 add_javascript('<script src="/ko/js/my_matching.js?ver=' . $my_matching_js_ver . '"></script>', 240);
 
 login_chk();
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
+	$action = trim((string)$_POST['action']);
+
+	if ($action === 'trade_request_approval') {
+		my_matching_handle_trade_request_approval($member, $_POST);
+	}
+
+	if ($action === 'my_matching_sent_status') {
+		my_matching_handle_sent_status($member);
+	}
+}
 
 include_once(G5_THEME_PATH . '/head.php');
 
