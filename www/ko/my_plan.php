@@ -1,4 +1,4 @@
-<?
+<?php
 include_once("./_common.php");
 
 $board['bo_10']="6"; // 1뎁스
@@ -101,16 +101,14 @@ $sql = "select
 			MM.title_en as plan_title_en,
 			MM.sale as plan_bonus_rate,
 			MM.vat as plan_vat,
-			M.rq_kind as matching_rq_kind,
-			M.rc_kind as matching_rc_kind,
-			M.KEDCD as matching_kedcd,
-			C.ENP_NM as company_name
+			TR.trade_direction as trade_request_direction,
+			IFNULL(C2.ENP_NM, TR.target_company_name) as company_name
 		from g5_matching_credit_history H
 		left join g5_membership_paybill B on H.order_no=B.order_no
 		left join g5_membership_payment P on H.order_no=P.order_no
 		left join g5_membership_manage MM on P.membership_parent_no=MM.no
-		left join g5_matching M on H.matching_no=M.no
-		left join company C on M.KEDCD=C.KEDCD
+		left join trade_request TR on H.service_code='TRADE_REQUEST' and H.matching_no=TR.tr_no
+		left join company C2 on C2.KEDCD=TR.target_kedcd
 		where
 			LOWER(TRIM(H.uid))=LOWER(TRIM('{$member['mb_id']}'))
 			".($member['mb_email'] ? " or LOWER(TRIM(H.uid))=LOWER(TRIM('{$member['mb_email']}'))" : "")."
@@ -139,15 +137,13 @@ if(!$result){
 				MM.title_en as plan_title_en,
 				MM.sale as plan_bonus_rate,
 				MM.vat as plan_vat,
-				M.rq_kind as matching_rq_kind,
-				M.rc_kind as matching_rc_kind,
-				M.KEDCD as matching_kedcd,
-				C.ENP_NM as company_name
+				TR.trade_direction as trade_request_direction,
+				IFNULL(C2.ENP_NM, TR.target_company_name) as company_name
 			from g5_matching_credit_history H
 			left join g5_membership_payment P on H.order_no=P.order_no
 			left join g5_membership_manage MM on P.membership_parent_no=MM.no
-			left join g5_matching M on H.matching_no=M.no
-			left join company C on M.KEDCD=C.KEDCD
+			left join trade_request TR on H.service_code='TRADE_REQUEST' and H.matching_no=TR.tr_no
+			left join company C2 on C2.KEDCD=TR.target_kedcd
 			where
 				LOWER(TRIM(H.uid))=LOWER(TRIM('{$member['mb_id']}'))
 				".($member['mb_email'] ? " or LOWER(TRIM(H.uid))=LOWER(TRIM('{$member['mb_email']}'))" : "")."
@@ -173,27 +169,6 @@ for($i=0; $i<count($history_rows); $i++){
 	else $payment_rows[] = $row;
 }
 
-$matching_company_map = array();
-$matching_rq_kind_map = array();
-$matching_rc_kind_map = array();
-$matching_no_list = array();
-// 매칭번호로 회사명 보강
-for($i=0; $i<count($use_rows); $i++){
-	$mn = (int)$use_rows[$i]['matching_no'];
-	if($mn > 0) $matching_no_list[$mn] = $mn;
-}
-if(count($matching_no_list) > 0){
-	$matching_no_in = implode(',', $matching_no_list);
-	$company_result = sql_query("select M.no as matching_no, C.ENP_NM as company_name, M.rq_kind, M.rc_kind from g5_matching M left join company C on M.KEDCD=C.KEDCD where M.no in ({$matching_no_in})", false);
-	if($company_result){
-		while($crow = sql_fetch_array($company_result)){
-			$key = (string)$crow['matching_no'];
-			$matching_company_map[$key] = trim((string)$crow['company_name']);
-			$matching_rq_kind_map[$key] = strtoupper(trim((string)$crow['rq_kind']));
-			$matching_rc_kind_map[$key] = strtoupper(trim((string)$crow['rc_kind']));
-		}
-	}
-}
 ?>
 
 
@@ -248,7 +223,7 @@ if(count($matching_no_list) > 0){
                     </div>
 
                     <div id="chargeList" class="card-list">
-                        <?for($i=0; $i<count($payment_rows); $i++){
+                        <?php for($i=0; $i<count($payment_rows); $i++){
                             $row = $payment_rows[$i];
                             $tx_type = strtoupper(trim((string)$row['tx_type']));
                             $amount = (float)$row['credit_delta'];
@@ -323,26 +298,26 @@ if(count($matching_no_list) > 0){
                         ?>
                         <div class="pay-card" data-type="<?=$filter_type?>">
                             <div class="pay-card-icon <?=$icon_class?>">
-                                <?if($icon_class=="free"){?>
+                                <?php if($icon_class=="free"){?>
                                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5" rx="1"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 010-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 000-5C13 2 12 7 12 7z"/></svg>
-                                <?}else{?>
+                                <?php }else{?>
                                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
-                                <?}?>
+                                <?php }?>
                             </div>
                             <div class="pay-card-info">
                                 <div class="title"><?=htmlspecialchars($title, ENT_QUOTES)?></div>
                                 <div class="meta">
-                                    <?if($is_signup_free){?>
+                                    <?php if($is_signup_free){?>
                                     <span><?=substr((string)$row['event_date'],0,10)?></span>
                                     <span class="dot"></span>
                                     <span>Free 플랜 · 서비스 체험용 · 청약철회 제외</span>
-                                    <?}else{?>
+                                    <?php }else{?>
                                     <span><?=substr((string)$row['event_date'],0,10)?></span>
                                     <span class="dot"></span>
                                     <span><?=htmlspecialchars($meta_credit_text, ENT_QUOTES)?></span>
                                     <span class="dot"></span>
                                     <span><?=htmlspecialchars($meta_method_text, ENT_QUOTES)?></span>
-                                    <?}?>
+                                    <?php }?>
                                 </div>
                             </div>
                             <div class="pay-card-right">
@@ -351,15 +326,15 @@ if(count($matching_no_list) > 0){
                                 <span class="status-badge <?=$status_class?>"><?=$status_text?></span>
                             </div>
                         </div>
-                        <?}?>
-                        <?if(!count($payment_rows)){?>
+                        <?php }?>
+                        <?php if(!count($payment_rows)){?>
                         <div class="pay-card">
                             <div class="pay-card-info">
                                 <div class="title">결제 내역이 없습니다.</div>
                                 <div class="meta"><span>결제 또는 지급 이력이 없습니다.</span></div>
                             </div>
                         </div>
-                        <?}?>
+                        <?php }?>
                     </div>
                     <div class="load-more-wrap" id="chargeMoreWrap">
                         <button class="load-more-btn" id="chargeMoreBtn" type="button">
@@ -384,7 +359,7 @@ if(count($matching_no_list) > 0){
                         </div>
 
                         <div id="useList" class="card-list">
-                            <?for($i=0; $i<count($use_rows); $i++){
+                            <?php for($i=0; $i<count($use_rows); $i++){
                                 $row = $use_rows[$i];
                                 $amount = (float)$row['credit_delta'];
                                 $amount_abs = abs($amount);
@@ -393,14 +368,6 @@ if(count($matching_no_list) > 0){
 
                                 $title = $row['memo'] ? $row['memo'] : "[크레딧] 매칭 요청 {$delta} 크레딧 차감";
                                 $company_name = trim((string)$row['company_name']);
-                                $rq_kind = strtoupper(trim((string)$row['matching_rq_kind']));
-                                $rc_kind = strtoupper(trim((string)$row['matching_rc_kind']));
-                                if(!$company_name && (int)$row['matching_no'] > 0){
-                                    $map_key = (string)((int)$row['matching_no']);
-                                    if(isset($matching_company_map[$map_key])) $company_name = $matching_company_map[$map_key];
-                                    if(!$rq_kind && isset($matching_rq_kind_map[$map_key])) $rq_kind = $matching_rq_kind_map[$map_key];
-                                    if(!$rc_kind && isset($matching_rc_kind_map[$map_key])) $rc_kind = $matching_rc_kind_map[$map_key];
-                                }
 
                                 $is_tm_request = (strpos((string)$title, "TM") !== false);
                                 $request_type_local = strtoupper(trim((string)$row['request_type']));
@@ -408,11 +375,11 @@ if(count($matching_no_list) > 0){
                                     $request_type_local = $is_tm_request ? "TM" : "BASIC";
                                 }
                                 $service_label = ($request_type_local === "TM") ? "TM 서포트" : "일반 거래";
+                                $direction_raw = strtoupper(trim((string)$row['trade_request_direction']));
                                 $direction_label = "구매";
-                                if($rq_kind === "M" && $rc_kind === "D") $direction_label = "판매";
-                                else if($rq_kind === "D" && $rc_kind === "M") $direction_label = "구매";
-                                else if($rq_kind === "M") $direction_label = "판매";
-                                else if($rq_kind === "D") $direction_label = "구매";
+                                if($direction_raw === "P") $direction_label = "구매";
+                                else if($direction_raw === "S") $direction_label = "판매";
+                                else if($direction_raw === "C") $direction_label = "협업";
                                 $is_match_request_memo = (
                                     strpos((string)$title, "일반 거래 요청") !== false ||
                                     strpos((string)$title, "TM 서포트 거래 요청") !== false
@@ -425,28 +392,28 @@ if(count($matching_no_list) > 0){
                             ?>
                             <div class="pay-card" data-type="<?=$use_type?>">
                                 <div class="pay-card-icon <?=$use_type?>">
-                                    <?if($use_type=="analyze"){?>
+                                    <?php if($use_type=="analyze"){?>
                                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z"/></svg>
-                                    <?}else{?>
+                                    <?php }else{?>
                                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
-                                    <?}?>
+                                    <?php }?>
                                 </div>
                                 <div class="pay-card-info">
                                     <div class="title"><?=htmlspecialchars($title, ENT_QUOTES)?></div>
                                     <div class="meta">
-                                        <?if($use_type=="match"){?>
+                                        <?php if($use_type=="match"){?>
                                         <span><?=substr((string)$row['event_date'],0,10)?></span>
                                         <span class="dot"></span>
                                         <span>거래 방향 : <?=htmlspecialchars($direction_label, ENT_QUOTES)?></span>
                                         <span class="dot"></span>
                                         <span><?=htmlspecialchars($service_label, ENT_QUOTES)?></span>
-                                        <?}else{?>
+                                        <?php }else{?>
                                         <span><?=substr((string)$row['event_date'],0,10)?></span>
-                                        <?if($row['matching_no']){?>
+                                        <?php if($row['matching_no']){?>
                                         <span class="dot"></span>
                                         <span>매칭번호 <?=htmlspecialchars($row['matching_no'], ENT_QUOTES)?></span>
-                                        <?}?>
-                                        <?}?>
+                                        <?php }?>
+                                        <?php }?>
                                     </div>
                                 </div>
                                 <div class="pay-card-right">
@@ -454,15 +421,15 @@ if(count($matching_no_list) > 0){
                                     <span class="status-badge used">사용</span>
                                 </div>
                             </div>
-                            <?}?>
-                            <?if(!count($use_rows)){?>
+                            <?php }?>
+                            <?php if(!count($use_rows)){?>
                             <div class="pay-card">
                                 <div class="pay-card-info">
                                     <div class="title">크레딧 사용 내역이 없습니다.</div>
                                     <div class="meta"><span>사용 이력이 없습니다.</span></div>
                                 </div>
                             </div>
-                            <?}?>
+                            <?php }?>
                         </div>
                         <div class="load-more-wrap" id="useMoreWrap">
                             <button class="load-more-btn" id="useMoreBtn" type="button">
@@ -483,7 +450,7 @@ if(count($matching_no_list) > 0){
                         <div class="policy-box-body">
                             <div class="policy-notice" style="margin-top:16px; background:#f0fdf4; border-color:#bbf7d0;">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-                                <span style="color:#14532d;">크레딧은 디지털 콘텐츠 이용권으로, <strong>첫 크레딧 사용 시점</strong>을 서비스 제공 개시로 봅니다. 결제 후 7일 이내 크레딧을 전혀 사용하지 않은 경우 전자상거래법 제17조에 따라 100% 환불이 가능합니다. 7일 경과 또는 일부 사용 후에는 잔여 유료 크레딧 기준으로 수수료(10%)를 제외한 금액이 환불됩니다.</span>
+                                <span style="color:#14532d;">크레딧은 디지털 콘텐츠 이용권으로, <strong>첫 크레딧 사용 시점</strong>을 서비스 제공 개시로 봅니다. 결제 후 7일 이내 해당 결제로 충전한 크레딧을 전혀 사용하지 않은 경우 전자상거래법 제17조에 따라 100% 환불이 가능합니다.</span>
                             </div>
                             <table class="policy-table">
                                 <thead>
@@ -495,14 +462,9 @@ if(count($matching_no_list) > 0){
                                 </thead>
                                 <tbody>
                                     <tr>
-                                        <td>청약철회<br><span style="font-size:11px;color:#9ca3af;">결제 후 7일 이내 · 미사용</span></td>
+                                        <td>청약철회<br><span style="font-size:11px;color:#9ca3af;">결제 후 7일 이내 · 해당 결제 충전분 미사용</span></td>
                                         <td><span class="tag-allowed">100% 환불</span></td>
-                                        <td>결제 후 7일 이내 크레딧을 전혀 사용하지 않은 경우 전액 환불<br><span style="font-size:11px;color:#9ca3af;">전자상거래법 제17조 적용</span></td>
-                                    </tr>
-                                    <tr>
-                                        <td>중도 해지<br><span style="font-size:11px;color:#9ca3af;">7일 경과 또는 일부 사용</span></td>
-                                        <td><span class="tag-partial">수수료 제외 환불</span></td>
-                                        <td>잔여 유료 크레딧 기준, 수수료 10% 제외 후 환불<br><span style="font-size:11px;color:#9ca3af;">예: 잔여 유료 150cr(₩15,000) → 수수료 ₩1,500 제외 → 환불액 ₩13,500</span></td>
+                                        <td>결제 후 7일 이내 해당 결제로 충전한 크레딧을 전혀 사용하지 않은 경우 전액 환불<br><span style="font-size:11px;color:#9ca3af;">전자상거래법 제17조 적용</span></td>
                                     </tr>
                                     <tr>
                                         <td>사용된 크레딧<br><span style="font-size:11px;color:#9ca3af;">거래 요청 · AI 분석</span></td>
@@ -530,7 +492,7 @@ if(count($matching_no_list) > 0){
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
                                 <ul>
                                     <li>보너스 크레딧 잔여 내역은 마이페이지 &gt; 결제정보에서 확인하실 수 있습니다.</li>
-                                    <li>AI 분석(0.5 크레딧)은 동일 기업 기준 6개월 내 재열람 시 크레딧이 차감되지 않습니다.</li>
+                                    <li>AI 분석(1 크레딧)은 동일 기업 기준 2개월 내 재열람 시 크레딧이 차감되지 않습니다.</li>
                                     <li>결제 오류 문의: 고객센터 접수 후 영업일 기준 3일 이내 처리됩니다.</li>
                                 </ul>
                             </div>
@@ -541,6 +503,6 @@ if(count($matching_no_list) > 0){
 
 </div>
 
-<?
+<?php
 include_once(G5_THEME_PATH.'/tail.php');
 ?>

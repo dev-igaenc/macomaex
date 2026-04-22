@@ -439,6 +439,8 @@ add_javascript('<script>window.MATCH_REQUEST_CONTEXT = { defaultRequestMessage: 
 
 </div>
 
+</div>
+
 <?php include __DIR__ . '/modal/match_request_modal.php'; ?>
 
 <?php

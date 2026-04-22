@@ -112,8 +112,7 @@ function trade_request_consume_credit($memberId, $trNo, $targetKedcd, $tradeType
 
 	$afterStatus = sql_fetch("select * from g5_membership_status where uid='" . sql_escape_string($memberId) . "' order by no desc limit 1");
 	$creditAfter = isset($afterStatus['matching_able_cnt']) ? (int)$afterStatus['matching_able_cnt'] : 0;
-	$memoPrefix = ($tradeType === 'TM') ? '거래 요청(TM)' : '거래 요청(BASIC)';
-	$memo = addslashes($memoPrefix . " 사용({$creditAmount} 차감)");
+	$memo = addslashes($tradeType === 'TM' ? 'TM 서포트 거래 요청' : '일반 거래 요청');
 
 	$historySql = "insert into g5_matching_credit_history set
 		uid='" . sql_escape_string($memberId) . "',
