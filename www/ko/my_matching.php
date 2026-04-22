@@ -1,6 +1,6 @@
 <?php
 include_once(__DIR__ . '/_common.php');
-include_once(__DIR__ . '/inc/trade_request_helper.php');
+include_once(__DIR__ . '/helper/trade_request_helper.php');
 
 $g5['title'] = '거래 히스토리';
 $board['bo_10'] = '6';

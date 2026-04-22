@@ -1,6 +1,6 @@
 <?php
 include_once("./_common.php");
-include_once(__DIR__ . '/inc/trade_request_helper.php');
+include_once(__DIR__ . '/helper/trade_request_helper.php');
 
 $g5['title'] = '기업 상세';
 $shouldOpenTradeRequestModal = false;
