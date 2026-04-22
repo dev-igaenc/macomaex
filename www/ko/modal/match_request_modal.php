@@ -2,7 +2,7 @@
 
 <!-- 1) 거래 요청서 작성 -->
 <div class="trm-overlay" id="modalRequest" aria-hidden="true">
-	<div class="trm-modal" role="dialog" aria-labelledby="reqTitle">
+	<div class="trm-modal" role="dialog" aria-modal="true" aria-labelledby="reqTitle">
 		<div class="trm-header">
 			<h2 id="reqTitle">거래 요청서 작성</h2>
 			<button type="button" class="trm-close" data-close="modalRequest" aria-label="닫기">&times;</button>
@@ -48,14 +48,14 @@
 					<div class="req2-step">
 						<div class="req2-step-label">거래 상세 정보</div>
 						<div class="req2-dynamic">
-							<label class="req2-required">거래 희망 품목</label>
+							<label class="req2-required" for="reqItemField">거래 희망 품목</label>
 							<input type="text" id="reqItemField" name="req_item" placeholder="거래 희망 품목을 입력해 주세요.">
 						</div>
 					</div>
 
 					<div class="req2-step">
 						<div class="req2-step-head">
-							<div class="req2-step-label">추가 문의 사항</div>
+							<label class="req2-step-label" for="reqExtraNote">추가 문의 사항</label>
 							<button type="button" class="trm-auto-note-btn" id="reqAutoMessageBtn">자동 메시지</button>
 						</div>
 						<textarea class="trm-extra" id="reqExtraNote" maxlength="500" placeholder="추가 문의 사항을 직접 입력해 주세요."></textarea>
@@ -72,7 +72,7 @@
 
 <!-- 2) 거래 타입 선택 -->
 <div class="trm-overlay" id="modalType" aria-hidden="true">
-	<div class="trm-modal trm-modal-sm" role="dialog" aria-labelledby="typeTitle">
+	<div class="trm-modal trm-modal-sm" role="dialog" aria-modal="true" aria-labelledby="typeTitle">
 		<div class="trm-header">
 			<h2 id="typeTitle">거래 타입 선택</h2>
 			<button type="button" class="trm-close" data-close="modalType" aria-label="닫기">&times;</button>

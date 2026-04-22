@@ -18,7 +18,7 @@ var DEFAULT_NOTE = MATCH_REQUEST_CONTEXT.defaultRequestMessage
     : ((window.COMPANY_DETAIL_DATA && window.COMPANY_DETAIL_DATA.defaultRequestMessage)
         ? String(window.COMPANY_DETAIL_DATA.defaultRequestMessage)
         : '');
-var REQUEST_ENDPOINT = MATCH_REQUEST_CONTEXT.endpoint || '/get_set.php';
+var REQUEST_ENDPOINT = MATCH_REQUEST_CONTEXT.endpoint || '/ko/company_detail.php';
 
 function setText(id, value) {
     var el = document.getElementById(id);
@@ -67,6 +67,7 @@ function setRequesterCompany(company) {
         return;
     }
 
+    // 홈페이지 값이 있으면 공통 모달에서도 링크 형태로만 렌더링한다.
     homepageRow.hidden = false;
     homepageCell.innerHTML = '<a href="' + escapeHtml(homepageUrl) + '" target="_blank" rel="noopener noreferrer">' + escapeHtml(homepageText) + '</a>';
 }
@@ -81,13 +82,17 @@ window.setMatchRequesterCompany = setRequesterCompany;
 
 /* ---- 모달 열기/닫기 (전역 노출 — 페이지 내 다른 코드에서도 사용 가능) ---- */
 window.openModal = function (id) {
+    var modal = document.getElementById(id);
+    if (!modal) return;
     var sw = window.innerWidth - document.documentElement.clientWidth;
     document.documentElement.style.setProperty('--scrollbar-w', sw + 'px');
     document.documentElement.classList.add('hide-scroll');
-    document.getElementById(id).classList.add('open');
+    modal.classList.add('open');
 };
 window.closeModal = function (id) {
-    document.getElementById(id).classList.remove('open');
+    var modal = document.getElementById(id);
+    if (!modal) return;
+    modal.classList.remove('open');
     document.documentElement.classList.remove('hide-scroll');
     document.documentElement.style.setProperty('--scrollbar-w', '0px');
 };
@@ -102,7 +107,13 @@ document.querySelectorAll('[data-close]').forEach(function (btn) {
 var openMatchBtn = document.getElementById('openTypeModal2');
 if (openMatchBtn) {
     openMatchBtn.addEventListener('click', function () {
-        if (window._isLoggedIn && !window._isLoggedIn()) { window._requireLogin('거래 요청'); return; }
+        // 비로그인 진입은 각 페이지가 내려준 로그인 유도 URL로만 처리한다.
+        if (MATCH_REQUEST_CONTEXT.isLoggedIn === false) {
+            if (MATCH_REQUEST_CONTEXT.loginCheckUrl) {
+                window.location.href = MATCH_REQUEST_CONTEXT.loginCheckUrl;
+            }
+            return;
+        }
         setRequesterCompany(MATCH_REQUEST_CONTEXT.requesterCompany || null);
         setRequestTarget(MATCH_REQUEST_CONTEXT.target || null);
         openModal('modalRequest');
@@ -127,6 +138,7 @@ function showReqWarning(msg) {
         warn.id = 'reqWarning';
         warn.style.cssText = 'color:#e03131;font-size:13px;font-weight:600;margin-top:8px;padding:8px 12px;background:#fff5f5;border:1px solid #ffc9c9;border-radius:6px;text-align:center;';
         var footer = document.querySelector('#modalRequest .trm-footer');
+        if (!footer || !footer.parentNode) return;
         footer.parentNode.insertBefore(warn, footer);
     }
     warn.textContent = '⚠ ' + msg;
@@ -224,6 +236,16 @@ renderTypes('buy');
 setRequesterCompany(MATCH_REQUEST_CONTEXT.requesterCompany || null);
 setRequestTarget(MATCH_REQUEST_CONTEXT.target || null);
 
+if (MATCH_REQUEST_CONTEXT.autoOpenOnLoad) {
+    openModal('modalRequest');
+
+    if (window.history && typeof window.history.replaceState === 'function') {
+        var cleanedUrl = new URL(window.location.href);
+        cleanedUrl.searchParams.delete('trade_request_login');
+        window.history.replaceState({}, document.title, cleanedUrl.pathname + cleanedUrl.search + cleanedUrl.hash);
+    }
+}
+
 /* ---- 추가 문의사항: 자동 메시지 버튼 ---- */
 (function () {
     var ta = document.getElementById('reqExtraNote');
@@ -284,7 +306,7 @@ if (confirmTypeBtn) {
 
         confirmTypeBtn.disabled = true;
 
-        // 거래 요청서 저장 fetch로 전송
+        // 저장은 항상 상세 페이지 POST 로직으로 보내서 페이지별 처리 차이를 없앤다.
         fetch(REQUEST_ENDPOINT, {
             method: 'POST',
             headers: {
@@ -293,7 +315,12 @@ if (confirmTypeBtn) {
             },
             body: formData.toString()
         })
-        .then(function (response) { return response.json(); })
+        .then(function (response) {
+            if (!response.ok) {
+                throw new Error('HTTP_' + response.status);
+            }
+            return response.json();
+        })
         .then(function (data) {
             if (!data || !data.success) {
                 var errorMessage = data && data.message ? data.message : '거래 요청서 저장 중 오류가 발생했습니다.';
@@ -319,6 +346,7 @@ if (confirmTypeBtn) {
                 return;
             }
 
+            // 상세 페이지에서는 저장 직후 마스킹 해제 상태를 반영하기 위해 새로고침한다.
             if (MATCH_REQUEST_CONTEXT.sourcePage === 'company_detail' && data && data.unlock_detail) {
                 setTimeout(function () {
                     window.location.reload();

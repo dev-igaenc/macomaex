@@ -1,7 +1,14 @@
 <?php
 include_once("./_common.php");
+include_once(__DIR__ . '/inc/trade_request_helper.php');
 
 $g5['title'] = '기업 상세';
+$shouldOpenTradeRequestModal = false;
+
+if (isset($_GET['trade_request_login']) && $_GET['trade_request_login'] === '1') {
+	login_chk();
+	$shouldOpenTradeRequestModal = !empty($member['mb_id']);
+}
 
 $design_tokens_ver = file_exists(__DIR__ . '/css/design-tokens.css') ? filemtime(__DIR__ . '/css/design-tokens.css') : time();
 $badges_css_ver = file_exists(__DIR__ . '/css/badges.css') ? filemtime(__DIR__ . '/css/badges.css') : time();
@@ -24,7 +31,7 @@ $match_request_modal_js_ver = file_exists(__DIR__ . '/js/match-request-modal.js'
 $share_js_ver = file_exists(__DIR__ . '/js/share.js') ? filemtime(__DIR__ . '/js/share.js') : time();
 $confirm_modal_js_ver = file_exists(__DIR__ . '/js/confirm-modal.js') ? filemtime(__DIR__ . '/js/confirm-modal.js') : time();
 $verify_modal_js_ver = file_exists(__DIR__ . '/js/verify-modal.js') ? filemtime(__DIR__ . '/js/verify-modal.js') : time();
-$defaultMessage = '담당자님, 안녕하세요. 귀사를 확인하고 연락드립니다. 신규 거래처를 검토 중이며, 귀사와 적합한 경우 거래 진행을 희망합니다. 상세 조건은 협의를 통해 논의하고자 합니다.';
+$defaultMessage = trade_request_default_message();
 
 // badge 퍼센트 포맷 변환
 function format_badge_percent_detail($value) {
@@ -48,7 +55,7 @@ function trade_request_json_response($success, $message, $extra = array()) {
 	exit;
 }
 
-// 로그용
+// 운영 로그는 식별자 중심으로만 남기고 원문 데이터는 최소화한다.
 function trade_request_log($stage, $data = array()) {
 	$payload = array(
 		'stage' => $stage,
@@ -59,30 +66,6 @@ function trade_request_log($stage, $data = array()) {
 	);
 
 	error_log('[trade_request] ' . json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
-}
-
-function trade_request_company_payload($companyRow, $industryName = '') {
-	$founded = '';
-	$establishedAt = trim((string)($companyRow['ESTB_DT'] ?? ''));
-	if ($establishedAt !== '' && strlen($establishedAt) >= 4) {
-		$founded = substr($establishedAt, 0, 4) . '년';
-	}
-
-	$companyType = '';
-	if (!empty($companyRow['ENP_TYP']) && isset($GLOBALS['enp_typt'][$companyRow['ENP_TYP']])) {
-		$companyType = $GLOBALS['enp_typt'][$companyRow['ENP_TYP']];
-	}
-
-	return array(
-		'company' => trim((string)($companyRow['ENP_NM'] ?? '')),
-		'bzno' => !empty($companyRow['BZNO']) ? licenseNum($companyRow['BZNO']) : '',
-		'founded' => $founded,
-		'employees' => !empty($companyRow['LABORER_SUM']) ? number_format((float)$companyRow['LABORER_SUM']) . '명' : '',
-		'corpType' => $companyType,
-		'industry' => trim((string)$industryName),
-		'product' => trim((string)($companyRow['PD_NM'] ?? '')),
-		'homepage' => trim((string)($companyRow['HPAGE_URL'] ?? '')),
-	);
 }
 
 // 상세 페이지 해제 상태에서 값이 비어 있으면 공통 대체 문구로 보여준다.
@@ -173,6 +156,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 		'post_keys' => array_keys($_POST),
 	));
 
+	// 공통 모달 POST payload를 상세 페이지 저장 규격으로 정규화한다.
 	if (empty($member['mb_id'])) {
 		trade_request_log('validation_failed', array('reason' => 'member_not_logged_in'));
 		trade_request_json_response(false, '로그인 후 이용해 주세요.');
@@ -302,6 +286,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 		trade_request_json_response(false, '거래 목적을 다시 선택해 주세요.');
 	}
 
+	// 화면 전송값은 DB 저장 코드와 크레딧 정책에서 쓰는 내부 코드로 변환한다.
 	$tradeDirection = $directionMap[$tradeDirectionRaw];
 	$tradeType = $tradeTypeMap[$tradeTypeRaw]['type'];
 	$creditAmount = (int)$tradeTypeMap[$tradeTypeRaw]['amount'];
@@ -326,6 +311,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 		));
 	}
 
+	// 요청 저장 이후에만 크레딧을 차감해 상세 공개 조건과 히스토리를 맞춘다.
 	$insertSql = "insert into trade_request set
 		request_mb_id='" . sql_escape_string($requestMemberId) . "',
 		request_company_name='" . sql_escape_string($requestCompanyName) . "',
@@ -346,13 +332,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
 	$insertResult = sql_query($insertSql, false);
 	if (!$insertResult) {
-		trade_request_log('insert_failed', array('sql' => $insertSql));
+		trade_request_log('insert_failed', array(
+			'member_id' => $requestMemberId,
+			'target_kedcd' => $targetKedcd,
+			'trade_type' => $tradeType,
+		));
 		trade_request_json_response(false, '거래 요청서 저장 중 오류가 발생했습니다.');
 	}
 
 	$insertId = sql_insert_id();
 	$creditConsume = trade_request_consume_credit($requestMemberId, $insertId, $targetKedcd, $tradeType, $creditAmount);
 	if (empty($creditConsume['success'])) {
+		sql_query("delete from trade_request where tr_no='" . (int)$insertId . "' and credit_used=0", false);
 		trade_request_log('credit_consume_failed', array(
 			'tr_no' => $insertId,
 			'message' => $creditConsume['message'] ?? '',
@@ -363,7 +354,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 		));
 	}
 
-	sql_query("update trade_request set credit_used=1 where tr_no='" . (int)$insertId . "'", false);
+	$creditUsedUpdated = sql_query("update trade_request set credit_used=1 where tr_no='" . (int)$insertId . "'", false);
+	if (!$creditUsedUpdated) {
+		trade_request_log('credit_used_update_failed', array(
+			'tr_no' => $insertId,
+			'member_id' => $requestMemberId,
+		));
+		trade_request_json_response(false, '거래 요청 상태 갱신 중 오류가 발생했습니다.');
+	}
 
 	trade_request_log('request_created', array(
 		'tr_no' => $insertId,
@@ -391,6 +389,8 @@ if (!preg_match('/^\d{10}$/', $kedcd)) {
 	alert('잘못된 접근입니다.', '/ko/matching_list.php');
 }
 
+$kedcdSql = sql_escape_string($kedcd);
+
 // 대상 기업 기본 정보 조회
 $company = sql_fetch("
 	SELECT
@@ -406,7 +406,7 @@ $company = sql_fetch("
 		LOC_ADDRB,
 		HPAGE_URL
 	FROM company
-	WHERE KEDCD = '{$kedcd}'
+	WHERE KEDCD = '{$kedcdSql}'
 ");
 
 if (empty($company['KEDCD'])) {
@@ -426,10 +426,11 @@ if (!empty($member['mb_id'])) {
 // 기업의 업종코드(BZC_CD) 기준 업종명 조회
 $industry = array();
 if (!empty($company['BZC_CD'])) {
+	$companyBzcCdSql = sql_escape_string($company['BZC_CD']);
 	$industry = sql_fetch("
 		SELECT k_code, k_code_name
 		FROM kssc
-		WHERE k_code = '{$company['BZC_CD']}'
+		WHERE k_code = '{$companyBzcCdSql}'
 	");
 }
 
@@ -448,7 +449,7 @@ $score = sql_fetch("
 		emp_score_5,
 		final_total_score_5
 	FROM company_score_final_dedup
-	WHERE KEDCD = '{$kedcd}'
+	WHERE KEDCD = '{$kedcdSql}'
 ");
 
 // 설립일자(ESTB_DT) : YYYYMMDD -> YYYY년 변환
@@ -462,9 +463,6 @@ $companyType = '';
 if (!empty($company['ENP_TYP']) && isset($enp_typt[$company['ENP_TYP']])) {
 	$companyType = $enp_typt[$company['ENP_TYP']];
 }
-
-// 거래 요청서 기본 안내 문구는 PHP/JS에서 공통으로 사용
-$defaultMessage = '담당자님, 안녕하세요. 귀사를 확인하고 연락드립니다. 신규 거래처를 검토 중이며, 귀사와 적합한 경우 거래 진행을 희망합니다. 상세 조건은 협의를 통해 논의하고자 합니다.';
 
 // 현재 로그인 회원이 이 기업에 대해 크레딧 사용 완료한 거래 요청이 있으면 마스킹 해제
 $isDetailUnlocked = false;
@@ -486,36 +484,14 @@ $companyTitleDisplay = trade_request_display_value($company['ENP_NM'] ?? '');
 $companyAddressDisplay = trade_request_display_value(trim(($company['LOC_ADDRA'] ?? '') . ' ' . ($company['LOC_ADDRB'] ?? '')));
 $companyHomepageDisplay = trade_request_display_value($company['HPAGE_URL'] ?? '');
 
-$requesterCompanyData = array();
-if (!empty($member['mb_id'])) {
-	$requesterBzno = preg_replace('/[^0-9]/', '', (string)($member['mb_4'] ?? ''));
-	if ($requesterBzno !== '') {
-		$requesterCompany = sql_fetch("
-			SELECT
-				KEDCD,
-				ENP_NM,
-				BZNO,
-				BZC_CD,
-				ESTB_DT,
-				LABORER_SUM,
-				ENP_TYP,
-				PD_NM,
-				HPAGE_URL
-			FROM company
-			WHERE BZNO = '" . sql_escape_string($requesterBzno) . "'
-			LIMIT 1
-		");
-		if (!empty($requesterCompany['KEDCD'])) {
-			$requesterIndustry = sql_fetch("
-				SELECT k_code_name
-				FROM kssc
-				WHERE k_code = '" . sql_escape_string($requesterCompany['BZC_CD']) . "'
-				LIMIT 1
-			");
-			$requesterCompanyData = trade_request_company_payload($requesterCompany, $requesterIndustry['k_code_name'] ?? '');
-		}
-	}
-}
+// 모달에서 쓰는 "우리 기업 정보"는 로그인 회원의 사업자번호 기준 회사 정보로 맞춘다.
+$requesterCompanyData = !empty($member['mb_id'])
+	? trade_request_member_company_data($member['mb_4'] ?? '')
+	: array();
+
+$tradeRequestLoginParams = $_GET;
+$tradeRequestLoginParams['trade_request_login'] = '1';
+$tradeRequestLoginUrl = '/ko/company_detail.php?' . http_build_query($tradeRequestLoginParams);
 
 // 프론트 렌더링과 마스킹 분기에 필요한 상세 페이지 데이터 구조를 한 번에 정리해 JS로 내려준다.
 $companyDetailData = array(
@@ -546,6 +522,7 @@ $companyDetailData = array(
 	'empScore' => isset($score['emp_score_5']) ? (float)$score['emp_score_5'] : 0,
 	'score' => isset($score['final_total_score_5']) ? (float)$score['final_total_score_5'] : 0,
 );
+
 // 테마 헤더 사용, 상단 비주얼/페이지탑은 상세 레이아웃과 겹치지 않도록 숨김
 $hide_theme_svisual = true;
 $hide_theme_pagetop = true;
@@ -657,6 +634,9 @@ window.COMPANY_DETAIL_DATA = <?php echo json_encode($companyDetailData, JSON_UNE
 window.MATCH_REQUEST_CONTEXT = {
 	endpoint: "/ko/company_detail.php",
 	sourcePage: "company_detail",
+	isLoggedIn: <?php echo !empty($member['mb_id']) ? 'true' : 'false'; ?>,
+	loginCheckUrl: <?php echo json_encode($tradeRequestLoginUrl, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>,
+	autoOpenOnLoad: <?php echo $shouldOpenTradeRequestModal ? 'true' : 'false'; ?>,
 	defaultRequestMessage: <?php echo json_encode($defaultMessage, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>,
 	requesterCompany: <?php echo json_encode($requesterCompanyData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>,
 	target: {
@@ -670,40 +650,6 @@ window.MATCH_REQUEST_CONTEXT = {
 		product: <?php echo json_encode($company['PD_NM'] ?? '', JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>
 	}
 };
-window._isLoggedIn = function () {
-	return <?php echo !empty($member['mb_id']) ? 'true' : 'false'; ?>;
-};
-window._requireLogin = function (featureName) {
-	var targetFeature = featureName || '이 기능';
-	var loginUrl = '/bbs/login.php?url=' + encodeURIComponent(window.location.pathname + window.location.search + window.location.hash);
-
-	if (window._confirm) {
-		window._confirm({
-			icon: 'blue',
-			iconSvg: '<path d="M12 12a4 4 0 1 0 0-8a4 4 0 0 0 0 8Z"/><path d="M4 20a8 8 0 0 1 16 0"/>',
-			title: '로그인 후 이용 가능합니다',
-			desc: '<strong>' + targetFeature + '</strong> 기능은 로그인 후 이용하실 수 있습니다.<br>로그인 페이지로 이동하시겠어요?',
-			confirmText: '로그인',
-			cancelText: '닫기',
-			confirmClass: 'blue',
-			onConfirm: function () {
-				window.location.href = loginUrl;
-			}
-		});
-		return;
-	}
-
-	if (window.jAlert) {
-		window.jAlert('로그인 후 이용하세요.', '알림', function () {
-			window.location.href = loginUrl;
-		});
-		return;
-	}
-
-	if (window.confirm(targetFeature + ' 기능은 로그인 후 이용하실 수 있습니다. 로그인 페이지로 이동하시겠어요?')) {
-		window.location.href = loginUrl;
-	}
-};
 </script>
 <script src="/ko/js/badges.js?ver=<?php echo $badges_js_ver; ?>"></script>
 <script src="/ko/js/company-detail-left.js?ver=<?php echo $company_detail_left_js_ver; ?>"></script>
@@ -714,5 +660,4 @@ window._requireLogin = function (featureName) {
 <script src="/ko/js/share.js?ver=<?php echo $share_js_ver; ?>"></script>
 <script src="/ko/js/confirm-modal.js?ver=<?php echo $confirm_modal_js_ver; ?>"></script>
 <script src="/ko/js/verify-modal.js?ver=<?php echo $verify_modal_js_ver; ?>"></script>
-<!-- <script src="inc/auth-toggle.js"></script> -->
 <?php include_once(G5_THEME_PATH . '/tail.php'); ?>
