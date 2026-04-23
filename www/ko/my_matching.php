@@ -48,6 +48,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 	if ($action === 'my_matching_sent_status') {
 		my_matching_handle_sent_status($member);
 	}
+
+	if ($action === 'trade_chat_retry') {
+		my_matching_handle_trade_chat_retry($member, $_POST);
+	}
 }
 
 include_once(G5_THEME_PATH . '/head.php');
@@ -147,6 +151,10 @@ function my_matching_build_item($row, $starred = false) {
 		'requestBzno' => trim((string)($row['request_bzno'] ?? '')),
 		'targetBzno' => trim((string)($row['target_bzno'] ?? '')),
 		'approvalStatus' => (int)($row['approval_status'] ?? 0),
+		'chatRoomId' => (int)($row['chat_room_id'] ?? 0),
+		'chatEnabled' => ((int)($row['approval_status'] ?? 0) === 1 && (int)($row['chat_room_id'] ?? 0) > 0 && ($row['chat_room_status'] ?? '') === 'active'),
+		'chatRoomStatus' => trim((string)($row['chat_room_status'] ?? '')),
+		'streamChannelCid' => trim((string)($row['stream_channel_cid'] ?? '')),
 		'message' => array(
 			'matchType' => my_matching_trade_type_label($row['trade_type'] ?? ''),
 			'direction' => my_matching_trade_direction_label($row['trade_direction'] ?? ''),
@@ -192,6 +200,9 @@ $receivedSql = "
 		TR.message_content,
 		TR.trade_type,
 		TR.approval_status,
+		TR.chat_room_id,
+		TCR.room_status AS chat_room_status,
+		TCR.stream_channel_cid,
 		C.BZNO AS company_bzno,
 		C.KEDCD AS company_kedcd,
 		C.ENP_NM AS company_name,
@@ -201,6 +212,7 @@ $receivedSql = "
 		M.mb_6 AS manager_name,
 		M.mb_5 AS manager_email
 	FROM trade_request TR
+	LEFT JOIN trade_chat_room TCR ON TCR.room_id = TR.chat_room_id
 	LEFT JOIN company C ON C.BZNO = TR.request_bzno
 	LEFT JOIN g5_member M ON M.mb_company = C.KEDCD
 	WHERE TR.target_bzno = '{$memberBznoSql}'
@@ -228,6 +240,9 @@ $sentSql = "
 		TR.message_content,
 		TR.trade_type,
 		TR.approval_status,
+		TR.chat_room_id,
+		TCR.room_status AS chat_room_status,
+		TCR.stream_channel_cid,
 		C.BZNO AS company_bzno,
 		C.KEDCD AS company_kedcd,
 		C.ENP_NM AS company_name,
@@ -237,6 +252,7 @@ $sentSql = "
 		M.mb_6 AS manager_name,
 		M.mb_5 AS manager_email
 	FROM trade_request TR
+	LEFT JOIN trade_chat_room TCR ON TCR.room_id = TR.chat_room_id
 	LEFT JOIN company C ON C.KEDCD = TR.target_kedcd
 	LEFT JOIN g5_member M ON M.mb_company = C.KEDCD
 	WHERE TR.request_bzno = '{$memberBznoSql}'
@@ -253,17 +269,29 @@ if ($sentResult) {
 }
 
 $receivedStatusByKedcd = array();
+$receivedChatByKedcd = array();
 for ($i = 0; $i < count($receivedRows); $i++) {
 	$kedcd = trim((string)($receivedRows[$i]['kedcd'] ?? ''));
 	if ($kedcd === '') continue;
 	$receivedStatusByKedcd[$kedcd] = 'received-' . (string)$receivedRows[$i]['status'];
+	$receivedChatByKedcd[$kedcd] = array(
+		'chatRoomId' => (int)($receivedRows[$i]['chatRoomId'] ?? 0),
+		'chatEnabled' => !empty($receivedRows[$i]['chatEnabled']),
+		'chatRoomStatus' => trim((string)($receivedRows[$i]['chatRoomStatus'] ?? '')),
+	);
 }
 
 $sentStatusByKedcd = array();
+$sentChatByKedcd = array();
 for ($i = 0; $i < count($sentRows); $i++) {
 	$kedcd = trim((string)($sentRows[$i]['kedcd'] ?? ''));
 	if ($kedcd === '') continue;
 	$sentStatusByKedcd[$kedcd] = 'sent-' . (string)$sentRows[$i]['status'];
+	$sentChatByKedcd[$kedcd] = array(
+		'chatRoomId' => (int)($sentRows[$i]['chatRoomId'] ?? 0),
+		'chatEnabled' => !empty($sentRows[$i]['chatEnabled']),
+		'chatRoomStatus' => trim((string)($sentRows[$i]['chatRoomStatus'] ?? '')),
+	);
 }
 
 $interestedRows = array();
@@ -287,10 +315,13 @@ if ($interestedResult) {
 	for ($i = 0; $row = sql_fetch_array($interestedResult); $i++) {
 		$kedcd = trim((string)($row['company_kedcd'] ?? ''));
 		$matchStatus = null;
+		$chatMeta = array();
 		if (isset($receivedStatusByKedcd[$kedcd])) {
 			$matchStatus = $receivedStatusByKedcd[$kedcd];
+			$chatMeta = $receivedChatByKedcd[$kedcd] ?? array();
 		} else if (isset($sentStatusByKedcd[$kedcd])) {
 			$matchStatus = $sentStatusByKedcd[$kedcd];
+			$chatMeta = $sentChatByKedcd[$kedcd] ?? array();
 		}
 
 		$interestedRows[] = array(
@@ -300,6 +331,9 @@ if ($interestedResult) {
 			'address' => trim((string)($row['LOC_ADDRA'] ?? '') . ' ' . (string)($row['LOC_ADDRB'] ?? '')) ?: '정보 준비중',
 			'industry' => trim((string)($row['industry_name'] ?? '')) ?: '정보 준비중',
 			'matchStatus' => $matchStatus,
+			'chatRoomId' => (int)($chatMeta['chatRoomId'] ?? 0),
+			'chatEnabled' => !empty($chatMeta['chatEnabled']),
+			'chatRoomStatus' => trim((string)($chatMeta['chatRoomStatus'] ?? '')),
 			'starred' => true,
 			'kedcd' => $kedcd,
 			'detailUrl' => my_matching_company_detail_url($row['company_kedcd'] ?? ''),
@@ -307,11 +341,14 @@ if ($interestedResult) {
 	}
 }
 
+$csrfToken = my_matching_create_csrf_token();
+
 // 프런트 데이터 패키징, JSON 직렬화 -> window.. 형태로 JS 주입
 $matchingPageData = array(
 	'received' => $receivedRows,
 	'sent' => $sentRows,
 	'interested' => $interestedRows,
+	'csrfToken' => $csrfToken,
 );
 
 $matchingPageDataJson = json_encode(
@@ -319,7 +356,7 @@ $matchingPageDataJson = json_encode(
 	JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
 );
 if ($matchingPageDataJson === false) {
-	$matchingPageDataJson = '{"received":[],"sent":[],"interested":[]}';
+	$matchingPageDataJson = '{"received":[],"sent":[],"interested":[],"csrfToken":""}';
 }
 
 $defaultMessageJson = json_encode($defaultMessage, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);

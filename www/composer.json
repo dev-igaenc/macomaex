@@ -1,6 +1,6 @@
 {
     "require": {
-        "getstream/stream-chat": "^5.5",
+        "getstream/getstream-php": "^6.0",
         "phpseclib/phpseclib": "^3.0"
     }
 }

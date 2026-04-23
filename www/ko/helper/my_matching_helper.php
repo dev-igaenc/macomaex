@@ -6,6 +6,8 @@ if (!defined('_GNUBOARD_')) exit;
  * 받은 요청 승인/거절 처리와 보낸 요청 상태 조회를 페이지 밖으로 분리해 관리한다.
  */
 
+include_once(__DIR__ . '/trade_chat_helper.php');
+
 function my_matching_json_response($payload) {
 	header('Content-Type: application/json; charset=utf-8');
 	echo json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
@@ -18,6 +20,37 @@ function my_matching_text_response($text) {
 	exit;
 }
 
+function my_matching_csrf_session_key() {
+	return 'ss_my_matching_csrf_token';
+}
+
+function my_matching_create_csrf_token() {
+	$token = '';
+	if (function_exists('random_bytes')) {
+		$token = bin2hex(random_bytes(32));
+	} else {
+		$token = md5(uniqid(rand(), true));
+	}
+
+	set_session(my_matching_csrf_session_key(), $token);
+	return $token;
+}
+
+function my_matching_verify_csrf_token($request) {
+	$postedToken = isset($request['csrf_token']) ? trim((string)$request['csrf_token']) : '';
+	$sessionToken = trim((string)get_session(my_matching_csrf_session_key()));
+
+	if ($postedToken === '' || $sessionToken === '') {
+		return false;
+	}
+
+	if (function_exists('hash_equals')) {
+		return hash_equals($sessionToken, $postedToken);
+	}
+
+	return $sessionToken === $postedToken;
+}
+
 function my_matching_member_bzno($member) {
 	return preg_replace('/[^0-9]/', '', (string)($member['mb_4'] ?? ''));
 }
@@ -25,6 +58,10 @@ function my_matching_member_bzno($member) {
 function my_matching_handle_trade_request_approval($member, $request) {
 	if (empty($member['mb_id'])) {
 		my_matching_text_response('501');
+	}
+
+	if (!my_matching_verify_csrf_token($request)) {
+		my_matching_text_response('403');
 	}
 
 	$idx = isset($request['idx']) ? (int)$request['idx'] : 0;
@@ -77,6 +114,30 @@ function my_matching_handle_trade_request_approval($member, $request) {
 		my_matching_text_response('500');
 	}
 
+	if ($nextStatus === '1') {
+		$chatRoomResult = trade_chat_open_or_attach_room($idx, $member);
+		if (empty($chatRoomResult['success'])) {
+			error_log('[trade_chat] room open failed: ' . json_encode(array(
+				'tr_no' => $idx,
+				'mb_id' => $member['mb_id'] ?? '',
+				'message' => $chatRoomResult['message'] ?? '',
+			), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+		} else {
+			$roomId = isset($chatRoomResult['room']['room_id']) ? (int)$chatRoomResult['room']['room_id'] : 0;
+			if ($roomId > 0) {
+				$streamSyncResult = trade_chat_sync_stream_room($roomId);
+				if (empty($streamSyncResult['success'])) {
+					error_log('[trade_chat] stream sync failed: ' . json_encode(array(
+						'tr_no' => $idx,
+						'room_id' => $roomId,
+						'mb_id' => $member['mb_id'] ?? '',
+						'message' => $streamSyncResult['message'] ?? '',
+					), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+				}
+			}
+		}
+	}
+
 	my_matching_text_response('1000|' . $nextStatus);
 }
 
@@ -119,4 +180,34 @@ function my_matching_handle_sent_status($member) {
 		'success' => true,
 		'items' => $statusItems,
 	));
+}
+
+function my_matching_handle_trade_chat_retry($member, $request) {
+	if (empty($member['mb_id'])) {
+		my_matching_json_response(array(
+			'success' => false,
+			'login' => false,
+			'message' => '로그인 후 이용해 주세요.',
+		));
+	}
+
+	if (!my_matching_verify_csrf_token($request)) {
+		my_matching_json_response(array(
+			'success' => false,
+			'message' => '요청 보안 토큰이 올바르지 않습니다.',
+		));
+	}
+
+	$roomId = isset($request['room_id']) ? (int)$request['room_id'] : 0;
+	if ($roomId < 1) {
+		my_matching_json_response(array(
+			'success' => false,
+			'message' => '채팅방 정보가 올바르지 않습니다.',
+		));
+	}
+
+	$result = trade_chat_retry_stream_room($roomId, $member);
+	my_matching_json_response(array_merge(array(
+		'success' => !empty($result['success']),
+	), $result));
 }

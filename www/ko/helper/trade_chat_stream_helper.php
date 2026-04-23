@@ -36,15 +36,24 @@ function trade_chat_stream_client() {
 		return null;
 	}
 
-	/*
-	 * 실제 SDK 인스턴스 생성은 패키지 설치 후 Phase 2에서 연결한다.
-	 * 여기서는 외부 호출부가 공통 진입점을 가질 수 있도록 placeholder만 둔다.
-	 */
-	return null;
+	$settings = trade_chat_settings();
+
+	try {
+		return new \GetStream\ChatClient(
+			$settings['api_key'],
+			$settings['api_secret'],
+			$settings['base_url']
+		);
+	} catch (\Throwable $e) {
+		return null;
+	}
 }
 
 function trade_chat_stream_upsert_user($mbId, $memberProfile = array()) {
 	$mbId = trim((string)$mbId);
+	$streamUserId = function_exists('trade_chat_make_stream_user_id')
+		? trade_chat_make_stream_user_id($mbId)
+		: 'member_' . preg_replace('/[^a-z0-9@_. -]/i', '_', $mbId);
 	if ($mbId === '') {
 		return array(
 			'success' => false,
@@ -52,16 +61,51 @@ function trade_chat_stream_upsert_user($mbId, $memberProfile = array()) {
 		);
 	}
 
-	return array(
-		'success' => false,
-		'message' => 'Phase 1 스켈레톤 상태입니다.',
-		'stream_user_id' => 'member:' . $mbId,
-		'profile' => $memberProfile,
-	);
+	$client = trade_chat_stream_client();
+	if (!$client) {
+		return array(
+			'success' => false,
+			'message' => 'GetStream client를 초기화할 수 없습니다.',
+			'stream_user_id' => $streamUserId,
+		);
+	}
+
+	$name = trim((string)($memberProfile['name'] ?? $mbId));
+	if ($name === '') $name = $mbId;
+
+	try {
+		$response = $client->updateUsers(new \GetStream\GeneratedModels\UpdateUsersRequest(
+			users: array(
+				$streamUserId => new \GetStream\GeneratedModels\UserRequest(
+					id: $streamUserId,
+					name: $name,
+					custom: (object)array(
+						'mb_id' => $mbId,
+						'company_bzno' => (string)($memberProfile['company_bzno'] ?? ''),
+						'company_kedcd' => (string)($memberProfile['company_kedcd'] ?? ''),
+					),
+				),
+			),
+		));
+
+		return array(
+			'success' => $response->isSuccessful(),
+			'status_code' => $response->getStatusCode(),
+			'stream_user_id' => $streamUserId,
+		);
+	} catch (\Throwable $e) {
+		return array(
+			'success' => false,
+			'message' => $e->getMessage(),
+			'stream_user_id' => $streamUserId,
+		);
+	}
 }
 
 function trade_chat_stream_get_or_create_channel($channelType, $channelId, $data = array()) {
-	$channelType = trim((string)$channelType);
+	$channelType = function_exists('trade_chat_normalize_channel_type')
+		? trade_chat_normalize_channel_type($channelType)
+		: trim((string)$channelType);
 	$channelId = trim((string)$channelId);
 
 	if ($channelType === '' || $channelId === '') {
@@ -71,23 +115,90 @@ function trade_chat_stream_get_or_create_channel($channelType, $channelId, $data
 		);
 	}
 
-	return array(
-		'success' => false,
-		'message' => 'Phase 1 스켈레톤 상태입니다.',
-		'channel_type' => $channelType,
-		'channel_id' => $channelId,
-		'channel_data' => $data,
-	);
+	if (function_exists('trade_chat_is_valid_channel_id') && !trade_chat_is_valid_channel_id($channelId)) {
+		return array(
+			'success' => false,
+			'message' => '채널 ID 형식이 올바르지 않습니다.',
+			'channel_type' => $channelType,
+			'channel_id' => $channelId,
+		);
+	}
+
+	$client = trade_chat_stream_client();
+	if (!$client) {
+		return array(
+			'success' => false,
+			'message' => 'GetStream client를 초기화할 수 없습니다.',
+			'channel_type' => $channelType,
+			'channel_id' => $channelId,
+		);
+	}
+
+	$createdById = trim((string)($data['created_by_id'] ?? ''));
+	$members = array_values(array_filter((array)($data['members'] ?? array())));
+	if ($createdById === '' && !empty($members)) {
+		$createdById = (string)$members[0];
+	}
+
+	if ($createdById === '') {
+		return array(
+			'success' => false,
+			'message' => '채널 생성자 정보가 없습니다.',
+			'channel_type' => $channelType,
+			'channel_id' => $channelId,
+		);
+	}
+
+	$memberRequests = array();
+	foreach ($members as $streamUserId) {
+		$streamUserId = trim((string)$streamUserId);
+		if ($streamUserId === '') continue;
+		$memberRequests[] = new \GetStream\GeneratedModels\ChannelMemberRequest(userID: $streamUserId);
+	}
+
+	try {
+		$response = $client->getOrCreateChannel(
+			$channelType,
+			$channelId,
+			new \GetStream\GeneratedModels\ChannelGetOrCreateRequest(
+				data: new \GetStream\GeneratedModels\ChannelInput(
+					createdByID: $createdById,
+					members: $memberRequests,
+					custom: (object)array(
+						'room_id' => (string)($data['room_id'] ?? ''),
+						'company_pair_key' => (string)($data['company_pair_key'] ?? ''),
+						'source_tr_no' => (string)($data['source_tr_no'] ?? ''),
+						'latest_tr_no' => (string)($data['latest_tr_no'] ?? ''),
+					),
+				),
+			),
+		);
+
+		$responseData = $response->getData();
+		$channel = $responseData->channel ?? null;
+
+		return array(
+			'success' => $response->isSuccessful(),
+			'status_code' => $response->getStatusCode(),
+			'channel_type' => $channelType,
+			'channel_id' => $channelId,
+			'channel_cid' => $channel->cid ?? ($channelType . ':' . $channelId),
+			'member_count' => $channel->memberCount ?? count($memberRequests),
+		);
+	} catch (\Throwable $e) {
+		return array(
+			'success' => false,
+			'message' => $e->getMessage(),
+			'channel_type' => $channelType,
+			'channel_id' => $channelId,
+		);
+	}
 }
 
 function trade_chat_stream_add_members($channelType, $channelId, $streamUserIds = array()) {
-	return array(
-		'success' => false,
-		'message' => 'Phase 1 스켈레톤 상태입니다.',
-		'channel_type' => trim((string)$channelType),
-		'channel_id' => trim((string)$channelId),
+	return trade_chat_stream_get_or_create_channel($channelType, $channelId, array(
 		'members' => array_values((array)$streamUserIds),
-	);
+	));
 }
 
 function trade_chat_stream_create_token($streamUserId) {
@@ -99,11 +210,29 @@ function trade_chat_stream_create_token($streamUserId) {
 		);
 	}
 
-	return array(
-		'success' => false,
-		'message' => 'Phase 1 스켈레톤 상태입니다.',
-		'stream_user_id' => $streamUserId,
-		'token' => '',
-	);
-}
+	$client = trade_chat_stream_client();
+	if (!$client) {
+		return array(
+			'success' => false,
+			'message' => 'GetStream client를 초기화할 수 없습니다.',
+			'stream_user_id' => $streamUserId,
+			'token' => '',
+		);
+	}
 
+	try {
+		return array(
+			'success' => true,
+			'stream_user_id' => $streamUserId,
+			'token' => $client->createUserToken($streamUserId, array(), 3600),
+			'expires_in' => 3600,
+		);
+	} catch (\Throwable $e) {
+		return array(
+			'success' => false,
+			'message' => $e->getMessage(),
+			'stream_user_id' => $streamUserId,
+			'token' => '',
+		);
+	}
+}
