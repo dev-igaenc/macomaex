@@ -774,6 +774,21 @@ html, body { margin: 0; overflow-x: hidden; font-family: var(--font-base); backg
 .ai-rest-swiper .swiper-wrapper { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; align-items: start; }
 .ai-rest-swiper .swiper-slide { width: auto !important; }
 .ai-rest-swiper .swiper-slide .mCompanyCard { display: flex; flex-direction: column; height: auto; }
+.ai-empty-state {
+    grid-column: 1 / -1;
+    width: 100%;
+    padding: 36px 18px;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    background: #fff;
+    text-align: center;
+}
+.ai-empty-state_text {
+    margin: 0;
+    font-size: 14px;
+    color: #6b7280;
+    line-height: 1.6;
+}
 .ai-rest-swiper .swiper-pagination { margin-top: 16px; text-align: center; display: none; }
 .ai-rest-swiper .swiper-pagination-bullet { width: 8px; height: 8px; background: #ccc; opacity: 1; border-radius: 50%; margin: 0 4px; display: inline-block; cursor: pointer; }
 .ai-rest-swiper .swiper-pagination-bullet-active { background: var(--purple); }
@@ -787,6 +802,7 @@ html, body { margin: 0; overflow-x: hidden; font-family: var(--font-base); backg
     .ai-rest-swiper { overflow-x: auto; overflow-y: visible; -webkit-overflow-scrolling: touch; scroll-snap-type: x mandatory; }
     .ai-rest-swiper .swiper-wrapper { display: flex !important; gap: 16px; flex-wrap: nowrap; }
     .ai-rest-swiper .swiper-slide { min-width: 280px; width: 75% !important; flex-shrink: 0; scroll-snap-align: start; }
+    .ai-empty-state { min-width: 280px; width: 75%; flex-shrink: 0; scroll-snap-align: start; }
     .ai-rest-swiper .swiper-pagination { display: block; }
     .ai-rest-nav { display: none; }
     .ai-rest-swiper .swiper-slide .mCompanyCard { overflow: hidden; }
@@ -803,6 +819,7 @@ html, body { margin: 0; overflow-x: hidden; font-family: var(--font-base); backg
 }
 @media (max-width: 640px) {
     .ai-rest-swiper .swiper-slide { min-width: 260px; width: 85% !important; }
+    .ai-empty-state { min-width: 260px; width: 85%; }
 }
 
 /* TOP3 & ALL 공통: 스와이프 시 카드 잘림 방지 */

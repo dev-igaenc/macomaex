@@ -50,6 +50,9 @@ function company_list_ai_translate_radar($radar)
         'scale_fit' => '규모 적합도',
         'scale_match' => '규모 적합도',
         'trade_diversity' => '거래 다변성',
+        'market_power' => '시장 경쟁력',
+        'company_size' => '기업 규모',
+        'trade_loyalty' => '거래 안정성',
     );
 
     $out = array();
@@ -60,6 +63,28 @@ function company_list_ai_translate_radar($radar)
         $out[$label] = (float)$val;
     }
     return $out;
+}
+
+function company_list_ai_format_bizno($bizno)
+{
+    $digits = preg_replace('/\D/', '', (string)$bizno);
+    if (strlen($digits) !== 10) return '';
+    return substr($digits, 0, 3) . '-' . substr($digits, 3, 2) . '-' . substr($digits, 5, 5);
+}
+
+function company_list_ai_candidate_label($candidate_type)
+{
+    $key = strtolower(trim((string)$candidate_type));
+    if ($key === '') return '';
+
+    $map = array(
+        'chain1' => '1차 연결',
+        'chain2' => '2차 연결',
+        'similar' => '유사 거래처',
+        'neighbor' => '인접 업종',
+    );
+
+    return isset($map[$key]) ? $map[$key] : strtoupper($key);
 }
 
 function company_list_ai_ml_item_to_card($item)
@@ -78,20 +103,26 @@ function company_list_ai_ml_item_to_card($item)
     if ($score > 100) $score = 100;
 
     $candidate_type = trim((string)($item['candidate_type'] ?? ''));
+    $candidate_label = company_list_ai_candidate_label($candidate_type);
     $bzc_cd = trim((string)($item['bzc_cd'] ?? ''));
     $bzno = preg_replace('/\D/', '', (string)($item['bzno'] ?? ''));
+    $bzno_fmt = company_list_ai_format_bizno($bzno);
+
+    $badges = array();
+    if ($score >= 90) $badges[] = '상위TOP5%';
+    else if ($score >= 75) $badges[] = '상위TOP20%';
+    if ($candidate_label !== '') $badges[] = $candidate_label;
 
     $tags = array();
     if ($bzc_cd !== '') $tags[] = $bzc_cd;
-    if ($candidate_type !== '') $tags[] = strtoupper($candidate_type);
-    if ($bzno !== '') $tags[] = '사업자';
+    if ($bzno_fmt !== '') $tags[] = $bzno_fmt;
     if (empty($tags)) $tags[] = 'AI추천';
 
     return array(
         'kedcd' => $kedcd,
         'title' => $title,
         'score' => $score,
-        'badges' => array(),
+        'badges' => $badges,
         'tags' => $tags,
         'one_line' => trim((string)($item['one_line'] ?? '')),
         'radar' => company_list_ai_translate_radar(isset($item['radar']) ? $item['radar'] : array()),
@@ -100,9 +131,7 @@ function company_list_ai_ml_item_to_card($item)
 
 function company_list_ai_render_badges($badges)
 {
-    if (!is_array($badges) || !$badges) {
-        return '<span class="mCompanyCard_badge mCompanyCard_badge_placeholder">뱃지 준비중</span>';
-    }
+    if (!is_array($badges) || !$badges) return '';
 
     $html = '';
     foreach ($badges as $badge) {
@@ -364,10 +393,12 @@ function company_list_ai_render_card($card, $trade_type, $rank = 0)
     $radar_rows = company_list_ai_render_radar_rows($card['radar'] ?? []);
     $radar_svg = company_list_ai_render_radar_svg($card['radar'] ?? []);
     $radar_tags = company_list_ai_render_radar_tags($card['radar'] ?? []);
+    $one_line = trim((string)($card['one_line'] ?? ''));
+    $one_line_attr = $one_line !== '' ? ' title="' . htmlspecialchars($one_line, ENT_QUOTES, 'UTF-8') . '"' : '';
 
     $html = '<div class="swiper-slide">';
     if ($is_top3) $html .= company_list_ai_render_rank_medal($rank);
-    $html .= '<a href="' . $url . '" class="company-ai-link" data-kedcd="' . $kedcd . '" data-trade-type="' . $trade_q . '" data-score="' . $score . '" style="text-decoration:none;color:inherit;">';
+    $html .= '<a href="' . $url . '" class="company-ai-link" data-kedcd="' . $kedcd . '" data-trade-type="' . $trade_q . '" data-score="' . $score . '"' . $one_line_attr . ' style="text-decoration:none;color:inherit;">';
     $html .= '<div class="mCompanyCard company-ai-card" style="position:relative;">';
     $html .= '<div class="mCompanyCard_content">';
     $html .= '<div class="mCompanyCard_ai_match"><span class="mCompanyCard_ai_match_label">AI 적합도</span><span><span class="mCompanyCard_ai_match_value">' . $score . '</span><span class="mCompanyCard_ai_match_unit">%</span></span></div>';
@@ -418,6 +449,8 @@ $buy_total_stat = count($buyer_cards);
 $sell_total_stat = count($seller_cards);
 $buy_live_ok = false;
 $sell_live_ok = false;
+$buy_call = array('ok' => false, 'error' => '', 'http_code' => 0);
+$sell_call = array('ok' => false, 'error' => '', 'http_code' => 0);
 
 $kedcd_query = str_pad(preg_replace('/\D/', '', (string)($_GET['kedcd'] ?? '')), 10, '0', STR_PAD_LEFT);
 $has_kedcd_query = isset($_GET['kedcd']) && trim((string)$_GET['kedcd']) !== '';
@@ -495,13 +528,8 @@ if (!empty($resolved_base_payload['kedcd'])) {
 
 $use_live_pool = ($buy_live_ok || $sell_live_ok);
 if ($use_live_pool) {
-    $buy_pool = $buyer_cards;
-    if ($sell_live_ok) {
-        $sell_pool = $seller_cards;
-    } else {
-        $sell_source = !empty($seller_cards) ? $seller_cards : $buyer_cards;
-        $sell_pool = $sell_source;
-    }
+    $buy_pool = $buy_live_ok ? $buyer_cards : array();
+    $sell_pool = $sell_live_ok ? $seller_cards : array();
 } else {
     $buy_pool = company_list_ai_expand_cards($buyer_cards, 48);
     $sell_source = !empty($seller_cards) ? $seller_cards : $buyer_cards;
@@ -514,6 +542,18 @@ $sell_slides = company_list_ai_build_slide_sets($sell_pool, 2);
 $buy_top3 = isset($buy_slides['top3']) ? $buy_slides['top3'] : array();
 $buy_rest_pool = isset($buy_slides['rest']) ? $buy_slides['rest'] : array();
 $buy_rest_first = array_slice($buy_rest_pool, 0, 9);
+$sell_top3 = isset($sell_slides['top3']) ? $sell_slides['top3'] : array();
+$sell_rest_pool = isset($sell_slides['rest']) ? $sell_slides['rest'] : array();
+
+$buy_top3_notice = '';
+$buy_rest_notice = '';
+$sell_top3_notice = '';
+$sell_rest_notice = '';
+
+if (empty($buy_top3)) $buy_top3_notice = !empty($buy_call['error']) ? '구매 추천 데이터를 불러오지 못했습니다.' : '구매 추천 결과가 없습니다.';
+if (empty($buy_rest_pool)) $buy_rest_notice = '추가 구매 추천 결과가 없습니다.';
+if (empty($sell_top3)) $sell_top3_notice = !empty($sell_call['error']) ? '판매 추천 데이터를 불러오지 못했습니다.' : '판매 추천 결과가 없습니다.';
+if (empty($sell_rest_pool)) $sell_rest_notice = '추가 판매 추천 결과가 없습니다.';
 
 ?>
 
@@ -573,9 +613,15 @@ $buy_rest_first = array_slice($buy_rest_pool, 0, 9);
                             </div>
                             <div class="ai-top3-swiper swiper">
                                 <div class="swiper-wrapper">
-                                <?php foreach ($buy_top3 as $slide_html): ?>
-                                    <?php echo $slide_html; ?>
-                                <?php endforeach; ?>
+                                <?php if (!empty($buy_top3)): ?>
+                                    <?php foreach ($buy_top3 as $slide_html): ?>
+                                        <?php echo $slide_html; ?>
+                                    <?php endforeach; ?>
+                                <?php else: ?>
+                                    <div class="ai-empty-state">
+                                        <p class="ai-empty-state_text"><?php echo htmlspecialchars($buy_top3_notice, ENT_QUOTES, 'UTF-8'); ?></p>
+                                    </div>
+                                <?php endif; ?>
                                 </div>
                             </div>
                         </div>
@@ -594,9 +640,15 @@ $buy_rest_first = array_slice($buy_rest_pool, 0, 9);
                         </div>
                         <div class="ai-rest-swiper swiper">
                             <div class="swiper-wrapper">
-                                <?php foreach ($buy_rest_first as $slide_html): ?>
-                                    <?php echo $slide_html; ?>
-                                <?php endforeach; ?>
+                                <?php if (!empty($buy_rest_first)): ?>
+                                    <?php foreach ($buy_rest_first as $slide_html): ?>
+                                        <?php echo $slide_html; ?>
+                                    <?php endforeach; ?>
+                                <?php else: ?>
+                                    <div class="ai-empty-state">
+                                        <p class="ai-empty-state_text"><?php echo htmlspecialchars($buy_rest_notice, ENT_QUOTES, 'UTF-8'); ?></p>
+                                    </div>
+                                <?php endif; ?>
                             </div>
                         </div>
                         <div class="list-grid_more_wrap" id="loadMoreWrap">
@@ -616,8 +668,18 @@ window.__COMPANY_LIST_AI_DATA__ = {
         rest: <?php echo json_encode(array_values($buy_rest_pool), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>
     },
     seller: {
-        top3: <?php echo json_encode(array_values(isset($sell_slides['top3']) ? $sell_slides['top3'] : array()), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>,
-        rest: <?php echo json_encode(array_values(isset($sell_slides['rest']) ? $sell_slides['rest'] : array()), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>
+        top3: <?php echo json_encode(array_values($sell_top3), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>,
+        rest: <?php echo json_encode(array_values($sell_rest_pool), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>
+    }
+};
+window.__COMPANY_LIST_AI_META__ = {
+    buyer: {
+        top3_notice: <?php echo json_encode($buy_top3_notice, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>,
+        rest_notice: <?php echo json_encode($buy_rest_notice, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>
+    },
+    seller: {
+        top3_notice: <?php echo json_encode($sell_top3_notice, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>,
+        rest_notice: <?php echo json_encode($sell_rest_notice, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>
     }
 };
 </script>

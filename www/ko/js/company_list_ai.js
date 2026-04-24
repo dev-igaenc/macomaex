@@ -31,6 +31,7 @@
     }
 
     var aiData = normalizeData(window.__COMPANY_LIST_AI_DATA__);
+    var aiMeta = window.__COMPANY_LIST_AI_META__ || {};
 
     var topWrap = document.querySelector('.ai-top3-swiper .swiper-wrapper');
     var restWrap = document.querySelector('.ai-rest-swiper .swiper-wrapper');
@@ -45,6 +46,25 @@
     var currentType = 'buyer';
     var restPageSize = 9;
     var restPageIndex = 0;
+
+    function escapeHtml(text) {
+        return String(text || '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    function getNotice(type, key, fallback) {
+        var side = aiMeta && typeof aiMeta === 'object' ? aiMeta[type] : null;
+        if (side && typeof side[key] === 'string' && side[key].trim() !== '') return side[key];
+        return fallback;
+    }
+
+    function buildEmptyStateHtml(message) {
+        return '<div class="ai-empty-state"><p class="ai-empty-state_text">' + escapeHtml(message) + '</p></div>';
+    }
 
     function updateTypeSlider(activeBtn) {
         if (!typeSlider || !activeBtn) return;
@@ -63,8 +83,12 @@
         var start = restPageIndex * restPageSize;
         var rest = restPool.slice(start, start + restPageSize);
 
-        topWrap.innerHTML = top3.join('');
-        restWrap.innerHTML = rest.join('');
+        topWrap.innerHTML = top3.length
+            ? top3.join('')
+            : buildEmptyStateHtml(getNotice(currentType, 'top3_notice', '추천 결과가 없습니다.'));
+        restWrap.innerHTML = rest.length
+            ? rest.join('')
+            : buildEmptyStateHtml(getNotice(currentType, 'rest_notice', '추가 추천 결과가 없습니다.'));
 
         if (loadMoreWrap) {
             loadMoreWrap.style.display = totalRestPages > 1 ? 'flex' : 'none';
