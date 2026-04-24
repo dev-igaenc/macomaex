@@ -19,6 +19,7 @@ $favorite_js_ver = file_exists(__DIR__ . '/js/favorite.js') ? filemtime(__DIR__ 
 $ai_loading_js_ver = file_exists(__DIR__ . '/js/ai-loading.js') ? filemtime(__DIR__ . '/js/ai-loading.js') : time();
 $match_request_modal_js_ver = file_exists(__DIR__ . '/js/match-request-modal.js') ? filemtime(__DIR__ . '/js/match-request-modal.js') : time();
 $my_matching_js_ver = file_exists(__DIR__ . '/js/my_matching.js') ? filemtime(__DIR__ . '/js/my_matching.js') : time();
+$stream_chat_vendor_js_ver = file_exists(__DIR__ . '/js/vendor/stream-chat.browser.full-bundle.min.js') ? filemtime(__DIR__ . '/js/vendor/stream-chat.browser.full-bundle.min.js') : time();
 $trade_chat_modal_js_ver = file_exists(__DIR__ . '/js/trade_chat_modal.js') ? filemtime(__DIR__ . '/js/trade_chat_modal.js') : time();
 
 // 테마 헤더 숨김, 페지 전용 스타일 범위 body class 고정
@@ -38,6 +39,7 @@ add_javascript('<script src="/ko/js/favorite.js?ver=' . $favorite_js_ver . '"></
 add_javascript('<script src="/ko/js/ai-loading.js?ver=' . $ai_loading_js_ver . '"></script>', 210);
 add_javascript('<script src="/ko/js/match-request-modal.js?ver=' . $match_request_modal_js_ver . '"></script>', 220);
 add_javascript('<script src="/ko/js/my_matching.js?ver=' . $my_matching_js_ver . '"></script>', 240);
+add_javascript('<script src="/ko/js/vendor/stream-chat.browser.full-bundle.min.js?ver=' . $stream_chat_vendor_js_ver . '"></script>', 245);
 add_javascript('<script src="/ko/js/trade_chat_modal.js?ver=' . $trade_chat_modal_js_ver . '"></script>', 250);
 
 login_chk();
@@ -376,6 +378,7 @@ if ($requesterCompanyDataJson === false) {
 // 공통 모달은 이 컨텍스트만 보고 company_detail 저장 로직을 공통으로 호출한다.
 add_javascript('<script>window.__MATCHING_PAGE_DATA = ' . $matchingPageDataJson . ';</script>', 239);
 add_javascript('<script>window.MATCH_REQUEST_CONTEXT = { defaultRequestMessage: ' . $defaultMessageJson . ', endpoint: "/ko/company_detail.php", sourcePage: "my_matching", isLoggedIn: true, loginCheckUrl: "", autoOpenOnLoad: false, requesterCompany: ' . $requesterCompanyDataJson . ', target: null };</script>', 238);
+add_javascript('<script>window.__TRADE_CHAT_MODAL_CONTEXT = { isLoggedIn: true, loginUrl: "/bbs/login.php?url=' . urlencode('/ko/my_matching.php') . '", bootstrapUrl: "/ko/trade_chat_modal_data.php" };</script>', 237);
 ?>
 
 <div id="myMatchingPage">

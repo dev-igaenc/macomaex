@@ -675,6 +675,174 @@ function trade_chat_open_or_attach_room($trNo, $member) {
 	);
 }
 
+function trade_chat_make_room_initial($title) {
+	$title = trim((string)$title);
+	if ($title === '') return '채';
+
+	if (function_exists('mb_substr')) {
+		return mb_substr($title, 0, 1, 'UTF-8');
+	}
+
+	return substr($title, 0, 1);
+}
+
+function trade_chat_make_room_title($room, $memberBzno) {
+	$memberBzno = trade_chat_normalize_bzno($memberBzno);
+	$requestBzno = trade_chat_normalize_bzno($room['request_bzno'] ?? '');
+	$targetBzno = trade_chat_normalize_bzno($room['target_bzno'] ?? '');
+
+	$title = '';
+	if ($memberBzno !== '' && $memberBzno === $requestBzno) {
+		$title = trim((string)($room['target_company_name'] ?? ''));
+		if ($title === '') $title = $targetBzno;
+	} else {
+		$title = trim((string)($room['request_company_name'] ?? ''));
+		if ($title === '') $title = $requestBzno;
+	}
+
+	if ($title === '') {
+		$title = '채팅방 #' . (int)($room['room_id'] ?? 0);
+	}
+
+	return $title;
+}
+
+function trade_chat_make_room_preview($room, $member = array()) {
+	$channelType = trim((string)($room['stream_channel_type'] ?? 'messaging'));
+	$channelId = trim((string)($room['stream_channel_id'] ?? ''));
+	$memberStreamUserId = trade_chat_make_stream_user_id($member['mb_id'] ?? '');
+	if ($channelId !== '' && trade_chat_is_configured()) {
+		$latestPreview = trade_chat_stream_get_latest_message_preview($channelType, $channelId, $memberStreamUserId);
+		if ($latestPreview !== '') {
+			return $latestPreview;
+		}
+	}
+
+	$status = trim((string)($room['room_status'] ?? ''));
+	if ($status === 'active') return '대화를 이어갈 수 있습니다.';
+	if ($status === 'pending') return '채팅 준비중입니다.';
+	if ($status === 'closed') return '종료된 채팅방입니다.';
+	if ($status === 'blocked') return '접근이 제한된 채팅방입니다.';
+	return '채팅방 정보를 확인해 주세요.';
+}
+
+function trade_chat_list_member_rooms($member) {
+	$memberBzno = trade_chat_member_company_bzno($member);
+	if ($memberBzno === '') return array();
+
+	$memberBznoSql = sql_escape_string($memberBzno);
+	$rooms = array();
+
+	$result = sql_query("
+		SELECT *
+		FROM trade_chat_room
+		WHERE request_bzno='{$memberBznoSql}'
+		   OR target_bzno='{$memberBznoSql}'
+		ORDER BY FIELD(room_status, 'active', 'pending', 'blocked', 'closed'),
+		         updated_at DESC,
+		         room_id DESC
+	", false);
+
+	if ($result) {
+		for ($i = 0; $row = sql_fetch_array($result); $i++) {
+			$title = trade_chat_make_room_title($row, $memberBzno);
+			$requestCompanyName = trim((string)($row['request_company_name'] ?? ''));
+			$targetCompanyName = trim((string)($row['target_company_name'] ?? ''));
+			$myCompanyName = $memberBzno === trade_chat_normalize_bzno($row['request_bzno'] ?? '')
+				? $requestCompanyName
+				: $targetCompanyName;
+			$counterpartyCompanyName = $memberBzno === trade_chat_normalize_bzno($row['request_bzno'] ?? '')
+				? $targetCompanyName
+				: $requestCompanyName;
+			$rooms[] = array(
+				'roomId' => (int)$row['room_id'],
+				'roomStatus' => trim((string)($row['room_status'] ?? '')),
+				'title' => $title,
+				'myCompanyName' => $myCompanyName !== '' ? $myCompanyName : '우리 회사',
+				'counterpartyCompanyName' => $counterpartyCompanyName !== '' ? $counterpartyCompanyName : $title,
+				'initial' => trade_chat_make_room_initial($title),
+				'preview' => trade_chat_make_room_preview($row, $member),
+				'updatedAt' => trim((string)($row['updated_at'] ?? '')),
+				'channelType' => trim((string)($row['stream_channel_type'] ?? 'messaging')),
+				'channelId' => trim((string)($row['stream_channel_id'] ?? '')),
+				'channelCid' => trim((string)($row['stream_channel_cid'] ?? '')),
+				'companyPairKey' => trim((string)($row['company_pair_key'] ?? '')),
+				'latestTrNo' => (int)($row['latest_tr_no'] ?? 0),
+			);
+		}
+	}
+
+	return $rooms;
+}
+
+function trade_chat_issue_member_token($member) {
+	$memberId = trim((string)($member['mb_id'] ?? ''));
+	if ($memberId === '') {
+		return array(
+			'success' => false,
+			'message' => '회원 ID가 없습니다.',
+		);
+	}
+
+	$upsert = trade_chat_stream_upsert_user($memberId, array(
+		'name' => trim((string)($member['mb_id'] ?? $memberId)),
+		'company_bzno' => trade_chat_member_company_bzno($member),
+		'company_kedcd' => trim((string)($member['mb_company'] ?? '')),
+	));
+
+	if (empty($upsert['success'])) {
+		return array(
+			'success' => false,
+			'message' => $upsert['message'] ?? 'Stream user upsert에 실패했습니다.',
+		);
+	}
+
+	return trade_chat_stream_create_token(trade_chat_make_stream_user_id($memberId));
+}
+
+function trade_chat_build_modal_bootstrap($member, $initialRoomId = 0) {
+	$rooms = trade_chat_list_member_rooms($member);
+	$initialRoomId = (int)$initialRoomId;
+	$selectedRoomId = 0;
+
+	foreach ($rooms as $room) {
+		if ($initialRoomId > 0 && $room['roomId'] === $initialRoomId) {
+			$selectedRoomId = $room['roomId'];
+			break;
+		}
+	}
+
+	if ($selectedRoomId < 1 && !empty($rooms[0]['roomId'])) {
+		$selectedRoomId = (int)$rooms[0]['roomId'];
+	}
+
+	$settings = trade_chat_settings();
+	$tokenResult = array(
+		'success' => false,
+		'token' => '',
+		'expires_in' => 0,
+	);
+
+	if (!empty($rooms) && trade_chat_is_configured()) {
+		$tokenResult = trade_chat_issue_member_token($member);
+	}
+
+	return array(
+		'success' => true,
+		'login' => !empty($member['mb_id']),
+		'configured' => trade_chat_is_configured(),
+		'apiKey' => (string)($settings['api_key'] ?? ''),
+		'user' => array(
+			'id' => trade_chat_make_stream_user_id($member['mb_id'] ?? ''),
+			'name' => trim((string)($member['mb_id'] ?? '')),
+		),
+		'token' => (string)($tokenResult['token'] ?? ''),
+		'tokenExpiresIn' => (int)($tokenResult['expires_in'] ?? 0),
+		'rooms' => $rooms,
+		'initialRoomId' => $selectedRoomId,
+	);
+}
+
 function trade_chat_issue_user_token($room, $member) {
 	$access = trade_chat_assert_member_access($room, $member);
 	if (empty($access['success'])) {
@@ -682,4 +850,51 @@ function trade_chat_issue_user_token($room, $member) {
 	}
 
 	return trade_chat_stream_create_token($access['stream_user_id']);
+}
+
+function trade_chat_build_modal_room_payload($member, $roomId) {
+	$roomId = (int)$roomId;
+	$room = trade_chat_find_room_by_id($roomId);
+	if (empty($room['room_id'])) {
+		return array(
+			'success' => false,
+			'message' => '채팅방을 찾을 수 없습니다.',
+		);
+	}
+
+	$access = trade_chat_assert_member_access($room, $member, false);
+	if (empty($access['success'])) {
+		return $access;
+	}
+
+	$settings = trade_chat_settings();
+	$response = array(
+		'success' => true,
+		'configured' => trade_chat_is_configured(),
+		'roomId' => (int)$room['room_id'],
+		'roomStatus' => trim((string)($room['room_status'] ?? '')),
+		'channelType' => trim((string)($room['stream_channel_type'] ?? 'messaging')),
+		'channelId' => trim((string)($room['stream_channel_id'] ?? '')),
+		'channelCid' => trim((string)($room['stream_channel_cid'] ?? '')),
+		'apiKey' => (string)($settings['api_key'] ?? ''),
+		'user' => array(
+			'id' => $access['stream_user_id'],
+			'name' => trim((string)($member['mb_id'] ?? $access['stream_user_id'])),
+		),
+		'token' => '',
+		'tokenExpiresIn' => 0,
+	);
+
+	if ($response['configured'] && $response['roomStatus'] === 'active') {
+		$tokenResult = trade_chat_issue_user_token($room, $member);
+		if (!empty($tokenResult['success']) && !empty($tokenResult['token'])) {
+			$response['token'] = (string)$tokenResult['token'];
+			$response['tokenExpiresIn'] = (int)($tokenResult['expires_in'] ?? 0);
+		} else {
+			$response['success'] = false;
+			$response['message'] = $tokenResult['message'] ?? '채팅 접속 토큰을 발급할 수 없습니다.';
+		}
+	}
+
+	return $response;
 }

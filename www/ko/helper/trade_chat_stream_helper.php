@@ -236,3 +236,78 @@ function trade_chat_stream_create_token($streamUserId) {
 		);
 	}
 }
+
+function trade_chat_stream_get_latest_message_preview($channelType, $channelId, $excludeStreamUserId = '') {
+	$channelType = function_exists('trade_chat_normalize_channel_type')
+		? trade_chat_normalize_channel_type($channelType)
+		: trim((string)$channelType);
+	$channelId = trim((string)$channelId);
+	$excludeStreamUserId = trim((string)$excludeStreamUserId);
+
+	if ($channelType === '' || $channelId === '') {
+		return '';
+	}
+
+	$client = trade_chat_stream_client();
+	if (!$client) {
+		return '';
+	}
+
+	try {
+		$response = $client->queryChannels(
+			new \GetStream\GeneratedModels\QueryChannelsRequest(
+				filterConditions: (object)array(
+					'id' => $channelId,
+					'type' => $channelType,
+				),
+				state: true,
+				messageLimit: 10,
+				memberLimit: 0,
+				limit: 1,
+			)
+		);
+
+		$data = $response->getData();
+		$channels = $data->channels ?? array();
+		if (empty($channels[0])) {
+			return '';
+		}
+
+		$messages = $channels[0]->messages ?? array();
+		if (empty($messages)) {
+			return '';
+		}
+
+		$candidateText = '';
+		for ($i = count($messages) - 1; $i >= 0; $i--) {
+			$message = $messages[$i];
+			$messageUserId = trim((string)($message->user->id ?? ''));
+			$text = trim((string)($message->text ?? ''));
+			if ($text === '') {
+				$attachments = $message->attachments ?? array();
+				if (!empty($attachments)) {
+					$text = '첨부파일이 있습니다.';
+				}
+			}
+
+			if ($text === '') {
+				continue;
+			}
+
+			if ($excludeStreamUserId !== '' && $messageUserId === $excludeStreamUserId) {
+				if ($candidateText === '') {
+					$candidateText = $text;
+				}
+				continue;
+			}
+
+			$candidateText = $text;
+			break;
+		}
+
+		$candidateText = preg_replace('/\s+/u', ' ', $candidateText);
+		return trim((string)$candidateText);
+	} catch (\Throwable $e) {
+		return '';
+	}
+}

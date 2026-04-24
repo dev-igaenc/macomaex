@@ -43,10 +43,11 @@ $chatPageData = array(
 );
 
 $trade_chat_css_ver = file_exists(__DIR__ . '/css/trade_chat.css') ? filemtime(__DIR__ . '/css/trade_chat.css') : time();
+$stream_chat_vendor_js_ver = file_exists(__DIR__ . '/js/vendor/stream-chat.browser.full-bundle.min.js') ? filemtime(__DIR__ . '/js/vendor/stream-chat.browser.full-bundle.min.js') : time();
 $trade_chat_js_ver = file_exists(__DIR__ . '/js/trade_chat.js') ? filemtime(__DIR__ . '/js/trade_chat.js') : time();
 
 add_stylesheet('<link rel="stylesheet" href="/ko/css/trade_chat.css?ver=' . $trade_chat_css_ver . '" />', 200);
-add_javascript('<script src="https://cdn.jsdelivr.net/npm/stream-chat@8.42.0/dist/browser.full-bundle.min.js"></script>', 200);
+add_javascript('<script src="/ko/js/vendor/stream-chat.browser.full-bundle.min.js?ver=' . $stream_chat_vendor_js_ver . '"></script>', 200);
 add_javascript('<script src="/ko/js/trade_chat.js?ver=' . $trade_chat_js_ver . '"></script>', 210);
 
 include_once(G5_THEME_PATH . '/head.php');

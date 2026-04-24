@@ -63,7 +63,19 @@ function openChat(id) {
         return;
     }
 
-    window.location.href = '/ko/trade_chat.php?room_id=' + encodeURIComponent(item.chatRoomId);
+    if (window.TradeChatModal && typeof window.TradeChatModal.open === 'function') {
+        window.TradeChatModal.open({
+            roomId: item.chatRoomId,
+            startInChat: true
+        });
+        return;
+    }
+
+    if (window._showToast) {
+        window._showToast('!', '채팅 모달을 불러오지 못했습니다. 페이지를 새로고침한 뒤 다시 시도해 주세요.', 'default');
+    } else {
+        alert('채팅 모달을 불러오지 못했습니다. 페이지를 새로고침한 뒤 다시 시도해 주세요.');
+    }
 }
 
 function retryChat(id) {
