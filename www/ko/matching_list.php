@@ -820,7 +820,7 @@ $sidebar_icon_map = [
         <aside class="list-sidebar">
 
             <div class="list-sidebar_ai_section">
-                <a href="?cat=all&type=ai" class="list-sidebar_ai <?php echo $has_comnum ? 'on' : ''; ?>">
+                <a href="/ko/company_list_ai_demo.php?entry=matching_ai_demo" class="list-sidebar_ai <?php echo $has_comnum ? 'on' : ''; ?>">
                     <span class="list-sidebar_ai_icon"><span class="ai-magic-wand"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16.8 2.2l1.1 2.3 2.3 1.1-2.3 1.1-1.1 2.3-1.1-2.3-2.3-1.1 2.3-1.1 1.1-2.3zm3.2 2.8.6 1.1 1.1.6-1.1.6-.6 1.1-.6-1.1-1.1-.6 1.1-.6.6-1.1zM7.4 17.4 16.1 8.7l2.6 2.6-8.7 8.7-2.6-2.6zm-1 2.4 1.3 1.3-3.1 1 .8-2.9z"/></svg></span></span>
                     <div class="list-sidebar_ai_body">
                         <span class="list-sidebar_ai_label">AI 추천받기</span>
