@@ -25,18 +25,49 @@ if ($action !== 'recommend') {
     exit;
 }
 
-// kedcd(10자리 숫자) 검증
+// kedcd 직접 입력 또는 bizno 기반(Kodata/캐시) 둘 다 지원
 $kedcd_raw = isset($_GET['kedcd']) ? (string)$_GET['kedcd'] : '';
 $kedcd = str_pad(preg_replace('/\D/', '', $kedcd_raw), 10, '0', STR_PAD_LEFT);
-if (strlen($kedcd) !== 10 || preg_match('/^0+$/', $kedcd)) {
+$has_valid_kedcd = (strlen($kedcd) === 10 && !preg_match('/^0+$/', $kedcd));
+
+$bizno_raw = isset($_GET['bizno']) ? (string)$_GET['bizno'] : (isset($_GET['comnum']) ? (string)$_GET['comnum'] : '');
+$bizno = preg_replace('/\D/', '', $bizno_raw);
+
+$base_payload = array();
+$resolve_meta = array();
+
+if ($has_valid_kedcd) {
+    $base_payload = company_list_ai_build_base_payload($_GET);
+    $base_payload['kedcd'] = $kedcd;
+    $resolve_meta = array('source' => 'kedcd_direct');
+} else if (strlen($bizno) === 10) {
+    // 사업자번호 진입: company_api_log 캐시 우선, 필요 시 Kodata fallback
+    $resolved = company_list_ai_resolve_base_payload_by_bizno($bizno, true);
+    if (empty($resolved['ok'])) {
+        $status = isset($resolved['status']) ? (int)$resolved['status'] : 502;
+        if ($status < 400) $status = 502;
+        http_response_code($status);
+        echo json_encode(
+            array(
+                'error' => '사업자번호 기반 기업정보 조회 실패',
+                'detail' => isset($resolved['error']) ? $resolved['error'] : 'unknown',
+            ),
+            JSON_UNESCAPED_UNICODE
+        );
+        exit;
+    }
+
+    $base_payload = isset($resolved['base_payload']) && is_array($resolved['base_payload']) ? $resolved['base_payload'] : array();
+    $resolved_kedcd = isset($base_payload['kedcd']) ? (string)$base_payload['kedcd'] : '';
+    $query_override = company_list_ai_build_base_payload(array_merge($_GET, array('kedcd' => $resolved_kedcd)));
+    $base_payload = array_merge($base_payload, $query_override);
+    $kedcd = isset($base_payload['kedcd']) ? (string)$base_payload['kedcd'] : '';
+    $resolve_meta = $resolved;
+} else {
     http_response_code(400);
-    echo json_encode(array('error' => 'kedcd는 10자리 숫자여야 합니다.'), JSON_UNESCAPED_UNICODE);
+    echo json_encode(array('error' => 'kedcd(10자리) 또는 bizno(10자리)가 필요합니다.'), JSON_UNESCAPED_UNICODE);
     exit;
 }
-
-// 공통 payload 구성
-$base_payload = company_list_ai_build_base_payload($_GET);
-$base_payload['kedcd'] = $kedcd;
 
 $buy_payload = $base_payload;
 $buy_payload['trade_type'] = 1;
@@ -44,7 +75,7 @@ $buy_payload['trade_type'] = 1;
 $sell_payload = $base_payload;
 $sell_payload['trade_type'] = 2;
 
-// buy/sell 각각 호출
+// 추천 탭 전환 지연을 줄이기 위해 buy/sell을 선호출로 모두 조회
 $timeout_sec = 8;
 $buy_call = company_list_ai_call_recommend($buy_payload, $timeout_sec);
 $sell_call = company_list_ai_call_recommend($sell_payload, $timeout_sec);
@@ -94,6 +125,16 @@ $response = array(
     'buy_elapsed_ms' => $buy_elapsed_ms,
     'sell_elapsed_ms' => $sell_elapsed_ms,
 );
+
+if ($bizno !== '') {
+    $response['bizno'] = $bizno;
+}
+if (!empty($resolve_meta['source'])) {
+    $response['company_source'] = (string)$resolve_meta['source'];
+}
+if (!empty($resolve_meta['cached_datetime'])) {
+    $response['company_cached_at'] = (string)$resolve_meta['cached_datetime'];
+}
 
 // 한쪽만 실패한 경우도 화면은 동작하도록 partial_failure로 전달
 if (empty($buy_call['ok']) || empty($sell_call['ok'])) {

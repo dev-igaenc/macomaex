@@ -522,6 +522,14 @@ function runAiLoading(onComplete) {
 	window.setTimeout(progress, 220);
 }
 
+function moveToAiRecommendByBizno(comnum) {
+	// 검색창 사업자번호 흐름은 AI 목록 페이지로 직접 이동
+	var digits = (comnum || "").replace(/[^0-9]/g, "");
+	if (digits.length !== 10) return false;
+	window.location.href = "/ko/company_list_ai.php?bizno=" + encodeURIComponent(digits) + "&type=buyer";
+	return true;
+}
+
 function requestMainCompCheck(comnum, $form, opts) {
 	opts = opts || {};
 
@@ -535,6 +543,7 @@ function requestMainCompCheck(comnum, $form, opts) {
 		if (originalHtml) btn.innerHTML = originalHtml;
 	}
 
+	// cominfo 보정 후 최종 진입 URL은 company_list_ai.php(bizno)로 통일
 	$.post("<?php echo G5_URL; ?>/get_set.php", { type: "main_comp_chk", comnum: comnum }, function(res) {
 		try {
 			var parts = (res + "").split("|");
@@ -547,10 +556,10 @@ function requestMainCompCheck(comnum, $form, opts) {
 					$form.find("input[name='cominfo']").val(parts[1] || "");
 					if (opts.useLoading) {
 						runAiLoading(function() {
-							$form.submit();
+							moveToAiRecommendByBizno(comnum);
 						});
 					} else {
-						$form.submit();
+						moveToAiRecommendByBizno(comnum);
 					}
 				}
 			} else {
@@ -676,7 +685,7 @@ $(document).on("click", "#modal_verify_btn_ai", function() {
 				overlay.setAttribute("aria-hidden", "true");
 			}
 			runAiLoading(function() {
-				$form.submit();
+				moveToAiRecommendByBizno(comnum);
 			});
 			return;
 		}

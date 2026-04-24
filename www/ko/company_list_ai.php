@@ -29,119 +29,73 @@ echo '<style>#pageTop,#sVisual{display:none !important;}</style>';
 function company_list_ai_cards()
 {
     return [
-        'buyer' => [
-            [
-                'kedcd' => '0008300204',
-                'title' => '(주)한빛머티리얼즈',
-                'score' => 97,
-                'badges' => ['성장TOP15%', '재무안정TOP10%'],
-                'tags' => ['금속소재', '철강·비철금속', '가공소재', '산업자재', 'B2B원자재'],
-                'one_line' => '동일 업종 + 지역 접근성이 높아 즉시 협업 가능성이 큽니다.',
-                'radar' => ['공급망 경로' => 95, '거래처 중첩도' => 90, '재무 건전성' => 88, '규모 적합도' => 91, '지역 접근성' => 94, '시장 거래력' => 85],
-            ],
-            [
-                'kedcd' => '0004123098',
-                'title' => '대성케미텍',
-                'score' => 94,
-                'badges' => ['벤처인증', '재무안정TOP5%'],
-                'tags' => ['화학소재', '합성수지', '도료원료', '산업소재', '기초화학', '중간재'],
-                'one_line' => '유사 거래 네트워크가 풍부해 초기 발주 테스트에 유리합니다.',
-                'radar' => ['공급망 연결강도' => 88, '거래처 유사성' => 84, '거래 활성도' => 73, '재무 건전성' => 85, '지역 접근성' => 97, '규모 적합도' => 86],
-            ],
-            [
-                'kedcd' => '0007123488',
-                'title' => '(주)동서기계',
-                'score' => 91,
-                'badges' => ['성장TOP20%'],
-                'tags' => ['기계설비', '산업장비', '정밀장치', '제조설비', '유지보수'],
-                'one_line' => '납품 반응 속도와 규모 적합도가 높아 단기 거래 전환에 적합합니다.',
-                'radar' => ['공급망 연결강도' => 86, '거래처 유사성' => 80, '거래 활성도' => 88, '재무 건전성' => 90, '지역 접근성' => 79, '규모 적합도' => 83],
-            ],
-            [
-                'kedcd' => '0005532001',
-                'title' => '(주)태영정밀',
-                'score' => 88,
-                'badges' => ['재무안정TOP5%'],
-                'tags' => ['기계부품', '정밀가공'],
-                'one_line' => '생산 라인 호환성이 높아 중장기 거래처 후보로 적합합니다.',
-                'radar' => ['공급망 근접도' => 84, '거래처 유사성' => 79, '거래 활성도' => 82, '재무 안정성' => 90, '지역 접근성' => 76, '규모 적합도' => 83],
-            ],
-            [
-                'kedcd' => '0009993007',
-                'title' => '주식회사 유진로직스',
-                'score' => 86,
-                'badges' => ['벤처인증'],
-                'tags' => ['물류', '유통'],
-                'one_line' => '유통·물류 연결성이 좋아 공급 안정성 확보에 도움이 됩니다.',
-                'radar' => ['공급망 근접도' => 80, '거래처 유사성' => 78, '거래 활성도' => 88, '재무 안정성' => 81, '지역 접근성' => 84, '규모 적합도' => 77],
-            ],
-            [
-                'kedcd' => '0001112099',
-                'title' => '(주)그린소재',
-                'score' => 84,
-                'badges' => ['성장TOP25%'],
-                'tags' => ['친환경소재', '화학'],
-                'one_line' => '성장성이 높고 거래처 유사성이 안정적으로 확보된 후보입니다.',
-                'radar' => ['공급망 근접도' => 78, '거래처 유사성' => 81, '거래 활성도' => 80, '재무 안정성' => 79, '지역 접근성' => 74, '규모 적합도' => 83],
-            ],
-        ],
-        'seller' => [
-            [
-                'kedcd' => '0006622001',
-                'title' => '(주)넥스트유통',
-                'score' => 96,
-                'badges' => ['성장TOP10%', '벤처인증'],
-                'tags' => ['유통', 'B2B플랫폼'],
-                'one_line' => '매출 확장성이 높고 거래 활성도 지표가 우수한 판매 후보입니다.',
-                'radar' => ['공급망 근접도' => 90, '거래처 유사성' => 93, '거래 활성도' => 96, '재무 안정성' => 84, '지역 접근성' => 89, '규모 적합도' => 88],
-            ],
-            [
-                'kedcd' => '0004022103',
-                'title' => '(주)오성테크',
-                'score' => 93,
-                'badges' => ['재무안정TOP10%'],
-                'tags' => ['전자부품', '산업장비'],
-                'one_line' => '유사 구매처가 많아 초기 판매 전환 확률이 높은 편입니다.',
-                'radar' => ['공급망 근접도' => 87, '거래처 유사성' => 90, '거래 활성도' => 91, '재무 안정성' => 88, '지역 접근성' => 78, '규모 적합도' => 86],
-            ],
-            [
-                'kedcd' => '0007332012',
-                'title' => '(주)현대소싱',
-                'score' => 91,
-                'badges' => ['성장TOP20%'],
-                'tags' => ['소재유통', '제조'],
-                'one_line' => '판매 채널 확장에 유리한 네트워크를 보유한 후보입니다.',
-                'radar' => ['공급망 근접도' => 85, '거래처 유사성' => 89, '거래 활성도' => 88, '재무 안정성' => 83, '지역 접근성' => 82, '규모 적합도' => 84],
-            ],
-            [
-                'kedcd' => '0002123008',
-                'title' => '(주)동아기공',
-                'score' => 87,
-                'badges' => ['재무안정TOP5%'],
-                'tags' => ['기계장비', '정밀부품'],
-                'one_line' => '구매력 지표가 안정적이라 반복 매출 기대가 가능합니다.',
-                'radar' => ['공급망 근접도' => 81, '거래처 유사성' => 84, '거래 활성도' => 83, '재무 안정성' => 90, '지역 접근성' => 74, '규모 적합도' => 81],
-            ],
-            [
-                'kedcd' => '0005532017',
-                'title' => '주식회사 삼우화학',
-                'score' => 85,
-                'badges' => ['벤처인증'],
-                'tags' => ['화학원료', '산업재'],
-                'one_line' => '기존 고객군과 제품군이 맞아 교차판매 가능성이 높습니다.',
-                'radar' => ['공급망 근접도' => 79, '거래처 유사성' => 82, '거래 활성도' => 86, '재무 안정성' => 78, '지역 접근성' => 80, '규모 적합도' => 79],
-            ],
-            [
-                'kedcd' => '0009944019',
-                'title' => '(주)바른패키지',
-                'score' => 83,
-                'badges' => ['성장TOP25%'],
-                'tags' => ['포장솔루션', '소모성자재'],
-                'one_line' => '중소 고객군 기반이 넓어 신규 거래 시작 허들이 낮습니다.',
-                'radar' => ['공급망 근접도' => 77, '거래처 유사성' => 80, '거래 활성도' => 81, '재무 안정성' => 76, '지역 접근성' => 75, '규모 적합도' => 82],
-            ],
-        ],
+        'buyer' => [],
+        'seller' => [],
     ];
+}
+
+function company_list_ai_translate_radar($radar)
+{
+    if (!is_array($radar)) return array();
+
+    $label_map = array(
+        'supply_chain' => '공급망 경로',
+        'similarity' => '거래처 유사성',
+        'network_overlap' => '거래처 유사성',
+        'activity' => '거래 활성도',
+        'growth_trend' => '거래 활성도',
+        'financial' => '재무 건전성',
+        'financial_health' => '재무 건전성',
+        'accessibility' => '지역 접근성',
+        'scale_fit' => '규모 적합도',
+        'scale_match' => '규모 적합도',
+        'trade_diversity' => '거래 다변성',
+    );
+
+    $out = array();
+    foreach ($radar as $key => $val) {
+        $k = strtolower(trim((string)$key));
+        $label = isset($label_map[$k]) ? $label_map[$k] : trim((string)$key);
+        if ($label === '') $label = '지표';
+        $out[$label] = (float)$val;
+    }
+    return $out;
+}
+
+function company_list_ai_ml_item_to_card($item)
+{
+    if (!is_array($item)) return null;
+
+    $kedcd = str_pad(preg_replace('/\D/', '', (string)($item['kedcd'] ?? '')), 10, '0', STR_PAD_LEFT);
+    if (strlen($kedcd) !== 10 || preg_match('/^0+$/', $kedcd)) return null;
+
+    $title = trim((string)($item['enp_nm'] ?? ''));
+    if ($title === '') $title = '기업명 준비중';
+
+    $raw_score = isset($item['display_score']) ? (float)$item['display_score'] : (float)($item['score'] ?? 0) * 100.0;
+    $score = (int)round($raw_score);
+    if ($score < 0) $score = 0;
+    if ($score > 100) $score = 100;
+
+    $candidate_type = trim((string)($item['candidate_type'] ?? ''));
+    $bzc_cd = trim((string)($item['bzc_cd'] ?? ''));
+    $bzno = preg_replace('/\D/', '', (string)($item['bzno'] ?? ''));
+
+    $tags = array();
+    if ($bzc_cd !== '') $tags[] = $bzc_cd;
+    if ($candidate_type !== '') $tags[] = strtoupper($candidate_type);
+    if ($bzno !== '') $tags[] = '사업자';
+    if (empty($tags)) $tags[] = 'AI추천';
+
+    return array(
+        'kedcd' => $kedcd,
+        'title' => $title,
+        'score' => $score,
+        'badges' => array(),
+        'tags' => $tags,
+        'one_line' => trim((string)($item['one_line'] ?? '')),
+        'radar' => company_list_ai_translate_radar(isset($item['radar']) ? $item['radar'] : array()),
+    );
 }
 
 function company_list_ai_render_badges($badges)
@@ -460,10 +414,99 @@ function company_list_ai_build_slide_sets($cards, $trade_type = 1)
 $cards = company_list_ai_cards();
 $buyer_cards = isset($cards['buyer']) && is_array($cards['buyer']) ? $cards['buyer'] : array();
 $seller_cards = isset($cards['seller']) && is_array($cards['seller']) ? $cards['seller'] : array();
+$buy_total_stat = count($buyer_cards);
+$sell_total_stat = count($seller_cards);
+$buy_live_ok = false;
+$sell_live_ok = false;
 
-$buy_pool = company_list_ai_expand_cards($buyer_cards, 48);
-$sell_source = !empty($seller_cards) ? $seller_cards : $buyer_cards;
-$sell_pool = company_list_ai_expand_cards($sell_source, 48);
+$kedcd_query = str_pad(preg_replace('/\D/', '', (string)($_GET['kedcd'] ?? '')), 10, '0', STR_PAD_LEFT);
+$has_kedcd_query = isset($_GET['kedcd']) && trim((string)$_GET['kedcd']) !== '';
+$bizno_query = preg_replace('/\D/', '', (string)($_GET['bizno'] ?? ($_GET['comnum'] ?? '')));
+$has_valid_bizno_query = (strlen($bizno_query) === 10);
+$resolved_base_payload = array();
+
+// 진입 파라미터는 kedcd 직접 입력 또는 bizno(comnum) 둘 다 지원
+if (($has_kedcd_query && strlen($kedcd_query) === 10 && !preg_match('/^0+$/', $kedcd_query)) || $has_valid_bizno_query) {
+    include_once(G5_PATH . '/ko/helper/company_list_ai_helper.php');
+
+    if ($has_kedcd_query && strlen($kedcd_query) === 10 && !preg_match('/^0+$/', $kedcd_query)) {
+        $resolved_base_payload = company_list_ai_build_base_payload($_GET);
+        $resolved_base_payload['kedcd'] = $kedcd_query;
+    } else if ($has_valid_bizno_query) {
+        $resolved = company_list_ai_resolve_base_payload_by_bizno($bizno_query, true);
+        if (!empty($resolved['ok']) && !empty($resolved['base_payload']) && is_array($resolved['base_payload'])) {
+            $resolved_base_payload = $resolved['base_payload'];
+            $query_override = company_list_ai_build_base_payload(array_merge($_GET, array(
+                'kedcd' => isset($resolved_base_payload['kedcd']) ? $resolved_base_payload['kedcd'] : ''
+            )));
+            $resolved_base_payload = array_merge($resolved_base_payload, $query_override);
+        }
+    }
+}
+
+if (!empty($resolved_base_payload['kedcd'])) {
+    // 화면 렌더 전에 buy/sell을 모두 받아 탭 전환 시 즉시 표시
+    $base_payload = $resolved_base_payload;
+    $buy_payload = $base_payload;
+    $buy_payload['trade_type'] = 1;
+
+    $sell_payload = $base_payload;
+    $sell_payload['trade_type'] = 2;
+
+    $buy_call = company_list_ai_call_recommend($buy_payload, 8);
+    $sell_call = company_list_ai_call_recommend($sell_payload, 8);
+
+    if (!empty($buy_call['ok']) && !empty($buy_call['data']['results']) && is_array($buy_call['data']['results'])) {
+        $buy_live_ok = true;
+        $buy_bucket = company_list_ai_build_bucket($buy_call['data']['results'], 45);
+        $buy_items = array_merge($buy_bucket['top3'], $buy_bucket['list']);
+        $mapped_buy = array();
+        foreach ($buy_items as $bi) {
+            $card = company_list_ai_ml_item_to_card($bi);
+            if (is_array($card)) $mapped_buy[] = $card;
+        }
+        $buyer_cards = $mapped_buy;
+        $buy_total_stat = isset($buy_bucket['total']) ? (int)$buy_bucket['total'] : count($mapped_buy);
+    } else if (!empty($buy_call['ok'])) {
+        // 실호출 성공 + 0건도 실제 결과로 취급
+        $buy_live_ok = true;
+        $buyer_cards = array();
+        $buy_total_stat = 0;
+    }
+
+    if (!empty($sell_call['ok']) && !empty($sell_call['data']['results']) && is_array($sell_call['data']['results'])) {
+        $sell_live_ok = true;
+        $sell_bucket = company_list_ai_build_bucket($sell_call['data']['results'], 45);
+        $sell_items = array_merge($sell_bucket['top3'], $sell_bucket['list']);
+        $mapped_sell = array();
+        foreach ($sell_items as $si) {
+            $card = company_list_ai_ml_item_to_card($si);
+            if (is_array($card)) $mapped_sell[] = $card;
+        }
+        $seller_cards = $mapped_sell;
+        $sell_total_stat = isset($sell_bucket['total']) ? (int)$sell_bucket['total'] : count($mapped_sell);
+    } else if (!empty($sell_call['ok'])) {
+        // 실호출 성공 + 0건도 실제 결과로 취급
+        $sell_live_ok = true;
+        $seller_cards = array();
+        $sell_total_stat = 0;
+    }
+}
+
+$use_live_pool = ($buy_live_ok || $sell_live_ok);
+if ($use_live_pool) {
+    $buy_pool = $buyer_cards;
+    if ($sell_live_ok) {
+        $sell_pool = $seller_cards;
+    } else {
+        $sell_source = !empty($seller_cards) ? $seller_cards : $buyer_cards;
+        $sell_pool = $sell_source;
+    }
+} else {
+    $buy_pool = company_list_ai_expand_cards($buyer_cards, 48);
+    $sell_source = !empty($seller_cards) ? $seller_cards : $buyer_cards;
+    $sell_pool = company_list_ai_expand_cards($sell_source, 48);
+}
 
 $buy_slides = company_list_ai_build_slide_sets($buy_pool, 1);
 $sell_slides = company_list_ai_build_slide_sets($sell_pool, 2);
@@ -491,11 +534,11 @@ $buy_rest_first = array_slice($buy_rest_pool, 0, 9);
                     <span class="ai-banner_stat_label">거래 데이터</span>
                 </div>
                 <div class="ai-banner_stat">
-                    <span class="ai-banner_stat_value"><?php echo (int)count($buy_pool); ?></span>
+                    <span class="ai-banner_stat_value"><?php echo (int)$buy_total_stat; ?></span>
                     <span class="ai-banner_stat_label">구매처</span>
                 </div>
                 <div class="ai-banner_stat">
-                    <span class="ai-banner_stat_value"><?php echo (int)count($sell_pool); ?></span>
+                    <span class="ai-banner_stat_value"><?php echo (int)$sell_total_stat; ?></span>
                     <span class="ai-banner_stat_label">판매처</span>
                 </div>
             </div>

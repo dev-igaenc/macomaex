@@ -198,10 +198,228 @@ if (!function_exists('company_list_ai_build_base_payload')) {
     }
 }
 
+if (!function_exists('company_list_ai_xml_val')) {
+    function company_list_ai_xml_val($value)
+    {
+        if ($value === null || is_array($value) || is_object($value)) {
+            return '';
+        }
+        return trim((string)$value);
+    }
+}
+
+if (!function_exists('company_list_ai_xml_int')) {
+    function company_list_ai_xml_int($value)
+    {
+        $s = company_list_ai_xml_val($value);
+        return ($s !== '') ? (int)$s : 0;
+    }
+}
+
+if (!function_exists('company_list_ai_collect_partner_names')) {
+    function company_list_ai_collect_partner_names($section, $prefix)
+    {
+        $names = array();
+        if (!is_array($section)) return $names;
+
+        for ($i = 1; $i <= 10; $i++) {
+            $k = $prefix . $i;
+            $name = company_list_ai_xml_val(isset($section[$k]) ? $section[$k] : '');
+            if (!company_list_ai_is_real_company($name)) continue;
+            $names[] = $name;
+        }
+
+        return array_slice($names, 0, 10);
+    }
+}
+
+if (!function_exists('company_list_ai_pick_company_api_log')) {
+    function company_list_ai_pick_company_api_log($bizno, $today_only)
+    {
+        $bizno = preg_replace('/\D/', '', (string)$bizno);
+        if (strlen($bizno) !== 10) return null;
+
+        $bizno_sql = sql_real_escape_string($bizno);
+        $sql = "select c_bizno, c_kedcd, c_content, c_datetime
+                from company_api_log
+                where c_bizno='{$bizno_sql}'";
+        if ($today_only) {
+            $sql .= " and DATE(c_datetime)='" . date('Y-m-d') . "'";
+        }
+        $sql .= " order by c_datetime desc limit 1";
+
+        $row = sql_fetch($sql);
+        if (!is_array($row) || empty($row['c_content'])) return null;
+        return $row;
+    }
+}
+
+if (!function_exists('company_list_ai_build_base_payload_from_kodata_json')) {
+    function company_list_ai_build_base_payload_from_kodata_json($json_text, $fallback_kedcd = '')
+    {
+        $decoded = json_decode((string)$json_text, true);
+        if (!is_array($decoded)) {
+            return array(
+                'ok' => false,
+                'error' => 'Kodata JSON 파싱 실패',
+                'base_payload' => array(),
+            );
+        }
+
+        $contents = (isset($decoded['CONTENTS']) && is_array($decoded['CONTENTS'])) ? $decoded['CONTENTS'] : array();
+        $enp  = (isset($contents['ENPintr0000']) && is_array($contents['ENPintr0000'])) ? $contents['ENPintr0000'] : array();
+        $cust = (isset($contents['ENPcust0001']) && is_array($contents['ENPcust0001'])) ? $contents['ENPcust0001'] : array();
+        $supp = (isset($contents['ENPsupp0001']) && is_array($contents['ENPsupp0001'])) ? $contents['ENPsupp0001'] : array();
+        $fsdt = (isset($contents['ENPfsdt0001']) && is_array($contents['ENPfsdt0001'])) ? $contents['ENPfsdt0001'] : array();
+        $kbad = (isset($contents['ENPkbad0000']) && is_array($contents['ENPkbad0000'])) ? $contents['ENPkbad0000'] : array();
+
+        $kedcd = preg_replace('/\D/', '', company_list_ai_xml_val(isset($enp['kedcd']) ? $enp['kedcd'] : ''));
+        if (strlen($kedcd) !== 10) {
+            $kedcd = preg_replace('/\D/', '', (string)$fallback_kedcd);
+        }
+        $kedcd = str_pad($kedcd, 10, '0', STR_PAD_LEFT);
+        if (strlen($kedcd) !== 10 || preg_match('/^0+$/', $kedcd)) {
+            return array(
+                'ok' => false,
+                'error' => 'Kodata 응답에 kedcd가 없습니다.',
+                'base_payload' => array(),
+            );
+        }
+
+        $cust_names = company_list_ai_collect_partner_names($cust, 'cust_nm');
+        $supp_names = company_list_ai_collect_partner_names($supp, 'supp_nm');
+        $loc_addra = company_list_ai_xml_val(isset($enp['loc_addra']) ? $enp['loc_addra'] : '');
+
+        $source = array(
+            'kedcd'      => $kedcd,
+            'bzc_cd'     => company_list_ai_xml_val(isset($enp['bzc_cd']) ? $enp['bzc_cd'] : ''),
+            'sido'       => ($loc_addra !== '') ? mb_substr($loc_addra, 0, 3) : '',
+            'sze'        => company_list_ai_xml_val(isset($enp['enp_sze']) ? $enp['enp_sze'] : ''),
+            'estb_dt'    => company_list_ai_xml_val(isset($enp['estb_dt']) ? $enp['estb_dt'] : ''),
+            'mpd'        => company_list_ai_xml_val(isset($enp['mpd']) ? $enp['mpd'] : ''),
+            'sales'      => company_list_ai_xml_int(isset($fsdt['fs_val9']) ? $fsdt['fs_val9'] : 0),
+            'prev_sales' => company_list_ai_xml_int(isset($fsdt['fs1_val9']) ? $fsdt['fs1_val9'] : 0),
+            'asset'      => company_list_ai_xml_int(isset($fsdt['fs_val3']) ? $fsdt['fs_val3'] : 0),
+            'debt'       => company_list_ai_xml_int(isset($fsdt['fs_val6']) ? $fsdt['fs_val6'] : 0),
+            'bad_cnt'    => company_list_ai_xml_int(isset($kbad['kfb_bad_cnt']) ? $kbad['kfb_bad_cnt'] : 0),
+            'cust_names' => implode('|', $cust_names),
+            'supp_names' => implode('|', $supp_names),
+        );
+
+        $payload = company_list_ai_build_base_payload($source);
+        $payload['kedcd'] = $kedcd;
+
+        return array(
+            'ok' => true,
+            'error' => '',
+            'base_payload' => $payload,
+        );
+    }
+}
+
+if (!function_exists('company_list_ai_resolve_base_payload_by_bizno')) {
+    function company_list_ai_resolve_base_payload_by_bizno($bizno, $allow_kodata = true)
+    {
+        // bizno -> ML 공통 payload 변환: cache-first, miss 시 Kodata
+        $bizno = preg_replace('/\D/', '', (string)$bizno);
+        if (strlen($bizno) !== 10) {
+            return array(
+                'ok' => false,
+                'status' => 400,
+                'error' => 'bizno는 10자리 숫자여야 합니다.',
+                'base_payload' => array(),
+            );
+        }
+
+        // 1) 오늘 캐시
+        $today_row = company_list_ai_pick_company_api_log($bizno, true);
+        if (is_array($today_row) && !empty($today_row['c_content'])) {
+            $parsed = company_list_ai_build_base_payload_from_kodata_json($today_row['c_content'], $today_row['c_kedcd']);
+            if (!empty($parsed['ok'])) {
+                return array(
+                    'ok' => true,
+                    'status' => 200,
+                    'error' => '',
+                    'source' => 'company_api_log_today',
+                    'cached_datetime' => (string)$today_row['c_datetime'],
+                    'base_payload' => $parsed['base_payload'],
+                );
+            }
+        }
+
+        // 2) 최근 캐시(로컬 개발에서 Kodata IP 제한 시 fallback)
+        $latest_row = company_list_ai_pick_company_api_log($bizno, false);
+        if (is_array($latest_row) && !empty($latest_row['c_content'])) {
+            $parsed = company_list_ai_build_base_payload_from_kodata_json($latest_row['c_content'], $latest_row['c_kedcd']);
+            if (!empty($parsed['ok'])) {
+                return array(
+                    'ok' => true,
+                    'status' => 200,
+                    'error' => '',
+                    'source' => 'company_api_log_latest',
+                    'cached_datetime' => (string)$latest_row['c_datetime'],
+                    'base_payload' => $parsed['base_payload'],
+                );
+            }
+        }
+
+        // 3) Kodata 직접 호출 (운영/허용 IP에서만 성공 가능)
+        if (!$allow_kodata || !function_exists('getKODATA')) {
+            return array(
+                'ok' => false,
+                'status' => 502,
+                'error' => 'Kodata 캐시 없음(로컬 IP 제한 가능). company_api_log 캐시를 먼저 확보하세요.',
+                'base_payload' => array(),
+            );
+        }
+
+        $kodata_raw = (string)getKODATA($bizno);
+        $parts = explode('|', $kodata_raw, 2);
+        $code = isset($parts[0]) ? trim((string)$parts[0]) : '';
+        $body = isset($parts[1]) ? (string)$parts[1] : '';
+
+        if ($code !== '1000' || $body === '') {
+            return array(
+                'ok' => false,
+                'status' => 502,
+                'error' => ($body !== '') ? $body : 'Kodata 조회 실패',
+                'base_payload' => array(),
+            );
+        }
+
+        $parsed = company_list_ai_build_base_payload_from_kodata_json($body, '');
+        if (empty($parsed['ok'])) {
+            return array(
+                'ok' => false,
+                'status' => 502,
+                'error' => isset($parsed['error']) ? $parsed['error'] : 'Kodata 파싱 실패',
+                'base_payload' => array(),
+            );
+        }
+
+        // Kodata 성공 응답은 company_api_log 에 즉시 기록해 재호출 절감
+        $bizno_sql = sql_real_escape_string($bizno);
+        $kedcd_sql = sql_real_escape_string((string)$parsed['base_payload']['kedcd']);
+        $json_sql = sql_real_escape_string($body);
+        $ip_sql = sql_real_escape_string((string)(isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : ''));
+        sql_query("insert company_api_log set c_bizno='{$bizno_sql}', c_kedcd='{$kedcd_sql}', c_content='{$json_sql}', c_datetime=now(), c_ip='{$ip_sql}'");
+
+        return array(
+            'ok' => true,
+            'status' => 200,
+            'error' => '',
+            'source' => 'kodata_live',
+            'cached_datetime' => date('Y-m-d H:i:s'),
+            'base_payload' => $parsed['base_payload'],
+        );
+    }
+}
+
 // EC2 /recommend 단건 호출
 if (!function_exists('company_list_ai_call_recommend')) {
     function company_list_ai_call_recommend($payload, $timeout_sec)
     {
+        // EC2 /recommend 단건 호출 공통 함수
         $base_url = rtrim((string)company_list_ai_env('ML_API_URL', ''), '/');
         $api_key = (string)company_list_ai_env('ML_API_KEY', '');
 
