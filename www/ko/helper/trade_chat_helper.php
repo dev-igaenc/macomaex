@@ -40,6 +40,79 @@ function trade_chat_make_stream_channel_id($companyPairKey) {
 	return 'trade-' . substr(hash('sha256', $companyPairKey), 0, 32);
 }
 
+function trade_chat_compact_log_message($message, $maxLength = 255) {
+	$message = trim((string)$message);
+	if ($message === '') return '';
+
+	$message = preg_replace('/\s+/u', ' ', $message);
+	$maxLength = (int)$maxLength;
+	if ($maxLength < 1) return $message;
+
+	if (function_exists('mb_strlen') && function_exists('mb_substr')) {
+		if (mb_strlen($message, 'UTF-8') > $maxLength) {
+			return mb_substr($message, 0, $maxLength - 1, 'UTF-8') . '…';
+		}
+
+		return $message;
+	}
+
+	if (strlen($message) > $maxLength) {
+		return substr($message, 0, $maxLength - 3) . '...';
+	}
+
+	return $message;
+}
+
+function trade_chat_error_summary($code, $fallback = '') {
+	$code = trim((string)$code);
+	$map = array(
+		'room_not_found' => '채팅방 정보를 찾을 수 없습니다.',
+		'room_already_active' => '이미 연결된 채팅방입니다.',
+		'members_not_enough' => '채팅 멤버가 아직 충분하지 않습니다.',
+		'user_upsert_failed' => '채팅 사용자 동기화에 실패했습니다.',
+		'stream_users_not_enough' => '채팅 사용자 정보가 아직 충분하지 않습니다.',
+		'channel_sync_failed' => '채팅 채널 동기화에 실패했습니다.',
+		'request_not_found' => '거래 요청을 찾을 수 없습니다.',
+		'invalid_company_pair' => '기업 식별 정보가 올바르지 않습니다.',
+		'room_row_create_failed' => '채팅방 생성에 실패했습니다.',
+		'invalid_room_id' => '채팅방 식별값이 올바르지 않습니다.',
+		'invalid_member' => '회원 정보가 올바르지 않습니다.',
+		'room_access_denied' => '채팅방 접근 권한이 없습니다.',
+		'room_not_active' => '활성 채팅방이 아닙니다.',
+		'empty_member_id' => '회원 ID가 비어 있습니다.',
+		'stream_client_init_failed' => 'GetStream 연결을 초기화할 수 없습니다.',
+		'invalid_channel_identifier' => '채널 식별 정보가 올바르지 않습니다.',
+		'invalid_channel_id' => '채널 ID 형식이 올바르지 않습니다.',
+		'missing_channel_creator' => '채널 생성자 정보가 없습니다.',
+		'empty_stream_user_id' => '채팅 사용자 식별값이 비어 있습니다.',
+		'stream_api_user_upsert_failed' => 'Stream 사용자 등록에 실패했습니다.',
+		'stream_api_channel_sync_failed' => 'Stream 채널 동기화에 실패했습니다.',
+		'stream_api_token_failed' => 'Stream 토큰 발급에 실패했습니다.',
+	);
+
+	if ($code !== '' && isset($map[$code])) {
+		return $map[$code];
+	}
+
+	return trade_chat_compact_log_message($fallback);
+}
+
+function trade_chat_attach_error_detail($payload, $code = '', $detailMessage = '') {
+	$payload = is_array($payload) ? $payload : array();
+	$code = trim((string)$code);
+	$detailMessage = trade_chat_compact_log_message($detailMessage, 500);
+
+	if ($code !== '') {
+		$payload['error_code'] = $code;
+	}
+
+	if ($detailMessage !== '') {
+		$payload['raw_error_message'] = $detailMessage;
+	}
+
+	return $payload;
+}
+
 function trade_chat_normalize_channel_type($channelType) {
 	$channelType = trim((string)$channelType);
 	if ($channelType === '') return 'messaging';
@@ -78,7 +151,7 @@ function trade_chat_write_event_log($eventType, $status, $payload = array(), $er
 	$eventTypeSql = sql_escape_string($eventType);
 	$statusSql = sql_escape_string($status);
 	$payloadSql = sql_escape_string($payloadJson);
-	$errorSql = sql_escape_string((string)$errorMessage);
+	$errorSql = sql_escape_string(trade_chat_compact_log_message($errorMessage));
 	$mbIdSql = sql_escape_string($mbId);
 
 	return sql_query("
@@ -391,20 +464,24 @@ function trade_chat_retry_stream_room($roomId, $member) {
 		return $access;
 	}
 
-	return trade_chat_sync_stream_room($room['room_id']);
+	return trade_chat_sync_stream_room($room['room_id'], $member);
 }
 
-function trade_chat_sync_stream_room($roomId) {
+function trade_chat_sync_stream_room($roomId, $member = array()) {
+	$actorMbId = trim((string)($member['mb_id'] ?? ''));
 	$room = trade_chat_find_room_by_id($roomId);
 	if (empty($room['room_id'])) {
-		trade_chat_write_event_log('stream_room_sync', 'fail', array(
+		$errorCode = 'room_not_found';
+		$message = trade_chat_error_summary($errorCode);
+		trade_chat_write_event_log('stream_room_sync', 'fail', trade_chat_attach_error_detail(array(
 			'room_id' => (int)$roomId,
+			'mb_id' => $actorMbId,
 			'reason' => 'room_not_found',
-		), '채팅방 정보를 찾을 수 없습니다.');
+		), $errorCode), $message);
 
 		return array(
 			'success' => false,
-			'message' => '채팅방 정보를 찾을 수 없습니다.',
+			'message' => $message,
 		);
 	}
 
@@ -413,6 +490,7 @@ function trade_chat_sync_stream_room($roomId) {
 		trade_chat_write_event_log('stream_room_sync', 'skip', array(
 			'room_id' => (int)$room['room_id'],
 			'tr_no' => (int)($room['latest_tr_no'] ?? 0),
+			'mb_id' => $actorMbId,
 			'reason' => 'room_already_active',
 			'stream_channel_cid' => $room['stream_channel_cid'],
 		));
@@ -426,14 +504,16 @@ function trade_chat_sync_stream_room($roomId) {
 
 	$members = trade_chat_find_active_room_members($room['room_id']);
 	if (count($members) < 2) {
-		$message = 'Stream 채널 동기화에는 활성 멤버가 2명 이상 필요합니다.';
-		trade_chat_update_room_stream_state($room['room_id'], 'pending', '', 'members_not_enough', $message);
-		trade_chat_write_event_log('stream_room_sync', 'skip', array(
+		$errorCode = 'members_not_enough';
+		$message = trade_chat_error_summary($errorCode);
+		trade_chat_update_room_stream_state($room['room_id'], 'pending', '', $errorCode, $message);
+		trade_chat_write_event_log('stream_room_sync', 'skip', trade_chat_attach_error_detail(array(
 			'room_id' => (int)$room['room_id'],
 			'tr_no' => (int)($room['latest_tr_no'] ?? 0),
+			'mb_id' => $actorMbId,
 			'reason' => 'members_not_enough',
 			'member_count' => count($members),
-		), $message);
+		), $errorCode), $message);
 
 		return array(
 			'success' => false,
@@ -459,14 +539,16 @@ function trade_chat_sync_stream_room($roomId) {
 		$upsertResults[] = $upsert;
 
 		if (empty($upsert['success'])) {
-			$message = $upsert['message'] ?? 'Stream user upsert 실패';
-			trade_chat_update_room_stream_state($room['room_id'], 'pending', '', 'user_upsert_failed', $message);
-			trade_chat_write_event_log('stream_user_upsert', 'fail', array(
+			$errorCode = trim((string)($upsert['error_code'] ?? 'user_upsert_failed'));
+			$message = trade_chat_error_summary($errorCode, $upsert['message'] ?? '');
+			$detailMessage = $upsert['detail_message'] ?? ($upsert['message'] ?? '');
+			trade_chat_update_room_stream_state($room['room_id'], 'pending', '', $errorCode, $message);
+			trade_chat_write_event_log('stream_user_upsert', 'fail', trade_chat_attach_error_detail(array(
 				'room_id' => (int)$room['room_id'],
 				'tr_no' => (int)($room['latest_tr_no'] ?? 0),
 				'mb_id' => $mbId,
 				'stream_user_id' => $streamUserId,
-			), $message);
+			), $errorCode, $detailMessage), $message);
 
 			return array(
 				'success' => false,
@@ -479,14 +561,16 @@ function trade_chat_sync_stream_room($roomId) {
 
 	$streamUserIds = array_values(array_unique($streamUserIds));
 	if (count($streamUserIds) < 2) {
-		$message = 'Stream user id가 2개 이상 필요합니다.';
-		trade_chat_update_room_stream_state($room['room_id'], 'pending', '', 'stream_users_not_enough', $message);
-		trade_chat_write_event_log('stream_room_sync', 'skip', array(
+		$errorCode = 'stream_users_not_enough';
+		$message = trade_chat_error_summary($errorCode);
+		trade_chat_update_room_stream_state($room['room_id'], 'pending', '', $errorCode, $message);
+		trade_chat_write_event_log('stream_room_sync', 'skip', trade_chat_attach_error_detail(array(
 			'room_id' => (int)$room['room_id'],
 			'tr_no' => (int)($room['latest_tr_no'] ?? 0),
+			'mb_id' => $actorMbId,
 			'reason' => 'stream_users_not_enough',
 			'stream_user_count' => count($streamUserIds),
-		), $message);
+		), $errorCode), $message);
 
 		return array(
 			'success' => false,
@@ -509,14 +593,17 @@ function trade_chat_sync_stream_room($roomId) {
 	);
 
 	if (empty($channelResult['success'])) {
-		$message = $channelResult['message'] ?? 'Stream channel 생성 실패';
-		trade_chat_update_room_stream_state($room['room_id'], 'pending', '', 'channel_sync_failed', $message);
-		trade_chat_write_event_log('stream_channel_sync', 'fail', array(
+		$errorCode = trim((string)($channelResult['error_code'] ?? 'channel_sync_failed'));
+		$message = trade_chat_error_summary($errorCode, $channelResult['message'] ?? '');
+		$detailMessage = $channelResult['detail_message'] ?? ($channelResult['message'] ?? '');
+		trade_chat_update_room_stream_state($room['room_id'], 'pending', '', $errorCode, $message);
+		trade_chat_write_event_log('stream_channel_sync', 'fail', trade_chat_attach_error_detail(array(
 			'room_id' => (int)$room['room_id'],
 			'tr_no' => (int)($room['latest_tr_no'] ?? 0),
+			'mb_id' => $actorMbId,
 			'stream_channel_id' => $room['stream_channel_id'] ?? '',
 			'members' => $streamUserIds,
-		), $message);
+		), $errorCode, $detailMessage), $message);
 
 		return array(
 			'success' => false,
@@ -531,6 +618,7 @@ function trade_chat_sync_stream_room($roomId) {
 	trade_chat_write_event_log('stream_room_sync', 'success', array(
 		'room_id' => (int)$room['room_id'],
 		'tr_no' => (int)($room['latest_tr_no'] ?? 0),
+		'mb_id' => $actorMbId,
 		'stream_channel_id' => $room['stream_channel_id'] ?? '',
 		'stream_channel_cid' => $channelCid,
 		'members' => $streamUserIds,
@@ -550,16 +638,18 @@ function trade_chat_sync_stream_room($roomId) {
 function trade_chat_open_or_attach_room($trNo, $member) {
 	$requestRow = trade_chat_get_request_row($trNo);
 	if (empty($requestRow['tr_no'])) {
+		$errorCode = 'request_not_found';
+		$message = trade_chat_error_summary($errorCode);
 		trade_chat_update_request_chat_state($trNo, 0, 'fail');
-		trade_chat_write_event_log('room_open', 'fail', array(
+		trade_chat_write_event_log('room_open', 'fail', trade_chat_attach_error_detail(array(
 			'tr_no' => (int)$trNo,
 			'mb_id' => $member['mb_id'] ?? '',
 			'reason' => 'request_not_found',
-		), '거래 요청을 찾을 수 없습니다.');
+		), $errorCode), $message);
 
 		return array(
 			'success' => false,
-			'message' => '거래 요청을 찾을 수 없습니다.',
+			'message' => $message,
 		);
 	}
 
@@ -568,16 +658,18 @@ function trade_chat_open_or_attach_room($trNo, $member) {
 		$requestRow['target_bzno'] ?? ''
 	);
 	if ($companyPairKey === '') {
+		$errorCode = 'invalid_company_pair';
+		$message = trade_chat_error_summary($errorCode);
 		trade_chat_update_request_chat_state($requestRow['tr_no'], 0, 'fail');
-		trade_chat_write_event_log('room_open', 'fail', array(
+		trade_chat_write_event_log('room_open', 'fail', trade_chat_attach_error_detail(array(
 			'tr_no' => (int)$requestRow['tr_no'],
 			'mb_id' => $member['mb_id'] ?? '',
 			'reason' => 'invalid_company_pair',
-		), '기업 식별 정보가 올바르지 않습니다.');
+		), $errorCode), $message);
 
 		return array(
 			'success' => false,
-			'message' => '기업 식별 정보가 올바르지 않습니다.',
+			'message' => $message,
 		);
 	}
 
@@ -636,17 +728,19 @@ function trade_chat_open_or_attach_room($trNo, $member) {
 
 	$room = trade_chat_find_room_by_pair_key($companyPairKey);
 	if (!$inserted || empty($room['room_id'])) {
+		$errorCode = 'room_row_create_failed';
+		$message = trade_chat_error_summary($errorCode);
 		trade_chat_update_request_chat_state($requestRow['tr_no'], 0, 'fail');
-		trade_chat_write_event_log('room_open', 'fail', array(
+		trade_chat_write_event_log('room_open', 'fail', trade_chat_attach_error_detail(array(
 			'tr_no' => (int)$requestRow['tr_no'],
 			'mb_id' => $member['mb_id'] ?? '',
 			'company_pair_key' => $companyPairKey,
 			'stream_channel_id' => $streamChannelId,
-		), '채팅방 row 생성에 실패했습니다.');
+		), $errorCode), $message);
 
 		return array(
 			'success' => false,
-			'message' => '채팅방 row 생성에 실패했습니다.',
+			'message' => $message,
 			'action' => 'create',
 			'company_pair_key' => $companyPairKey,
 			'stream_channel_id' => $streamChannelId,

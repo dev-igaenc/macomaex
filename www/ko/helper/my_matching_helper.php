@@ -125,7 +125,7 @@ function my_matching_handle_trade_request_approval($member, $request) {
 		} else {
 			$roomId = isset($chatRoomResult['room']['room_id']) ? (int)$chatRoomResult['room']['room_id'] : 0;
 			if ($roomId > 0) {
-				$streamSyncResult = trade_chat_sync_stream_room($roomId);
+				$streamSyncResult = trade_chat_sync_stream_room($roomId, $member);
 				if (empty($streamSyncResult['success'])) {
 					error_log('[trade_chat] stream sync failed: ' . json_encode(array(
 						'tr_no' => $idx,

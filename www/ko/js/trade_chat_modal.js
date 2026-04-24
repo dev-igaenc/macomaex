@@ -8,7 +8,7 @@
 
 		var modal = overlay.querySelector('.chat-demo-modal');
 		var closeBtn = document.getElementById('closeChatDemo');
-		var closeSidebarBtn = document.getElementById('closeChatSidebar');
+		var sidebarToggleBtn = document.getElementById('tradeChatSidebarToggle');
 		var backBtn = document.getElementById('chatBackBtn');
 		var openDemoBtn = document.getElementById('openChatDemo');
 		var roomListEl = document.getElementById('chatRoomList');
@@ -30,6 +30,23 @@
 			filterKeyword: '',
 			bootPromise: null
 		};
+
+		function syncSidebarToggleState() {
+			if (!sidebarToggleBtn) return;
+			var collapsed = modal.classList.contains('chat-demo-modal--sidebar-collapsed');
+			sidebarToggleBtn.setAttribute('aria-pressed', collapsed ? 'true' : 'false');
+			sidebarToggleBtn.setAttribute('aria-label', collapsed ? '목록 펼치기' : '목록 접기');
+			sidebarToggleBtn.setAttribute('title', collapsed ? '목록 펼치기' : '목록 접기');
+		}
+
+		function toggleSidebarCollapsed(forceCollapsed) {
+			if (isMobileViewport()) return;
+			var collapsed = typeof forceCollapsed === 'boolean'
+				? forceCollapsed
+				: !modal.classList.contains('chat-demo-modal--sidebar-collapsed');
+			modal.classList.toggle('chat-demo-modal--sidebar-collapsed', collapsed);
+			syncSidebarToggleState();
+		}
 
 		function ensureLoginGuardModal() {
 			var guard = document.getElementById('tradeChatLoginGuard');
@@ -198,6 +215,31 @@
 			messagesEl.scrollTop = messagesEl.scrollHeight;
 		}
 
+		function extractRoomPreviewFromMessage(message) {
+			if (!message) return '';
+			var text = String(message.text || '').trim();
+			if (text !== '') {
+				return text.replace(/\s+/g, ' ');
+			}
+			if (Array.isArray(message.attachments) && message.attachments.length > 0) {
+				return '첨부파일이 있습니다.';
+			}
+			return '';
+		}
+
+		function updateRoomPreviewFromMessage(room, message) {
+			if (!room || !message) return;
+			var preview = extractRoomPreviewFromMessage(message);
+			if (preview !== '') {
+				room.preview = preview;
+			}
+			var updatedAt = message.created_at || message.createdAt || message.updated_at || message.updatedAt || '';
+			if (updatedAt) {
+				room.updatedAt = updatedAt;
+			}
+			renderRoomList();
+		}
+
 		function findRoomById(roomId) {
 			if (!state.bootstrap || !Array.isArray(state.bootstrap.rooms)) return null;
 			for (var i = 0; i < state.bootstrap.rooms.length; i++) {
@@ -363,13 +405,20 @@
 				var channel = client.channel(roomPayload.channelType || room.channelType, roomPayload.channelId || room.channelId);
 				await channel.watch();
 				state.channel = channel;
-				state.channelListener = function () {
+				state.channelListener = function (event) {
+					var latestMessage = event && event.message ? event.message : null;
+					if (latestMessage) {
+						updateRoomPreviewFromMessage(room, latestMessage);
+					}
 					renderMessages(channel.state && channel.state.messages ? channel.state.messages : [], state.bootstrap.user.id, room);
 				};
 				if (typeof channel.on === 'function') {
 					channel.on('message.new', state.channelListener);
 				}
 				setMainHeader(room, roomMeta.header, roomMeta.code);
+				if (channel.state && Array.isArray(channel.state.messages) && channel.state.messages.length > 0) {
+					updateRoomPreviewFromMessage(room, channel.state.messages[channel.state.messages.length - 1]);
+				}
 				renderMessages(channel.state && channel.state.messages ? channel.state.messages : [], state.bootstrap.user.id, room);
 				setComposerEnabled(true, roomMeta.placeholder);
 			} catch (error) {
@@ -458,9 +507,12 @@
 				} else {
 					modal.classList.remove('chat-demo-modal--mobile-chat');
 				}
+				modal.classList.remove('chat-demo-modal--sidebar-collapsed');
 			} else {
 				modal.classList.remove('chat-demo-modal--mobile-chat');
 			}
+
+			syncSidebarToggleState();
 
 			document.documentElement.classList.add('hide-scroll');
 
@@ -484,7 +536,9 @@
 			overlay.setAttribute('aria-hidden', 'true');
 			modal.classList.remove('chat-demo-modal--mobile-chat');
 			modal.classList.remove('chat-demo-modal--locked');
+			modal.classList.remove('chat-demo-modal--sidebar-collapsed');
 			document.documentElement.classList.remove('hide-scroll');
+			syncSidebarToggleState();
 		}
 
 		function backToList() {
@@ -503,12 +557,15 @@
 			closeBtn.addEventListener('click', closeModal);
 		}
 
-		if (closeSidebarBtn) {
-			closeSidebarBtn.addEventListener('click', closeModal);
-		}
-
 		if (backBtn) {
 			backBtn.addEventListener('click', backToList);
+		}
+
+		if (sidebarToggleBtn) {
+			sidebarToggleBtn.addEventListener('click', function () {
+				toggleSidebarCollapsed();
+			});
+			syncSidebarToggleState();
 		}
 
 		if (searchInputEl) {
@@ -576,6 +633,7 @@
 			},
 			showRoomList: backToList,
 			selectRoom: bindRoom,
+			toggleSidebar: toggleSidebarCollapsed,
 			getOverlay: function () {
 				return overlay;
 			}

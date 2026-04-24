@@ -32,6 +32,7 @@
 	flex-direction: column;
 	border-right: 1px solid #edf0f5;
 	background: #fafbfd;
+	transition: width .22s ease, min-width .22s ease;
 }
 
 .chat-sidebar-head {
@@ -71,6 +72,31 @@
 	background: #e0e7ff;
 }
 
+.chat-demo-modal--sidebar-collapsed .chat-sidebar {
+	width: 56px;
+	min-width: 56px;
+}
+
+.chat-demo-modal--sidebar-collapsed .chat-sidebar-title,
+.chat-demo-modal--sidebar-collapsed .chat-sidebar-search,
+.chat-demo-modal--sidebar-collapsed .chat-room-list {
+	display: none;
+}
+
+.chat-demo-modal--sidebar-collapsed .chat-sidebar-head {
+	padding: 14px 10px;
+	justify-content: center;
+}
+
+.chat-demo-modal--sidebar-collapsed .chat-sidebar-head-actions {
+	width: 100%;
+	justify-content: center;
+}
+
+.chat-demo-modal--sidebar-collapsed .chat-sidebar-new {
+	transform: rotate(180deg);
+}
+
 .chat-sidebar-search {
 	padding: 0 12px 10px;
 	flex-shrink: 0;
@@ -104,10 +130,12 @@
 	align-items: start;
 	gap: 10px;
 	padding: 10px 14px;
+	min-height: 62px;
 	cursor: pointer;
 	border-radius: 0;
 	transition: background .15s;
 	position: relative;
+	box-sizing: border-box;
 }
 
 .chat-room-item:hover {
@@ -142,6 +170,8 @@
 	display: flex;
 	flex-direction: column;
 	align-items: flex-start;
+	justify-content: center;
+	min-height: 42px;
 }
 
 .chat-room-name {
@@ -170,6 +200,7 @@
 	display: flex;
 	flex-direction: column;
 	align-items: flex-end;
+	justify-content: flex-start;
 	gap: 4px;
 	flex-shrink: 0;
 	padding-top: 1px;

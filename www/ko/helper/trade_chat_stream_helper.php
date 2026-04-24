@@ -57,6 +57,7 @@ function trade_chat_stream_upsert_user($mbId, $memberProfile = array()) {
 	if ($mbId === '') {
 		return array(
 			'success' => false,
+			'error_code' => 'empty_member_id',
 			'message' => '회원 ID가 비어 있습니다.',
 		);
 	}
@@ -65,6 +66,7 @@ function trade_chat_stream_upsert_user($mbId, $memberProfile = array()) {
 	if (!$client) {
 		return array(
 			'success' => false,
+			'error_code' => 'stream_client_init_failed',
 			'message' => 'GetStream client를 초기화할 수 없습니다.',
 			'stream_user_id' => $streamUserId,
 		);
@@ -96,7 +98,9 @@ function trade_chat_stream_upsert_user($mbId, $memberProfile = array()) {
 	} catch (\Throwable $e) {
 		return array(
 			'success' => false,
-			'message' => $e->getMessage(),
+			'error_code' => 'stream_api_user_upsert_failed',
+			'message' => 'Stream 사용자 등록에 실패했습니다.',
+			'detail_message' => $e->getMessage(),
 			'stream_user_id' => $streamUserId,
 		);
 	}
@@ -111,6 +115,7 @@ function trade_chat_stream_get_or_create_channel($channelType, $channelId, $data
 	if ($channelType === '' || $channelId === '') {
 		return array(
 			'success' => false,
+			'error_code' => 'invalid_channel_identifier',
 			'message' => '채널 식별자가 올바르지 않습니다.',
 		);
 	}
@@ -118,6 +123,7 @@ function trade_chat_stream_get_or_create_channel($channelType, $channelId, $data
 	if (function_exists('trade_chat_is_valid_channel_id') && !trade_chat_is_valid_channel_id($channelId)) {
 		return array(
 			'success' => false,
+			'error_code' => 'invalid_channel_id',
 			'message' => '채널 ID 형식이 올바르지 않습니다.',
 			'channel_type' => $channelType,
 			'channel_id' => $channelId,
@@ -128,6 +134,7 @@ function trade_chat_stream_get_or_create_channel($channelType, $channelId, $data
 	if (!$client) {
 		return array(
 			'success' => false,
+			'error_code' => 'stream_client_init_failed',
 			'message' => 'GetStream client를 초기화할 수 없습니다.',
 			'channel_type' => $channelType,
 			'channel_id' => $channelId,
@@ -143,6 +150,7 @@ function trade_chat_stream_get_or_create_channel($channelType, $channelId, $data
 	if ($createdById === '') {
 		return array(
 			'success' => false,
+			'error_code' => 'missing_channel_creator',
 			'message' => '채널 생성자 정보가 없습니다.',
 			'channel_type' => $channelType,
 			'channel_id' => $channelId,
@@ -188,7 +196,9 @@ function trade_chat_stream_get_or_create_channel($channelType, $channelId, $data
 	} catch (\Throwable $e) {
 		return array(
 			'success' => false,
-			'message' => $e->getMessage(),
+			'error_code' => 'stream_api_channel_sync_failed',
+			'message' => 'Stream 채널 동기화에 실패했습니다.',
+			'detail_message' => $e->getMessage(),
 			'channel_type' => $channelType,
 			'channel_id' => $channelId,
 		);
@@ -206,6 +216,7 @@ function trade_chat_stream_create_token($streamUserId) {
 	if ($streamUserId === '') {
 		return array(
 			'success' => false,
+			'error_code' => 'empty_stream_user_id',
 			'message' => 'Stream user id가 비어 있습니다.',
 		);
 	}
@@ -214,6 +225,7 @@ function trade_chat_stream_create_token($streamUserId) {
 	if (!$client) {
 		return array(
 			'success' => false,
+			'error_code' => 'stream_client_init_failed',
 			'message' => 'GetStream client를 초기화할 수 없습니다.',
 			'stream_user_id' => $streamUserId,
 			'token' => '',
@@ -230,7 +242,9 @@ function trade_chat_stream_create_token($streamUserId) {
 	} catch (\Throwable $e) {
 		return array(
 			'success' => false,
-			'message' => $e->getMessage(),
+			'error_code' => 'stream_api_token_failed',
+			'message' => 'Stream 토큰 발급에 실패했습니다.',
+			'detail_message' => $e->getMessage(),
 			'stream_user_id' => $streamUserId,
 			'token' => '',
 		);
