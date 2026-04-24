@@ -9,10 +9,12 @@ if (!defined('_GNUBOARD_')) exit;
 include_once(__DIR__ . '/trade_chat_config_helper.php');
 include_once(__DIR__ . '/trade_chat_stream_helper.php');
 
+// 사업자번호 비교/저장에 필요한 숫자만 남긴다.
 function trade_chat_normalize_bzno($bzno) {
 	return preg_replace('/[^0-9]/', '', (string)$bzno);
 }
 
+// 두 회사 사업자번호를 정렬해 기업 pair 기준 고유 키를 만든다.
 function trade_chat_make_company_pair_key($bznoA, $bznoB) {
 	$a = trade_chat_normalize_bzno($bznoA);
 	$b = trade_chat_normalize_bzno($bznoB);
@@ -25,6 +27,7 @@ function trade_chat_make_company_pair_key($bznoA, $bznoB) {
 	return $pair[0] . ':' . $pair[1];
 }
 
+// 회원 ID를 Stream에서 허용하는 안전한 user id 형식으로 변환한다.
 function trade_chat_make_stream_user_id($mbId) {
 	$mbId = trim((string)$mbId);
 	if ($mbId === '') return '';
@@ -33,6 +36,7 @@ function trade_chat_make_stream_user_id($mbId) {
 	return 'member_' . preg_replace('/[^a-z0-9@_. -]/i', '_', $mbId);
 }
 
+// 기업 pair 하나당 재사용할 고정 Stream channel id를 만든다.
 function trade_chat_make_stream_channel_id($companyPairKey) {
 	$companyPairKey = trim((string)$companyPairKey);
 	if ($companyPairKey === '') return '';
@@ -40,6 +44,7 @@ function trade_chat_make_stream_channel_id($companyPairKey) {
 	return 'trade-' . substr(hash('sha256', $companyPairKey), 0, 32);
 }
 
+// 로그/에러 문구를 한 줄 요약으로 정리해 DB 컬럼 길이와 가독성을 맞춘다.
 function trade_chat_compact_log_message($message, $maxLength = 255) {
 	$message = trim((string)$message);
 	if ($message === '') return '';
@@ -63,6 +68,7 @@ function trade_chat_compact_log_message($message, $maxLength = 255) {
 	return $message;
 }
 
+// 내부 error_code를 운영자가 읽기 쉬운 한국어 메시지로 치환한다.
 function trade_chat_error_summary($code, $fallback = '') {
 	$code = trim((string)$code);
 	$map = array(
@@ -97,6 +103,7 @@ function trade_chat_error_summary($code, $fallback = '') {
 	return trade_chat_compact_log_message($fallback);
 }
 
+// 요약 문구 외의 상세 원인은 payload에 붙여서 파일/DB 로그에서 같이 추적한다.
 function trade_chat_attach_error_detail($payload, $code = '', $detailMessage = '') {
 	$payload = is_array($payload) ? $payload : array();
 	$code = trim((string)$code);
@@ -113,6 +120,7 @@ function trade_chat_attach_error_detail($payload, $code = '', $detailMessage = '
 	return $payload;
 }
 
+// channel type을 허용 형식으로 정리해 잘못된 설정값이 흘러가지 않게 한다.
 function trade_chat_normalize_channel_type($channelType) {
 	$channelType = trim((string)$channelType);
 	if ($channelType === '') return 'messaging';
@@ -120,11 +128,13 @@ function trade_chat_normalize_channel_type($channelType) {
 	return $channelType;
 }
 
+// Stream channel id로 사용할 수 있는 값인지 최종 검증한다.
 function trade_chat_is_valid_channel_id($channelId) {
 	$channelId = trim((string)$channelId);
 	return $channelId !== '' && preg_match('/^[a-z0-9@_. -]{1,128}$/i', $channelId);
 }
 
+// 채팅 이벤트를 DB 로그와 파일 로그에 함께 남기는 공통 진입점이다.
 function trade_chat_write_event_log($eventType, $status, $payload = array(), $errorMessage = '') {
 	$eventType = trim((string)$eventType);
 	$status = trim((string)$status);
@@ -154,7 +164,8 @@ function trade_chat_write_event_log($eventType, $status, $payload = array(), $er
 	$errorSql = sql_escape_string(trade_chat_compact_log_message($errorMessage));
 	$mbIdSql = sql_escape_string($mbId);
 
-	return sql_query("
+	// DB 로그와 파일 로그를 같은 entry point로 묶어서 추적 기준을 일치시킨다.
+	$result = sql_query("
 		INSERT INTO trade_chat_event_log
 		SET room_id=" . ($roomId > 0 ? "'{$roomId}'" : "NULL") . ",
 			tr_no=" . ($trNo > 0 ? "'{$trNo}'" : "NULL") . ",
@@ -165,6 +176,167 @@ function trade_chat_write_event_log($eventType, $status, $payload = array(), $er
 			error_message=" . ($errorSql === '' ? "NULL" : "'{$errorSql}'") . ",
 			created_at=NOW()
 	", false);
+
+	trade_chat_write_daily_file_log($eventType, $status, $payload, $errorMessage);
+
+	return $result;
+}
+
+// 일자별 채팅 파일 로그를 쌓아둘 디렉터리 경로를 반환한다.
+function trade_chat_log_directory_path() {
+	return dirname(dirname(__DIR__)) . '/logs/chat';
+}
+
+// 오늘 날짜 기준 또는 지정 날짜 기준의 채팅 파일 로그 경로를 만든다.
+function trade_chat_log_file_path($dateYmd = '') {
+	$dateYmd = preg_replace('/[^0-9]/', '', (string)$dateYmd);
+	if ($dateYmd === '') {
+		$dateYmd = date('Ymd');
+	}
+
+	return trade_chat_log_directory_path() . '/chat_log_' . $dateYmd . '.php';
+}
+
+// 파일 로그에서 event_type별 문맥을 빠르게 읽을 수 있게 짧은 설명을 만든다.
+function trade_chat_log_context_label($eventType, $status, $payload = array()) {
+	$eventType = trim((string)$eventType);
+	$status = trim((string)$status);
+	$reason = trim((string)($payload['reason'] ?? ''));
+
+	$map = array(
+		'room_open' => '거래 수락 후 채팅방 생성',
+		'stream_room_sync' => 'GetStream 채널 동기화',
+		'stream_channel_sync' => 'GetStream 채널 생성 또는 조회',
+		'stream_user_upsert' => 'GetStream 사용자 동기화',
+	);
+
+	$label = $map[$eventType] ?? '채팅 이벤트 처리';
+
+	if ($eventType === 'stream_room_sync' && $status === 'skip' && $reason === 'room_already_active') {
+		return '이미 활성화된 채팅방 동기화 확인';
+	}
+
+	if ($eventType === 'stream_room_sync' && $status === 'skip' && $reason !== '') {
+		return 'GetStream 채널 동기화 건너뜀';
+	}
+
+	if ($eventType === 'room_open' && $status === 'skip') {
+		return '기존 채팅방 재사용';
+	}
+
+	return $label;
+}
+
+// 성공/스킵 로그도 사람이 바로 읽을 수 있게 기본 message를 채운다.
+function trade_chat_log_default_message($eventType, $status, $payload = array()) {
+	$eventType = trim((string)$eventType);
+	$status = trim((string)$status);
+	$reason = trim((string)($payload['reason'] ?? ''));
+
+	if ($status === 'success') {
+		$map = array(
+			'room_open' => '채팅방 생성 완료',
+			'stream_room_sync' => '채팅 채널 동기화 완료',
+			'stream_channel_sync' => '채팅 채널 생성 또는 조회 완료',
+			'stream_user_upsert' => '채팅 사용자 동기화 완료',
+		);
+
+		return $map[$eventType] ?? '채팅 작업이 완료되었습니다.';
+	}
+
+	if ($status === 'skip') {
+		if ($eventType === 'room_open' && $reason === 'room_already_exists') {
+			return '기존 채팅방을 재사용했습니다.';
+		}
+		if ($eventType === 'stream_room_sync' && $reason === 'room_already_active') {
+			return '이미 활성화된 채팅방입니다.';
+		}
+		if ($eventType === 'stream_room_sync' && $reason === 'members_not_enough') {
+			return '채팅 멤버가 아직 충분하지 않습니다.';
+		}
+		if ($eventType === 'stream_room_sync' && $reason === 'stream_users_not_enough') {
+			return '채팅 사용자 정보가 아직 충분하지 않습니다.';
+		}
+
+		return '채팅 작업을 건너뛰었습니다.';
+	}
+
+	return '';
+}
+
+// 초기 안정화용으로 사람이 읽기 쉬운 멀티라인 일자별 로그 파일에 append한다.
+function trade_chat_write_daily_file_log($eventType, $status, $payload = array(), $errorMessage = '') {
+	$payload = is_array($payload) ? $payload : array();
+	$dir = trade_chat_log_directory_path();
+	if (!is_dir($dir) && !@mkdir($dir, 0775, true) && !is_dir($dir)) {
+		return false;
+	}
+
+	$filePath = trade_chat_log_file_path();
+	$isNewFile = !file_exists($filePath);
+	$requestUri = trim((string)($_SERVER['REQUEST_URI'] ?? ''));
+	$loggedAt = date('Y-m-d H:i:s');
+	$errorMessage = trade_chat_compact_log_message($errorMessage);
+	if ($errorMessage === '') {
+		$errorMessage = trade_chat_log_default_message($eventType, $status, $payload);
+	}
+
+	$fields = array(
+		'event_type' => trim((string)$eventType),
+		'event_status' => trim((string)$status),
+		'room_id' => (int)($payload['room_id'] ?? 0),
+		'tr_no' => (int)($payload['tr_no'] ?? 0),
+		'mb_id' => trim((string)($payload['mb_id'] ?? '')),
+		'company_pair_key' => trim((string)($payload['company_pair_key'] ?? '')),
+		'stream_channel_id' => trim((string)($payload['stream_channel_id'] ?? '')),
+		'stream_channel_cid' => trim((string)($payload['stream_channel_cid'] ?? '')),
+		'message' => $errorMessage,
+		'context' => trade_chat_log_context_label($eventType, $status, $payload),
+		'request_uri' => $requestUri,
+	);
+
+	if ($fields['company_pair_key'] === '' && !empty($payload['room_id'])) {
+		$room = trade_chat_find_room_by_id((int)$payload['room_id']);
+		if (!empty($room['company_pair_key'])) {
+			$fields['company_pair_key'] = trim((string)$room['company_pair_key']);
+		}
+		if ($fields['stream_channel_id'] === '' && !empty($room['stream_channel_id'])) {
+			$fields['stream_channel_id'] = trim((string)$room['stream_channel_id']);
+		}
+		if ($fields['stream_channel_cid'] === '' && !empty($room['stream_channel_cid'])) {
+			$fields['stream_channel_cid'] = trim((string)$room['stream_channel_cid']);
+		}
+	}
+
+	if (!empty($payload['error_code'])) {
+		$fields['error_code'] = trim((string)$payload['error_code']);
+	}
+
+	if (!empty($payload['raw_error_message'])) {
+		$fields['raw_error_message'] = trade_chat_compact_log_message($payload['raw_error_message'], 500);
+	}
+
+	if (!empty($payload['reason'])) {
+		$fields['reason'] = trim((string)$payload['reason']);
+	}
+
+	// 초기 안정화 단계에서는 사람이 바로 열어 읽기 쉬운 멀티라인 포맷을 우선한다.
+	$lines = array();
+	if ($isNewFile) {
+		$lines[] = "<?php exit; ?>";
+		$lines[] = '';
+	}
+
+	$lines[] = '[' . $loggedAt . ']';
+	foreach ($fields as $key => $value) {
+		if ($value === '' || $value === 0) continue;
+		$lines[] = $key . ': ' . $value;
+	}
+	$lines[] = '---';
+	$lines[] = '';
+
+	$body = implode(PHP_EOL, $lines);
+	return @file_put_contents($filePath, $body, FILE_APPEND | LOCK_EX) !== false;
 }
 
 function trade_chat_get_request_row($trNo) {
@@ -191,6 +363,7 @@ function trade_chat_get_request_row($trNo) {
 	");
 }
 
+// 기업 pair key로 기존 채팅방이 있는지 찾는다.
 function trade_chat_find_room_by_pair_key($companyPairKey) {
 	$companyPairKey = trim((string)$companyPairKey);
 	if ($companyPairKey === '') return array();
@@ -203,6 +376,7 @@ function trade_chat_find_room_by_pair_key($companyPairKey) {
 	");
 }
 
+// 거래 번호 문맥으로 최근 연결된 채팅방을 찾는다.
 function trade_chat_find_room_by_tr_no($trNo) {
 	$trNo = (int)$trNo;
 	if ($trNo < 1) return array();
@@ -217,6 +391,7 @@ function trade_chat_find_room_by_tr_no($trNo) {
 	");
 }
 
+// room_id 기준으로 채팅방 단건을 조회한다.
 function trade_chat_find_room_by_id($roomId) {
 	$roomId = (int)$roomId;
 	if ($roomId < 1) return array();
@@ -229,6 +404,7 @@ function trade_chat_find_room_by_id($roomId) {
 	");
 }
 
+// 현재 활성 멤버만 조회해 Stream sync 대상 목록을 만든다.
 function trade_chat_find_active_room_members($roomId) {
 	$roomId = (int)$roomId;
 	$members = array();
@@ -251,6 +427,7 @@ function trade_chat_find_active_room_members($roomId) {
 	return $members;
 }
 
+// 거래 요청 row에 연결된 채팅방과 open 결과 상태를 기록한다.
 function trade_chat_update_request_chat_state($trNo, $roomId, $result) {
 	$trNo = (int)$trNo;
 	$roomId = (int)$roomId;
@@ -269,6 +446,7 @@ function trade_chat_update_request_chat_state($trNo, $roomId, $result) {
 	", false);
 }
 
+// 채팅방의 Stream 연결 상태와 마지막 에러 상태를 room row에 반영한다.
 function trade_chat_update_room_stream_state($roomId, $status, $channelCid = '', $errorCode = '', $errorMessage = '') {
 	$roomId = (int)$roomId;
 	$status = trim((string)$status);
@@ -292,6 +470,7 @@ function trade_chat_update_room_stream_state($roomId, $status, $channelCid = '',
 	", false);
 }
 
+// 같은 room을 바라보는 거래 요청 row들의 open 결과를 일괄 갱신한다.
 function trade_chat_update_room_requests_result($roomId, $result) {
 	$roomId = (int)$roomId;
 	$result = trim((string)$result);
@@ -306,6 +485,7 @@ function trade_chat_update_room_requests_result($roomId, $result) {
 	", false);
 }
 
+// 회원 ID로 채팅 연결에 필요한 최소 회원 정보를 조회한다.
 function trade_chat_fetch_member_by_id($mbId) {
 	$mbId = trim((string)$mbId);
 	if ($mbId === '') return array();
@@ -318,6 +498,7 @@ function trade_chat_fetch_member_by_id($mbId) {
 	");
 }
 
+// room-member 매핑을 upsert해서 기업 pair room 참여자를 고정 관리한다.
 function trade_chat_upsert_room_member($roomId, $memberRow, $role) {
 	$roomId = (int)$roomId;
 	$mbId = trim((string)($memberRow['mb_id'] ?? ''));
@@ -354,6 +535,7 @@ function trade_chat_upsert_room_member($roomId, $memberRow, $role) {
 	", false);
 }
 
+// 거래 요청 문맥으로 양쪽 회사 회원을 room-member 테이블과 동기화한다.
 function trade_chat_sync_room_members_for_request($roomId, $requestRow, $currentMember) {
 	$roomId = (int)$roomId;
 	if ($roomId < 1) {
@@ -390,10 +572,12 @@ function trade_chat_sync_room_members_for_request($roomId, $requestRow, $current
 	);
 }
 
+// 현재 회원 row에서 채팅 권한 판별에 사용할 회사 사업자번호를 꺼낸다.
 function trade_chat_member_company_bzno($member) {
 	return trade_chat_normalize_bzno($member['mb_4'] ?? '');
 }
 
+// 현재 회원이 해당 room에 접근 가능한지와 활성 상태 요구 조건을 함께 검증한다.
 function trade_chat_assert_member_access($room, $member, $requireActive = true) {
 	$memberId = trim((string)($member['mb_id'] ?? ''));
 	$memberBzno = trade_chat_member_company_bzno($member);
@@ -434,6 +618,7 @@ function trade_chat_assert_member_access($room, $member, $requireActive = true) 
 	);
 }
 
+// room_id만 주어졌을 때 room의 최근 거래 문맥으로 멤버를 다시 맞춘다.
 function trade_chat_sync_room_members($roomId) {
 	$roomId = (int)$roomId;
 	if ($roomId < 1) {
@@ -450,6 +635,7 @@ function trade_chat_sync_room_members($roomId) {
 	);
 }
 
+// 사용자가 수동 재시도했을 때 room 접근 권한을 확인하고 Stream sync를 다시 호출한다.
 function trade_chat_retry_stream_room($roomId, $member) {
 	$room = trade_chat_find_room_by_id($roomId);
 	if (empty($room['room_id'])) {
@@ -467,6 +653,7 @@ function trade_chat_retry_stream_room($roomId, $member) {
 	return trade_chat_sync_stream_room($room['room_id'], $member);
 }
 
+// 로컬 room/member 상태를 기준으로 Stream user와 channel을 실제 활성 상태로 맞춘다.
 function trade_chat_sync_stream_room($roomId, $member = array()) {
 	$actorMbId = trim((string)($member['mb_id'] ?? ''));
 	$room = trade_chat_find_room_by_id($roomId);
@@ -502,6 +689,7 @@ function trade_chat_sync_stream_room($roomId, $member = array()) {
 		);
 	}
 
+	// Stream 채널은 양쪽 멤버가 모두 준비된 뒤에만 활성화한다.
 	$members = trade_chat_find_active_room_members($room['room_id']);
 	if (count($members) < 2) {
 		$errorCode = 'members_not_enough';
@@ -525,6 +713,7 @@ function trade_chat_sync_stream_room($roomId, $member = array()) {
 
 	$streamUserIds = array();
 	$upsertResults = array();
+	// 로컬 멤버를 먼저 Stream user로 맞춘 뒤 채널 생성/재사용을 시도한다.
 	foreach ($members as $memberRow) {
 		$streamUserId = trim((string)($memberRow['stream_user_id'] ?? ''));
 		$mbId = trim((string)($memberRow['mb_id'] ?? ''));
@@ -579,6 +768,7 @@ function trade_chat_sync_stream_room($roomId, $member = array()) {
 		);
 	}
 
+	// 기업 pair 기준 room 하나를 Stream channel 하나로 동기화한다.
 	$channelResult = trade_chat_stream_get_or_create_channel(
 		$room['stream_channel_type'] ?? 'messaging',
 		$room['stream_channel_id'] ?? '',
@@ -635,6 +825,7 @@ function trade_chat_sync_stream_room($roomId, $member = array()) {
 	);
 }
 
+// 거래 수락 시 기업 pair 기준 room을 생성하거나 기존 room에 거래를 연결한다.
 function trade_chat_open_or_attach_room($trNo, $member) {
 	$requestRow = trade_chat_get_request_row($trNo);
 	if (empty($requestRow['tr_no'])) {
@@ -780,6 +971,7 @@ function trade_chat_make_room_initial($title) {
 	return substr($title, 0, 1);
 }
 
+// 현재 회원 기준으로 상대 회사명을 room 제목으로 만든다.
 function trade_chat_make_room_title($room, $memberBzno) {
 	$memberBzno = trade_chat_normalize_bzno($memberBzno);
 	$requestBzno = trade_chat_normalize_bzno($room['request_bzno'] ?? '');
@@ -801,6 +993,7 @@ function trade_chat_make_room_title($room, $memberBzno) {
 	return $title;
 }
 
+// room list에 보여줄 마지막 메시지 또는 상태 문구 preview를 만든다.
 function trade_chat_make_room_preview($room, $member = array()) {
 	$channelType = trim((string)($room['stream_channel_type'] ?? 'messaging'));
 	$channelId = trim((string)($room['stream_channel_id'] ?? ''));
@@ -820,6 +1013,7 @@ function trade_chat_make_room_preview($room, $member = array()) {
 	return '채팅방 정보를 확인해 주세요.';
 }
 
+// 현재 회원이 접근 가능한 room 목록을 모달 sidebar용 구조로 정리한다.
 function trade_chat_list_member_rooms($member) {
 	$memberBzno = trade_chat_member_company_bzno($member);
 	if ($memberBzno === '') return array();
@@ -869,6 +1063,7 @@ function trade_chat_list_member_rooms($member) {
 	return $rooms;
 }
 
+// 현재 회원의 Stream user token을 발급해 채팅 연결 bootstrap에 사용한다.
 function trade_chat_issue_member_token($member) {
 	$memberId = trim((string)($member['mb_id'] ?? ''));
 	if ($memberId === '') {
@@ -894,6 +1089,7 @@ function trade_chat_issue_member_token($member) {
 	return trade_chat_stream_create_token(trade_chat_make_stream_user_id($memberId));
 }
 
+// 모달 최초 진입 시 필요한 room list와 사용자 연결 정보를 한 번에 만든다.
 function trade_chat_build_modal_bootstrap($member, $initialRoomId = 0) {
 	$rooms = trade_chat_list_member_rooms($member);
 	$initialRoomId = (int)$initialRoomId;
@@ -937,6 +1133,7 @@ function trade_chat_build_modal_bootstrap($member, $initialRoomId = 0) {
 	);
 }
 
+// room payload용 token 발급 래퍼를 남겨 room별 재진입 시 같은 경로를 재사용한다.
 function trade_chat_issue_user_token($room, $member) {
 	$access = trade_chat_assert_member_access($room, $member);
 	if (empty($access['success'])) {
@@ -946,6 +1143,7 @@ function trade_chat_issue_user_token($room, $member) {
 	return trade_chat_stream_create_token($access['stream_user_id']);
 }
 
+// 선택한 room 하나를 실제 채팅 연결에 사용할 payload로 구성한다.
 function trade_chat_build_modal_room_payload($member, $roomId) {
 	$roomId = (int)$roomId;
 	$room = trade_chat_find_room_by_id($roomId);

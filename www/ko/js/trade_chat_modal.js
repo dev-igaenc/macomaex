@@ -31,6 +31,7 @@
 			bootPromise: null
 		};
 
+		// 데스크톱에서는 room list 폭을 토글하고, 모바일에서는 기존 전환 흐름을 유지한다.
 		function syncSidebarToggleState() {
 			if (!sidebarToggleBtn) return;
 			var collapsed = modal.classList.contains('chat-demo-modal--sidebar-collapsed');
@@ -52,6 +53,7 @@
 			var guard = document.getElementById('tradeChatLoginGuard');
 			if (guard) return guard;
 
+			// 비로그인 상태에서는 빈 채팅 모달 대신 로그인 가드만 단독으로 띄운다.
 			guard = document.createElement('div');
 			guard.id = 'tradeChatLoginGuard';
 			guard.className = 'login-guard-modal';
@@ -156,6 +158,7 @@
 		}
 
 		function cleanupActiveChannel() {
+			// room 전환 시 이전 리스너를 정리하지 않으면 메시지 렌더링이 중복될 수 있다.
 			if (!state.channel) return;
 
 			try {
@@ -237,6 +240,7 @@
 			if (updatedAt) {
 				room.updatedAt = updatedAt;
 			}
+			// 새 메시지가 오면 room list preview와 시간도 즉시 다시 그린다.
 			renderRoomList();
 		}
 
@@ -405,6 +409,7 @@
 				var channel = client.channel(roomPayload.channelType || room.channelType, roomPayload.channelId || room.channelId);
 				await channel.watch();
 				state.channel = channel;
+				// 현재 열린 room의 Stream 이벤트를 받아 본문과 room list를 함께 갱신한다.
 				state.channelListener = function (event) {
 					var latestMessage = event && event.message ? event.message : null;
 					if (latestMessage) {

@@ -8,15 +8,18 @@ if (!defined('_GNUBOARD_')) exit;
 
 include_once(__DIR__ . '/trade_chat_config_helper.php');
 
+// composer autoload 경로를 고정해 SDK 로드 여부를 확인한다.
 function trade_chat_stream_autoload_path() {
 	return dirname(dirname(__DIR__)) . '/vendor/autoload.php';
 }
 
+// GetStream SDK 설치 여부를 빠르게 판별한다.
 function trade_chat_stream_sdk_available() {
 	$autoload = trade_chat_stream_autoload_path();
 	return file_exists($autoload);
 }
 
+// SDK가 있을 때만 autoload를 포함해 상위 헬퍼가 안전하게 분기할 수 있게 한다.
 function trade_chat_stream_require_sdk() {
 	$autoload = trade_chat_stream_autoload_path();
 	if (!file_exists($autoload)) {
@@ -27,7 +30,9 @@ function trade_chat_stream_require_sdk() {
 	return true;
 }
 
+// 설정값과 SDK 상태를 확인한 뒤 공통 ChatClient 인스턴스를 만든다.
 function trade_chat_stream_client() {
+	// SDK 로드 실패나 설정 누락은 여기서 null로 흡수하고 상위 헬퍼가 공통 문구로 처리한다.
 	if (!trade_chat_is_configured()) {
 		return null;
 	}
@@ -49,6 +54,7 @@ function trade_chat_stream_client() {
 	}
 }
 
+// 채팅 참여 회원을 Stream user로 등록/갱신한다.
 function trade_chat_stream_upsert_user($mbId, $memberProfile = array()) {
 	$mbId = trim((string)$mbId);
 	$streamUserId = function_exists('trade_chat_make_stream_user_id')
@@ -106,6 +112,7 @@ function trade_chat_stream_upsert_user($mbId, $memberProfile = array()) {
 	}
 }
 
+// 기업 pair room과 1:1로 대응되는 Stream channel을 생성하거나 재사용한다.
 function trade_chat_stream_get_or_create_channel($channelType, $channelId, $data = array()) {
 	$channelType = function_exists('trade_chat_normalize_channel_type')
 		? trade_chat_normalize_channel_type($channelType)
@@ -165,6 +172,7 @@ function trade_chat_stream_get_or_create_channel($channelType, $channelId, $data
 	}
 
 	try {
+		// 동일 channel id 재사용을 전제로 getOrCreate를 사용한다.
 		$response = $client->getOrCreateChannel(
 			$channelType,
 			$channelId,
@@ -205,12 +213,14 @@ function trade_chat_stream_get_or_create_channel($channelType, $channelId, $data
 	}
 }
 
+// 기존 channel에 멤버만 다시 맞춰야 할 때 getOrCreate 경로를 재사용한다.
 function trade_chat_stream_add_members($channelType, $channelId, $streamUserIds = array()) {
 	return trade_chat_stream_get_or_create_channel($channelType, $channelId, array(
 		'members' => array_values((array)$streamUserIds),
 	));
 }
 
+// 브라우저가 Stream에 접속할 때 사용할 단기 user token을 발급한다.
 function trade_chat_stream_create_token($streamUserId) {
 	$streamUserId = trim((string)$streamUserId);
 	if ($streamUserId === '') {
@@ -251,6 +261,7 @@ function trade_chat_stream_create_token($streamUserId) {
 	}
 }
 
+// room list preview용으로 채널의 최근 메시지를 조회하고 필요하면 내 메시지는 제외한다.
 function trade_chat_stream_get_latest_message_preview($channelType, $channelId, $excludeStreamUserId = '') {
 	$channelType = function_exists('trade_chat_normalize_channel_type')
 		? trade_chat_normalize_channel_type($channelType)
@@ -268,6 +279,7 @@ function trade_chat_stream_get_latest_message_preview($channelType, $channelId, 
 	}
 
 	try {
+		// room list preview는 현재 사용자 메시지보다 상대방의 최근 메시지를 우선 노출한다.
 		$response = $client->queryChannels(
 			new \GetStream\GeneratedModels\QueryChannelsRequest(
 				filterConditions: (object)array(
