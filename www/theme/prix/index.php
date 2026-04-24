@@ -19,6 +19,7 @@ include_once(G5_THEME_PATH . '/head.php');
 <link rel="stylesheet" href="<?php echo G5_URL; ?>/ko/css/auth-toggle.css?ver=<?php echo G5_CSS_VER; ?>">
 <link rel="stylesheet" href="<?php echo G5_URL; ?>/ko/css/verify-modal.css?ver=<?php echo G5_CSS_VER; ?>">
 <link rel="stylesheet" href="<?php echo G5_URL; ?>/ko/css/ai-loading.css?ver=<?php echo G5_CSS_VER; ?>">
+<link rel="stylesheet" href="<?php echo G5_URL; ?>/ko/css/trade_chat_modal.css?ver=<?php echo G5_CSS_VER; ?>">
 <link rel="stylesheet" href="<?php echo G5_THEME_URL; ?>/css/index.css?ver=<?php echo G5_CSS_VER; ?>&rev=20260417-1610">
 <?php
 
@@ -616,10 +617,12 @@ $stable_list = get_processed_companies('stability_score_5', 3, $unlocked_bzno_ma
     <?php
     $company_detail_popup_variant = 'advanced';
     include_once(G5_THEME_PATH . '/partials/company-detail-matching-popup.php');
+    include_once(G5_PATH . '/ko/modal/trade_chat_modal.php');
     ?>
 
 
 <script src="<?php echo G5_THEME_JS_URL; ?>/index.js?ver=<?php echo G5_JS_VER; ?>&rev=20260417-1550"></script>
+<script src="<?php echo G5_URL; ?>/ko/js/trade_chat_modal.js?ver=<?php echo G5_JS_VER; ?>"></script>
 
 	</div>
 <?php

@@ -13,11 +13,13 @@ $match_request_modal_ver = file_exists(__DIR__ . '/css/match-request-modal.css')
 $my_matching_css_ver = file_exists(__DIR__ . '/css/my_matching.css') ? filemtime(__DIR__ . '/css/my_matching.css') : time();
 $favorite_css_ver = file_exists(__DIR__ . '/css/favorite.css') ? filemtime(__DIR__ . '/css/favorite.css') : time();
 $ai_loading_css_ver = file_exists(__DIR__ . '/css/ai-loading.css') ? filemtime(__DIR__ . '/css/ai-loading.css') : time();
+$trade_chat_modal_css_ver = file_exists(__DIR__ . '/css/trade_chat_modal.css') ? filemtime(__DIR__ . '/css/trade_chat_modal.css') : time();
 
 $favorite_js_ver = file_exists(__DIR__ . '/js/favorite.js') ? filemtime(__DIR__ . '/js/favorite.js') : time();
 $ai_loading_js_ver = file_exists(__DIR__ . '/js/ai-loading.js') ? filemtime(__DIR__ . '/js/ai-loading.js') : time();
 $match_request_modal_js_ver = file_exists(__DIR__ . '/js/match-request-modal.js') ? filemtime(__DIR__ . '/js/match-request-modal.js') : time();
 $my_matching_js_ver = file_exists(__DIR__ . '/js/my_matching.js') ? filemtime(__DIR__ . '/js/my_matching.js') : time();
+$trade_chat_modal_js_ver = file_exists(__DIR__ . '/js/trade_chat_modal.js') ? filemtime(__DIR__ . '/js/trade_chat_modal.js') : time();
 
 // 테마 헤더 숨김, 페지 전용 스타일 범위 body class 고정
 $hide_theme_svisual = true;
@@ -30,11 +32,13 @@ add_stylesheet('<link rel="stylesheet" href="/ko/css/match-request-modal.css?ver
 add_stylesheet('<link rel="stylesheet" href="/ko/css/my_matching.css?ver=' . $my_matching_css_ver . '" />', 210);
 add_stylesheet('<link rel="stylesheet" href="/ko/css/favorite.css?ver=' . $favorite_css_ver . '" />', 220);
 add_stylesheet('<link rel="stylesheet" href="/ko/css/ai-loading.css?ver=' . $ai_loading_css_ver . '" />', 240);
+add_stylesheet('<link rel="stylesheet" href="/ko/css/trade_chat_modal.css?ver=' . $trade_chat_modal_css_ver . '" />', 250);
 
 add_javascript('<script src="/ko/js/favorite.js?ver=' . $favorite_js_ver . '"></script>', 200);
 add_javascript('<script src="/ko/js/ai-loading.js?ver=' . $ai_loading_js_ver . '"></script>', 210);
 add_javascript('<script src="/ko/js/match-request-modal.js?ver=' . $match_request_modal_js_ver . '"></script>', 220);
 add_javascript('<script src="/ko/js/my_matching.js?ver=' . $my_matching_js_ver . '"></script>', 240);
+add_javascript('<script src="/ko/js/trade_chat_modal.js?ver=' . $trade_chat_modal_js_ver . '"></script>', 250);
 
 login_chk();
 
@@ -492,6 +496,7 @@ add_javascript('<script>window.MATCH_REQUEST_CONTEXT = { defaultRequestMessage: 
 </div>
 
 <?php include __DIR__ . '/modal/match_request_modal.php'; ?>
+<?php include __DIR__ . '/modal/trade_chat_modal.php'; ?>
 
 <?php
 include_once(G5_THEME_PATH . '/tail.php');
