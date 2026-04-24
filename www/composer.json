@@ -1,5 +1,6 @@
 {
     "require": {
+        "getstream/getstream-php": "^6.0",
         "phpseclib/phpseclib": "^3.0"
     }
 }

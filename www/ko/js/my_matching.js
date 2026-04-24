@@ -2,6 +2,7 @@ var matchingPageData = window.__MATCHING_PAGE_DATA || {};
 var receivedData = Array.isArray(matchingPageData.received) ? matchingPageData.received : [];
 var sentData = Array.isArray(matchingPageData.sent) ? matchingPageData.sent : [];
 var interestedData = Array.isArray(matchingPageData.interested) ? matchingPageData.interested : [];
+var matchingCsrfToken = matchingPageData.csrfToken || '';
 
 /* ======================================================
    Rendering Functions
@@ -48,7 +49,77 @@ function chatSvg() {
     return '<svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>';
 }
 function openChat(id) {
-    alert('채팅창이 열립니다. (거래 ID: ' + id + ')\n\n※ 시연용 데모입니다.');
+    var allItems = receivedData.concat(sentData, interestedData);
+    var item = allItems.find(function(candidate) {
+        return String(candidate.id) === String(id);
+    });
+
+    if (!item || !item.chatEnabled || !item.chatRoomId) {
+        if (window._showToast) {
+            window._showToast('!', '채팅방 준비가 아직 완료되지 않았습니다', 'default');
+        } else {
+            alert('채팅방 준비가 아직 완료되지 않았습니다.');
+        }
+        return;
+    }
+
+    if (window.TradeChatModal && typeof window.TradeChatModal.open === 'function') {
+        window.TradeChatModal.open({
+            roomId: item.chatRoomId,
+            startInChat: true
+        });
+        return;
+    }
+
+    if (window._showToast) {
+        window._showToast('!', '채팅 모달을 불러오지 못했습니다. 페이지를 새로고침한 뒤 다시 시도해 주세요.', 'default');
+    } else {
+        alert('채팅 모달을 불러오지 못했습니다. 페이지를 새로고침한 뒤 다시 시도해 주세요.');
+    }
+}
+
+function retryChat(id) {
+    var allItems = receivedData.concat(sentData, interestedData);
+    var item = allItems.find(function(candidate) {
+        return String(candidate.id) === String(id);
+    });
+
+    if (!item || !item.chatRoomId) {
+        if (window._showToast) window._showToast('!', '재시도할 채팅방 정보가 없습니다', 'default');
+        else alert('재시도할 채팅방 정보가 없습니다.');
+        return;
+    }
+
+    var body = new URLSearchParams();
+    body.set('action', 'trade_chat_retry');
+    body.set('room_id', item.chatRoomId);
+    body.set('csrf_token', matchingCsrfToken);
+
+    fetch('/ko/my_matching.php', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
+        },
+        body: body.toString()
+    }).then(function(res) {
+        return res.json();
+    }).then(function(payload) {
+        if (payload && payload.success) {
+            item.chatEnabled = true;
+            item.chatRoomStatus = 'active';
+            if (window._showToast) window._showToast('✓', '채팅방 준비가 완료되었습니다', 'success');
+            openChat(id);
+            return;
+        }
+
+        var message = payload && payload.message ? payload.message : '채팅방 준비 재시도에 실패했습니다';
+        if (window._showToast) window._showToast('!', message, 'default');
+        else alert(message);
+    }).catch(function() {
+        if (window._showToast) window._showToast('!', '채팅방 준비 재시도에 실패했습니다', 'default');
+        else alert('채팅방 준비 재시도에 실패했습니다.');
+    });
 }
 function statusBadgeHtml(status) {
     if (status === 'N') return '<span class="status-badge pending">연결중</span>';
@@ -123,7 +194,9 @@ function renderReceivedItem(item) {
         ? '<button class="btn-accept" onclick="handleAccept(' + item.id + ')">수락하기</button>' +
           '<button class="btn-reject" onclick="handleReject(' + item.id + ')">거절하기</button>'
         : item.status === 'Y'
-            ? '<button class="btn-chat" onclick="openChat(' + item.id + ')">' + chatSvg() + '채팅창 열기</button>'
+            ? (item.chatEnabled
+                ? '<button class="btn-chat" onclick="openChat(' + item.id + ')">' + chatSvg() + '채팅창 열기</button>'
+                : '<button class="btn-chat" onclick="retryChat(' + item.id + ')">' + chatSvg() + '채팅 준비중</button>')
             : '<span class="btn-disabled">거래거절</span>';
     return renderBaseCard(item, {
         status:  item.status,
@@ -141,7 +214,9 @@ function renderSentItem(item) {
     var btnHtml = item.status === 'N'
         ? '<span class="btn-disabled">연결중</span>'
         : item.status === 'Y'
-            ? '<button class="btn-chat" onclick="openChat(' + item.id + ')">' + chatSvg() + '채팅창 열기</button>'
+            ? (item.chatEnabled
+                ? '<button class="btn-chat" onclick="openChat(' + item.id + ')">' + chatSvg() + '채팅창 열기</button>'
+                : '<button class="btn-chat" onclick="retryChat(' + item.id + ')">' + chatSvg() + '채팅 준비중</button>')
             : '<span class="btn-disabled">거래거절</span>';
     return renderBaseCard(item, {
         status:  item.status,
@@ -166,7 +241,9 @@ function renderInterestedItem(item) {
                 btnHtml = '<button class="btn-accept" onclick="handleAccept(' + item.id + ')">수락하기</button>' +
                           '<button class="btn-reject" onclick="handleReject(' + item.id + ')">거절하기</button>';
             } else if (status === 'Y') {
-                btnHtml = '<button class="btn-chat" onclick="openChat(' + item.id + ')">' + chatSvg() + '채팅창 열기</button>';
+                btnHtml = item.chatEnabled
+                    ? '<button class="btn-chat" onclick="openChat(\'' + item.id + '\')">' + chatSvg() + '채팅창 열기</button>'
+                    : '<button class="btn-chat" onclick="retryChat(\'' + item.id + '\')">' + chatSvg() + '채팅 준비중</button>';
             } else {
                 btnHtml = '<span class="btn-disabled">거래거절</span>';
             }
@@ -174,7 +251,9 @@ function renderInterestedItem(item) {
             if (status === 'N') {
                 btnHtml = '<span class="btn-disabled">연결중</span>';
             } else if (status === 'Y') {
-                btnHtml = '<button class="btn-chat" onclick="openChat(' + item.id + ')">' + chatSvg() + '채팅창 열기</button>';
+                btnHtml = item.chatEnabled
+                    ? '<button class="btn-chat" onclick="openChat(\'' + item.id + '\')">' + chatSvg() + '채팅창 열기</button>'
+                    : '<button class="btn-chat" onclick="retryChat(\'' + item.id + '\')">' + chatSvg() + '채팅 준비중</button>';
             } else {
                 btnHtml = '<span class="btn-disabled">거래거절</span>';
             }
@@ -325,7 +404,10 @@ function buildInterestedItemFromSource(source, item) {
         matchStatus: matchStatus,
         starred: true,
         kedcd: item.kedcd,
-        detailUrl: item.detailUrl || ''
+        detailUrl: item.detailUrl || '',
+        chatRoomId: item.chatRoomId || 0,
+        chatEnabled: !!item.chatEnabled,
+        chatRoomStatus: item.chatRoomStatus || ''
     };
 }
 
@@ -488,6 +570,7 @@ function requestTradeApproval(url, id, action) {
     body.set('action', 'trade_request_approval');
     body.set('idx', id);
     body.set('typ', action);
+    body.set('csrf_token', matchingCsrfToken);
 
     return fetch(url, {
         method: 'POST',
@@ -663,6 +746,9 @@ function handleAccept(id) {
                 if (window._showToast) {
                     window._showToast('✓', '요청을 수락했습니다', 'success');
                 }
+                window.setTimeout(function() {
+                    window.location.reload();
+                }, 500);
                 return;
             }
 

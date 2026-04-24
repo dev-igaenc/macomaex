@@ -9,6 +9,7 @@ if (G5_IS_MOBILE) {
 
 include_once(G5_THEME_PATH . '/head.php');
 ?>
+<?php $stream_chat_vendor_js_ver = file_exists(G5_PATH . '/ko/js/vendor/stream-chat.browser.full-bundle.min.js') ? filemtime(G5_PATH . '/ko/js/vendor/stream-chat.browser.full-bundle.min.js') : G5_JS_VER; ?>
 <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" rel="stylesheet" />
 <link href="<?php echo G5_THEME_URL; ?>/font/SUIT-Variable.css" rel="stylesheet">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;500;600&display=swap">
@@ -19,6 +20,7 @@ include_once(G5_THEME_PATH . '/head.php');
 <link rel="stylesheet" href="<?php echo G5_URL; ?>/ko/css/auth-toggle.css?ver=<?php echo G5_CSS_VER; ?>">
 <link rel="stylesheet" href="<?php echo G5_URL; ?>/ko/css/verify-modal.css?ver=<?php echo G5_CSS_VER; ?>">
 <link rel="stylesheet" href="<?php echo G5_URL; ?>/ko/css/ai-loading.css?ver=<?php echo G5_CSS_VER; ?>">
+<link rel="stylesheet" href="<?php echo G5_URL; ?>/ko/css/trade_chat_modal.css?ver=<?php echo G5_CSS_VER; ?>">
 <link rel="stylesheet" href="<?php echo G5_THEME_URL; ?>/css/index.css?ver=<?php echo G5_CSS_VER; ?>&rev=20260417-1610">
 <?php
 
@@ -616,10 +618,19 @@ $stable_list = get_processed_companies('stability_score_5', 3, $unlocked_bzno_ma
     <?php
     $company_detail_popup_variant = 'advanced';
     include_once(G5_THEME_PATH . '/partials/company-detail-matching-popup.php');
+    include_once(G5_PATH . '/ko/modal/trade_chat_modal.php');
     ?>
 
-
+<script>
+window.__TRADE_CHAT_MODAL_CONTEXT = {
+    isLoggedIn: <?php echo !empty($member['mb_id']) ? 'true' : 'false'; ?>,
+    loginUrl: "/bbs/login.php?url=<?php echo urlencode('/'); ?>",
+    bootstrapUrl: "/ko/trade_chat_modal_data.php"
+};
+</script>
+<script src="<?php echo G5_URL; ?>/ko/js/vendor/stream-chat.browser.full-bundle.min.js?ver=<?php echo $stream_chat_vendor_js_ver; ?>"></script>
 <script src="<?php echo G5_THEME_JS_URL; ?>/index.js?ver=<?php echo G5_JS_VER; ?>&rev=20260417-1550"></script>
+<script src="<?php echo G5_URL; ?>/ko/js/trade_chat_modal.js?ver=<?php echo G5_JS_VER; ?>"></script>
 
 	</div>
 <?php
