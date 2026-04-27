@@ -344,14 +344,27 @@ function company_list_ai_build_radar_axes($radar)
     );
 
     // 시안 위치 고정: 0(상단)=supply, 1(우상)=network, 5(좌상)=financial
+    // 단, network_overlap 점수가 0 이하이면 고정축에서 제외 (문서 규칙 반영)
     $fixed = array('supply_chain', 'network_overlap', 'financial_health');
     $all_axes = array_keys($radar);
     $fixed_axes = array_values(array_filter($fixed, function ($k) use ($radar) {
-        return array_key_exists($k, $radar);
+        if (!array_key_exists($k, $radar)) return false;
+        if ($k === 'network_overlap' && (float)$radar[$k] <= 0) return false;
+        return true;
     }));
-    $dyn_axes = array_values(array_filter($all_axes, function ($k) use ($fixed) {
-        return !in_array($k, $fixed, true);
+
+    $dyn_axes = array_values(array_filter($all_axes, function ($k) use ($fixed_axes) {
+        return !in_array($k, $fixed_axes, true);
     }));
+    $axis_order = array_flip($all_axes);
+    usort($dyn_axes, function ($a, $b) use ($radar, $axis_order) {
+        $sa = (float)($radar[$a] ?? 0);
+        $sb = (float)($radar[$b] ?? 0);
+        if ($sa === $sb) {
+            return ($axis_order[$a] ?? 0) <=> ($axis_order[$b] ?? 0);
+        }
+        return ($sb <=> $sa);
+    });
 
     $slots = array(
         isset($fixed_axes[0]) ? $fixed_axes[0] : null,
@@ -597,9 +610,15 @@ function company_list_ai_render_rank_medal($rank)
     '</span>';
 }
 
-function company_list_ai_render_card($card, $trade_type, $rank = 0)
+function company_list_ai_render_card($card, $trade_type, $rank = 0, $src_kedcd = '')
 {
     $kedcd = htmlspecialchars($card['kedcd'], ENT_QUOTES, 'UTF-8');
+    // 상세에서 동일 추천 컨텍스트를 복원할 수 있도록 기준기업(src) kedcd를 함께 전달
+    $src_kedcd_raw = str_pad(preg_replace('/\D/', '', (string)$src_kedcd), 10, '0', STR_PAD_LEFT);
+    if (strlen($src_kedcd_raw) !== 10 || preg_match('/^0+$/', $src_kedcd_raw)) {
+        $src_kedcd_raw = '';
+    }
+    $src_kedcd_attr = htmlspecialchars($src_kedcd_raw, ENT_QUOTES, 'UTF-8');
     $title_raw = trim((string)($card['title'] ?? ''));
     $title_text = !empty($card['is_unlocked'])
         ? ($title_raw !== '' ? $title_raw : '기업 상세')
@@ -608,6 +627,9 @@ function company_list_ai_render_card($card, $trade_type, $rank = 0)
     $score = (int)$card['score'];
     $trade_q = (int)$trade_type;
     $url = '/ko/company_detail_ai.php?kedcd=' . rawurlencode($card['kedcd']) . '&trade_type=' . $trade_q;
+    if ($src_kedcd_raw !== '') {
+        $url .= '&src_kedcd=' . rawurlencode($src_kedcd_raw);
+    }
     $is_top3 = ($rank > 0);
 
     $tags_html = '';
@@ -627,7 +649,7 @@ function company_list_ai_render_card($card, $trade_type, $rank = 0)
     $radar_tags = company_list_ai_render_radar_tags($card['radar'] ?? []);
     $html = '<div class="swiper-slide">';
     if ($is_top3) $html .= company_list_ai_render_rank_medal($rank);
-    $html .= '<a href="' . $url . '" class="company-ai-link" data-kedcd="' . $kedcd . '" data-trade-type="' . $trade_q . '" data-score="' . $score . '" style="text-decoration:none;color:inherit;">';
+    $html .= '<a href="' . $url . '" class="company-ai-link" data-kedcd="' . $kedcd . '" data-src-kedcd="' . $src_kedcd_attr . '" data-trade-type="' . $trade_q . '" data-score="' . $score . '" style="text-decoration:none;color:inherit;">';
     $html .= '<div class="mCompanyCard company-ai-card" style="position:relative;">';
     $html .= '<div class="mCompanyCard_content">';
     $html .= '<div class="mCompanyCard_ai_match"><span class="mCompanyCard_ai_match_label">AI 적합도</span><span><span class="mCompanyCard_ai_match_value">' . $score . '</span><span class="mCompanyCard_ai_match_unit">%</span></span></div>';
@@ -660,13 +682,13 @@ function company_list_ai_expand_cards($source_cards, $target_count = 48)
     return $out;
 }
 
-function company_list_ai_build_slide_sets($cards, $trade_type = 1)
+function company_list_ai_build_slide_sets($cards, $trade_type = 1, $src_kedcd = '')
 {
     $top3 = array();
     $rest = array();
     foreach ($cards as $idx => $card) {
-        if ($idx < 3) $top3[] = company_list_ai_render_card($card, $trade_type, $idx + 1);
-        else $rest[] = company_list_ai_render_card($card, $trade_type, 0);
+        if ($idx < 3) $top3[] = company_list_ai_render_card($card, $trade_type, $idx + 1, $src_kedcd);
+        else $rest[] = company_list_ai_render_card($card, $trade_type, 0, $src_kedcd);
     }
     return array('top3' => $top3, 'rest' => $rest);
 }
@@ -687,6 +709,8 @@ $has_kedcd_query = isset($_GET['kedcd']) && trim((string)$_GET['kedcd']) !== '';
 $bizno_query = preg_replace('/\D/', '', (string)($_GET['bizno'] ?? ($_GET['comnum'] ?? '')));
 $has_valid_bizno_query = (strlen($bizno_query) === 10);
 $resolved_base_payload = array();
+// 상세 링크에 실어 보낼 "추천의 기준 기업" kedcd
+$source_kedcd_for_detail = '';
 
 // 진입 파라미터는 kedcd 직접 입력 또는 bizno(comnum) 둘 다 지원
 if (($has_kedcd_query && strlen($kedcd_query) === 10 && !preg_match('/^0+$/', $kedcd_query)) || $has_valid_bizno_query) {
@@ -708,6 +732,11 @@ if (($has_kedcd_query && strlen($kedcd_query) === 10 && !preg_match('/^0+$/', $k
 }
 
 if (!empty($resolved_base_payload['kedcd'])) {
+    $source_kedcd_for_detail = str_pad(preg_replace('/\D/', '', (string)$resolved_base_payload['kedcd']), 10, '0', STR_PAD_LEFT);
+    if (strlen($source_kedcd_for_detail) !== 10 || preg_match('/^0+$/', $source_kedcd_for_detail)) {
+        $source_kedcd_for_detail = '';
+    }
+
     // 화면 렌더 전에 buy/sell을 모두 받아 탭 전환 시 즉시 표시
     $base_payload = $resolved_base_payload;
     $buy_payload = $base_payload;
@@ -716,8 +745,35 @@ if (!empty($resolved_base_payload['kedcd'])) {
     $sell_payload = $base_payload;
     $sell_payload['trade_type'] = 2;
 
-    $buy_call = company_list_ai_call_recommend($buy_payload, 8);
-    $sell_call = company_list_ai_call_recommend($sell_payload, 8);
+    // company_api_log와 동일하게 당일 company_ml_log 캐시 우선 사용
+    $ml_log_bizno = $has_valid_bizno_query ? $bizno_query : '';
+    $ml_log_kedcd = isset($resolved_base_payload['kedcd']) ? (string)$resolved_base_payload['kedcd'] : '';
+
+    $buy_call = null;
+    $buy_cached_row = company_list_ai_pick_ml_log($ml_log_bizno, $ml_log_kedcd, 1, true);
+    $buy_cached_call = company_list_ai_restore_call_from_ml_log($buy_cached_row);
+    if (is_array($buy_cached_call)) {
+        $buy_call = $buy_cached_call;
+    } else {
+        $buy_call = company_list_ai_call_recommend($buy_payload, 8);
+    }
+
+    $sell_call = null;
+    $sell_cached_row = company_list_ai_pick_ml_log($ml_log_bizno, $ml_log_kedcd, 2, true);
+    $sell_cached_call = company_list_ai_restore_call_from_ml_log($sell_cached_row);
+    if (is_array($sell_cached_call)) {
+        $sell_call = $sell_cached_call;
+    } else {
+        $sell_call = company_list_ai_call_recommend($sell_payload, 8);
+    }
+
+    // 캐시 미스 후 EC2 실호출 성공 건만 적재
+    if (!empty($buy_call['ok']) && empty($buy_call['from_cache'])) {
+        company_list_ai_save_ml_log($ml_log_bizno, $ml_log_kedcd, 1, $buy_call);
+    }
+    if (!empty($sell_call['ok']) && empty($sell_call['from_cache'])) {
+        company_list_ai_save_ml_log($ml_log_bizno, $ml_log_kedcd, 2, $sell_call);
+    }
 
     if (!empty($buy_call['ok']) && !empty($buy_call['data']['results']) && is_array($buy_call['data']['results'])) {
         $buy_live_ok = true;
@@ -766,6 +822,10 @@ if (!empty($resolved_base_payload['kedcd'])) {
     }
 }
 
+if ($source_kedcd_for_detail === '' && $has_kedcd_query && strlen($kedcd_query) === 10 && !preg_match('/^0+$/', $kedcd_query)) {
+    $source_kedcd_for_detail = $kedcd_query;
+}
+
 $use_live_pool = ($buy_live_ok || $sell_live_ok);
 if ($use_live_pool) {
     $buy_pool = $buy_live_ok ? $buyer_cards : array();
@@ -780,8 +840,8 @@ if ($use_live_pool) {
 $buy_pool = company_list_ai_apply_unlock_state($buy_pool, $unlocked_kedcd_map);
 $sell_pool = company_list_ai_apply_unlock_state($sell_pool, $unlocked_kedcd_map);
 
-$buy_slides = company_list_ai_build_slide_sets($buy_pool, 1);
-$sell_slides = company_list_ai_build_slide_sets($sell_pool, 2);
+$buy_slides = company_list_ai_build_slide_sets($buy_pool, 1, $source_kedcd_for_detail);
+$sell_slides = company_list_ai_build_slide_sets($sell_pool, 2, $source_kedcd_for_detail);
 
 $buy_top3 = isset($buy_slides['top3']) ? $buy_slides['top3'] : array();
 $buy_rest_pool = isset($buy_slides['rest']) ? $buy_slides['rest'] : array();

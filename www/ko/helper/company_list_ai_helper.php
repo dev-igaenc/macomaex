@@ -415,6 +415,119 @@ if (!function_exists('company_list_ai_resolve_base_payload_by_bizno')) {
     }
 }
 
+// company_ml_log 저장
+if (!function_exists('company_list_ai_save_ml_log')) {
+    function company_list_ai_save_ml_log($bizno, $kedcd, $trade_type, $call_result)
+    {
+        $trade_type = ((int)$trade_type === 2) ? 2 : 1;
+
+        $bizno = preg_replace('/\D/', '', (string)$bizno);
+        if (strlen($bizno) !== 10) $bizno = '';
+
+        $kedcd = preg_replace('/\D/', '', (string)$kedcd);
+        $kedcd = str_pad($kedcd, 10, '0', STR_PAD_LEFT);
+        if (strlen($kedcd) !== 10 || preg_match('/^0+$/', $kedcd)) $kedcd = '';
+
+        $raw = '';
+        if (is_array($call_result)) {
+            if (isset($call_result['raw']) && is_string($call_result['raw']) && $call_result['raw'] !== '') {
+                $raw = $call_result['raw'];
+            } else if (isset($call_result['data']) && is_array($call_result['data'])) {
+                $json = json_encode($call_result['data'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+                if (is_string($json)) $raw = $json;
+            }
+        } else if (is_string($call_result)) {
+            $raw = $call_result;
+        }
+
+        if (!is_string($raw) || trim($raw) === '') {
+            return false;
+        }
+
+        // MEDIUMTEXT(16MB) 안전 여유
+        if (strlen($raw) > 16000000) {
+            $raw = substr($raw, 0, 16000000);
+        }
+
+        $bizno_sql = sql_real_escape_string($bizno);
+        $kedcd_sql = sql_real_escape_string($kedcd);
+        $content_sql = sql_real_escape_string($raw);
+        $ip_sql = sql_real_escape_string((string)(isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : ''));
+
+        $sql = "insert company_ml_log
+                set c_bizno='{$bizno_sql}',
+                    c_kedcd='{$kedcd_sql}',
+                    c_trade_type={$trade_type},
+                    c_content='{$content_sql}',
+                    c_datetime=now(),
+                    c_ip='{$ip_sql}'";
+
+        return (bool)sql_query($sql, false);
+    }
+}
+
+// company_ml_log 조회 (당일/최신)
+if (!function_exists('company_list_ai_pick_ml_log')) {
+    function company_list_ai_pick_ml_log($bizno, $kedcd, $trade_type, $today_only = true)
+    {
+        $trade_type = ((int)$trade_type === 2) ? 2 : 1;
+
+        $bizno = preg_replace('/\D/', '', (string)$bizno);
+        if (strlen($bizno) !== 10) $bizno = '';
+
+        $kedcd = preg_replace('/\D/', '', (string)$kedcd);
+        $kedcd = str_pad($kedcd, 10, '0', STR_PAD_LEFT);
+        if (strlen($kedcd) !== 10 || preg_match('/^0+$/', $kedcd)) $kedcd = '';
+
+        if ($bizno === '' && $kedcd === '') {
+            return null;
+        }
+
+        $where = array("c_trade_type={$trade_type}");
+        if ($bizno !== '') $where[] = "c_bizno='" . sql_real_escape_string($bizno) . "'";
+        if ($kedcd !== '') $where[] = "c_kedcd='" . sql_real_escape_string($kedcd) . "'";
+        if ($today_only) $where[] = "DATE(c_datetime)='" . date('Y-m-d') . "'";
+
+        $sql = "select c_id, c_bizno, c_kedcd, c_trade_type, c_content, c_datetime
+                from company_ml_log
+                where " . implode(' and ', $where) . "
+                order by c_datetime desc, c_id desc
+                limit 1";
+
+        $row = sql_fetch($sql);
+        if (!is_array($row) || empty($row['c_content'])) return null;
+        return $row;
+    }
+}
+
+// company_ml_log row -> recommend call_result 형태로 복원
+if (!function_exists('company_list_ai_restore_call_from_ml_log')) {
+    function company_list_ai_restore_call_from_ml_log($row)
+    {
+        if (!is_array($row) || empty($row['c_content'])) {
+            return null;
+        }
+
+        $raw = (string)$row['c_content'];
+        $decoded = json_decode($raw, true);
+        if (!is_array($decoded)) {
+            return null;
+        }
+
+        return array(
+            'ok' => true,
+            'status' => 200,
+            'error' => '',
+            'elapsed_ms' => 0,
+            'http_code' => 200,
+            'raw' => $raw,
+            'data' => $decoded,
+            'from_cache' => true,
+            'cached_datetime' => isset($row['c_datetime']) ? (string)$row['c_datetime'] : '',
+        );
+    }
+}
+
 // EC2 /recommend 단건 호출
 if (!function_exists('company_list_ai_call_recommend')) {
     function company_list_ai_call_recommend($payload, $timeout_sec)
@@ -430,6 +543,7 @@ if (!function_exists('company_list_ai_call_recommend')) {
                 'error' => 'ML_API_URL 또는 ML_API_KEY가 설정되지 않았습니다.',
                 'elapsed_ms' => 0,
                 'http_code' => 0,
+                'raw' => '',
                 'data' => null,
             );
         }
@@ -443,6 +557,7 @@ if (!function_exists('company_list_ai_call_recommend')) {
                 'error' => '요청 JSON 인코딩 실패',
                 'elapsed_ms' => 0,
                 'http_code' => 0,
+                'raw' => '',
                 'data' => null,
             );
         }
@@ -479,6 +594,7 @@ if (!function_exists('company_list_ai_call_recommend')) {
                 'error' => $curl_error !== '' ? $curl_error : 'cURL 오류',
                 'elapsed_ms' => $elapsed_ms,
                 'http_code' => $http_code,
+                'raw' => is_string($raw) ? $raw : '',
                 'data' => null,
             );
         }
@@ -490,6 +606,7 @@ if (!function_exists('company_list_ai_call_recommend')) {
                 'error' => 'EC2 응답 오류',
                 'elapsed_ms' => $elapsed_ms,
                 'http_code' => $http_code,
+                'raw' => is_string($raw) ? $raw : '',
                 'data' => null,
             );
         }
@@ -502,6 +619,7 @@ if (!function_exists('company_list_ai_call_recommend')) {
                 'error' => 'EC2 JSON 파싱 실패',
                 'elapsed_ms' => $elapsed_ms,
                 'http_code' => $http_code,
+                'raw' => is_string($raw) ? $raw : '',
                 'data' => null,
             );
         }
@@ -512,6 +630,7 @@ if (!function_exists('company_list_ai_call_recommend')) {
             'error' => '',
             'elapsed_ms' => $elapsed_ms,
             'http_code' => $http_code,
+            'raw' => $raw,
             'data' => $decoded,
         );
     }

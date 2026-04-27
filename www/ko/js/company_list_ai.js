@@ -68,6 +68,109 @@
         return '<div class="ai-empty-state"><p class="ai-empty-state_text">' + escapeHtml(message) + '</p></div>';
     }
 
+    function radarLabelToKey(label) {
+        var map = {
+            '공급망 경로': 'supply_chain',
+            '거래처 중첩도': 'network_overlap',
+            '재무 건전성': 'financial_health',
+            '시장 거래력': 'market_power',
+            '거래 다각화': 'trade_diversity',
+            '규모 적합도': 'scale_match',
+            '기업 역량': 'company_size',
+            '지역 접근성': 'accessibility',
+            '업종 연관성': 'industry_fit',
+            '거래 지속성': 'trade_loyalty',
+            '품목 보완성': 'product_fit',
+            '성장 추세': 'growth_trend'
+        };
+        return map[String(label || '').trim()] || '';
+    }
+
+    function collectCardSnapshot(linkEl) {
+        if (!linkEl) return null;
+        var kedcd = String(linkEl.getAttribute('data-kedcd') || '').replace(/[^0-9]/g, '');
+        if (kedcd.length !== 10) return null;
+        // 목록 -> 상세 이동 시 추천 기준기업(src)도 같이 저장
+        var srcKedcd = String(linkEl.getAttribute('data-src-kedcd') || '').replace(/[^0-9]/g, '');
+        if (srcKedcd.length !== 10) srcKedcd = '';
+
+        var cardEl = linkEl.querySelector('.mCompanyCard') || linkEl;
+        var titleEl = cardEl.querySelector('.mCompanyCard_title');
+        var scorePct = Number(linkEl.getAttribute('data-score') || 0);
+        if (!Number.isFinite(scorePct) || scorePct < 0) scorePct = 0;
+
+        var tags = [];
+        cardEl.querySelectorAll('.mCompanyCard_desc_tag').forEach(function(el) {
+            var t = String(el.textContent || '').trim();
+            if (t) tags.push(t);
+        });
+
+        var badges = [];
+        cardEl.querySelectorAll('.mCompanyCard_badge').forEach(function(el) {
+            var b = String(el.textContent || '').trim();
+            if (b) badges.push(b);
+        });
+        var badgeGrowth = null;
+        var badgeStability = null;
+        var badgeVenture = 'N';
+        badges.forEach(function(text) {
+            var growth = String(text || '').match(/성장TOP\s*([0-9]+(?:\.[0-9]+)?)%?/);
+            if (growth && growth[1]) badgeGrowth = growth[1];
+            var stability = String(text || '').match(/재무안정TOP\s*([0-9]+(?:\.[0-9]+)?)%?/);
+            if (stability && stability[1]) badgeStability = stability[1];
+            if (String(text || '').indexOf('벤처') !== -1) badgeVenture = 'Y';
+        });
+
+        var radar = {};
+        cardEl.querySelectorAll('.radar-card_bar').forEach(function(row) {
+            var labelEl = row.querySelector('.radar-card_bar_label');
+            var valueEl = row.querySelector('.radar-card_bar_value');
+            var key = radarLabelToKey(labelEl ? labelEl.textContent : '');
+            var value = Number(valueEl ? valueEl.textContent : 0);
+            if (!key || !Number.isFinite(value)) return;
+            radar[key] = value;
+        });
+
+        return {
+            kedcd: kedcd,
+            src_kedcd: srcKedcd,
+            title: titleEl ? String(titleEl.textContent || '').trim() : '',
+            tags: tags,
+            badges: badges,
+            badge_growth: badgeGrowth,
+            badge_stability: badgeStability,
+            badge_venture: badgeVenture,
+            radar: radar,
+            trade_type: Number(linkEl.getAttribute('data-trade-type') || 1) || 1,
+            ai_match: Math.round(scorePct),
+            score: Number((scorePct / 20).toFixed(2)),
+            candidate_type: 'chain2'
+        };
+    }
+
+    function saveCardSnapshot(linkEl) {
+        var snapshot = collectCardSnapshot(linkEl);
+        if (!snapshot) return;
+        try {
+            var cardMap = {};
+            var rawMap = sessionStorage.getItem('_aiCardMap');
+            if (rawMap) cardMap = JSON.parse(rawMap) || {};
+            cardMap[snapshot.kedcd] = snapshot;
+            sessionStorage.setItem('_aiCardMap', JSON.stringify(cardMap));
+            sessionStorage.setItem('_aiCard', JSON.stringify(snapshot));
+
+            var srcKedcd = String(snapshot.src_kedcd || '').replace(/[^0-9]/g, '');
+            try {
+                // data-src-kedcd가 비어있으면 현재 목록 URL의 src/kedcd를 fallback으로 사용
+                if (srcKedcd.length !== 10) {
+                    var qs = new URLSearchParams(window.location.search);
+                    srcKedcd = String(qs.get('src_kedcd') || qs.get('kedcd') || '').replace(/[^0-9]/g, '');
+                }
+            } catch (e) {}
+            if (srcKedcd.length === 10) sessionStorage.setItem('_aiSrcKedcd', srcKedcd);
+        } catch (e) {}
+    }
+
     function updateTypeSlider(activeBtn) {
         if (!typeSlider || !activeBtn) return;
         typeSlider.style.width = activeBtn.offsetWidth + 'px';
@@ -163,6 +266,13 @@
         var totalRestPages = Math.ceil(restPool.length / restPageSize) || 1;
         restPageIndex = (restPageIndex + 1) % totalRestPages;
         renderCurrent(true);
+    });
+
+    // 카드 클릭 시 상세 페이지에서 사용할 스냅샷을 저장한다.
+    document.addEventListener('click', function(event) {
+        var linkEl = event.target && event.target.closest ? event.target.closest('.company-ai-link') : null;
+        if (!linkEl) return;
+        saveCardSnapshot(linkEl);
     });
 
     window.addEventListener('resize', function() {
