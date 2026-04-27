@@ -465,7 +465,7 @@ function fetch_general_cards_by_where($where_clause, $query_type, $show_count_re
 
     $sql_list = "
         SELECT A.KEDCD, A.BZNO, A.ENP_NM, A.LOC_ADDRA, A.BZC_CD, A.PD_NM, A.VENP_YN, B.k_code_name,
-            S.growth_score_5, S.profit_score_5, S.stability_score_5, S.final_total_score_5,
+            S.growth_score_5, S.profit_score_5, S.stability_score_5, S.age_score_5, S.emp_score_5, S.final_total_score_5,
             S.badge_growth, S.badge_stability, S.badge_venture
         FROM   company A
         LEFT JOIN kssc B ON A.BZC_CD = B.k_code
@@ -486,6 +486,8 @@ function fetch_general_cards_by_where($where_clause, $query_type, $show_count_re
             'grow'    => $row['growth_score_5'],
             'profit'  => $row['profit_score_5'],
             'stable'  => $row['stability_score_5'],
+            'age_score' => $row['age_score_5'],
+            'emp_score' => $row['emp_score_5'],
             'company' => $title,
             'kedcd'   => $row['KEDCD'],
             'venp_yn' => $row['VENP_YN'],
@@ -652,7 +654,7 @@ if (!$has_comnum) {
                 $REC        = implode("','", $REC_KEDCD);
                 $client_res = sql_query("
                     SELECT A.*, B.BZNO, B.BZC_CD, B.LOC_ADDRA, B.PD_NM, B.VENP_YN, C.k_code_name,
-                           S.growth_score_5, S.profit_score_5, S.stability_score_5, S.final_total_score_5,
+                           S.growth_score_5, S.profit_score_5, S.stability_score_5, S.age_score_5, S.emp_score_5, S.final_total_score_5,
                            MAX(S.badge_growth) AS badge_growth,
                            MAX(S.badge_stability) AS badge_stability,
                            MAX(S.badge_venture) AS badge_venture
@@ -662,7 +664,7 @@ if (!$has_comnum) {
                     LEFT JOIN company_score_final_dedup S ON A.TXPL_KEDCD = S.KEDCD
                     WHERE  A.KEDCD IN ('{$REC}')
                       AND  A.TXPL_KEDCD != ''
-                    GROUP BY A.TXPL_KEDCD, S.growth_score_5, S.profit_score_5, S.stability_score_5, S.final_total_score_5
+                    GROUP BY A.TXPL_KEDCD, S.growth_score_5, S.profit_score_5, S.stability_score_5, S.age_score_5, S.emp_score_5, S.final_total_score_5
                     ORDER BY B.BZC_CD DESC
                 ");
 
@@ -716,6 +718,8 @@ if (!$has_comnum) {
                 'grow'    => $row['growth_score_5'],
                 'profit'  => $row['profit_score_5'],
                 'stable'  => $row['stability_score_5'],
+                'age_score' => $row['age_score_5'],
+                'emp_score' => $row['emp_score_5'],
                 'company' => $title,
                 'kedcd'   => $row['TXPL_KEDCD'],
                 'venp_yn' => $row['VENP_YN'],
@@ -943,8 +947,8 @@ $sidebar_icon_map = [
                         $profitScore = isset($c['profit']) && is_numeric($c['profit']) ? (float)$c['profit'] : 0.0;
                         $stableScore = isset($c['stable']) && is_numeric($c['stable']) ? (float)$c['stable'] : 0.0;
 
-                        $careerScore = min(5, max(2.5, $stableScore * 0.9 + (($idx % 3) * 0.3)));
-                        $employScore = min(5, max(2.5, $growScore * 0.8 + (($idx % 4) * 0.25)));
+                        $careerScore = isset($c['age_score']) && is_numeric($c['age_score']) ? (float)$c['age_score'] : 0.0;
+                        $employScore = isset($c['emp_score']) && is_numeric($c['emp_score']) ? (float)$c['emp_score'] : 0.0;
                         $radarScores = [$growScore, $profitScore, $stableScore, $careerScore, $employScore];
                         $radarSvg = build_radar_svg_5($radarScores);
                         $starsHtml = render_stars_html($scoreValue);
