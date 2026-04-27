@@ -121,7 +121,31 @@
 
 .chat-room-list {
 	flex: 1;
+	min-height: 0;
 	overflow-y: auto;
+	overflow-x: hidden;
+	-webkit-overflow-scrolling: touch;
+	scrollbar-gutter: stable;
+	scrollbar-width: thin;
+	scrollbar-color: #b8c3ff #eef2ff;
+}
+
+.chat-room-list::-webkit-scrollbar {
+	width: 6px;
+}
+
+.chat-room-list::-webkit-scrollbar-track {
+	background: #eef2ff;
+	border-radius: 999px;
+}
+
+.chat-room-list::-webkit-scrollbar-thumb {
+	background: #b8c3ff;
+	border-radius: 999px;
+}
+
+.chat-room-list::-webkit-scrollbar-thumb:hover {
+	background: #99a9ff;
 }
 
 .chat-room-item {
