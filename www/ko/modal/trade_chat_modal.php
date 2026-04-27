@@ -14,7 +14,7 @@
 				</div>
 			</div>
 			<div class="chat-sidebar-search">
-				<input id="tradeChatRoomSearch" type="text" placeholder="대화 검색..." autocomplete="off">
+				<input id="tradeChatRoomSearch" type="text" placeholder="기업명 검색" autocomplete="off">
 			</div>
 			<div class="chat-room-list" id="chatRoomList">
 				<div class="trade-chat-empty-state trade-chat-empty-state--list">

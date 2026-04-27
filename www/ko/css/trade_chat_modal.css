@@ -129,10 +129,15 @@
 	grid-template-columns: 38px minmax(0, 1fr) auto;
 	align-items: start;
 	gap: 10px;
+	width: 100%;
 	padding: 10px 14px;
 	min-height: 62px;
 	cursor: pointer;
 	border-radius: 0;
+	border: 0;
+	background: transparent;
+	text-align: left;
+	float: none;
 	transition: background .15s;
 	position: relative;
 	box-sizing: border-box;
