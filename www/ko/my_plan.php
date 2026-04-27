@@ -9,10 +9,8 @@ if(!$member['mb_id']) ALERT("로그인 후 이용하세요.","/bbs/login.php");
 
 $my_plan_css_ver = file_exists(__DIR__ . '/css/my_plan.css') ? filemtime(__DIR__ . '/css/my_plan.css') : time();
 $my_plan_js_ver = file_exists(__DIR__ . '/js/my_plan.js') ? filemtime(__DIR__ . '/js/my_plan.js') : time();
-$design_tokens_css_ver = file_exists(__DIR__ . '/css/design-tokens.css') ? filemtime(__DIR__ . '/css/design-tokens.css') : time();
 $header_css_ver = file_exists(__DIR__ . '/css/header.css') ? filemtime(__DIR__ . '/css/header.css') : time();
 add_stylesheet('<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">', 190);
-add_stylesheet('<link rel="stylesheet" href="/ko/css/design-tokens.css?ver=' . $design_tokens_css_ver . '">', 191);
 add_stylesheet('<link rel="stylesheet" href="/ko/css/header.css?ver=' . $header_css_ver . '">', 192);
 add_stylesheet('<link rel="stylesheet" href="/ko/css/my_plan.css?ver=' . $my_plan_css_ver . '">', 200);
 add_javascript('<script src="/ko/js/my_plan.js?ver=' . $my_plan_js_ver . '"></script>', 200);

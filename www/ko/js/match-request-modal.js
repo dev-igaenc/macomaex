@@ -333,12 +333,11 @@ if (confirmTypeBtn) {
                 return;
             }
 
-            alert(data.message || '거래 요청서가 저장되었습니다.');
             closeModal('modalType');
             closeModal('modalRequest');
 
             if (window._showToast) {
-                window._showToast('✓', '거래 요청서가 저장되었습니다', 'success');
+                window._showToast('✓', data.message || '거래 요청서가 저장되었습니다', 'success');
             }
 
             if (typeof window.onTradeRequestCreated === 'function') {

@@ -1610,6 +1610,12 @@ a.mCategories_item { text-decoration: none; color: inherit; display: flex; flex-
     box-shadow: 0 4px 12px rgba(0,0,0,0.1); 
     border-color: #452EFF;
 }
+@media (hover: none) {
+    .mCompanyCard:hover {
+        box-shadow: none;
+        border-color: #e5e7eb;
+    }
+}
 .mCompanyCard_badge { 
     display: inline-block; 
     background: #4CAF50; 

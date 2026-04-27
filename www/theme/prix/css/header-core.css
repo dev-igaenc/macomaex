@@ -14,15 +14,6 @@
     --modal-pad-b-mobile: 24px;
 }
 
-/* 파란 스크롤바 (layout.css가 없는 페이지용) */
-html {
-    scrollbar-width: thin;
-    scrollbar-color: #3222e6 rgba(0,0,0,0.1);
-}
-*::-webkit-scrollbar { width: 6px; }
-*::-webkit-scrollbar-thumb { background-color: #3222e6; border-radius: 10px; }
-*::-webkit-scrollbar-track { background-color: rgba(0,0,0,0.1); }
-
 /* 사파리 포함 폰트 호환 */
 #header, #header *, #sideMenuArea, #sideMenuArea * {
     font-family: var(--font-base, 'Pretendard Variable', 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif);
@@ -112,7 +103,7 @@ html {
 }
 
 /* 햄버거 메뉴 */
-.mMenu {
+#header .mMenu {
     position: relative;
     width: 36px;
     height: 36px;
@@ -123,8 +114,8 @@ html {
     flex-shrink: 0;
     margin-right: 8px;
 }
-.mMenu::before,
-.mMenu::after {
+#header .mMenu::before,
+#header .mMenu::after {
     position: absolute;
     content: '';
     height: 2px;
@@ -132,13 +123,13 @@ html {
     transform: translate(-50%, -50%);
     transition: all ease 0.3s;
 }
-.mMenu::before { top: calc(50% - 5px); left: 50%; width: 70%; }
-.mMenu::after { top: calc(50% + 5px); left: 50%; width: 45%; }
-.mMenu.open { width: 32px; }
-.mMenu.open::before,
-.mMenu.open::after { top: 50%; left: 50%; width: 100%; }
-.mMenu.open::before { transform: translate(-50%, -50%) rotate(45deg); }
-.mMenu.open::after { transform: translate(-50%, -50%) rotate(135deg); }
+#header .mMenu::before { top: calc(50% - 5px); left: 50%; width: 70%; }
+#header .mMenu::after { top: calc(50% + 5px); left: 50%; width: 45%; }
+#header .mMenu.open { width: 32px; }
+#header .mMenu.open::before,
+#header .mMenu.open::after { top: 50%; left: 50%; width: 100%; }
+#header .mMenu.open::before { transform: translate(-50%, -50%) rotate(45deg); }
+#header .mMenu.open::after { transform: translate(-50%, -50%) rotate(135deg); }
 
 /* ===== 사이드 메뉴 ===== */
 #sideMenuArea {

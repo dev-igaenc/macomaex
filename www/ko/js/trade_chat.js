@@ -5,6 +5,7 @@
     var formEl = null;
     var inputEl = null;
     var submitBtn = null;
+    var MESSAGE_TEXT_MAX_LENGTH = 2000;
 
     function setStatus(message, type) {
         if (!statusEl) return;
@@ -26,6 +27,12 @@
         var date = new Date(value);
         if (Number.isNaN(date.getTime())) return '';
         return date.toLocaleString();
+    }
+
+    function normalizeMessageText(value) {
+        return String(value || '')
+            .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, '')
+            .trim();
     }
 
     function renderMessages(messages) {
@@ -94,8 +101,12 @@
             if (formEl) {
                 formEl.addEventListener('submit', async function (event) {
                     event.preventDefault();
-                    var text = inputEl ? inputEl.value.trim() : '';
+                    var text = normalizeMessageText(inputEl ? inputEl.value : '');
                     if (!text) return;
+                    if (text.length > MESSAGE_TEXT_MAX_LENGTH) {
+                        setStatus('메시지는 2000자 이하로 입력해 주세요.', 'error');
+                        return;
+                    }
 
                     enableForm(false);
                     try {

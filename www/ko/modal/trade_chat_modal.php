@@ -14,7 +14,7 @@
 				</div>
 			</div>
 			<div class="chat-sidebar-search">
-				<input id="tradeChatRoomSearch" type="text" placeholder="대화 검색..." autocomplete="off">
+				<input id="tradeChatRoomSearch" type="text" placeholder="기업명 검색" autocomplete="off">
 			</div>
 			<div class="chat-room-list" id="chatRoomList">
 				<div class="trade-chat-empty-state trade-chat-empty-state--list">
@@ -54,6 +54,13 @@
 
 			<form class="chat-demo-input-row" id="tradeChatModalForm" autocomplete="off">
 				<input class="chat-demo-input" id="chatInput" type="text" placeholder="메시지를 입력하세요…" disabled>
+				<input id="chatFileInput" type="file" class="chat-demo-file-input" hidden aria-hidden="true" tabindex="-1">
+				<button class="chat-demo-attach" id="chatAttachBtn" type="button" aria-label="파일 첨부" title="파일 첨부" disabled>
+					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+						<path d="M21 11.5V16a5 5 0 0 1-5 5H8a5 5 0 0 1-5-5V8a5 5 0 0 1 5-5h4.5"></path>
+						<path d="M21 3l-9.5 9.5a3 3 0 1 0 4.2 4.2L21 11.4"></path>
+					</svg>
+				</button>
 				<button class="chat-demo-send" id="chatSendBtn" type="submit" aria-label="전송" disabled>
 					<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
 						<line x1="22" y1="2" x2="11" y2="13"></line>

@@ -691,6 +691,16 @@
     box-shadow: 0 4px 12px rgba(0,0,0,0.1);
     border-color: #452EFF;
 }
+@media (hover: none) {
+    .mCompanyCard:hover {
+        box-shadow: none;
+        border-color: #e5e7eb;
+    }
+    .list-sidebar_ai:hover {
+        transform: none;
+        box-shadow: 0 4px 18px rgba(129,140,248,0.45);
+    }
+}
 .mCompanyCard_badge {
     display: inline-block;
     background: #4CAF50;

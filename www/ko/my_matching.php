@@ -8,7 +8,6 @@ $board['bo_10'] = '6';
 $board['bo_9'] = '2';
 $defaultMessage = trade_request_default_message();
 
-$design_tokens_ver = file_exists(__DIR__ . '/css/design-tokens.css') ? filemtime(__DIR__ . '/css/design-tokens.css') : time();
 $match_request_modal_ver = file_exists(__DIR__ . '/css/match-request-modal.css') ? filemtime(__DIR__ . '/css/match-request-modal.css') : time();
 $my_matching_css_ver = file_exists(__DIR__ . '/css/my_matching.css') ? filemtime(__DIR__ . '/css/my_matching.css') : time();
 $favorite_css_ver = file_exists(__DIR__ . '/css/favorite.css') ? filemtime(__DIR__ . '/css/favorite.css') : time();
@@ -28,7 +27,6 @@ $hide_theme_pagetop = true;
 $g5['body_script'] = ' class="page-my-matching"';
 
 add_stylesheet('<link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" rel="stylesheet" />', 180);
-add_stylesheet('<link rel="stylesheet" href="/ko/css/design-tokens.css?ver=' . $design_tokens_ver . '" />', 190);
 add_stylesheet('<link rel="stylesheet" href="/ko/css/match-request-modal.css?ver=' . $match_request_modal_ver . '" />', 200);
 add_stylesheet('<link rel="stylesheet" href="/ko/css/my_matching.css?ver=' . $my_matching_css_ver . '" />', 210);
 add_stylesheet('<link rel="stylesheet" href="/ko/css/favorite.css?ver=' . $favorite_css_ver . '" />', 220);

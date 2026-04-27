@@ -14,7 +14,6 @@ include_once(G5_THEME_PATH . '/head.php');
 <link href="<?php echo G5_THEME_URL; ?>/font/SUIT-Variable.css" rel="stylesheet">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;500;600&display=swap">
 <link href="<?php echo G5_THEME_URL; ?>/mont/font.css" rel="stylesheet">
-<link rel="stylesheet" href="<?php echo G5_URL; ?>/ko/css/design-tokens.css?ver=<?php echo G5_CSS_VER; ?>">
 <link rel="stylesheet" href="<?php echo G5_URL; ?>/ko/css/company-card.css?ver=<?php echo G5_CSS_VER; ?>">
 <link rel="stylesheet" href="<?php echo G5_URL; ?>/ko/css/section-header.css?ver=<?php echo G5_CSS_VER; ?>">
 <link rel="stylesheet" href="<?php echo G5_URL; ?>/ko/css/auth-toggle.css?ver=<?php echo G5_CSS_VER; ?>">
