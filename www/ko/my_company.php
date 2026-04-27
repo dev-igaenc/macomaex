@@ -61,7 +61,7 @@ if($member['mb_id'] && $cd){
 	$unlisted_once_key = hash('sha256', $unlisted_service_code.':'.$member['mb_id'].':'.$cd);
 	$unlisted_once_key_sql = sql_real_escape_string($unlisted_once_key);
 	$unlock_row = sql_fetch("select id from g5_matching_credit_history where uid='{$uid_sql}' and tx_type='USE' and service_code='{$service_code_sql}' and once_key='{$unlisted_once_key_sql}' limit 1");
-	if($unlock_row['id']) $unlisted_unlocked = true;
+	if(is_array($unlock_row) && !empty($unlock_row['id'])) $unlisted_unlocked = true;
 }
 
 // 주식정보
@@ -232,13 +232,19 @@ if($com['HPAGE_URL']) {
 					<dd>
 <?
 $yearsm=date("Y")-1; //직전년도 매출액
-if($SALESY[$yearsm]){?>
-					<?=number_format($SALESY[$yearsm])?>
-<?}else{?>
-					<?=number_format(current($SALESY))?>
-<?}?>
-					</dd>
-				</dl>
+$latest_sales = 0;
+if(isset($SALESY[$yearsm]) && $SALESY[$yearsm] !== ''){
+	$latest_sales = $SALESY[$yearsm];
+}else if(!empty($SALESY)){
+	$tmp_sales = reset($SALESY);
+	if($tmp_sales !== false && $tmp_sales !== null && $tmp_sales !== ''){
+		$latest_sales = $tmp_sales;
+	}
+}
+?>
+						<?=number_format($latest_sales)?>
+						</dd>
+					</dl>
 			</div>
 		</div>
 		<div class="cv-info-re contact">
