@@ -24,6 +24,9 @@
 		var formEl = document.getElementById('tradeChatModalForm');
 		var context = window.__TRADE_CHAT_MODAL_CONTEXT || {};
 		var FILE_UPLOAD_MAX_BYTES = 100 * 1024 * 1024;
+		var MESSAGE_TEXT_MAX_LENGTH = 2000;
+
+		// 실행 위험 확장자 차단 목록 추가
 		var BLOCKED_EXECUTABLE_EXTENSIONS = {
 			'ade': true, 'adp': true, 'apk': true, 'app': true, 'bat': true, 'cmd': true, 'com': true,
 			'cpl': true, 'dll': true, 'dmg': true, 'exe': true, 'hta': true, 'inf': true, 'ins': true,
@@ -32,6 +35,8 @@
 			'ps1': true, 'reg': true, 'scr': true, 'sct': true, 'sh': true, 'sys': true, 'vb': true,
 			'vbe': true, 'vbs': true, 'vxd': true, 'wsc': true, 'wsf': true, 'wsh': true
 		};
+
+		// MIME 검사
 		var BLOCKED_EXECUTABLE_MIME_TYPES = {
 			'application/x-dosexec': true,
 			'application/x-executable': true,
@@ -220,6 +225,23 @@
 			return rounded.replace(/\.0$/, '') + ' ' + units[unitIndex];
 		}
 
+		function normalizeMessageText(value) {
+			return String(value || '')
+				.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, '')
+				.trim();
+		}
+
+		function validateMessageText(text, allowEmpty) {
+			var normalized = normalizeMessageText(text);
+			if (!allowEmpty && !normalized) {
+				return { valid: false, message: '메시지를 입력해 주세요.', text: '' };
+			}
+			if (normalized.length > MESSAGE_TEXT_MAX_LENGTH) {
+				return { valid: false, message: '메시지는 2000자 이하로 입력해 주세요.', text: '' };
+			}
+			return { valid: true, message: '', text: normalized };
+		}
+
 		function getFileExtension(fileName) {
 			var name = String(fileName || '').trim().toLowerCase();
 			if (name === '' || name.lastIndexOf('.') < 0) return '';
@@ -241,7 +263,7 @@
 
 		function getAttachmentUrl(attachment) {
 			if (!attachment) return '';
-			return String(
+			var raw = String(
 				attachment.asset_url
 				|| attachment.assetUrl
 				|| attachment.image_url
@@ -251,6 +273,17 @@
 				|| attachment.url
 				|| ''
 			).trim();
+			if (raw === '') return '';
+
+			try {
+				var parsed = new URL(raw, window.location.origin);
+				if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+					return '';
+				}
+				return parsed.href;
+			} catch (error) {
+				return '';
+			}
 		}
 
 		function isImageAttachment(attachment) {
@@ -440,9 +473,12 @@
 				attachment.thumb_url = uploadedUrl;
 			}
 
-			var text = String(inputEl.value || '').trim();
+			var textValidation = validateMessageText(inputEl.value || '', true);
+			if (!textValidation.valid) {
+				throw new Error(textValidation.message);
+			}
 			await state.channel.sendMessage({
-				text: text,
+				text: textValidation.text,
 				attachments: [attachment]
 			});
 			inputEl.value = '';
@@ -797,12 +833,15 @@
 				event.preventDefault();
 				if (!state.channel || inputEl.disabled) return;
 
-				var text = String(inputEl.value || '').trim();
-				if (!text) return;
+				var textValidation = validateMessageText(inputEl.value || '', false);
+				if (!textValidation.valid) {
+					showToast(textValidation.message, 'error');
+					return;
+				}
 
 				setComposerEnabled(false, '메시지 전송 중입니다.');
 				try {
-					await state.channel.sendMessage({ text: text });
+					await state.channel.sendMessage({ text: textValidation.text });
 					inputEl.value = '';
 					renderMessages(state.channel.state && state.channel.state.messages ? state.channel.state.messages : [], state.bootstrap.user.id, findRoomById(state.activeRoomId));
 				} catch (error) {

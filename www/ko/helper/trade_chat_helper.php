@@ -208,6 +208,9 @@ function trade_chat_log_context_label($eventType, $status, $payload = array()) {
 		'stream_room_sync' => 'GetStream 채널 동기화',
 		'stream_channel_sync' => 'GetStream 채널 생성 또는 조회',
 		'stream_user_upsert' => 'GetStream 사용자 동기화',
+		'file_scan_webhook' => '첨부파일 스캔 웹훅 수신',
+		'file_scan_result' => '첨부파일 악성코드 스캔 결과',
+		'file_scan_action' => '악성 파일 메시지 후속 조치',
 	);
 
 	$label = $map[$eventType] ?? '채팅 이벤트 처리';
@@ -239,6 +242,9 @@ function trade_chat_log_default_message($eventType, $status, $payload = array())
 			'stream_room_sync' => '채팅 채널 동기화 완료',
 			'stream_channel_sync' => '채팅 채널 생성 또는 조회 완료',
 			'stream_user_upsert' => '채팅 사용자 동기화 완료',
+			'file_scan_webhook' => '파일 스캔 웹훅 수신 처리 완료',
+			'file_scan_result' => '첨부파일 보안 스캔 완료',
+			'file_scan_action' => '보안 조치가 완료되었습니다.',
 		);
 
 		return $map[$eventType] ?? '채팅 작업이 완료되었습니다.';
@@ -256,6 +262,18 @@ function trade_chat_log_default_message($eventType, $status, $payload = array())
 		}
 		if ($eventType === 'stream_room_sync' && $reason === 'stream_users_not_enough') {
 			return '채팅 사용자 정보가 아직 충분하지 않습니다.';
+		}
+		if ($eventType === 'file_scan_webhook' && $reason === 'unsupported_event') {
+			return '지원하지 않는 웹훅 이벤트라 건너뛰었습니다.';
+		}
+		if ($eventType === 'file_scan_webhook' && $reason === 'no_attachments') {
+			return '첨부파일 없는 메시지라 스캔을 건너뛰었습니다.';
+		}
+		if ($eventType === 'file_scan_result' && $reason === 'scan_unavailable') {
+			return '스캐너 미설치 상태로 스캔을 건너뛰었습니다.';
+		}
+		if ($eventType === 'file_scan_action' && $reason === 'action_not_required') {
+			return '감염 파일이 없어 후속 조치를 건너뛰었습니다.';
 		}
 
 		return '채팅 작업을 건너뛰었습니다.';
@@ -284,15 +302,41 @@ function trade_chat_write_daily_file_log($eventType, $status, $payload = array()
 	$fields = array(
 		'event_type' => trim((string)$eventType),
 		'event_status' => trim((string)$status),
+		'stream_event_type' => trim((string)($payload['event_type'] ?? '')),
+		'webhook_event_id' => trim((string)($payload['webhook_event_id'] ?? '')),
+		'request_id' => trim((string)($payload['request_id'] ?? '')),
 		'room_id' => (int)($payload['room_id'] ?? 0),
 		'tr_no' => (int)($payload['tr_no'] ?? 0),
 		'mb_id' => trim((string)($payload['mb_id'] ?? '')),
 		'company_pair_key' => trim((string)($payload['company_pair_key'] ?? '')),
 		'stream_channel_id' => trim((string)($payload['stream_channel_id'] ?? '')),
 		'stream_channel_cid' => trim((string)($payload['stream_channel_cid'] ?? '')),
+		'message_id' => trim((string)($payload['message_id'] ?? '')),
+		'attachment_count' => (int)($payload['attachment_count'] ?? 0),
+		'attachment_index' => (int)($payload['attachment_index'] ?? -1),
+		'attachment_type' => trim((string)($payload['attachment_type'] ?? '')),
+		'attachment_title' => trim((string)($payload['attachment_title'] ?? '')),
+		'attachment_url' => trim((string)($payload['attachment_url'] ?? '')),
+		'scan_status' => trim((string)($payload['scan_status'] ?? '')),
+		'scanner' => trim((string)($payload['scanner'] ?? '')),
+		'file_size' => (int)($payload['file_size'] ?? 0),
+		'scan_total' => (int)($payload['scan_total'] ?? 0),
+		'scan_clean' => (int)($payload['scan_clean'] ?? 0),
+		'scan_infected' => (int)($payload['scan_infected'] ?? 0),
+		'scan_unavailable' => (int)($payload['scan_unavailable'] ?? 0),
+		'scan_error' => (int)($payload['scan_error'] ?? 0),
+		'infected_count' => (int)($payload['infected_count'] ?? 0),
+		'http_code' => (int)($payload['http_code'] ?? 0),
+		'actor_user_id' => trim((string)($payload['actor_user_id'] ?? '')),
+		'action_status' => trim((string)($payload['action_status'] ?? '')),
+		'delete_status' => trim((string)($payload['delete_status'] ?? '')),
+		'notice_status' => trim((string)($payload['notice_status'] ?? '')),
+		'action_error_code' => trim((string)($payload['action_error_code'] ?? '')),
 		'message' => $errorMessage,
 		'context' => trade_chat_log_context_label($eventType, $status, $payload),
 		'request_uri' => $requestUri,
+		'client_ip' => trim((string)($payload['client_ip'] ?? ($_SERVER['REMOTE_ADDR'] ?? ''))),
+		'user_agent' => trade_chat_compact_log_message((string)($payload['user_agent'] ?? ($_SERVER['HTTP_USER_AGENT'] ?? '')), 300),
 	);
 
 	if ($fields['company_pair_key'] === '' && !empty($payload['room_id'])) {
@@ -328,8 +372,21 @@ function trade_chat_write_daily_file_log($eventType, $status, $payload = array()
 	}
 
 	$lines[] = '[' . $loggedAt . ']';
+	$allowZeroKeys = array(
+		'attachment_index',
+		'attachment_count',
+		'scan_total',
+		'scan_clean',
+		'scan_infected',
+		'scan_unavailable',
+		'scan_error',
+		'infected_count',
+		'http_code',
+	);
 	foreach ($fields as $key => $value) {
-		if ($value === '' || $value === 0) continue;
+		if ($value === '') continue;
+		if ($value === 0 && !in_array($key, $allowZeroKeys, true)) continue;
+		if ($key === 'attachment_index' && (int)$value < 0) continue;
 		$lines[] = $key . ': ' . $value;
 	}
 	$lines[] = '---';
