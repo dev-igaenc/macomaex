@@ -180,13 +180,7 @@ include_once(G5_LIB_PATH.'/popular.lib.php');
 					<img src="/img/logo.svg" onerror="this.onerror=null;this.src='/img/logo.png';" alt="<?php echo $config['cf_title']; ?>" class="list-header_logo_img">
 				</a></h1>
 
-			<?php if(defined('_INDEX_')) { ?>
-			<div id="pcMenu">
-				<ul id="list">
-					<script type="text/javascript">globalNavigationBar();</script>
-				</ul>
-			</div>
-			<?php } else { ?>
+			<?php if(!defined('_INDEX_')) { ?>
 				<div id="hd_search">
 					<form action="/ko/matching_list.php" method="POST" id="match_hd" class="header-search-form">
 						<input type="hidden" name="cominfo" id="cominfo_hd">
@@ -197,7 +191,7 @@ include_once(G5_LIB_PATH.'/popular.lib.php');
 						</button>
 					</form>
 				</div>
-				<?php } ?>
+			<?php } ?>
 		</div>
 
 		<div class="right-utill">
