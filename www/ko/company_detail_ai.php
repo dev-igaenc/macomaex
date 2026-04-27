@@ -1,6 +1,17 @@
 <?php
 include_once('./_common.php');
 include_once(__DIR__ . '/helper/trade_request_helper.php');
+include_once(__DIR__ . '/helper/company_detail_helper.php');
+
+$should_open_trade_request_modal = false;
+if (isset($_GET['trade_request_login']) && $_GET['trade_request_login'] === '1') {
+    login_chk();
+    $should_open_trade_request_modal = !empty($member['mb_id']);
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'trade_request_insert') {
+    company_detail_handle_trade_request_insert($member, $_POST);
+}
 
 // TOP 배지 퍼센트 표기를 화면용 문자열로 정규화
 function company_detail_ai_format_badge_percent($value)
@@ -32,6 +43,12 @@ function company_detail_ai_parse_pd_nm($pd_nm)
         $tags[] = $tag;
     }
     return $tags;
+}
+
+function company_detail_ai_display_value($value)
+{
+    $value = trim((string)$value);
+    return ($value !== '') ? $value : '정보 준비중';
 }
 
 // 상세 대상 기업 식별자(kedcd)는 kedcd 또는 id 파라미터로 받는다.
@@ -118,10 +135,25 @@ if (!empty($company['ENP_TYP']) && isset($enp_typt[$company['ENP_TYP']])) {
     $company_type = $enp_typt[$company['ENP_TYP']];
 }
 
+$is_detail_unlocked = false;
+if (!empty($member['mb_id']) && strlen($kedcd) === 10) {
+    $unlock_row = sql_fetch("
+        SELECT tr_no
+        FROM trade_request
+        WHERE request_mb_id = '" . sql_escape_string($member['mb_id']) . "'
+          AND target_kedcd = '" . sql_escape_string($kedcd) . "'
+          AND credit_used = 1
+        ORDER BY tr_no DESC
+        LIMIT 1
+    ");
+    $is_detail_unlocked = !empty($unlock_row['tr_no']);
+}
+
 // 상세 초기 렌더/JS seed로 함께 쓰는 기본 데이터
 $company_seed = array(
     'id' => $kedcd,
     'title' => $company_name,
+    'title_display' => company_detail_ai_display_value($company_name),
     'sub' => $industry_name,
     'tags' => $seed_tags,
     'score' => (isset($score['final_total_score_5']) && $score['final_total_score_5'] !== '') ? (float)$score['final_total_score_5'] : null,
@@ -137,11 +169,11 @@ $company_seed = array(
     'credit' => trim((string)($score['total_grade_22'] ?? '')) !== '' ? (string)$score['total_grade_22'] : '',
     'corp_type' => $company_type,
     'address' => trim((string)($company['LOC_ADDRA'] ?? '') . ' ' . (string)($company['LOC_ADDRB'] ?? '')),
-    'address_display' => trim((string)($company['LOC_ADDRA'] ?? '') . ' ' . (string)($company['LOC_ADDRB'] ?? '')),
+    'address_display' => company_detail_ai_display_value(trim((string)($company['LOC_ADDRA'] ?? '') . ' ' . (string)($company['LOC_ADDRB'] ?? ''))),
     'homepage' => trim((string)($company['HPAGE_URL'] ?? '')),
-    'homepage_display' => trim((string)($company['HPAGE_URL'] ?? '')),
+    'homepage_display' => company_detail_ai_display_value(trim((string)($company['HPAGE_URL'] ?? ''))),
     'product_line' => $pd_nm,
-    'is_unlocked' => true,
+    'is_unlocked' => $is_detail_unlocked,
     'region_insensitive' => false,
     'clients' => array(),
     'ai_analysis_html' => ''
@@ -308,7 +340,7 @@ window.MATCH_REQUEST_CONTEXT = {
 	sourcePage: "company_detail_ai",
 	isLoggedIn: <?php echo !empty($member['mb_id']) ? 'true' : 'false'; ?>,
 	loginCheckUrl: <?php echo json_encode($trade_request_login_url, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>,
-	autoOpenOnLoad: false,
+	autoOpenOnLoad: <?php echo $should_open_trade_request_modal ? 'true' : 'false'; ?>,
 	defaultRequestMessage: <?php echo json_encode($default_message, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>,
 	requesterCompany: <?php echo json_encode($requester_company_data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>,
 	target: {

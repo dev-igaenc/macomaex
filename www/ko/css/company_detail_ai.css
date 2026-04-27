@@ -178,16 +178,18 @@ body {
 	color: var(--company-detail-masked-color, #bbb);
 	opacity: var(--company-detail-masked-opacity, 1);
 }
+#leftCard .tag-pill,
 #leftCard .tag-pill-more {
 	display: inline-block;
 	padding: 4px 10px;
 	font-size: 12px;
 	font-weight: 600;
 	line-height: 1.2;
-	color: #7da8c0;
 	background: var(--blue-soft);
-	border-radius: 999px;
+	border-radius: 8px;
 }
+#leftCard .tag-pill { color: #0369a1; }
+#leftCard .tag-pill-more { color: #7da8c0; }
 .score-row {
 	display: flex;
 	align-items: center;
