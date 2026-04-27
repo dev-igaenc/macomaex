@@ -182,6 +182,18 @@
 			messagesEl.innerHTML = '<span class="chat-demo-badge">' + escapeHtml(text) + '</span>';
 		}
 
+		function scrollMessagesToBottom() {
+			if (!messagesEl) return;
+			messagesEl.scrollTop = messagesEl.scrollHeight;
+		}
+
+		function scheduleScrollMessagesToBottom() {
+			scrollMessagesToBottom();
+			requestAnimationFrame(scrollMessagesToBottom);
+			setTimeout(scrollMessagesToBottom, 60);
+			setTimeout(scrollMessagesToBottom, 180);
+		}
+
 		function showToast(message, type) {
 			if (!message) return;
 			if (toastEl) {
@@ -403,7 +415,14 @@
 				'</div>';
 			}).join('');
 
-			messagesEl.scrollTop = messagesEl.scrollHeight;
+			scheduleScrollMessagesToBottom();
+			// 이미지 첨부는 로드 이후 높이가 확정되므로 하단 고정을 한 번 더 보정한다.
+			var imageNodes = messagesEl.querySelectorAll('.chat-attachment--image img');
+			Array.prototype.forEach.call(imageNodes, function (img) {
+				if (img.complete) return;
+				img.addEventListener('load', scrollMessagesToBottom, { once: true });
+				img.addEventListener('error', scrollMessagesToBottom, { once: true });
+			});
 		}
 
 		function extractRoomPreviewFromMessage(message) {
