@@ -24,6 +24,27 @@
 		var formEl = document.getElementById('tradeChatModalForm');
 		var context = window.__TRADE_CHAT_MODAL_CONTEXT || {};
 		var FILE_UPLOAD_MAX_BYTES = 100 * 1024 * 1024;
+		var BLOCKED_EXECUTABLE_EXTENSIONS = {
+			'ade': true, 'adp': true, 'apk': true, 'app': true, 'bat': true, 'cmd': true, 'com': true,
+			'cpl': true, 'dll': true, 'dmg': true, 'exe': true, 'hta': true, 'inf': true, 'ins': true,
+			'isp': true, 'jar': true, 'js': true, 'jse': true, 'ksh': true, 'lib': true, 'lnk': true,
+			'mde': true, 'msc': true, 'msi': true, 'msp': true, 'mst': true, 'osx': true, 'pif': true,
+			'ps1': true, 'reg': true, 'scr': true, 'sct': true, 'sh': true, 'sys': true, 'vb': true,
+			'vbe': true, 'vbs': true, 'vxd': true, 'wsc': true, 'wsf': true, 'wsh': true
+		};
+		var BLOCKED_EXECUTABLE_MIME_TYPES = {
+			'application/x-dosexec': true,
+			'application/x-executable': true,
+			'application/x-msdos-program': true,
+			'application/x-msdownload': true,
+			'application/x-ms-installer': true,
+			'application/x-sh': true,
+			'application/x-shellscript': true,
+			'application/x-bat': true,
+			'application/javascript': true,
+			'text/javascript': true,
+			'text/x-shellscript': true
+		};
 		var toastEl = null;
 		var toastTimer = null;
 		var state = {
@@ -199,6 +220,25 @@
 			return rounded.replace(/\.0$/, '') + ' ' + units[unitIndex];
 		}
 
+		function getFileExtension(fileName) {
+			var name = String(fileName || '').trim().toLowerCase();
+			if (name === '' || name.lastIndexOf('.') < 0) return '';
+			return name.slice(name.lastIndexOf('.') + 1);
+		}
+
+		function isExecutableFileBlocked(file) {
+			if (!file) return false;
+			var extension = getFileExtension(file.name);
+			if (extension && BLOCKED_EXECUTABLE_EXTENSIONS[extension]) {
+				return true;
+			}
+			var mimeType = String(file.type || '').trim().toLowerCase();
+			if (mimeType !== '' && BLOCKED_EXECUTABLE_MIME_TYPES[mimeType]) {
+				return true;
+			}
+			return false;
+		}
+
 		function getAttachmentUrl(attachment) {
 			if (!attachment) return '';
 			return String(
@@ -365,6 +405,9 @@
 			}
 			if (!file) {
 				throw new Error('첨부할 파일을 선택해 주세요.');
+			}
+			if (isExecutableFileBlocked(file)) {
+				throw new Error('실행 가능한 파일 형식은 첨부할 수 없습니다.');
 			}
 			if (Number(file.size || 0) > FILE_UPLOAD_MAX_BYTES) {
 				throw new Error('파일은 100MB 이하만 첨부할 수 있습니다.');
