@@ -4,13 +4,11 @@ include_once(__DIR__ . '/_common.php');
 $board['bo_10'] = '4'; // 1뎁스
 $board['bo_9'] = '1'; // 2뎁스
 
-$design_tokens_ver = file_exists(__DIR__ . '/css/design-tokens.css') ? filemtime(__DIR__ . '/css/design-tokens.css') : time();
 $plan_css_ver = file_exists(__DIR__ . '/css/plan.css') ? filemtime(__DIR__ . '/css/plan.css') : time();
 $plan_js_ver = file_exists(__DIR__ . '/js/plan.js') ? filemtime(__DIR__ . '/js/plan.js') : time();
 $hide_theme_svisual = true;
 $hide_theme_pagetop = true;
 add_stylesheet('<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">', 180);
-add_stylesheet('<link rel="stylesheet" href="/ko/css/design-tokens.css?ver=' . $design_tokens_ver . '">', 190);
 add_stylesheet('<link rel="stylesheet" href="/ko/css/plan.css?ver=' . $plan_css_ver . '">', 200);
 add_javascript('<script src="/ko/js/plan.js?ver=' . $plan_js_ver . '"></script>', 200);
 include_once(G5_THEME_PATH . '/head.php');

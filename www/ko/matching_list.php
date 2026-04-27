@@ -26,7 +26,6 @@ if (!$matching_list_css_ver) $matching_list_css_ver = G5_CSS_VER;
 if (!$matching_list_js_ver)  $matching_list_js_ver  = G5_JS_VER;
 
 add_stylesheet('<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">', 180);
-add_stylesheet('<link rel="stylesheet" href="'.G5_URL.'/ko/css/design-tokens.css?ver='.G5_CSS_VER.'">', 185);
 add_stylesheet('<link rel="stylesheet" href="'.G5_URL.'/ko/css/badges.css?ver='.G5_CSS_VER.'">', 210);
 add_stylesheet('<link rel="stylesheet" href="'.G5_URL.'/ko/css/company-card.css?ver='.G5_CSS_VER.'">', 211);
 add_stylesheet('<link rel="stylesheet" href="'.G5_URL.'/ko/css/favorite.css?ver='.G5_CSS_VER.'">', 212);
