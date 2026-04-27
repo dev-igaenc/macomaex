@@ -202,17 +202,6 @@
   }
 }
 
-@media (hover: none) {
-  .mCompanyCard:hover {
-    box-shadow: none;
-    border-color: #e5e7eb;
-  }
-  .list-sidebar_ai:hover {
-    transform: none;
-    box-shadow: 0 4px 18px rgba(129, 140, 248, 0.45);
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;

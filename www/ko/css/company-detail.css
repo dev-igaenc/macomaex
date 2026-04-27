@@ -13,7 +13,7 @@ html.in-iframe body { padding-top: 0 !important; margin-top: 0 !important; }
 html.in-iframe #detailWrap { padding-top: 0 !important; margin-top: 0 !important; }
 html.in-iframe .page-wrap { padding-top: 0 !important; margin-top: 0 !important; }
 html.in-iframe { --header-h: 0px; }
-html.in-iframe .btn-back { display: none !important; }
+html.in-iframe #detailWrap .btn-back { display: none !important; }
 html.in-iframe .top-nav {
 	justify-content: flex-end;
 	margin: 0 -24px !important;
@@ -392,8 +392,8 @@ html.no-cta.in-iframe .top-nav-actions { flex: 0 0 auto; }
 	box-shadow: 0 6px 20px rgba(37,99,235,0.4);
 	transform: scale(1.03);
 }
-.btn-back { border-color: #bfdbfe; color: #2563eb; background: #eff6ff; }
-.btn-back:hover { border-color: #2563eb; color: #1e40af; background: #dbeafe; }
+#detailWrap .top-nav .btn-back { border-color: #bfdbfe; color: #2563eb; background: #eff6ff; }
+#detailWrap .top-nav .btn-back:hover { border-color: #2563eb; color: #1e40af; background: #dbeafe; }
 /* Floating bar */
 .floating-match-bar {
 	position: fixed;

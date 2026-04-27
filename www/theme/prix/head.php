@@ -17,72 +17,15 @@ include_once(G5_LIB_PATH.'/popular.lib.php');
 ?>
 
 <link rel="stylesheet" href="<?php echo G5_URL; ?>/ko/css/ai-loading.css">
-<link rel="stylesheet" href="<?php echo G5_THEME_URL; ?>/css/design-tokens.css?v=20260421">
-<link rel="stylesheet" href="<?php echo G5_THEME_URL; ?>/css/header-core.css?v=20260421">
+<link rel="stylesheet" href="<?php echo G5_THEME_URL; ?>/css/design-tokens.css?v=20260427">
+<link rel="stylesheet" href="<?php echo G5_THEME_URL; ?>/css/common.layout.css?v=20260427">
+<link rel="stylesheet" href="<?php echo G5_THEME_URL; ?>/css/common.scrollbar.css?v=20260427">
+<link rel="stylesheet" href="<?php echo G5_THEME_URL; ?>/css/common.ai-magic-wand.css?v=20260427">
+<link rel="stylesheet" href="<?php echo G5_THEME_URL; ?>/css/header-core.css?v=20260427">
+<link rel="stylesheet" href="<?php echo G5_THEME_URL; ?>/css/header-bridge.css?v=20260427">
 <?php if (!defined('_INDEX_')) { ?>
-<link rel="stylesheet" href="<?php echo G5_THEME_URL; ?>/css/header-search.css?v=20260421">
+<link rel="stylesheet" href="<?php echo G5_THEME_URL; ?>/css/header-search.css?v=20260427">
 <?php } ?>
-<style>
-/* G5 템플릿 구조 브릿지: 시안 CSS를 그대로 쓰되 기존 구조 차이만 보정 */
-#wrapper { padding-top: 60px; }
-.menuLayer { top: 60px; }
-.list-header_logo_img { height: 28px !important; width: auto !important; display: block !important; }
-#header .inConts { max-width: 1200px !important; padding: 0 24px !important; margin: 0 auto !important; box-sizing: border-box !important; height: 60px !important; display: flex !important; align-items: center !important; justify-content: space-between !important; gap: 24px !important; }
-#header .inConts > * { align-items: center !important; }
-#header h1 { display: inline-flex !important; align-items: center !important; }
-#header .header-left { flex: 1 !important; min-width: 0 !important; display: flex !important; align-items: center !important; gap: 24px !important; }
-#header h1 a { width: auto !important; }
-#header h1 a img { height: 28px; width: auto; display: block; }
-#header #pcMenu { flex: 1; min-width: 0; }
-#header #pcMenu #list { gap: 64px !important; }
-#header #pcMenu #list .gnbSub {
-  width: auto !important;
-  min-width: 150px !important;
-  padding-left: 8px !important;
-  padding-right: 8px !important;
-  left: 50% !important;
-  transform: translateX(-50%) !important;
-}
-#header #pcMenu #list .gnbSub > li > a,
-#header #pcMenu #list .gnbSub > li > a > span {
-  white-space: nowrap !important;
-  word-break: keep-all !important;
-}
-#header #hd_search { flex: 1; min-width: 0; display: flex; justify-content: center; margin: 0; }
-#header #hd_search .header-search-form { width: 100%; max-width: 500px; margin-left: 0; }
-#header .right-utill { display: flex !important; gap: 20px !important; align-items: center !important; margin-left: auto !important; margin-right: 12px !important; }
-#header .right-utill a { font-size: 14px !important; font-weight: 500 !important; color: #555 !important; text-decoration: none !important; }
-#sideMenuArea { position: fixed !important; top: 0 !important; left: 0 !important; width: 100% !important; height: 100% !important; right: auto !important; opacity: 0 !important; visibility: hidden !important; pointer-events: none !important; transition: opacity .26s ease, visibility .26s ease !important; }
-#sideMenuArea.open { opacity: 1 !important; visibility: visible !important; pointer-events: all !important; }
-#sideMenu { padding: 0 !important; display: flex !important; flex-direction: column !important; max-width: 290px !important; width: 80vw !important; box-shadow: -8px 0 32px rgba(0,0,0,.1) !important; position: absolute !important; top: 0 !important; right: 0 !important; height: 100% !important; transform: translateX(100%) !important; transition: transform .28s cubic-bezier(0.4,0,0.2,1) !important; }
-#sideMenuArea.open #sideMenu { transform: translateX(0) !important; }
-.mMenu { overflow: visible !important; width: 36px !important; height: 36px !important; }
-.mMenu::before { top: calc(50% - 5px) !important; left: 50% !important; width: 70% !important; }
-.mMenu::after { top: calc(50% + 5px) !important; left: 50% !important; width: 45% !important; }
-#sideMenuArea .all_layout > li::after { content: none !important; display: none !important; }
-#header .mMenu > span,
-#sideMenuArea .mMenu > span { display: none; }
-
-@media (max-width: 1280px) {
-  #header #pcMenu { display: none; }
-}
-@media (max-width: 1024px) {
-  #header #hd_search { display: none; }
-  #header .right-utill a { display: none; }
-  #header .right-utill { gap: 0; margin-right: 0; }
-}
-@media (max-width: 768px) {
-  .list-header_logo_img { height: 20px !important; }
-  #header .inConts { height: 56px; }
-  #header h1 a img { height: 20px; }
-  #wrapper { padding-top: 56px; }
-  .menuLayer { top: 56px; }
-}
-@media (max-width: 480px) {
-  .list-header_logo_img { height: 16px !important; }
-  #header h1 a img { height: 16px; }
-}
-</style>
 <!-- 상단 시작 { -->
 <div id="hd">
 	<div id="hd_h1"><?php echo $g5['title'] ?></div>

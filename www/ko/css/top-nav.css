@@ -22,7 +22,7 @@
     gap: 10px;
     flex-wrap: wrap;
 }
-.btn-back {
+.top-nav .btn-back {
     display: inline-flex;
     align-items: center;
     gap: 8px;
@@ -36,7 +36,7 @@
     cursor: pointer;
     text-decoration: none;
 }
-.btn-back:hover { border-color: var(--purple); color: var(--purple); background: var(--purple-soft); }
+.top-nav .btn-back:hover { border-color: var(--purple); color: var(--purple); background: var(--purple-soft); }
 
 /* 거래 요청하기 버튼 — 구조 공통, 색상은 각 페이지에서 오버라이드 */
 .btn-match-cta-top {
@@ -85,7 +85,7 @@
         flex: 1;
         min-width: 0;
     }
-    .btn-back {
+    .top-nav .btn-back {
         padding: 9px 12px;
         font-size: 12px;
         white-space: nowrap;

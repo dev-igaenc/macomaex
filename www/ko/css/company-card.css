@@ -17,6 +17,12 @@
     box-shadow: 0 4px 20px rgba(0,0,0,0.08);
     border-color: #d0d5dd;
 }
+@media (hover: none) {
+    .mCompanyCard:hover {
+        box-shadow: none;
+        border-color: #e5e7eb;
+    }
+}
 .mCompanyCard_bookmark {
     position: absolute;
     top: 16px;

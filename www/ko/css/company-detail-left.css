@@ -14,12 +14,12 @@
 }
 
 /* 배지 */
-.card .mCompanyCard_badges { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
-.mCompanyCard_badge { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 500; line-height: 1.2; white-space: nowrap; }
-.mCompanyCard_badge_top_growth    { background: #dbeafe; color: #1e40af; }
-.mCompanyCard_badge_top_stability { background: #ede9fe; color: #5b21b6; }
-.mCompanyCard_badge_venture       { background: #10b981; color: #fff; }
-.mCompanyCard_badge_placeholder   { background: #f3f4f6; color: #9ca3af; }
+#detailWrap .card .mCompanyCard_badges { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+#detailWrap .mCompanyCard_badge { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 500; line-height: 1.2; white-space: nowrap; }
+#detailWrap .mCompanyCard_badge_top_growth    { background: #dbeafe; color: #1e40af; }
+#detailWrap .mCompanyCard_badge_top_stability { background: #ede9fe; color: #5b21b6; }
+#detailWrap .mCompanyCard_badge_venture       { background: #10b981; color: #fff; }
+#detailWrap .mCompanyCard_badge_placeholder   { background: #f3f4f6; color: #9ca3af; }
 
 /* 카드 제목 */
 .card-title-row {
