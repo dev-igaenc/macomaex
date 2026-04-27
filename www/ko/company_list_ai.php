@@ -6,6 +6,8 @@ $board['bo_9'] = '1';
 
 $company_list_ai_css_ver = @filemtime(G5_PATH . '/ko/css/company_list_ai.css');
 if (!$company_list_ai_css_ver) $company_list_ai_css_ver = G5_CSS_VER;
+$company_card_css_ver = @filemtime(G5_PATH . '/ko/css/company-card.css');
+if (!$company_card_css_ver) $company_card_css_ver = G5_CSS_VER;
 $company_list_ai_js_ver = @filemtime(G5_PATH . '/ko/js/company_list_ai.js');
 if (!$company_list_ai_js_ver) $company_list_ai_js_ver = defined('G5_JS_VER') ? G5_JS_VER : G5_CSS_VER;
 
@@ -15,7 +17,7 @@ add_stylesheet('<link rel="stylesheet" href="' . G5_URL . '/ko/css/header-core.c
 add_stylesheet('<link rel="stylesheet" href="' . G5_URL . '/ko/css/header-search.css?ver=' . G5_CSS_VER . '">', 187);
 add_stylesheet('<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css">', 188);
 add_stylesheet('<link rel="stylesheet" href="' . G5_URL . '/ko/css/badges.css?ver=' . G5_CSS_VER . '">', 190);
-add_stylesheet('<link rel="stylesheet" href="' . G5_URL . '/ko/css/company-card.css?ver=' . G5_CSS_VER . '">', 200);
+add_stylesheet('<link rel="stylesheet" href="' . G5_URL . '/ko/css/company-card.css?ver=' . (int)$company_card_css_ver . '">', 200);
 add_stylesheet('<link rel="stylesheet" href="' . G5_URL . '/ko/css/favorite.css?ver=' . G5_CSS_VER . '">', 205);
 add_stylesheet('<link rel="stylesheet" href="' . G5_URL . '/ko/css/section-header.css?ver=' . G5_CSS_VER . '">', 210);
 add_stylesheet('<link rel="stylesheet" href="' . G5_URL . '/ko/css/verify-modal.css?ver=' . G5_CSS_VER . '">', 215);
@@ -38,53 +40,179 @@ function company_list_ai_translate_radar($radar)
 {
     if (!is_array($radar)) return array();
 
-    $label_map = array(
-        'supply_chain' => '공급망 경로',
-        'similarity' => '거래처 유사성',
-        'network_overlap' => '거래처 유사성',
-        'activity' => '거래 활성도',
-        'growth_trend' => '거래 활성도',
-        'financial' => '재무 건전성',
-        'financial_health' => '재무 건전성',
-        'accessibility' => '지역 접근성',
-        'scale_fit' => '규모 적합도',
-        'scale_match' => '규모 적합도',
-        'trade_diversity' => '거래 다변성',
-        'market_power' => '시장 경쟁력',
-        'company_size' => '기업 규모',
-        'trade_loyalty' => '거래 안정성',
+    // EC2/구버전 키를 공통 표준 키로 정규화
+    $key_alias = array(
+        'supply_chain_old' => 'supply_chain',
+        'industry' => 'supply_chain',
+        'network' => 'network_overlap',
+        'similarity' => 'network_overlap',
+        'financial' => 'financial_health',
+        'finance' => 'financial_health',
+        'activity' => 'growth_trend',
+        'trust' => 'growth_trend',
+        'scale_fit' => 'scale_match',
+        'scale' => 'scale_match',
+        'region' => 'accessibility',
     );
 
     $out = array();
     foreach ($radar as $key => $val) {
         $k = strtolower(trim((string)$key));
-        $label = isset($label_map[$k]) ? $label_map[$k] : trim((string)$key);
-        if ($label === '') $label = '지표';
-        $out[$label] = (float)$val;
+        if ($k === '') continue;
+        if (isset($key_alias[$k])) $k = $key_alias[$k];
+
+        $score = (float)$val;
+        if ($score < 0) $score = 0;
+        if ($score > 100) $score = 100;
+        $out[$k] = $score;
     }
     return $out;
 }
 
-function company_list_ai_format_bizno($bizno)
+function company_list_ai_parse_pd_nm($pd_nm)
 {
-    $digits = preg_replace('/\D/', '', (string)$bizno);
-    if (strlen($digits) !== 10) return '';
-    return substr($digits, 0, 3) . '-' . substr($digits, 3, 2) . '-' . substr($digits, 5, 5);
+    $pd_nm = trim((string)$pd_nm);
+    if ($pd_nm === '') return array();
+
+    $parts = preg_split('/\s*,\s*/u', $pd_nm);
+    if (!is_array($parts)) return array();
+
+    $tags = array();
+    foreach ($parts as $part) {
+        $tag = trim((string)$part);
+        if ($tag === '') continue;
+        $tag = str_replace(' 외', '', $tag);
+        if ($tag === '' || in_array($tag, $tags, true)) continue;
+        $tags[] = $tag;
+    }
+
+    return $tags;
 }
 
-function company_list_ai_candidate_label($candidate_type)
+function company_list_ai_normalize_kedcd($kedcd)
 {
-    $key = strtolower(trim((string)$candidate_type));
-    if ($key === '') return '';
+    $k = str_pad(preg_replace('/\D/', '', (string)$kedcd), 10, '0', STR_PAD_LEFT);
+    if (strlen($k) !== 10 || preg_match('/^0+$/', $k)) return '';
+    return $k;
+}
 
-    $map = array(
-        'chain1' => '1차 연결',
-        'chain2' => '2차 연결',
-        'similar' => '유사 거래처',
-        'neighbor' => '인접 업종',
+function company_list_ai_fetch_unlocked_kedcd_map_for_member($member_id)
+{
+    $member_id = trim((string)$member_id);
+    if ($member_id === '') return array();
+
+    $res = sql_query("
+        SELECT target_kedcd
+        FROM trade_request
+        WHERE request_mb_id = '" . sql_escape_string($member_id) . "'
+          AND credit_used = 1
+          AND target_kedcd != ''
+    ", false);
+    if (!$res) return array();
+
+    $map = array();
+    while ($row = sql_fetch_array($res)) {
+        $kedcd = company_list_ai_normalize_kedcd($row['target_kedcd'] ?? '');
+        if ($kedcd !== '') $map[$kedcd] = true;
+    }
+    return $map;
+}
+
+function company_list_ai_apply_unlock_state($cards, $unlocked_kedcd_map)
+{
+    if (!is_array($cards) || empty($cards)) return array();
+    if (!is_array($unlocked_kedcd_map)) $unlocked_kedcd_map = array();
+
+    foreach ($cards as $idx => $card) {
+        if (!is_array($card)) continue;
+        $kedcd = company_list_ai_normalize_kedcd($card['kedcd'] ?? '');
+        $cards[$idx]['is_unlocked'] = ($kedcd !== '' && !empty($unlocked_kedcd_map[$kedcd]));
+    }
+    return $cards;
+}
+
+function company_list_ai_fetch_company_pd_nm_map($kedcd_list)
+{
+    if (!is_array($kedcd_list) || empty($kedcd_list)) return array();
+
+    $clean = array();
+    foreach ($kedcd_list as $kedcd) {
+        $k = str_pad(preg_replace('/\D/', '', (string)$kedcd), 10, '0', STR_PAD_LEFT);
+        if (strlen($k) !== 10 || preg_match('/^0+$/', $k)) continue;
+        $clean[$k] = true;
+    }
+    $keys = array_keys($clean);
+    if (empty($keys)) return array();
+
+    $map = array();
+    foreach (array_chunk($keys, 200) as $chunk) {
+        $quoted = array();
+        foreach ($chunk as $k) {
+            $quoted[] = "'" . sql_real_escape_string($k) . "'";
+        }
+        if (empty($quoted)) continue;
+
+        $sql = "
+            SELECT KEDCD, PD_NM
+            FROM company
+            WHERE KEDCD IN (" . implode(',', $quoted) . ")
+        ";
+        $res = sql_query($sql, false);
+        if (!$res) continue;
+
+        while ($row = sql_fetch_array($res)) {
+            $k = str_pad(preg_replace('/\D/', '', (string)($row['KEDCD'] ?? '')), 10, '0', STR_PAD_LEFT);
+            if (strlen($k) !== 10) continue;
+            $pd_nm = trim((string)($row['PD_NM'] ?? ''));
+            if ($pd_nm === '') continue;
+            $map[$k] = $pd_nm;
+        }
+    }
+
+    return $map;
+}
+
+function company_list_ai_get_item_tags_by_industry($bzc_nm, $bzc_cd, $kedcd = '')
+{
+    $industry_item_map = array(
+        array('kw' => array('화학', '케미칼', '도료', '도장', '수지', '플라스틱'), 'items' => array('화학원료', '정밀화학', '첨가제')),
+        array('kw' => array('철강', '금속', '주물', '단조', '압연', '알루미늄', '스테인리스'), 'items' => array('철강재', '금속부품', '합금소재')),
+        array('kw' => array('기계', '장비', '설비', '압축기', '펌프', '밸브', '유압'), 'items' => array('산업기계', '유압부품', '제조설비')),
+        array('kw' => array('전자', '전기', '반도체', 'pcb', '디스플레이', '배터리', 'led'), 'items' => array('전자부품', '회로기판', '전기자재')),
+        array('kw' => array('자동차', '차량', '모빌리티', '타이어', '브레이크', '시트'), 'items' => array('자동차부품', '차체소재', '조립모듈')),
+        array('kw' => array('식품', '음료', '제과', '제빵', '농산', '수산', '축산', '가공'), 'items' => array('식자재', '가공식품', '원물')),
+        array('kw' => array('건설', '건축', '토목', '인테리어', '단열', '방수', '콘크리트'), 'items' => array('건설자재', '구조재', '시공자재')),
+        array('kw' => array('섬유', '의류', '봉제', '원단', '실', '직물', '편물'), 'items' => array('원단', '의류소재', '봉제부자재')),
+        array('kw' => array('종이', '인쇄', '포장', '골판지', '박스', '완충재'), 'items' => array('포장재', '인쇄물', '산업용지')),
+        array('kw' => array('물류', '운송', '화물', '배송', '택배', '냉동', '냉장'), 'items' => array('물류서비스', '운송장비', '보관용역')),
+        array('kw' => array('소프트웨어', 'it', '솔루션', '시스템', 'erp', 'saas'), 'items' => array('IT솔루션', 'SW라이선스', '시스템구축')),
+        array('kw' => array('의료', '바이오', '제약', '의약', '헬스', '의료기기'), 'items' => array('의료기기', '의약원료', '바이오소재')),
+        array('kw' => array('농업', '비료', '농약', '종자', '원예', '작물'), 'items' => array('농자재', '비료', '식물원료')),
+        array('kw' => array('고무', '실리콘', '씰', '가스켓', '방진', '방음'), 'items' => array('고무부품', '실리콘제품', '씰링재')),
+        array('kw' => array('목재', '가구', '합판', 'mdf', '목공'), 'items' => array('목재소재', '가구부자재', '합판')),
+        array('kw' => array('유리', '세라믹', '도자', '내화'), 'items' => array('유리제품', '세라믹소재', '내화재')),
+        array('kw' => array('환경', '폐기물', '재활용', '수처리', '정수'), 'items' => array('환경설비', '재활용원료', '처리약품')),
+        array('kw' => array('에너지', '태양광', '풍력', '연료', '가스', 'lng'), 'items' => array('에너지설비', '연료소재', '발전부품')),
     );
 
-    return isset($map[$key]) ? $map[$key] : strtoupper($key);
+    $name = trim((string)$bzc_nm);
+    $name_lc = function_exists('mb_strtolower') ? mb_strtolower($name, 'UTF-8') : strtolower($name);
+
+    foreach ($industry_item_map as $row) {
+        foreach ($row['kw'] as $kw) {
+            $kw_lc = function_exists('mb_strtolower') ? mb_strtolower((string)$kw, 'UTF-8') : strtolower((string)$kw);
+            if ($kw_lc !== '' && strpos($name_lc, $kw_lc) !== false) {
+                return $row['items'];
+            }
+        }
+    }
+
+    $cd = strtoupper(trim((string)$bzc_cd));
+    if ($cd !== '' && substr($cd, 0, 1) === 'C') {
+        return array('제조부품', '산업소재', '납품용역');
+    }
+
+    return array('납품용역', 'B2B소재', '산업부품');
 }
 
 function company_list_ai_ml_item_to_card($item)
@@ -102,20 +230,56 @@ function company_list_ai_ml_item_to_card($item)
     if ($score < 0) $score = 0;
     if ($score > 100) $score = 100;
 
-    $candidate_type = trim((string)($item['candidate_type'] ?? ''));
-    $candidate_label = company_list_ai_candidate_label($candidate_type);
     $bzc_cd = trim((string)($item['bzc_cd'] ?? ''));
-    $bzno = preg_replace('/\D/', '', (string)($item['bzno'] ?? ''));
-    $bzno_fmt = company_list_ai_format_bizno($bzno);
+    $bzc_nm = trim((string)($item['bzc_nm'] ?? ''));
+    $radar_raw = (isset($item['radar']) && is_array($item['radar'])) ? $item['radar'] : array();
+    $financial_score = 0.0;
+    if (isset($radar_raw['financial_health'])) $financial_score = (float)$radar_raw['financial_health'];
+    else if (isset($radar_raw['financial'])) $financial_score = (float)$radar_raw['financial'];
+    else if (isset($radar_raw['finance'])) $financial_score = (float)$radar_raw['finance'];
+
+    $venture_raw = strtoupper(trim((string)(
+        $item['badge_venture']
+        ?? $item['venp_yn']
+        ?? $item['venture_yn']
+        ?? ''
+    )));
+    $is_venture = in_array($venture_raw, array('Y', '1', 'T', 'TRUE'), true);
 
     $badges = array();
-    if ($score >= 90) $badges[] = '상위TOP5%';
-    else if ($score >= 75) $badges[] = '상위TOP20%';
-    if ($candidate_label !== '') $badges[] = $candidate_label;
+    if ($score >= 90) $badges[] = '성장TOP5%';
+    else if ($score >= 75) $badges[] = '성장TOP20%';
+    if ($financial_score >= 80) $badges[] = '재무안정TOP5%';
+    else if ($financial_score >= 60) $badges[] = '재무안정TOP20%';
+    if ($is_venture) $badges[] = '벤처인증';
 
     $tags = array();
-    if ($bzc_cd !== '') $tags[] = $bzc_cd;
-    if ($bzno_fmt !== '') $tags[] = $bzno_fmt;
+    $pd_nm = trim((string)($item['pd_nm'] ?? $item['PD_NM'] ?? ''));
+    if ($pd_nm !== '') {
+        $tags = company_list_ai_parse_pd_nm($pd_nm);
+    }
+    if (empty($tags) && isset($item['tags']) && is_array($item['tags'])) {
+        foreach ($item['tags'] as $tag) {
+            $t = trim((string)$tag);
+            if ($t === '' || in_array($t, $tags, true)) continue;
+            $tags[] = $t;
+        }
+    } else if (empty($tags) && isset($item['tags']) && is_string($item['tags']) && trim($item['tags']) !== '') {
+        $parts = preg_split('/\s*,\s*/u', trim((string)$item['tags']));
+        foreach ($parts as $tag) {
+            $t = trim((string)$tag);
+            if ($t === '' || in_array($t, $tags, true)) continue;
+            $tags[] = $t;
+        }
+    }
+    if (empty($tags)) {
+        $biz_category = trim((string)($item['biz_category'] ?? ''));
+        if ($biz_category !== '') {
+            $tags[] = $biz_category;
+        } else {
+            $tags = company_list_ai_get_item_tags_by_industry($bzc_nm, $bzc_cd, $kedcd);
+        }
+    }
     if (empty($tags)) $tags[] = 'AI추천';
 
     return array(
@@ -124,7 +288,6 @@ function company_list_ai_ml_item_to_card($item)
         'score' => $score,
         'badges' => $badges,
         'tags' => $tags,
-        'one_line' => trim((string)($item['one_line'] ?? '')),
         'radar' => company_list_ai_translate_radar(isset($item['radar']) ? $item['radar'] : array()),
     );
 }
@@ -136,7 +299,7 @@ function company_list_ai_render_badges($badges)
     $html = '';
     foreach ($badges as $badge) {
         $class = 'mCompanyCard_badge';
-        if (strpos($badge, '성장TOP') !== false) $class .= ' mCompanyCard_badge_top_growth';
+        if (strpos($badge, '성장TOP') !== false || strpos($badge, '상위TOP') !== false) $class .= ' mCompanyCard_badge_top_growth';
         else if (strpos($badge, '재무안정TOP') !== false) $class .= ' mCompanyCard_badge_top_stability';
         else if (strpos($badge, '벤처') !== false) $class .= ' mCompanyCard_badge_venture';
         $html .= '<span class="' . $class . '">' . htmlspecialchars($badge, ENT_QUOTES, 'UTF-8') . '</span>';
@@ -146,50 +309,109 @@ function company_list_ai_render_badges($badges)
 
 function company_list_ai_mask_name($name)
 {
-    $name = trim((string)$name);
-    if ($name === '') return '';
+    $raw = trim((string)$name);
+    if ($raw === '') return '기업 상세';
 
-    if (preg_match('/^(\(주\)|\(유\)|\(사\))(.*)$/u', $name, $m)) {
-        $prefix = $m[1];
-        $body = trim($m[2]);
-        $first = mb_substr($body, 0, 1, 'UTF-8');
-        return $prefix . $first . '****';
-    }
+    $m = array();
+    preg_match('/^(\(주\)|\(유\)|\(사\))?(.*)$/u', $raw, $m);
+    $prefix = isset($m[1]) ? (string)$m[1] : '';
+    $body = isset($m[2]) ? (string)$m[2] : $raw;
+    $visible = ($prefix !== '')
+        ? mb_substr($body, 0, 1, 'UTF-8')
+        : mb_substr($body, 0, 2, 'UTF-8');
 
-    $first_two = mb_substr($name, 0, 2, 'UTF-8');
-    return $first_two . '****';
+    return $prefix . $visible . '****';
 }
 
 function company_list_ai_build_radar_axes($radar)
 {
-    $fallback_labels = ['공급망 근접도', '거래처 유사성', '거래 활성도', '재무 안정성', '지역 접근성', '규모 적합도'];
-    $axes = [];
+    $radar = is_array($radar) ? $radar : array();
 
-    if (is_array($radar)) {
-        foreach ($radar as $label => $score) {
-            if (count($axes) >= 6) break;
-            $label = trim((string)$label);
-            if ($label === '') $label = '지표';
-            $score = (float)$score;
-            if ($score < 0) $score = 0;
-            if ($score > 100) $score = 100;
-            $axes[] = ['label' => $label, 'score' => (int)round($score)];
+    // 시안과 동일한 레이더 라벨 체계
+    $label_map = array(
+        'supply_chain' => '공급망 경로',
+        'network_overlap' => '거래처 중첩도',
+        'financial_health' => '재무 건전성',
+        'market_power' => '시장 거래력',
+        'trade_diversity' => '거래 다각화',
+        'scale_match' => '규모 적합도',
+        'company_size' => '기업 역량',
+        'accessibility' => '지역 접근성',
+        'industry_fit' => '업종 연관성',
+        'trade_loyalty' => '거래 지속성',
+        'product_fit' => '품목 보완성',
+        'growth_trend' => '성장 추세',
+    );
+
+    // 시안 위치 고정: 0(상단)=supply, 1(우상)=network, 5(좌상)=financial
+    $fixed = array('supply_chain', 'network_overlap', 'financial_health');
+    $all_axes = array_keys($radar);
+    $fixed_axes = array_values(array_filter($fixed, function ($k) use ($radar) {
+        return array_key_exists($k, $radar);
+    }));
+    $dyn_axes = array_values(array_filter($all_axes, function ($k) use ($fixed) {
+        return !in_array($k, $fixed, true);
+    }));
+
+    $slots = array(
+        isset($fixed_axes[0]) ? $fixed_axes[0] : null,
+        isset($fixed_axes[1]) ? $fixed_axes[1] : null,
+        isset($dyn_axes[0]) ? $dyn_axes[0] : null,
+        isset($dyn_axes[1]) ? $dyn_axes[1] : null,
+        isset($dyn_axes[2]) ? $dyn_axes[2] : null,
+        isset($fixed_axes[2]) ? $fixed_axes[2] : null,
+    );
+
+    $slots_filled = array_values(array_filter($slots, function ($k) {
+        return $k !== null && $k !== '';
+    }));
+    $spare = array_values(array_filter($all_axes, function ($k) use ($slots_filled) {
+        return !in_array($k, $slots_filled, true);
+    }));
+
+    $ordered = array();
+    $si = 0;
+    foreach ($slots as $k) {
+        if ($k === null || $k === '') {
+            $k = isset($spare[$si]) ? $spare[$si] : null;
+            $si++;
         }
+        if ($k !== null && $k !== '' && !in_array($k, $ordered, true)) $ordered[] = $k;
     }
 
-    foreach ($fallback_labels as $label) {
-        if (count($axes) >= 6) break;
-        $exists = false;
-        foreach ($axes as $axis) {
-            if ($axis['label'] === $label) {
-                $exists = true;
-                break;
-            }
-        }
-        if (!$exists) $axes[] = ['label' => $label, 'score' => 0];
+    // 축이 부족하면 시안 기본 축 순서로 0점 폴백
+    $fallback_order = array(
+        'supply_chain',
+        'network_overlap',
+        'market_power',
+        'accessibility',
+        'scale_match',
+        'financial_health',
+        'trade_diversity',
+        'company_size',
+        'industry_fit',
+        'trade_loyalty',
+        'product_fit',
+        'growth_trend',
+    );
+    foreach ($fallback_order as $k) {
+        if (count($ordered) >= 6) break;
+        if (!in_array($k, $ordered, true)) $ordered[] = $k;
     }
 
-    return array_slice($axes, 0, 6);
+    $axes = array();
+    foreach (array_slice($ordered, 0, 6) as $k) {
+        $score = isset($radar[$k]) ? (float)$radar[$k] : 0;
+        if ($score < 0) $score = 0;
+        if ($score > 100) $score = 100;
+        $axes[] = array(
+            'key' => $k,
+            'label' => isset($label_map[$k]) ? $label_map[$k] : $k,
+            'score' => (int)round($score),
+        );
+    }
+
+    return $axes;
 }
 
 function company_list_ai_radar_point($cx, $cy, $radius, $angle_deg)
@@ -234,9 +456,16 @@ function company_list_ai_render_radar_svg($radar)
         $svg .= '<line x1="' . number_format($cx, 1, '.', '') . '" y1="' . number_format($cy, 1, '.', '') . '" x2="' . number_format($edge['x'], 1, '.', '') . '" y2="' . number_format($edge['y'], 1, '.', '') . '" stroke="#e5e7eb" stroke-width="0.6"/>';
     }
 
+    // 레이더 폴리곤은 최소 25 + 25단위 스냅으로 시각 보정
+    $snap_score = function ($v) {
+        $v = (float)$v;
+        if ($v < 25) return 25;
+        return max(25, min(100, round($v / 25) * 25));
+    };
+
     $shape_points = [];
     foreach ($axes as $idx => $axis) {
-        $ratio = ((int)$axis['score']) / 100.0;
+        $ratio = $snap_score((int)$axis['score']) / 100.0;
         $shape_points[] = company_list_ai_radar_point($cx, $cy, $outer_r * $ratio, $angles[$idx]);
     }
     $svg .= '<polygon points="' . company_list_ai_points_to_str($shape_points) . '" fill="rgba(109,40,217,0.12)" stroke="rgba(109,40,217,0.6)" stroke-width="1.8"/>';
@@ -267,7 +496,7 @@ function company_list_ai_radar_tag_meta($label)
     if (strpos($label, '공급망') !== false || strpos($label, '업종') !== false || strpos($lower, 'supply') !== false) {
         return ['같은 업종', 'tag-industry'];
     }
-    if (strpos($label, '유사') !== false || strpos($label, '네트워크') !== false || strpos($lower, 'network') !== false) {
+    if (strpos($label, '유사') !== false || strpos($label, '중첩') !== false || strpos($label, '네트워크') !== false || strpos($lower, 'network') !== false) {
         return ['인기 거래처', 'tag-network'];
     }
     if (strpos($label, '활성') !== false || strpos($label, '신뢰') !== false || strpos($lower, 'activity') !== false) {
@@ -371,8 +600,11 @@ function company_list_ai_render_rank_medal($rank)
 function company_list_ai_render_card($card, $trade_type, $rank = 0)
 {
     $kedcd = htmlspecialchars($card['kedcd'], ENT_QUOTES, 'UTF-8');
-    $title_masked = company_list_ai_mask_name((string)($card['title'] ?? ''));
-    $title = htmlspecialchars($title_masked, ENT_QUOTES, 'UTF-8');
+    $title_raw = trim((string)($card['title'] ?? ''));
+    $title_text = !empty($card['is_unlocked'])
+        ? ($title_raw !== '' ? $title_raw : '기업 상세')
+        : company_list_ai_mask_name($title_raw);
+    $title = htmlspecialchars($title_text, ENT_QUOTES, 'UTF-8');
     $score = (int)$card['score'];
     $trade_q = (int)$trade_type;
     $url = '/ko/company_detail_ai.php?kedcd=' . rawurlencode($card['kedcd']) . '&trade_type=' . $trade_q;
@@ -380,7 +612,7 @@ function company_list_ai_render_card($card, $trade_type, $rank = 0)
 
     $tags_html = '';
     $all_tags = isset($card['tags']) && is_array($card['tags']) ? $card['tags'] : [];
-    $tags = array_slice($all_tags, 0, 2);
+    $tags = array_slice($all_tags, 0, 3);
     foreach ($tags as $tag) {
         $tags_html .= '<span class="mCompanyCard_desc_tag">' . htmlspecialchars($tag, ENT_QUOTES, 'UTF-8') . '</span>';
     }
@@ -393,12 +625,9 @@ function company_list_ai_render_card($card, $trade_type, $rank = 0)
     $radar_rows = company_list_ai_render_radar_rows($card['radar'] ?? []);
     $radar_svg = company_list_ai_render_radar_svg($card['radar'] ?? []);
     $radar_tags = company_list_ai_render_radar_tags($card['radar'] ?? []);
-    $one_line = trim((string)($card['one_line'] ?? ''));
-    $one_line_attr = $one_line !== '' ? ' title="' . htmlspecialchars($one_line, ENT_QUOTES, 'UTF-8') . '"' : '';
-
     $html = '<div class="swiper-slide">';
     if ($is_top3) $html .= company_list_ai_render_rank_medal($rank);
-    $html .= '<a href="' . $url . '" class="company-ai-link" data-kedcd="' . $kedcd . '" data-trade-type="' . $trade_q . '" data-score="' . $score . '"' . $one_line_attr . ' style="text-decoration:none;color:inherit;">';
+    $html .= '<a href="' . $url . '" class="company-ai-link" data-kedcd="' . $kedcd . '" data-trade-type="' . $trade_q . '" data-score="' . $score . '" style="text-decoration:none;color:inherit;">';
     $html .= '<div class="mCompanyCard company-ai-card" style="position:relative;">';
     $html .= '<div class="mCompanyCard_content">';
     $html .= '<div class="mCompanyCard_ai_match"><span class="mCompanyCard_ai_match_label">AI 적합도</span><span><span class="mCompanyCard_ai_match_value">' . $score . '</span><span class="mCompanyCard_ai_match_unit">%</span></span></div>';
@@ -451,6 +680,7 @@ $buy_live_ok = false;
 $sell_live_ok = false;
 $buy_call = array('ok' => false, 'error' => '', 'http_code' => 0);
 $sell_call = array('ok' => false, 'error' => '', 'http_code' => 0);
+$unlocked_kedcd_map = company_list_ai_fetch_unlocked_kedcd_map_for_member($member['mb_id'] ?? '');
 
 $kedcd_query = str_pad(preg_replace('/\D/', '', (string)($_GET['kedcd'] ?? '')), 10, '0', STR_PAD_LEFT);
 $has_kedcd_query = isset($_GET['kedcd']) && trim((string)$_GET['kedcd']) !== '';
@@ -493,8 +723,13 @@ if (!empty($resolved_base_payload['kedcd'])) {
         $buy_live_ok = true;
         $buy_bucket = company_list_ai_build_bucket($buy_call['data']['results'], 45);
         $buy_items = array_merge($buy_bucket['top3'], $buy_bucket['list']);
+        $buy_pd_nm_map = company_list_ai_fetch_company_pd_nm_map(array_column($buy_items, 'kedcd'));
         $mapped_buy = array();
         foreach ($buy_items as $bi) {
+            $item_kedcd = str_pad(preg_replace('/\D/', '', (string)($bi['kedcd'] ?? '')), 10, '0', STR_PAD_LEFT);
+            if (isset($buy_pd_nm_map[$item_kedcd])) {
+                $bi['pd_nm'] = $buy_pd_nm_map[$item_kedcd];
+            }
             $card = company_list_ai_ml_item_to_card($bi);
             if (is_array($card)) $mapped_buy[] = $card;
         }
@@ -511,8 +746,13 @@ if (!empty($resolved_base_payload['kedcd'])) {
         $sell_live_ok = true;
         $sell_bucket = company_list_ai_build_bucket($sell_call['data']['results'], 45);
         $sell_items = array_merge($sell_bucket['top3'], $sell_bucket['list']);
+        $sell_pd_nm_map = company_list_ai_fetch_company_pd_nm_map(array_column($sell_items, 'kedcd'));
         $mapped_sell = array();
         foreach ($sell_items as $si) {
+            $item_kedcd = str_pad(preg_replace('/\D/', '', (string)($si['kedcd'] ?? '')), 10, '0', STR_PAD_LEFT);
+            if (isset($sell_pd_nm_map[$item_kedcd])) {
+                $si['pd_nm'] = $sell_pd_nm_map[$item_kedcd];
+            }
             $card = company_list_ai_ml_item_to_card($si);
             if (is_array($card)) $mapped_sell[] = $card;
         }
@@ -536,6 +776,10 @@ if ($use_live_pool) {
     $sell_pool = company_list_ai_expand_cards($sell_source, 48);
 }
 
+// company_detail.php와 동일한 해제 기준으로 목록 카드 마스킹 상태를 서버에서 확정한다.
+$buy_pool = company_list_ai_apply_unlock_state($buy_pool, $unlocked_kedcd_map);
+$sell_pool = company_list_ai_apply_unlock_state($sell_pool, $unlocked_kedcd_map);
+
 $buy_slides = company_list_ai_build_slide_sets($buy_pool, 1);
 $sell_slides = company_list_ai_build_slide_sets($sell_pool, 2);
 
@@ -554,6 +798,10 @@ if (empty($buy_top3)) $buy_top3_notice = !empty($buy_call['error']) ? '구매 �
 if (empty($buy_rest_pool)) $buy_rest_notice = '추가 구매 추천 결과가 없습니다.';
 if (empty($sell_top3)) $sell_top3_notice = !empty($sell_call['error']) ? '판매 추천 데이터를 불러오지 못했습니다.' : '판매 추천 결과가 없습니다.';
 if (empty($sell_rest_pool)) $sell_rest_notice = '추가 판매 추천 결과가 없습니다.';
+
+// 시안과 동일하게 배너 통계는 고정 노출
+$banner_buy_stat = 12;
+$banner_sell_stat = 12;
 
 ?>
 
@@ -574,11 +822,11 @@ if (empty($sell_rest_pool)) $sell_rest_notice = '추가 판매 추천 결과가 
                     <span class="ai-banner_stat_label">거래 데이터</span>
                 </div>
                 <div class="ai-banner_stat">
-                    <span class="ai-banner_stat_value"><?php echo (int)$buy_total_stat; ?></span>
+                    <span class="ai-banner_stat_value"><?php echo (int)$banner_buy_stat; ?></span>
                     <span class="ai-banner_stat_label">구매처</span>
                 </div>
                 <div class="ai-banner_stat">
-                    <span class="ai-banner_stat_value"><?php echo (int)$sell_total_stat; ?></span>
+                    <span class="ai-banner_stat_value"><?php echo (int)$banner_sell_stat; ?></span>
                     <span class="ai-banner_stat_label">판매처</span>
                 </div>
             </div>
@@ -681,6 +929,10 @@ window.__COMPANY_LIST_AI_META__ = {
         top3_notice: <?php echo json_encode($sell_top3_notice, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>,
         rest_notice: <?php echo json_encode($sell_rest_notice, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>
     }
+};
+window.__COMPANY_LIST_AI_STATS__ = {
+    buyer_total: <?php echo (int)$buy_total_stat; ?>,
+    seller_total: <?php echo (int)$sell_total_stat; ?>
 };
 </script>
 <script src="<?php echo G5_URL; ?>/ko/js/company_list_ai.js?ver=<?php echo (int)$company_list_ai_js_ver; ?>"></script>

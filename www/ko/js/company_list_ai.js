@@ -32,6 +32,7 @@
 
     var aiData = normalizeData(window.__COMPANY_LIST_AI_DATA__);
     var aiMeta = window.__COMPANY_LIST_AI_META__ || {};
+    var aiStats = window.__COMPANY_LIST_AI_STATS__ || {};
 
     var topWrap = document.querySelector('.ai-top3-swiper .swiper-wrapper');
     var restWrap = document.querySelector('.ai-rest-swiper .swiper-wrapper');
@@ -40,6 +41,7 @@
     var loadMoreBtn = document.getElementById('btnLoadMore');
     var typeBtns = document.querySelectorAll('.list-type-btn');
     var typeSlider = document.querySelector('.list-type-slider');
+    var bannerStatEls = document.querySelectorAll('.ai-banner_stat_value');
 
     if (!topWrap || !restWrap || !loadMoreBtn) return;
 
@@ -70,6 +72,29 @@
         if (!typeSlider || !activeBtn) return;
         typeSlider.style.width = activeBtn.offsetWidth + 'px';
         typeSlider.style.left = activeBtn.offsetLeft + 'px';
+    }
+
+    function parseTotal(value) {
+        var n = Number(value);
+        if (!Number.isFinite(n) || n < 0) return null;
+        return Math.round(n);
+    }
+
+    function fallbackTotal(side) {
+        if (!side || typeof side !== 'object') return 0;
+        var top3 = Array.isArray(side.top3) ? side.top3.length : 0;
+        var rest = Array.isArray(side.rest) ? side.rest.length : 0;
+        return top3 + rest;
+    }
+
+    function updateBannerStats(stats) {
+        if (!bannerStatEls || bannerStatEls.length < 3) return;
+        var buyerTotal = parseTotal(stats && stats.buyer_total);
+        var sellerTotal = parseTotal(stats && stats.seller_total);
+        if (buyerTotal === null) buyerTotal = fallbackTotal(aiData.buyer);
+        if (sellerTotal === null) sellerTotal = fallbackTotal(aiData.seller);
+        bannerStatEls[1].textContent = String(buyerTotal);
+        bannerStatEls[2].textContent = String(sellerTotal);
     }
 
     function renderCurrent(shouldScrollToRest) {
@@ -149,6 +174,18 @@
     window.COMPANY_LIST_AI = {
         setData: function(nextData) {
             aiData = normalizeData(nextData);
+            var nextStats = {};
+            if (nextData && typeof nextData === 'object') {
+                var buyerSrc = nextData.buyer || nextData.buy || {};
+                var sellerSrc = nextData.seller || nextData.sell || {};
+                nextStats.buyer_total = parseTotal(buyerSrc.total);
+                nextStats.seller_total = parseTotal(sellerSrc.total);
+            }
+            aiStats = {
+                buyer_total: nextStats.buyer_total !== null ? nextStats.buyer_total : fallbackTotal(aiData.buyer),
+                seller_total: nextStats.seller_total !== null ? nextStats.seller_total : fallbackTotal(aiData.seller)
+            };
+            updateBannerStats(aiStats);
             restPageIndex = 0;
             renderCurrent(false);
         },
@@ -164,6 +201,7 @@
     try {
         urlType = new URLSearchParams(window.location.search).get('type');
     } catch (e) {}
+    updateBannerStats(aiStats);
     if (urlType === 'seller') setType('seller', false);
     else setType('buyer', false);
 })();

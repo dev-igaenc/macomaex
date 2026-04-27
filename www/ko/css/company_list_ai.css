@@ -764,6 +764,17 @@ html, body { margin: 0; overflow-x: hidden; font-family: var(--font-base); backg
     line-height: 1.3 !important;
     border-radius: 8px !important;
     font-size: var(--fs-tag, 12px) !important;
+    background: #F3F5FA !important;
+    border: 1px solid #E8EBF0 !important;
+    font-weight: 500 !important;
+}
+.company-list-ai-real .ai-top3-section-top .mCompanyCard_desc_tag,
+.company-list-ai-real .ai-rest-section .mCompanyCard_desc_tag {
+    color: #5A5F72 !important;
+}
+.company-list-ai-real .ai-top3-section-top .mCompanyCard_desc_more,
+.company-list-ai-real .ai-rest-section .mCompanyCard_desc_more {
+    color: #9199B0 !important;
 }
 /* TOP3 카드: 일반 카드와 동일, 배지 공간만 확보 */
 /* → css/section-header.css 로 분리 */
