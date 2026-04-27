@@ -18,9 +18,14 @@
 		var mainStatusEl = document.getElementById('chatMainStatus');
 		var mainAvatarEl = document.getElementById('chatMainAvatar');
 		var inputEl = document.getElementById('chatInput');
+		var attachBtnEl = document.getElementById('chatAttachBtn');
+		var fileInputEl = document.getElementById('chatFileInput');
 		var sendBtn = document.getElementById('chatSendBtn');
 		var formEl = document.getElementById('tradeChatModalForm');
 		var context = window.__TRADE_CHAT_MODAL_CONTEXT || {};
+		var FILE_UPLOAD_MAX_BYTES = 100 * 1024 * 1024;
+		var toastEl = null;
+		var toastTimer = null;
 		var state = {
 			bootstrap: null,
 			client: null,
@@ -137,6 +142,9 @@
 		function setComposerEnabled(enabled, placeholder) {
 			inputEl.disabled = !enabled;
 			sendBtn.disabled = !enabled;
+			if (attachBtnEl) {
+				attachBtnEl.disabled = !enabled;
+			}
 			inputEl.placeholder = placeholder || '메시지를 입력하세요…';
 		}
 
@@ -146,6 +154,113 @@
 
 		function renderStatusBadge(text) {
 			messagesEl.innerHTML = '<span class="chat-demo-badge">' + escapeHtml(text) + '</span>';
+		}
+
+		function showToast(message, type) {
+			if (!message) return;
+			if (toastEl) {
+				toastEl.remove();
+				toastEl = null;
+			}
+			if (toastTimer) {
+				clearTimeout(toastTimer);
+				toastTimer = null;
+			}
+
+			toastEl = document.createElement('div');
+			toastEl.className = 'chat-demo-toast chat-demo-toast--' + (type || 'info');
+			toastEl.textContent = String(message);
+			document.body.appendChild(toastEl);
+
+			requestAnimationFrame(function () {
+				if (toastEl) toastEl.classList.add('is-show');
+			});
+
+			toastTimer = setTimeout(function () {
+				if (!toastEl) return;
+				toastEl.classList.remove('is-show');
+				setTimeout(function () {
+					if (toastEl) toastEl.remove();
+					toastEl = null;
+				}, 220);
+			}, 2100);
+		}
+
+		function formatFileSize(bytes) {
+			var size = Number(bytes || 0);
+			if (size <= 0) return '';
+			var units = ['B', 'KB', 'MB', 'GB'];
+			var unitIndex = 0;
+			while (size >= 1024 && unitIndex < units.length - 1) {
+				size = size / 1024;
+				unitIndex += 1;
+			}
+			var rounded = unitIndex === 0 ? String(Math.round(size)) : String(size.toFixed(1));
+			return rounded.replace(/\.0$/, '') + ' ' + units[unitIndex];
+		}
+
+		function getAttachmentUrl(attachment) {
+			if (!attachment) return '';
+			return String(
+				attachment.asset_url
+				|| attachment.assetUrl
+				|| attachment.image_url
+				|| attachment.imageUrl
+				|| attachment.thumb_url
+				|| attachment.thumbUrl
+				|| attachment.url
+				|| ''
+			).trim();
+		}
+
+		function isImageAttachment(attachment) {
+			if (!attachment) return false;
+			var type = String(attachment.type || '').toLowerCase();
+			if (type === 'image') return true;
+			var mimeType = String(attachment.mime_type || attachment.mimeType || '').toLowerCase();
+			if (mimeType.indexOf('image/') === 0) return true;
+			var url = getAttachmentUrl(attachment).toLowerCase();
+			return /\.(png|jpe?g|gif|webp|bmp|svg)(\?|$)/.test(url);
+		}
+
+		function renderAttachment(attachment) {
+			var url = getAttachmentUrl(attachment);
+			if (url === '') return '';
+
+			var safeUrl = escapeHtml(url);
+			if (isImageAttachment(attachment)) {
+				return '<a class="chat-attachment chat-attachment--image" href="' + safeUrl + '" target="_blank" rel="noopener noreferrer">' +
+					'<img src="' + safeUrl + '" alt="첨부 이미지">' +
+				'</a>';
+			}
+
+			var fileName = String(attachment.title || attachment.name || attachment.file_name || attachment.filename || '첨부파일');
+			var fileSize = formatFileSize(attachment.file_size || attachment.fileSize || 0);
+			return '<a class="chat-attachment chat-attachment--file" href="' + safeUrl + '" target="_blank" rel="noopener noreferrer">' +
+				'<span class="chat-attachment__label">FILE</span>' +
+				'<span class="chat-attachment__name">' + escapeHtml(fileName + (fileSize ? ' (' + fileSize + ')' : '')) + '</span>' +
+			'</a>';
+		}
+
+		function buildMessageBubbleHtml(message) {
+			var text = String(message && message.text ? message.text : '');
+			var attachments = Array.isArray(message && message.attachments) ? message.attachments : [];
+			var hasText = text.trim() !== '';
+			var attachmentHtml = attachments.map(renderAttachment).filter(Boolean).join('');
+			var hasAttachments = attachmentHtml !== '';
+
+			if (!hasText && !hasAttachments) {
+				return '<div class="chat-msg-text">내용 없음</div>';
+			}
+
+			var html = '';
+			if (hasText) {
+				html += '<div class="chat-msg-text">' + escapeHtml(text) + '</div>';
+			}
+			if (hasAttachments) {
+				html += '<div class="chat-msg-attachments">' + attachmentHtml + '</div>';
+			}
+			return html;
 		}
 
 		function renderRoomStateNotice(room, meta, detail) {
@@ -210,7 +325,7 @@
 					: String((room && room.counterpartyCompanyName) || (room && room.title) || '상대 기업');
 				return '<div class="chat-msg chat-msg--' + (mine ? 'out' : 'in') + '">' +
 					(mine ? '' : '<span class="chat-msg-sender">' + escapeHtml(sender) + '</span>') +
-					'<div class="chat-msg-bubble">' + escapeHtml(message.text || '') + '</div>' +
+					'<div class="chat-msg-bubble">' + buildMessageBubbleHtml(message) + '</div>' +
 					'<span class="chat-msg-time">' + escapeHtml(formatTime(message.created_at)) + '</span>' +
 				'</div>';
 			}).join('');
@@ -242,6 +357,52 @@
 			}
 			// 새 메시지가 오면 room list preview와 시간도 즉시 다시 그린다.
 			renderRoomList();
+		}
+
+		async function uploadAndSendFileAttachment(file) {
+			if (!state.channel) {
+				throw new Error('채팅 채널 연결 후 파일을 전송할 수 있습니다.');
+			}
+			if (!file) {
+				throw new Error('첨부할 파일을 선택해 주세요.');
+			}
+			if (Number(file.size || 0) > FILE_UPLOAD_MAX_BYTES) {
+				throw new Error('파일은 100MB 이하만 첨부할 수 있습니다.');
+			}
+
+			var isImage = file.type && file.type.indexOf('image/') === 0;
+			var uploadResponse = null;
+			if (isImage && typeof state.channel.sendImage === 'function') {
+				uploadResponse = await state.channel.sendImage(file, file.name, file.type);
+			} else if (typeof state.channel.sendFile === 'function') {
+				uploadResponse = await state.channel.sendFile(file, file.name, file.type);
+			} else {
+				throw new Error('현재 채팅 SDK에서는 파일 첨부를 지원하지 않습니다.');
+			}
+
+			var uploadedUrl = uploadResponse && (uploadResponse.file || uploadResponse.url || uploadResponse.asset_url);
+			if (!uploadedUrl) {
+				throw new Error('파일 업로드 URL을 확인할 수 없습니다.');
+			}
+
+			var attachment = {
+				type: isImage ? 'image' : 'file',
+				asset_url: uploadedUrl,
+				title: file.name,
+				mime_type: file.type || '',
+				file_size: Number(file.size || 0)
+			};
+			if (isImage) {
+				attachment.image_url = uploadedUrl;
+				attachment.thumb_url = uploadedUrl;
+			}
+
+			var text = String(inputEl.value || '').trim();
+			await state.channel.sendMessage({
+				text: text,
+				attachments: [attachment]
+			});
+			inputEl.value = '';
 		}
 
 		function findRoomById(roomId) {
@@ -602,8 +763,36 @@
 					inputEl.value = '';
 					renderMessages(state.channel.state && state.channel.state.messages ? state.channel.state.messages : [], state.bootstrap.user.id, findRoomById(state.activeRoomId));
 				} catch (error) {
-					renderEmptyMessages(error && error.message ? error.message : '메시지 전송에 실패했습니다.');
+					showToast(error && error.message ? error.message : '메시지 전송에 실패했습니다.', 'error');
 				} finally {
+					setComposerEnabled(true, '메시지를 입력하세요…');
+					inputEl.focus();
+				}
+			});
+		}
+
+		if (attachBtnEl && fileInputEl) {
+			attachBtnEl.addEventListener('click', function () {
+				if (attachBtnEl.disabled) return;
+				fileInputEl.click();
+			});
+
+			fileInputEl.addEventListener('change', async function () {
+				var file = fileInputEl.files && fileInputEl.files[0] ? fileInputEl.files[0] : null;
+				if (!file) return;
+				if (!state.channel || inputEl.disabled) {
+					fileInputEl.value = '';
+					return;
+				}
+
+				setComposerEnabled(false, '파일 전송 중입니다.');
+				try {
+					await uploadAndSendFileAttachment(file);
+					renderMessages(state.channel.state && state.channel.state.messages ? state.channel.state.messages : [], state.bootstrap.user.id, findRoomById(state.activeRoomId));
+				} catch (error) {
+					showToast(error && error.message ? error.message : '파일 전송에 실패했습니다.', 'error');
+				} finally {
+					fileInputEl.value = '';
 					setComposerEnabled(true, '메시지를 입력하세요…');
 					inputEl.focus();
 				}
