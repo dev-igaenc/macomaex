@@ -63,10 +63,12 @@
     margin-bottom: 16px;
 }
 .tag-pill {
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
     padding: 4px 10px;
     font-size: 12px;
     font-weight: 600;
+    line-height: 1.2;
     color: #0369a1;
     background: var(--blue-soft);
     border-radius: 999px;

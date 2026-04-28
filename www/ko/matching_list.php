@@ -317,18 +317,28 @@ function render_stars_html($score) {
     return str_repeat($star, $full) . (($part >= 0.3) ? $star : '');
 }
 
-// 품목 문자열을 태그 배열로 변경
-function parse_pd_nm($pd_nm) {
-    if (empty($pd_nm)) return [];
-    $tags = explode(',', $pd_nm);
+// keywords_json(JSON 배열)에서 태그 목록 추출
+function parse_keywords_json_tags($keywords_json) {
+    $keywords_json = trim((string)$keywords_json);
+    if ($keywords_json === '') return [];
+
+    $decoded = json_decode($keywords_json, true);
+    if (!is_array($decoded)) return [];
+
     $result = [];
-    foreach ($tags as $t) {
-        $trimmed = trim($t);
-        if ($trimmed) {
-            $result[] = str_replace(' 외', '', $trimmed);
-        }
+    foreach ($decoded as $kw) {
+        $trimmed = trim((string)$kw);
+        if ($trimmed === '') continue;
+        $result[] = $trimmed;
     }
-    return $result;
+    return array_values(array_unique($result));
+}
+
+// keyword_count가 있으면 우선 사용, 없으면 파싱된 태그 개수 사용
+function resolve_keyword_tag_total_count($keyword_count, $tags) {
+    $count = (int)$keyword_count;
+    if ($count > 0) return $count;
+    return count(is_array($tags) ? $tags : []);
 }
 
 // 현재 카테고리의 구매 코드 찾기
@@ -464,8 +474,8 @@ function fetch_general_cards_by_where($where_clause, $query_type, $show_count_re
     $order_clause = build_company_order_clause($sort_key);
 
     $sql_list = "
-        SELECT A.KEDCD, A.BZNO, A.ENP_NM, A.LOC_ADDRA, A.BZC_CD, A.PD_NM, A.VENP_YN, B.k_code_name,
-            S.growth_score_5, S.profit_score_5, S.stability_score_5, S.final_total_score_5,
+        SELECT A.KEDCD, A.BZNO, A.ENP_NM, A.LOC_ADDRA, A.BZC_CD, A.keywords_json AS keywords_json, A.keyword_count AS keyword_count, A.VENP_YN, B.k_code_name,
+            S.growth_score_5, S.profit_score_5, S.stability_score_5, S.age_score_5, S.emp_score_5, S.final_total_score_5,
             S.badge_growth, S.badge_stability, S.badge_venture
         FROM   company A
         LEFT JOIN kssc B ON A.BZC_CD = B.k_code
@@ -478,14 +488,18 @@ function fetch_general_cards_by_where($where_clause, $query_type, $show_count_re
     $res_list = sql_query($sql_list);
     while ($row = sql_fetch_array($res_list)) {
         $title = build_company_title_for_list($row['ENP_NM'] ?? '', $row['BZNO'] ?? '', $unlocked_bzno_map);
+        $tags = parse_keywords_json_tags($row['keywords_json'] ?? '');
         $cards[] = [
             'type'    => $query_type,
             'title'   => $title,
-            'tags'    => parse_pd_nm($row['PD_NM']),
+            'tags'    => $tags,
+            'tag_total_count' => resolve_keyword_tag_total_count($row['keyword_count'] ?? 0, $tags),
             'score'   => calc_score_avg($row['final_total_score_5']),
             'grow'    => $row['growth_score_5'],
             'profit'  => $row['profit_score_5'],
             'stable'  => $row['stability_score_5'],
+            'age_score' => $row['age_score_5'],
+            'emp_score' => $row['emp_score_5'],
             'company' => $title,
             'kedcd'   => $row['KEDCD'],
             'venp_yn' => $row['VENP_YN'],
@@ -651,8 +665,8 @@ if (!$has_comnum) {
             if (!empty($REC_KEDCD)) {
                 $REC        = implode("','", $REC_KEDCD);
                 $client_res = sql_query("
-                    SELECT A.*, B.BZNO, B.BZC_CD, B.LOC_ADDRA, B.PD_NM, B.VENP_YN, C.k_code_name,
-                           S.growth_score_5, S.profit_score_5, S.stability_score_5, S.final_total_score_5,
+                    SELECT A.*, B.BZNO, B.BZC_CD, B.LOC_ADDRA, B.keywords_json AS keywords_json, B.keyword_count AS keyword_count, B.VENP_YN, C.k_code_name,
+                           S.growth_score_5, S.profit_score_5, S.stability_score_5, S.age_score_5, S.emp_score_5, S.final_total_score_5,
                            MAX(S.badge_growth) AS badge_growth,
                            MAX(S.badge_stability) AS badge_stability,
                            MAX(S.badge_venture) AS badge_venture
@@ -662,7 +676,7 @@ if (!$has_comnum) {
                     LEFT JOIN company_score_final_dedup S ON A.TXPL_KEDCD = S.KEDCD
                     WHERE  A.KEDCD IN ('{$REC}')
                       AND  A.TXPL_KEDCD != ''
-                    GROUP BY A.TXPL_KEDCD, S.growth_score_5, S.profit_score_5, S.stability_score_5, S.final_total_score_5
+                    GROUP BY A.TXPL_KEDCD, S.growth_score_5, S.profit_score_5, S.stability_score_5, S.age_score_5, S.emp_score_5, S.final_total_score_5
                     ORDER BY B.BZC_CD DESC
                 ");
 
@@ -708,14 +722,18 @@ if (!$has_comnum) {
         foreach ($rows as $row) {
             if (empty($row['TXPL_KEDCD']) || empty($row['TXPL_NM'])) continue;
             $title = build_company_title_for_list($row['TXPL_NM'] ?? '', $row['BZNO'] ?? '', $unlocked_bzno_map);
+            $tags = parse_keywords_json_tags($row['keywords_json'] ?? '');
             $out[] = [
                 'type'    => $type,
                 'title'   => $title,
-                'tags'    => parse_pd_nm($row['PD_NM']),
+                'tags'    => $tags,
+                'tag_total_count' => resolve_keyword_tag_total_count($row['keyword_count'] ?? 0, $tags),
                 'score'   => calc_score_avg($row['final_total_score_5']),
                 'grow'    => $row['growth_score_5'],
                 'profit'  => $row['profit_score_5'],
                 'stable'  => $row['stability_score_5'],
+                'age_score' => $row['age_score_5'],
+                'emp_score' => $row['emp_score_5'],
                 'company' => $title,
                 'kedcd'   => $row['TXPL_KEDCD'],
                 'venp_yn' => $row['VENP_YN'],
@@ -820,7 +838,7 @@ $sidebar_icon_map = [
         <aside class="list-sidebar">
 
             <div class="list-sidebar_ai_section">
-                <a href="?cat=all&type=ai" class="list-sidebar_ai <?php echo $has_comnum ? 'on' : ''; ?>">
+                <a href="/ko/company_list_ai_demo.php?entry=matching_ai_demo" class="list-sidebar_ai <?php echo $has_comnum ? 'on' : ''; ?>">
                     <span class="list-sidebar_ai_icon"><span class="ai-magic-wand"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16.8 2.2l1.1 2.3 2.3 1.1-2.3 1.1-1.1 2.3-1.1-2.3-2.3-1.1 2.3-1.1 1.1-2.3zm3.2 2.8.6 1.1 1.1.6-1.1.6-.6 1.1-.6-1.1-1.1-.6 1.1-.6.6-1.1zM7.4 17.4 16.1 8.7l2.6 2.6-8.7 8.7-2.6-2.6zm-1 2.4 1.3 1.3-3.1 1 .8-2.9z"/></svg></span></span>
                     <div class="list-sidebar_ai_body">
                         <span class="list-sidebar_ai_label">AI 추천받기</span>
@@ -943,8 +961,8 @@ $sidebar_icon_map = [
                         $profitScore = isset($c['profit']) && is_numeric($c['profit']) ? (float)$c['profit'] : 0.0;
                         $stableScore = isset($c['stable']) && is_numeric($c['stable']) ? (float)$c['stable'] : 0.0;
 
-                        $careerScore = min(5, max(2.5, $stableScore * 0.9 + (($idx % 3) * 0.3)));
-                        $employScore = min(5, max(2.5, $growScore * 0.8 + (($idx % 4) * 0.25)));
+                        $careerScore = isset($c['age_score']) && is_numeric($c['age_score']) ? (float)$c['age_score'] : 0.0;
+                        $employScore = isset($c['emp_score']) && is_numeric($c['emp_score']) ? (float)$c['emp_score'] : 0.0;
                         $radarScores = [$growScore, $profitScore, $stableScore, $careerScore, $employScore];
                         $radarSvg = build_radar_svg_5($radarScores);
                         $starsHtml = render_stars_html($scoreValue);
@@ -952,6 +970,10 @@ $sidebar_icon_map = [
                         $allTags = is_array($c['tags'] ?? null) ? $c['tags'] : [];
                         $showNum = 3;
                         $displayTags = array_slice($allTags, 0, $showNum);
+                        $totalCount = isset($c['tag_total_count']) && is_numeric($c['tag_total_count'])
+                            ? max(0, (int)$c['tag_total_count'])
+                            : count($allTags);
+                        $restCount = max($totalCount - count($displayTags), 0);
                     ?>
                     <a href="/ko/company_detail.php?cd=<?php echo urlencode(simple_crypt($c['kedcd'] ?? '')); ?>"
                     class="mCompanyCard detail_view"
@@ -967,34 +989,32 @@ $sidebar_icon_map = [
                         <div class="mCompanyCard_content">
                             <div class="mCompanyCard_badges">
                                 <?php
-                                $has_badge = false;
                                 $badge_growth = format_badge_percent($c['badge_growth'] ?? null);
                                 $badge_stability = format_badge_percent($c['badge_stability'] ?? null);
                                 $badge_venture = strtoupper(trim((string)($c['badge_venture'] ?? '')));
 
                                 if ($badge_growth !== '') {
-                                    $has_badge = true;
                                     echo '<span class="mCompanyCard_badge mCompanyCard_badge_top_growth">성장TOP' . htmlspecialchars($badge_growth) . '%</span>';
                                 }
                                 if ($badge_stability !== '') {
-                                    $has_badge = true;
                                     echo '<span class="mCompanyCard_badge mCompanyCard_badge_top_stability">재무안정TOP' . htmlspecialchars($badge_stability) . '%</span>';
                                 }
                                 if ($badge_venture === 'Y') {
-                                    $has_badge = true;
                                     echo '<span class="mCompanyCard_badge mCompanyCard_badge_venture">벤처인증</span>';
-                                }
-                                if (!$has_badge) {
-                                    echo '<span class="mCompanyCard_badge mCompanyCard_badge_placeholder">뱃지 준비중</span>';
                                 }
                                 ?>
                             </div>
                             <h3 class="mCompanyCard_title"><?php echo htmlspecialchars($c['title'] ?? ''); ?></h3>
 
                             <p class="mCompanyCard_desc">
-                                <?php foreach ($displayTags as $t): ?>
-                                    <span class="mCompanyCard_desc_tag"><?php echo htmlspecialchars($t); ?></span>
-                                <?php endforeach; ?>
+                                <?php if ($totalCount > 0): ?>
+                                    <?php foreach ($displayTags as $t): ?>
+                                        <span class="mCompanyCard_desc_tag"><?php echo htmlspecialchars($t); ?></span>
+                                    <?php endforeach; ?>
+                                    <?php if ($restCount > 0): ?>
+                                        <span class="mCompanyCard_desc_tag">+<?php echo $restCount; ?></span>
+                                    <?php endif; ?>
+                                <?php endif; ?>
                             </p>
 
                             <div class="radar-card">

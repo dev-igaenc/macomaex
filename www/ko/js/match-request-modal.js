@@ -346,7 +346,7 @@ if (confirmTypeBtn) {
             }
 
             // 상세 페이지에서는 저장 직후 마스킹 해제 상태를 반영하기 위해 새로고침한다.
-            if (MATCH_REQUEST_CONTEXT.sourcePage === 'company_detail' && data && data.unlock_detail) {
+            if ((MATCH_REQUEST_CONTEXT.sourcePage === 'company_detail' || MATCH_REQUEST_CONTEXT.sourcePage === 'company_detail_ai') && data && data.unlock_detail) {
                 setTimeout(function () {
                     window.location.reload();
                 }, window._showToast ? 1200 : 0);

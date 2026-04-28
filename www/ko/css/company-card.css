@@ -52,7 +52,7 @@
 .mCompanyCard_title { font-size: var(--fs-card-company, 17px); font-weight: 700; color: #111; margin-bottom: 6px; margin-top: 6px; line-height: var(--lh-snug, 1.3); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; letter-spacing: -0.01em; }
 .mCompanyCard_desc { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 10px; margin-top: 6px; align-items: center; min-height: 0; overflow: hidden; max-height: 28px; }
 .mCompanyCard_desc_tag { display: inline-flex; align-items: center; padding: 4px 10px; font-size: var(--fs-tag, 12px); font-weight: 500; color: #5A5F72; background: #F3F5FA; border: 1px solid #E8EBF0; border-radius: var(--r-md, 8px); line-height: var(--lh-snug, 1.3); white-space: nowrap; flex-shrink: 0; }
-.mCompanyCard_desc_more { display: inline-flex; align-items: center; padding: 3px 8px; font-size: 11.5px; font-weight: 500; color: #999; background: transparent; border: none; border-radius: 4px; line-height: 1.3; white-space: nowrap; flex-shrink: 0; }
+.mCompanyCard_desc_more { display: inline-flex; align-items: center; padding: 4px 10px; font-size: var(--fs-tag, 12px); font-weight: 500; color: #9199B0; background: #F3F5FA; border: 1px solid #E8EBF0; border-radius: var(--r-md, 8px); line-height: var(--lh-snug, 1.3); white-space: nowrap; flex-shrink: 0; }
 /* 점수 영역 */
 .mCompanyCard_rating { display: flex; gap: 12px; margin-bottom: 8px; padding: 4px 12px; background: #fafbfc; border-radius: 8px; border: 1px solid #f0f0f0; box-sizing: border-box; overflow: hidden; min-width: 0; }
 .mCompanyCard_rating_left { display: flex; flex-direction: column; align-items: center; min-width: 64px; flex-shrink: 0; }

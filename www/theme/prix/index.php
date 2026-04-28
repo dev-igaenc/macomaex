@@ -185,7 +185,7 @@ function get_processed_companies($order_by_col, $limit = 3, $unlocked_bzno_map =
     $limit = (int)$limit;
     if ($limit < 1) $limit = 3;
 
-    $sql = "SELECT a.KEDCD, a.BZNO, a.ENP_NM, a.ENP_NM_TRD, a.PD_NM, a.VENP_YN,
+    $sql = "SELECT a.KEDCD, a.BZNO, a.ENP_NM, a.ENP_NM_TRD, a.keywords_json, a.keyword_count, a.VENP_YN,
                    COALESCE(b.growth_score_5, 0) AS growth_score_5,
                    COALESCE(b.profit_score_5, 0) AS profit_score_5,
                    COALESCE(b.stability_score_5, 0) AS stability_score_5,
@@ -214,17 +214,21 @@ function get_processed_companies($order_by_col, $limit = 3, $unlocked_bzno_map =
         $row['final_score_num'] = clamp_score_5($row['final_total_score_5']);
         $row['final_score'] = number_format($row['final_score_num'], 1);
 
+        // 카드 태그는 PD_NM 대신 keywords_json(JSON 배열) 기준으로 구성
         $tags = array();
-        if (!empty($row['PD_NM'])) {
-            $raw_tags = explode(',', $row['PD_NM']);
-            foreach($raw_tags as $rt) {
-                $trimmed = trim($rt);
-                if($trimmed) {
-                    $tags[] = str_replace(' 외', '', $trimmed);
+        $keywords_json_raw = trim((string)($row['keywords_json'] ?? ''));
+        if ($keywords_json_raw !== '') {
+            $decoded = json_decode($keywords_json_raw, true);
+            if (is_array($decoded)) {
+                foreach ($decoded as $kw) {
+                    $trimmed = trim((string)$kw);
+                    if ($trimmed === '') continue;
+                    $tags[] = $trimmed;
                 }
             }
         }
-        $row['PD_NM_TAGS'] = array_values(array_unique($tags));
+        $row['KEYWORD_TAGS'] = array_values(array_unique($tags));
+        $row['keyword_count'] = max(0, (int)($row['keyword_count'] ?? 0));
 
         $list[] = $row;
     }
@@ -478,11 +482,13 @@ $stable_list = get_processed_companies('stability_score_5', 3, $unlocked_bzno_ma
             </div>
             <div class="card-grid" id="hkGrowthGrid">
                 <?php foreach ($company_list as $index => $com): 
-                    $allTags = $com['PD_NM_TAGS'] ?? [];
-                    $totalCount = count($allTags);
-                    $showNum = 2;
+                    $allTags = $com['KEYWORD_TAGS'] ?? [];
+                    $showNum = 3;
                     $displayTags = array_slice($allTags, 0, $showNum);
-                    $restCount = max($totalCount - $showNum, 0);
+                    $totalCount = isset($com['keyword_count']) && (int)$com['keyword_count'] > 0
+                        ? (int)$com['keyword_count']
+                        : count($allTags);
+                    $restCount = max($totalCount - count($displayTags), 0);
                     $growthTop = (int)round($com['growth_score_5'] * 20);
                     $detailUrl = '/ko/company_detail.php?cd=' . urlencode(simple_crypt($com['KEDCD']));
                 ?>
@@ -553,11 +559,13 @@ $stable_list = get_processed_companies('stability_score_5', 3, $unlocked_bzno_ma
             </div>
             <div class="card-grid" id="hkStableGrid">
                 <?php foreach ($stable_list as $idx => $com): 
-                    $allTags = $com['PD_NM_TAGS'] ?? [];
-                    $totalCount = count($allTags);
-                    $showNum = 2;
+                    $allTags = $com['KEYWORD_TAGS'] ?? [];
+                    $showNum = 3;
                     $displayTags = array_slice($allTags, 0, $showNum);
-                    $restCount = max($totalCount - $showNum, 0);
+                    $totalCount = isset($com['keyword_count']) && (int)$com['keyword_count'] > 0
+                        ? (int)$com['keyword_count']
+                        : count($allTags);
+                    $restCount = max($totalCount - count($displayTags), 0);
                     $stableTop = (int)round($com['stability_score_5'] * 20);
                     $detailUrl = '/ko/company_detail.php?cd=' . urlencode(simple_crypt($com['KEDCD']));
                 ?>

@@ -207,7 +207,7 @@ html.no-cta.in-iframe .top-nav-actions { flex: 0 0 auto; }
 .detail-radar-card .radar-footer-stars { display: flex; gap: 2px; }
 .detail-radar-card .radar-footer-score { font-size: 16px; font-weight: 700; color: #1A1D29; }
 .detail-radar-card .radar-footer-max { font-size: 13px; color: #8B90A0; }
-.detail-radar-card .radar-scores { display: grid; grid-template-columns: repeat(6, 1fr); gap: 0; margin-top: 22px; max-width: 100%; border: 1px solid #E8EBF0; border-radius: 8px; overflow: hidden; }
+.detail-radar-card .radar-scores { display: grid; grid-template-columns: repeat(6, 1fr); gap: 0; margin-top: 40px; max-width: 100%; border: 1px solid #E8EBF0; border-radius: 8px; overflow: hidden; }
 @media (max-width: 900px) {
 	.detail-radar-card .radar-scores { width: 100%; max-width: none; margin-left: 0; margin-right: 0; }
 }
