@@ -53,6 +53,14 @@ if (expectedSrcKedcd.length !== 10) {
     try { expectedSrcKedcd = String(sessionStorage.getItem('_aiSrcKedcd') || '').replace(/\D/g, ''); } catch (e0) {}
 }
 if (expectedSrcKedcd.length !== 10) expectedSrcKedcd = '';
+var detailHydrateNoticeText = '';
+
+function setDetailHydrateNotice(message) {
+    detailHydrateNoticeText = String(message || '').trim();
+    if (typeof window._renderRightCard === 'function') {
+        window._renderRightCard();
+    }
+}
 
 function parseTagListFromLine(raw) {
     var text = String(raw || '').trim();
@@ -253,7 +261,10 @@ var co = COMPANIES[demoId];
     if (srcKedcd.length !== 10) {
         try { srcKedcd = String(sessionStorage.getItem('_aiSrcKedcd') || '').replace(/\D/g, ''); } catch (e1) {}
     }
-    if (srcKedcd.length !== 10) return;
+    if (srcKedcd.length !== 10) {
+        setDetailHydrateNotice('추천 기준 기업 정보가 없어 EC2 추천값을 불러오지 못했습니다. 목록에서 다시 진입해 주세요.');
+        return;
+    }
 
     // target_card API 호출
     var hydrateUrl = '/ko/company_list_ai_api.php?action=target_card'
@@ -262,11 +273,34 @@ var co = COMPANIES[demoId];
         + '&trade_type=' + encodeURIComponent(pageTradeType);
 
     fetch(hydrateUrl, { credentials: 'same-origin' })
-        .then(function (res) { return res.json(); })
-        .then(function (data) {
-            if (!data || typeof data !== 'object') return;
+        .then(function (res) {
+            return res.json().catch(function () { return {}; }).then(function (data) {
+                return { ok: !!res.ok, status: res.status, data: data };
+            });
+        })
+        .then(function (response) {
+            var data = (response && response.data && typeof response.data === 'object') ? response.data : {};
+            if (!response || !response.ok || data.error) {
+                var failMsg = '';
+                if (data && data.error) failMsg = String(data.error);
+                else if (response && response.status === 404) failMsg = '추천 결과가 없습니다.';
+                else if (response && response.status === 400) failMsg = '요청 파라미터가 올바르지 않습니다.';
+                else if (response && response.status === 502) failMsg = 'EC2 연결 또는 응답 오류';
+                else failMsg = '추천 데이터 조회 실패';
+                throw new Error(failMsg);
+            }
+
             var found = data.item;
-            if (!found || !found.radar || typeof found.radar !== 'object' || !Object.keys(found.radar).length) return;
+            if (!found || !found.radar || typeof found.radar !== 'object' || !Object.keys(found.radar).length) {
+                var resultTotal = Number(data.result_total || 0);
+                if (Number.isFinite(resultTotal) && resultTotal === 0) {
+                    setDetailHydrateNotice('추천 결과가 0건이라 기본 데이터로 표시 중입니다.');
+                } else {
+                    setDetailHydrateNotice('추천 응답 매핑에 실패해 기본 데이터로 표시 중입니다.');
+                }
+                return;
+            }
+            setDetailHydrateNotice('');
 
             var scorePct = Number(found.display_score);
             if (!Number.isFinite(scorePct)) {
@@ -324,7 +358,10 @@ var co = COMPANIES[demoId];
                 }
             } catch (e2) {}
         })
-        .catch(function () {});
+        .catch(function (err) {
+            var msg = (err && err.message) ? String(err.message) : '알 수 없는 오류';
+            setDetailHydrateNotice('EC2 추천값을 불러오지 못해 기본 데이터로 표시 중입니다. (' + msg + ')');
+        });
 })();
 
 document.title = String(co.title || 'AI 추천 기업') + ' \xB7 AI \uCD94\uCC9C \uAE30\uC5C5 \uC0C1\uC138 \u2014 \uB9E4\uCEE4\uBA59\uC2A4';
@@ -801,25 +838,28 @@ var regionNotice = '';
 
 (function renderRightCard() {
 	var loggedIn = window._isLoggedIn && window._isLoggedIn();
-	function buildInner(isMock) {
-		var scoreNum = isMock ? '--' : fitScore;
-		var companyName = isMock ? '○○○○' : maskName(co.title);
-		return '<div class="match-box-inner">' +
-			'<div class="fit-header">' +
+		function buildInner(isMock) {
+			var scoreNum = isMock ? '--' : fitScore;
+			var companyName = isMock ? '○○○○' : maskName(co.title);
+			var noticeHtml = detailHydrateNoticeText
+				? '<div class="detail-radar_notice"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="13"/><circle cx="12" cy="16.5" r="0.8" fill="currentColor" stroke="none"/></svg><span>' + esc(detailHydrateNoticeText) + '</span></div>'
+				: '';
+			return '<div class="match-box-inner">' +
+				'<div class="fit-header">' +
 				'<div class="fit-header-top">' +
 					'<div class="fit-header-companies">우리회사 <strong>A기업</strong> <span class="fit-header-arrow">⇄</span> 추천 <strong>B기업</strong></div>' +
 					'<div class="fit-header-score"><span class="fit-header-score-num">' + scoreNum + '</span><span class="fit-header-score-unit">%</span></div>' +
 				'</div>' +
 				'<div class="fit-header-label">AI 적합도 예측</div>' +
 			'</div>' +
-			'<div class="detail-radar">' +
-				'<div class="detail-radar_row">' +
-					'<div class="detail-radar_chart">' + svgHtml + '</div>' +
-					legendHtml +
+				'<div class="detail-radar">' +
+					'<div class="detail-radar_row">' +
+						'<div class="detail-radar_chart">' + svgHtml + '</div>' +
+						legendHtml +
+					'</div>' + noticeHtml +
 				'</div>' +
-			'</div>' +
-		'</div>';
-	}
+			'</div>';
+		}
 	var overlayHtml = '<div class="match-box-login-overlay">' +
 		'<div class="auth-login-modal" style="position:relative;">' +
 			'<button class="auth-login-modal_close" onclick="document.getElementById(\'rightCard\').classList.remove(\'match-box-blur\')" aria-label="닫기">' +
@@ -845,6 +885,9 @@ window._renderRightCard = function() {
 	function buildInner(isMock) {
 		var scoreNum = isMock ? '--' : fitScore;
 		var companyName = isMock ? '○○○○' : maskName(co.title);
+		var noticeHtml = detailHydrateNoticeText
+			? '<div class="detail-radar_notice"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="13"/><circle cx="12" cy="16.5" r="0.8" fill="currentColor" stroke="none"/></svg><span>' + esc(detailHydrateNoticeText) + '</span></div>'
+			: '';
 		return '<div class="match-box-inner">' +
 			'<div class="fit-header">' +
 				'<div class="fit-header-top">' +
@@ -857,7 +900,7 @@ window._renderRightCard = function() {
 				'<div class="detail-radar_row">' +
 					'<div class="detail-radar_chart">' + svgHtml + '</div>' +
 					legendHtml +
-				'</div>' +
+				'</div>' + noticeHtml +
 			'</div>' +
 		'</div>';
 	}

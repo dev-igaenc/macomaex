@@ -64,10 +64,16 @@ if ($kedcd === '' && isset($_GET['id'])) {
     if (strlen($id) === 10) $kedcd = $id;
 }
 
+// 잘못된 식별자로 직접 진입한 경우 목록으로 되돌린다.
+if (strlen($kedcd) !== 10 || preg_match('/^0+$/', $kedcd)) {
+    alert('잘못된 접근입니다. AI 추천 목록에서 다시 선택해 주세요.', '/ko/company_list_ai.php');
+}
+
 $company = array();
-if (strlen($kedcd) === 10) {
-    // 상세 기본 정보 조회
-    $company = sql_fetch("\n        SELECT KEDCD, ENP_NM, BZNO, keywords_json, keyword_count, BZC_CD, ENP_TYP, LABORER_SUM, ESTB_DT, LOC_ADDRA, LOC_ADDRB, HPAGE_URL\n        FROM company\n        WHERE KEDCD = '" . sql_escape_string($kedcd) . "'\n        LIMIT 1\n    ");
+// 상세 기본 정보 조회
+$company = sql_fetch("\n    SELECT KEDCD, ENP_NM, BZNO, keywords_json, keyword_count, BZC_CD, ENP_TYP, LABORER_SUM, ESTB_DT, LOC_ADDRA, LOC_ADDRB, HPAGE_URL\n    FROM company\n    WHERE KEDCD = '" . sql_escape_string($kedcd) . "'\n    LIMIT 1\n");
+if (empty($company['KEDCD'])) {
+    alert('기업 정보를 찾을 수 없습니다.', '/ko/company_list_ai.php');
 }
 
 $company_name = trim((string)($company['ENP_NM'] ?? ''));

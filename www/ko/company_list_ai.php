@@ -733,9 +733,20 @@ $unlocked_kedcd_map = company_list_ai_fetch_unlocked_kedcd_map_for_member($membe
 
 $kedcd_query = str_pad(preg_replace('/\D/', '', (string)($_GET['kedcd'] ?? '')), 10, '0', STR_PAD_LEFT);
 $has_kedcd_query = isset($_GET['kedcd']) && trim((string)$_GET['kedcd']) !== '';
+$has_kedcd_query_invalid = $has_kedcd_query && (strlen($kedcd_query) !== 10 || preg_match('/^0+$/', $kedcd_query));
+$bizno_query_raw = trim((string)($_GET['bizno'] ?? ($_GET['comnum'] ?? '')));
 $bizno_query = preg_replace('/\D/', '', (string)($_GET['bizno'] ?? ($_GET['comnum'] ?? '')));
+$has_bizno_query = ($bizno_query_raw !== '');
 $has_valid_bizno_query = (strlen($bizno_query) === 10);
+$has_bizno_query_invalid = $has_bizno_query && !$has_valid_bizno_query;
+$has_valid_source_input = (($has_kedcd_query && !$has_kedcd_query_invalid) || $has_valid_bizno_query);
 $resolved_base_payload = array();
+$input_error_notice = '';
+$resolve_error_notice = '';
+
+if (!$has_valid_source_input && ($has_kedcd_query_invalid || $has_bizno_query_invalid)) {
+    $input_error_notice = '입력값이 올바르지 않습니다. kedcd/bizno는 10자리 숫자여야 합니다.';
+}
 // 상세 링크에 실어 보낼 "추천의 기준 기업" kedcd
 $source_kedcd_for_detail = '';
 
@@ -754,6 +765,11 @@ if (($has_kedcd_query && strlen($kedcd_query) === 10 && !preg_match('/^0+$/', $k
                 'kedcd' => isset($resolved_base_payload['kedcd']) ? $resolved_base_payload['kedcd'] : ''
             )));
             $resolved_base_payload = array_merge($resolved_base_payload, $query_override);
+        } else {
+            $resolve_error_notice = trim((string)($resolved['error'] ?? ''));
+            if ($resolve_error_notice === '') {
+                $resolve_error_notice = '기준 기업 정보를 불러오지 못했습니다.';
+            }
         }
     }
 }
@@ -887,10 +903,17 @@ $buy_rest_notice = '';
 $sell_top3_notice = '';
 $sell_rest_notice = '';
 
-if (empty($buy_top3)) $buy_top3_notice = !empty($buy_call['error']) ? '구매 추천 데이터를 불러오지 못했습니다.' : '구매 추천 결과가 없습니다.';
-if (empty($buy_rest_pool)) $buy_rest_notice = '추가 구매 추천 결과가 없습니다.';
-if (empty($sell_top3)) $sell_top3_notice = !empty($sell_call['error']) ? '판매 추천 데이터를 불러오지 못했습니다.' : '판매 추천 결과가 없습니다.';
-if (empty($sell_rest_pool)) $sell_rest_notice = '추가 판매 추천 결과가 없습니다.';
+if ($input_error_notice !== '') {
+    $buy_top3_notice = $input_error_notice;
+    $buy_rest_notice = $input_error_notice;
+    $sell_top3_notice = $input_error_notice;
+    $sell_rest_notice = $input_error_notice;
+} else {
+    if (empty($buy_top3)) $buy_top3_notice = !empty($resolve_error_notice) ? $resolve_error_notice : (!empty($buy_call['error']) ? '구매 추천 데이터를 불러오지 못했습니다.' : '구매 추천 결과가 없습니다.');
+    if (empty($buy_rest_pool)) $buy_rest_notice = !empty($resolve_error_notice) ? $resolve_error_notice : '추가 구매 추천 결과가 없습니다.';
+    if (empty($sell_top3)) $sell_top3_notice = !empty($resolve_error_notice) ? $resolve_error_notice : (!empty($sell_call['error']) ? '판매 추천 데이터를 불러오지 못했습니다.' : '판매 추천 결과가 없습니다.');
+    if (empty($sell_rest_pool)) $sell_rest_notice = !empty($resolve_error_notice) ? $resolve_error_notice : '추가 판매 추천 결과가 없습니다.';
+}
 
 // 시안과 동일하게 배너 통계는 고정 노출
 $banner_buy_stat = 12;
