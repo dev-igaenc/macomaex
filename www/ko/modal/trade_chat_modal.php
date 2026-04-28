@@ -56,9 +56,8 @@
 				<input class="chat-demo-input" id="chatInput" type="text" placeholder="메시지를 입력하세요…" disabled>
 				<input id="chatFileInput" type="file" class="chat-demo-file-input" hidden aria-hidden="true" tabindex="-1">
 				<button class="chat-demo-attach" id="chatAttachBtn" type="button" aria-label="파일 첨부" title="파일 첨부" disabled>
-					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
-						<path d="M21 11.5V16a5 5 0 0 1-5 5H8a5 5 0 0 1-5-5V8a5 5 0 0 1 5-5h4.5"></path>
-						<path d="M21 3l-9.5 9.5a3 3 0 1 0 4.2 4.2L21 11.4"></path>
+					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+						<path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 1 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.82-2.82l8.49-8.48"></path>
 					</svg>
 				</button>
 				<button class="chat-demo-send" id="chatSendBtn" type="submit" aria-label="전송" disabled>

@@ -59,7 +59,10 @@
 			channelListener: null,
 			activeRoomId: 0,
 			filterKeyword: '',
-			bootPromise: null
+			bootPromise: null,
+			composerEnabled: false,
+			isSending: false,
+			isUploading: false
 		};
 
 		// 데스크톱에서는 room list 폭을 토글하고, 모바일에서는 기존 전환 흐름을 유지한다.
@@ -165,13 +168,22 @@
 				'<span class="chat-main-status__text">' + escapeHtml(statusText || '연결 대기 중') + '</span>';
 		}
 
-		function setComposerEnabled(enabled, placeholder) {
-			inputEl.disabled = !enabled;
-			sendBtn.disabled = !enabled;
+		function refreshComposerControls(placeholder) {
+			var composerEnabled = !!state.composerEnabled;
+			var isBusy = !!(state.isSending || state.isUploading);
+			inputEl.disabled = !composerEnabled;
+			sendBtn.disabled = !composerEnabled || isBusy;
 			if (attachBtnEl) {
-				attachBtnEl.disabled = !enabled;
+				attachBtnEl.disabled = !composerEnabled || isBusy;
 			}
-			inputEl.placeholder = placeholder || '메시지를 입력하세요…';
+			if (placeholder) {
+				inputEl.placeholder = placeholder;
+			}
+		}
+
+		function setComposerEnabled(enabled, placeholder) {
+			state.composerEnabled = !!enabled;
+			refreshComposerControls(placeholder || '메시지를 입력하세요…');
 		}
 
 		function renderEmptyMessages(message) {
@@ -850,7 +862,7 @@
 		if (formEl) {
 			formEl.addEventListener('submit', async function (event) {
 				event.preventDefault();
-				if (!state.channel || inputEl.disabled) return;
+				if (!state.channel || inputEl.disabled || state.isSending || state.isUploading) return;
 
 				var textValidation = validateMessageText(inputEl.value || '', false);
 				if (!textValidation.valid) {
@@ -858,15 +870,20 @@
 					return;
 				}
 
-				setComposerEnabled(false, '메시지 전송 중입니다.');
+				var sendingText = textValidation.text;
+				inputEl.value = '';
+				state.isSending = true;
+				refreshComposerControls('메시지 전송 중입니다.');
 				try {
-					await state.channel.sendMessage({ text: textValidation.text });
-					inputEl.value = '';
-					renderMessages(state.channel.state && state.channel.state.messages ? state.channel.state.messages : [], state.bootstrap.user.id, findRoomById(state.activeRoomId));
+					await state.channel.sendMessage({ text: sendingText });
 				} catch (error) {
+					if (!inputEl.value) {
+						inputEl.value = sendingText;
+					}
 					showToast(error && error.message ? error.message : '메시지 전송에 실패했습니다.', 'error');
 				} finally {
-					setComposerEnabled(true, '메시지를 입력하세요…');
+					state.isSending = false;
+					refreshComposerControls('메시지를 입력하세요…');
 					inputEl.focus();
 				}
 			});
@@ -881,20 +898,21 @@
 			fileInputEl.addEventListener('change', async function () {
 				var file = fileInputEl.files && fileInputEl.files[0] ? fileInputEl.files[0] : null;
 				if (!file) return;
-				if (!state.channel || inputEl.disabled) {
+				if (!state.channel || inputEl.disabled || state.isSending || state.isUploading) {
 					fileInputEl.value = '';
 					return;
 				}
 
-				setComposerEnabled(false, '파일 전송 중입니다.');
+				state.isUploading = true;
+				refreshComposerControls('파일 전송 중입니다.');
 				try {
 					await uploadAndSendFileAttachment(file);
-					renderMessages(state.channel.state && state.channel.state.messages ? state.channel.state.messages : [], state.bootstrap.user.id, findRoomById(state.activeRoomId));
 				} catch (error) {
 					showToast(error && error.message ? error.message : '파일 전송에 실패했습니다.', 'error');
 				} finally {
+					state.isUploading = false;
 					fileInputEl.value = '';
-					setComposerEnabled(true, '메시지를 입력하세요…');
+					refreshComposerControls('메시지를 입력하세요…');
 					inputEl.focus();
 				}
 			});
