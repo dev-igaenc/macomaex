@@ -48,6 +48,49 @@
     var currentType = 'buyer';
     var restPageSize = 9;
     var restPageIndex = 0;
+    var top3Swiper = null;
+    var restSwiper = null;
+
+    function destroySwiper(instance) {
+        if (!instance || typeof instance.destroy !== 'function') return null;
+        instance.destroy(true, true);
+        return null;
+    }
+
+    function initAiSwipers() {
+        top3Swiper = destroySwiper(top3Swiper);
+        restSwiper = destroySwiper(restSwiper);
+
+        if (typeof Swiper === 'undefined' || window.innerWidth > 1024) return;
+
+        var topEl = document.querySelector('.ai-top3-swiper');
+        if (topEl) {
+            top3Swiper = new Swiper(topEl, {
+                slidesPerView: 'auto',
+                spaceBetween: 25,
+                grabCursor: true,
+                resistanceRatio: 0.65
+            });
+        }
+
+        var restEl = document.querySelector('.ai-rest-swiper');
+        if (restEl) {
+            var paginationEl = restEl.querySelector('.swiper-pagination');
+            var options = {
+                slidesPerView: 'auto',
+                spaceBetween: 25,
+                grabCursor: true,
+                resistanceRatio: 0.65
+            };
+            if (paginationEl) {
+                options.pagination = {
+                    el: paginationEl,
+                    clickable: true
+                };
+            }
+            restSwiper = new Swiper(restEl, options);
+        }
+    }
 
     function escapeHtml(text) {
         return String(text || '')
@@ -222,6 +265,8 @@
             loadMoreWrap.style.display = restPool.length > 0 ? 'flex' : 'none';
         }
 
+        initAiSwipers();
+
         if (shouldScrollToRest && restHeader) {
             restHeader.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
@@ -291,6 +336,7 @@
     window.addEventListener('resize', function() {
         var activeBtn = document.querySelector('.list-type-btn.on');
         if (activeBtn) updateTypeSlider(activeBtn);
+        initAiSwipers();
     });
 
     // 외부에서 실제 API 응답 연결 시 데이터 주입 가능하게 노출

@@ -7,6 +7,15 @@ body {
 	min-height: 100vh;
 }
 #detailWrap { background: #FAFBFD; min-height: 100vh; }
+html.in-iframe { --header-h: 0px; }
+/* 테마 공통(layout.css)의 흰 배경(#container/#wrap) 덮어쓰기 */
+.page-company-detail-ai,
+.page-company-detail-ai #wrap,
+.page-company-detail-ai #wrapper,
+.page-company-detail-ai #container,
+.page-company-detail-ai #detailWrap {
+	background: #FAFBFD !important;
+}
 .demo-notice {
 	text-align: center;
 	font-size: 12px;
@@ -150,9 +159,25 @@ body {
 	gap: 24px;
 	align-items: stretch;
 }
+/* 헤더처럼 스크롤 시 상단 고정 (시안 기준: 항상 고정) */
+.page-company-detail-ai .top-nav {
+	position: fixed !important;
+	top: var(--header-h, 60px) !important;
+	left: 50% !important;
+	transform: translateX(-50%) !important;
+	width: min(1200px, calc(100% - 40px)) !important;
+	margin: 0 !important;
+	z-index: 300 !important;
+}
+.page-company-detail-ai .page-wrap {
+	padding-top: 68px;
+}
 @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } }
 @media (max-width: 768px) {
-	.page-wrap { padding-left: 16px; padding-right: 16px; }
+	.page-company-detail-ai .top-nav {
+		width: calc(100% - 32px) !important;
+	}
+	.page-wrap { padding-top: 60px; padding-left: 16px; padding-right: 16px; }
 	.list-header .inner { padding: 0 16px; }
 }
 #leftCard { --detail-accent: var(--purple, #6d28d9); --detail-accent-dark: #4c1d95; }

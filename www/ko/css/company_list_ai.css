@@ -455,6 +455,16 @@ html, body { margin: 0; overflow-x: hidden; font-family: var(--font-base); backg
 /* AI 카드: 높이 콘텐츠 기준, 하단 여백 통일 */
 .company-list-ai-real .mCompanyCard_content { padding-bottom: 16px; display: flex; flex-direction: column; }
 .company-list-ai-real .mCompanyCard_content .radar-card { margin-top: 8px; }
+.company-ai-link {
+    display: block;
+    width: 100%;
+}
+.company-ai-link .mCompanyCard {
+    width: 100% !important;
+    max-width: none !important;
+    min-width: 0 !important;
+}
+.company-ai-link .mCompanyCard_content { width: 100%; }
 .ai-top3-swiper .swiper-slide .mCompanyCard { height: auto; }
 .ai-top3-swiper .swiper-slide .mCompanyCard_content { padding-bottom: 16px; }
 
@@ -841,10 +851,14 @@ html, body { margin: 0; overflow-x: hidden; font-family: var(--font-base); backg
 
 /* TOP3 & ALL 공통: 스와이프 시 카드 잘림 방지 */
 @media (max-width: 1024px) {
-    .company-list-ai-real { overflow-x: hidden; }
+    .company-list-ai-real { overflow-x: visible; }
     .company-list-ai-real .list-main { overflow: visible; }
     .company-list-ai-real .list-body .inner { overflow: visible; }
     .company-list-ai-real #cardArea { overflow: visible; }
+    .company-list-ai-real .ai-top3-swiper.swiper-initialized .swiper-wrapper,
+    .company-list-ai-real .ai-rest-swiper.swiper-initialized .swiper-wrapper {
+        gap: 0 !important;
+    }
     .ai-top3 { overflow: visible; }
     /* 스크롤바 숨기기 (스와이프는 유지) */
     .ai-top3-swiper::-webkit-scrollbar { display: none; }
@@ -929,5 +943,136 @@ html, body { margin: 0; overflow-x: hidden; font-family: var(--font-base); backg
     .company-list-ai-real .list-body .inner {
         display: block !important;
         padding: 0 16px 24px;
+    }
+}
+
+/* ===== company_list_ai 모바일 반응형 (PC 비영향) ===== */
+@media (max-width: 768px) {
+    .page-company-list-ai #container {
+        max-width: none !important;
+        padding: 0 0 20px !important;
+    }
+    .page-company-list-ai #wrapper {
+        padding-top: 60px !important;
+    }
+
+    .company-list-ai-real .ai-banner {
+        padding: 16px 16px 0;
+    }
+    .company-list-ai-real .ai-banner_card {
+        padding: 24px 20px;
+        border-radius: 16px;
+    }
+    .company-list-ai-real .ai-banner_title {
+        font-size: 20px;
+    }
+    .company-list-ai-real .ai-banner_stats {
+        gap: 16px;
+    }
+    .company-list-ai-real .ai-banner_stat_value {
+        font-size: 18px;
+    }
+
+    .company-list-ai-real .list-main { padding: 0 !important; }
+    .company-list-ai-real .list-body .inner { padding: 0 16px 24px !important; }
+    .company-list-ai-real .list-top {
+        margin-bottom: 16px;
+        padding-top: 16px;
+    }
+
+    .company-list-ai-real .mHookSection_title {
+        font-size: 20px;
+    }
+    .company-list-ai-real .mHookSection_subtitle {
+        font-size: 13px;
+    }
+    .company-list-ai-real .ai-top3 {
+        margin-top: 32px;
+    }
+    .company-list-ai-real .ai-rest_header {
+        margin-top: 44px;
+    }
+
+    /* 모바일에서 Swiper가 slide에 margin-right(spaceBetween)를 넣으므로 gap은 0으로 유지 */
+    .company-list-ai-real .ai-top3-swiper .swiper-wrapper,
+    .company-list-ai-real .ai-rest-swiper .swiper-wrapper {
+        gap: 0 !important;
+    }
+    .company-list-ai-real .ai-top3-swiper,
+    .company-list-ai-real .ai-rest-swiper {
+        overflow-x: auto !important;
+        overflow-y: visible !important;
+        -webkit-overflow-scrolling: touch;
+        scroll-snap-type: x mandatory;
+        touch-action: pan-x;
+    }
+    .company-list-ai-real .ai-top3-swiper .swiper-wrapper,
+    .company-list-ai-real .ai-rest-swiper .swiper-wrapper {
+        display: flex !important;
+        flex-wrap: nowrap !important;
+    }
+    .company-list-ai-real .ai-top3-swiper .swiper-slide {
+        min-width: 240px;
+        width: 82% !important;
+        flex-shrink: 0;
+        scroll-snap-align: start;
+    }
+    .company-list-ai-real .ai-rest-swiper .swiper-slide,
+    .company-list-ai-real .ai-empty-state {
+        min-width: 240px;
+        width: 82% !important;
+        flex-shrink: 0;
+        scroll-snap-align: start;
+    }
+
+    .company-list-ai-real .mCompanyCard_ai_match {
+        margin: -16px -20px 12px;
+        padding: 9px 16px;
+    }
+    .company-list-ai-real .mCompanyCard_ai_match_label,
+    .company-list-ai-real .mCompanyCard_ai_match_unit {
+        font-size: 12px;
+    }
+    .company-list-ai-real .mCompanyCard_ai_match_value {
+        font-size: 21px;
+    }
+    .company-list-ai-real .mCompanyCard_title {
+        font-size: 16px !important;
+    }
+
+    .company-list-ai-real .list-grid_more_wrap {
+        padding: 22px 0 10px;
+    }
+    .company-list-ai-real .list-grid_more_btn {
+        width: 100%;
+        padding: 13px 16px;
+        font-size: 14px;
+        border-radius: 10px;
+    }
+}
+
+@media (max-width: 640px) {
+    .page-company-list-ai #container {
+        padding: 0 0 18px !important;
+    }
+    .company-list-ai-real .list-body .inner {
+        padding: 0 16px 22px !important;
+    }
+
+    .company-list-ai-real .ai-top3-swiper .swiper-slide,
+    .company-list-ai-real .ai-rest-swiper .swiper-slide,
+    .company-list-ai-real .ai-empty-state {
+        min-width: 240px;
+        width: 82% !important;
+    }
+
+    .company-list-ai-real .mHookSection_title {
+        font-size: 18px;
+    }
+    .company-list-ai-real .mHookSection_subtitle {
+        font-size: 12px;
+    }
+    .company-list-ai-real .radar-card--hex .radar-svg {
+        max-width: 208px;
     }
 }
