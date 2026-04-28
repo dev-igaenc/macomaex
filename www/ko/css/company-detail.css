@@ -9,7 +9,7 @@ body {
 
 .page-company-detail #container {
 	max-width: none;
-	padding: none;
+	padding: 0 !important;
 }
 
 .page-company-detail #wrap {
