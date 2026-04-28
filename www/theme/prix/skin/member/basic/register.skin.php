@@ -53,34 +53,39 @@ if (!defined('_GNUBOARD_')) exit; // 개별 페이지 접근 불가
 </div>
 
 <script>
-$("#id").keyup(function(){
-	$this=$(this);
-	  var email = $(this).val();
-	  
-	  let pattern_email = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-	  	  pattern_email = new RegExp(pattern_email);
-	  if (pattern_email.test(email) == false) {
-		  if(email) $this.parents(".formBox").find(".formBox_errorM").text("올바른 이메일 주소가 아닙니다.");
-		  else $this.parents(".formBox").find(".formBox_errorM").text("이메일 주소를 입력해주세요.");
-		  $("#id_chk").val("false");
-		return false;
-	  }else{
-		  $this.parents(".formBox").find(".formBox_errorM").text("");
+function validateSignupEmailAndMark() {
+	var $input = $("#id");
+	var email = $.trim($input.val());
+	var patternEmail = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 
-			$.post( "../get_set.php", {
-				type: 'member_check',
-				id: email
-			}).done(function(jqXHR) {
-				jqXHR=jqXHR.split("|");
-				if(jqXHR[0]!="1000") {
-					$this.parents(".formBox").find(".formBox_errorM").text(jqXHR[1]);
-					$("#id_chk").val("false");
-				}else{
-					$("#id_chk").val("true");
-				}
-			});
-	  }
-  })
+	if (!patternEmail.test(email)) {
+		if (email) $input.parents(".formBox").find(".formBox_errorM").text("올바른 이메일 주소가 아닙니다.");
+		else $input.parents(".formBox").find(".formBox_errorM").text("이메일 주소를 입력해주세요.");
+		$("#id_chk").val("false");
+		return;
+	}
+
+	$input.parents(".formBox").find(".formBox_errorM").text("");
+	$.post("../get_set.php", {
+		type: "member_check",
+		id: email
+	}).done(function(resp) {
+		var parsed = $.trim(resp).split("|");
+		if (parsed[0] != "1000") {
+			$input.parents(".formBox").find(".formBox_errorM").text(parsed[1] || "가입한 이력이 있습니다.");
+			$("#id_chk").val("false");
+		} else {
+			$("#id_chk").val("true");
+		}
+	}).fail(function() {
+		// 네트워크 오류 시 오탐 방지: 제출 시점에 다시 한 번 확인한다.
+		$("#id_chk").val("true");
+	});
+}
+
+$("#id").on("input blur change", function(){
+	validateSignupEmailAndMark();
+});
 
 function validateString(event){
 	const pattern = /^(?=.*[a-zA-Z])(?=.*\d)(?=.*[~@#$!%*?&^()])[a-zA-Z\d~@#$!%*?&^()]{8,14}$/          
@@ -122,20 +127,33 @@ $("#password_re").keyup(function(){
 })
 
 $("#confirm").click(function(){
-	if($("#id_chk").val()=="false") {
+	var email = $.trim($("#id").val());
+	let checkEmail = RegExp(/^([a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})$/);
+	if(!checkEmail.test(email)) {
 		alert("이메일을 확인해 주세요.");
+		$("#id").focus();
 		return false;
 	}
 
-	id=$("#id").val();
-	$.post( "../get_set.php", {
-		type: 'member_check',
-		id: id
-	}).done(function(jqXHR) {
-		if(jqXHR=="500") {
-			jAlert("가입한 이력이 있습니다.","알림");
+	// keyup 미발생(붙여넣기/자동완성) 대비: 제출 시점에 1회 동기 검증
+	var emailBlocked = false;
+	$.ajax({
+		url: "../get_set.php",
+		type: "POST",
+		data: { type: "member_check", id: email },
+		async: false,
+		success: function(resp) {
+			var parsed = $.trim(resp).split("|");
+			if (parsed[0] != "1000") {
+				emailBlocked = true;
+				jAlert(parsed[1] || "가입한 이력이 있습니다.","알림", function(){ $("#id").focus(); });
+			}
+		},
+		error: function() {
+			emailBlocked = false;
 		}
 	});
+	if(emailBlocked) return false;
 
 	if($("#password_chk").val()=="false") {
 		alert("비밀번호를 확인해 주세요.");

@@ -316,7 +316,7 @@ function fregisterform_submit()
 
     // 회원아이디 검사
     if ($("input[name='w']").val() == "") {
-        var msg = reg_mb_id_check();
+        var msg = $.trim(reg_mb_id_check());
         if (msg) {
             alert(msg);
             return false;

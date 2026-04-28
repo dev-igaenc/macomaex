@@ -12,7 +12,7 @@ var reg_mb_id_check = function() {
             result = data;
         }
     });
-    return result;
+    return $.trim(result);
 }
 
 
