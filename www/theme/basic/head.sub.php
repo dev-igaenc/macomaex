@@ -89,7 +89,12 @@ if (defined('_SHOP_')) {
 add_javascript('<script src="'.G5_JS_URL.'/common.js?ver='.G5_JS_VER.'"></script>', 0);
 add_javascript('<script src="'.G5_JS_URL.'/wrest.js?ver='.G5_JS_VER.'"></script>', 0);
 add_javascript('<script src="'.G5_JS_URL.'/placeholders.min.js"></script>', 0);
-add_stylesheet('<link rel="stylesheet" href="'.G5_JS_URL.'/font-awesome/css/font-awesome.min.css">', 0);
+$font_awesome_css_url = G5_JS_URL.'/font-awesome/fonts/css/font-awesome.min.css';
+if (!is_file(G5_PATH.'/js/font-awesome/fonts/css/font-awesome.min.css')) {
+    // Backward compatibility for deployments that still keep the old css path.
+    $font_awesome_css_url = G5_JS_URL.'/font-awesome/css/font-awesome.min.css';
+}
+add_stylesheet('<link rel="stylesheet" href="'.$font_awesome_css_url.'">', 0);
 
 if(G5_IS_MOBILE) {
     add_javascript('<script src="'.G5_JS_URL.'/modernizr.custom.70111.js"></script>', 1); // overflow scroll 감지
