@@ -754,10 +754,11 @@
 	--login-guard-primary-dark: #1d4ed8;
 	--login-guard-shadow: 0 24px 60px rgba(15, 23, 42, .16);
 	position: relative;
-	width: min(420px, 100%);
+	max-width:380px;
+	width:90%;
 	background: var(--login-guard-card);
-	border-radius: 24px;
-	padding: 36px 32px 28px;
+	border-radius: 20px;
+	padding: 40px 36px 32px;
 	box-shadow: var(--login-guard-shadow);
 	text-align: center;
 	animation: loginGuardFade .18s ease-out;
@@ -801,8 +802,8 @@
 }
 
 .login-guard__icon {
-	width: 60px;
-	height: 60px;
+	width: 56px;
+	height: 56px;
 	margin: 0 auto 18px;
 	border-radius: 999px;
 	background: #2f5fe3;
@@ -813,21 +814,21 @@
 }
 
 .login-guard__icon svg {
-	width: 24px;
-	height: 24px;
-	fill: currentColor;
+	width: 26px;
+	height: 26px;
+	fill: #fff;
 }
 
 .login-guard__title {
 	margin: 0 0 10px;
-	font-size: 22px;
+	font-size: 18px;
 	font-weight: 700;
 	letter-spacing: -.02em;
 }
 
 .login-guard__desc {
 	margin: 0 0 26px;
-	font-size: 17px;
+	font-size: 14px;
 	line-height: 1.5;
 	color: var(--login-guard-muted);
 }
