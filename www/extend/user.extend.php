@@ -160,11 +160,11 @@ function login_chk(){
 
 function login_required_modal($msg = "로그인 후 이용하세요.", $loginUrl = "/bbs/login.php")
 {
-	$msg = trim(strip_tags((string)$msg, '<br>'));
-	if ($msg === '') $msg = "로그인 후 이용하세요.";
+	$msg = '서비스를 이용하시려면 로그인이 필요합니다.';
 
 	$loginUrl = trim((string)$loginUrl);
 	if ($loginUrl === '') $loginUrl = "/bbs/login.php";
+	$signupUrl = "/bbs/register.php";
 
 	header('Content-Type: text/html; charset=utf-8');
 	echo '<!doctype html>';
@@ -174,34 +174,37 @@ function login_required_modal($msg = "로그인 후 이용하세요.", $loginUrl
 	echo '<meta name="viewport" content="width=device-width, initial-scale=1">';
 	echo '<title>로그인 안내</title>';
 	echo '<style>';
-	echo ':root{color-scheme:light;--bg:#f5f7fb;--card:#fff;--text:#1f2937;--muted:#6b7280;--line:#e5e7eb;--primary:#2563eb;--primary-dark:#1d4ed8;--shadow:0 24px 60px rgba(15,23,42,.16);}';
+	echo ':root{color-scheme:light;--bg:#f5f7fb;--card:#fff;--text:#1f2937;--muted:#6b7280;--line:#e5e7eb;--primary:#2f5fe3;--primary-dark:#1d4ed8;--shadow:0 24px 60px rgba(15,23,42,.16);}';
 	echo '*{box-sizing:border-box}html,body{height:100%}body{margin:0;font-family:Pretendard,Apple SD Gothic Neo,Noto Sans KR,sans-serif;background:linear-gradient(180deg,#f8fbff 0%,#f3f6fb 100%);color:var(--text);}';
 	echo '.login-guard{min-height:100%;display:flex;align-items:center;justify-content:center;padding:24px;}';
 	echo '.login-guard__overlay{position:fixed;inset:0;background:rgba(15,23,42,.18);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);}';
-	echo '.login-guard__modal{position:relative;width:min(420px,100%);background:var(--card);border-radius:24px;padding:36px 32px 28px;box-shadow:var(--shadow);text-align:center;animation:loginGuardFade .18s ease-out;}';
+	echo '.login-guard__modal{position:relative;max-width:380px;width:90%;background:var(--card);border-radius:20px;padding:40px 36px 32px;box-shadow:var(--shadow);text-align:center;animation:loginGuardFade .18s ease-out;}';
 	echo '@keyframes loginGuardFade{from{opacity:0;transform:translateY(10px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}';
-	echo '.login-guard__icon{width:60px;height:60px;margin:0 auto 18px;border-radius:999px;background:#eff6ff;display:flex;align-items:center;justify-content:center;color:var(--primary);}';
-	echo '.login-guard__icon svg{width:30px;height:30px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}';
-	echo '.login-guard__title{margin:0 0 10px;font-size:22px;font-weight:700;letter-spacing:-.02em;}';
-	echo '.login-guard__desc{margin:0 0 26px;font-size:15px;line-height:1.7;color:var(--muted);}';
+	echo '.login-guard__close{position:absolute;top:12px;right:12px;width:28px;height:28px;border:none;border-radius:50%;background:transparent;color:#9ca3af;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;}';
+	echo '.login-guard__close svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2.2;stroke-linecap:round}';
+	echo '.login-guard__icon{width:56px;height:56px;margin:0 auto 18px;border-radius:999px;background:var(--primary);display:flex;align-items:center;justify-content:center;color:#fff;}';
+	echo '.login-guard__icon svg{width:24px;height:24px;fill:#fff}';
+	echo '.login-guard__title{margin:0 0 10px;font-size:18px;font-weight:700;letter-spacing:-.02em;}';
+	echo '.login-guard__desc{margin:0 0 26px;font-size:14px;line-height:1.5;color:var(--muted);}';
 	echo '.login-guard__actions{display:flex;gap:10px;}';
 	echo '.login-guard__btn{flex:1;display:inline-flex;align-items:center;justify-content:center;height:48px;border-radius:14px;border:1px solid transparent;font-size:15px;font-weight:600;text-decoration:none;cursor:pointer;transition:.18s ease;}';
 	echo '.login-guard__btn--ghost{background:#f3f4f6;color:#4b5563;border-color:#e5e7eb;}';
 	echo '.login-guard__btn--ghost:hover{background:#e5e7eb;}';
 	echo '.login-guard__btn--primary{background:var(--primary);color:#fff;}';
 	echo '.login-guard__btn--primary:hover{background:var(--primary-dark);}';
-	echo '@media (max-width:480px){.login-guard{padding:18px}.login-guard__modal{border-radius:20px;padding:30px 20px 22px}.login-guard__title{font-size:19px}.login-guard__desc{font-size:14px}.login-guard__actions{flex-direction:column;}}';
+	echo '@media (max-width:480px){.login-guard{padding:18px}.login-guard__modal{border-radius:20px;padding:30px 20px 22px}.login-guard__title{font-size:19px}.login-guard__desc{font-size:14px}.login-guard__actions{flex-direction:row;}}';
 	echo '</style>';
 	echo '</head>';
 	echo '<body>';
 	echo '<div class="login-guard">';
 	echo '<div class="login-guard__overlay" aria-hidden="true"></div>';
 	echo '<div class="login-guard__modal" role="dialog" aria-modal="true" aria-labelledby="loginGuardTitle">';
-	echo '<div class="login-guard__icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 12a4 4 0 1 0 0-8a4 4 0 0 0 0 8Z"/><path d="M4 20a8 8 0 0 1 16 0"/></svg></div>';
-	echo '<h1 class="login-guard__title" id="loginGuardTitle">로그인 후 이용 가능합니다</h1>';
-	echo '<p class="login-guard__desc">' . $msg . '<br>로그인 페이지로 이동해 주세요.</p>';
+	echo '<button type="button" class="login-guard__close" aria-label="닫기" onclick="history.back();"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>';
+	echo '<div class="login-guard__icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1s3.1 1.39 3.1 3.1v2z"/></svg></div>';
+	echo '<h1 class="login-guard__title" id="loginGuardTitle">로그인이 필요합니다</h1>';
+	echo '<p class="login-guard__desc">' . $msg . '</p>';
 	echo '<div class="login-guard__actions">';
-	echo '<button type="button" class="login-guard__btn login-guard__btn--ghost" onclick="history.back();">이전으로</button>';
+	echo '<a class="login-guard__btn login-guard__btn--ghost" href="' . htmlspecialchars($signupUrl, ENT_QUOTES, 'UTF-8') . '">회원가입</a>';
 	echo '<a class="login-guard__btn login-guard__btn--primary" href="' . htmlspecialchars($loginUrl, ENT_QUOTES, 'UTF-8') . '">로그인</a>';
 	echo '</div>';
 	echo '</div>';

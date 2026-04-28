@@ -59,7 +59,10 @@
 			channelListener: null,
 			activeRoomId: 0,
 			filterKeyword: '',
-			bootPromise: null
+			bootPromise: null,
+			composerEnabled: false,
+			isSending: false,
+			isUploading: false
 		};
 
 		// 데스크톱에서는 room list 폭을 토글하고, 모바일에서는 기존 전환 흐름을 유지한다.
@@ -92,16 +95,21 @@
 				'<div class="login-guard">' +
 					'<div class="login-guard__overlay" aria-hidden="true"></div>' +
 					'<div class="login-guard__modal" role="dialog" aria-modal="true" aria-labelledby="tradeChatLoginGuardTitle">' +
+						'<button type="button" class="login-guard__close" id="tradeChatLoginGuardClose" aria-label="닫기">' +
+							'<svg viewBox="0 0 24 24">' +
+								'<line x1="18" y1="6" x2="6" y2="18"></line>' +
+								'<line x1="6" y1="6" x2="18" y2="18"></line>' +
+							'</svg>' +
+						'</button>' +
 						'<div class="login-guard__icon" aria-hidden="true">' +
 							'<svg viewBox="0 0 24 24">' +
-								'<path d="M12 12a4 4 0 1 0 0-8a4 4 0 0 0 0 8Z"></path>' +
-								'<path d="M4 20a8 8 0 0 1 16 0"></path>' +
+								'<path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1s3.1 1.39 3.1 3.1v2z"></path>' +
 							'</svg>' +
 						'</div>' +
-						'<h1 class="login-guard__title" id="tradeChatLoginGuardTitle">로그인 후 이용 가능합니다</h1>' +
-						'<p class="login-guard__desc" id="tradeChatLoginGuardDesc">로그인 후 이용하세요.<br>로그인 페이지로 이동해 주세요.</p>' +
+						'<h1 class="login-guard__title" id="tradeChatLoginGuardTitle">로그인이 필요합니다</h1>' +
+						'<p class="login-guard__desc" id="tradeChatLoginGuardDesc">채팅을 확인하시려면 로그인이 필요합니다.</p>' +
 						'<div class="login-guard__actions">' +
-							'<button type="button" class="login-guard__btn login-guard__btn--ghost" id="tradeChatLoginGuardBack">이전으로</button>' +
+							'<a class="login-guard__btn login-guard__btn--ghost" id="tradeChatLoginGuardSignupLink" href="/bbs/register.php">회원가입</a>' +
 							'<a class="login-guard__btn login-guard__btn--primary" id="tradeChatLoginGuardLink" href="/bbs/login.php">로그인</a>' +
 						'</div>' +
 					'</div>' +
@@ -109,7 +117,7 @@
 
 			document.body.appendChild(guard);
 
-			guard.querySelector('#tradeChatLoginGuardBack').addEventListener('click', function () {
+			guard.querySelector('#tradeChatLoginGuardClose').addEventListener('click', function () {
 				document.documentElement.classList.remove('hide-scroll');
 				guard.classList.remove('is-open');
 			});
@@ -122,7 +130,8 @@
 			var guard = ensureLoginGuardModal();
 			closeModal();
 			guard.querySelector('#tradeChatLoginGuardLink').setAttribute('href', loginUrl);
-			guard.querySelector('#tradeChatLoginGuardDesc').innerHTML = '로그인 후 이용하세요.<br>로그인 페이지로 이동해 주세요.';
+			guard.querySelector('#tradeChatLoginGuardSignupLink').setAttribute('href', '/bbs/register.php');
+			guard.querySelector('#tradeChatLoginGuardDesc').textContent = '채팅을 확인하시려면 로그인이 필요합니다.';
 			document.documentElement.classList.add('hide-scroll');
 			guard.classList.add('is-open');
 		}
@@ -165,13 +174,22 @@
 				'<span class="chat-main-status__text">' + escapeHtml(statusText || '연결 대기 중') + '</span>';
 		}
 
-		function setComposerEnabled(enabled, placeholder) {
-			inputEl.disabled = !enabled;
-			sendBtn.disabled = !enabled;
+		function refreshComposerControls(placeholder) {
+			var composerEnabled = !!state.composerEnabled;
+			var isBusy = !!(state.isSending || state.isUploading);
+			inputEl.disabled = !composerEnabled;
+			sendBtn.disabled = !composerEnabled || isBusy;
 			if (attachBtnEl) {
-				attachBtnEl.disabled = !enabled;
+				attachBtnEl.disabled = !composerEnabled || isBusy;
 			}
-			inputEl.placeholder = placeholder || '메시지를 입력하세요…';
+			if (placeholder) {
+				inputEl.placeholder = placeholder;
+			}
+		}
+
+		function setComposerEnabled(enabled, placeholder) {
+			state.composerEnabled = !!enabled;
+			refreshComposerControls(placeholder || '메시지를 입력하세요…');
 		}
 
 		function renderEmptyMessages(message) {
@@ -850,7 +868,7 @@
 		if (formEl) {
 			formEl.addEventListener('submit', async function (event) {
 				event.preventDefault();
-				if (!state.channel || inputEl.disabled) return;
+				if (!state.channel || inputEl.disabled || state.isSending || state.isUploading) return;
 
 				var textValidation = validateMessageText(inputEl.value || '', false);
 				if (!textValidation.valid) {
@@ -858,15 +876,20 @@
 					return;
 				}
 
-				setComposerEnabled(false, '메시지 전송 중입니다.');
+				var sendingText = textValidation.text;
+				inputEl.value = '';
+				state.isSending = true;
+				refreshComposerControls('메시지 전송 중입니다.');
 				try {
-					await state.channel.sendMessage({ text: textValidation.text });
-					inputEl.value = '';
-					renderMessages(state.channel.state && state.channel.state.messages ? state.channel.state.messages : [], state.bootstrap.user.id, findRoomById(state.activeRoomId));
+					await state.channel.sendMessage({ text: sendingText });
 				} catch (error) {
+					if (!inputEl.value) {
+						inputEl.value = sendingText;
+					}
 					showToast(error && error.message ? error.message : '메시지 전송에 실패했습니다.', 'error');
 				} finally {
-					setComposerEnabled(true, '메시지를 입력하세요…');
+					state.isSending = false;
+					refreshComposerControls('메시지를 입력하세요…');
 					inputEl.focus();
 				}
 			});
@@ -881,20 +904,21 @@
 			fileInputEl.addEventListener('change', async function () {
 				var file = fileInputEl.files && fileInputEl.files[0] ? fileInputEl.files[0] : null;
 				if (!file) return;
-				if (!state.channel || inputEl.disabled) {
+				if (!state.channel || inputEl.disabled || state.isSending || state.isUploading) {
 					fileInputEl.value = '';
 					return;
 				}
 
-				setComposerEnabled(false, '파일 전송 중입니다.');
+				state.isUploading = true;
+				refreshComposerControls('파일 전송 중입니다.');
 				try {
 					await uploadAndSendFileAttachment(file);
-					renderMessages(state.channel.state && state.channel.state.messages ? state.channel.state.messages : [], state.bootstrap.user.id, findRoomById(state.activeRoomId));
 				} catch (error) {
 					showToast(error && error.message ? error.message : '파일 전송에 실패했습니다.', 'error');
 				} finally {
+					state.isUploading = false;
 					fileInputEl.value = '';
-					setComposerEnabled(true, '메시지를 입력하세요…');
+					refreshComposerControls('메시지를 입력하세요…');
 					inputEl.focus();
 				}
 			});

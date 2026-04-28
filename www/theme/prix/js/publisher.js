@@ -108,19 +108,13 @@ if($("#sideMenuArea").length>0){
 		});
 	});
 
-	$("body").on("click", "#wrap[data-device='mobile'] .mMenu", function(){ // [MO] MENU OPEN
-		if(!$(".mMenu").hasClass("open")){
-			$("#header").addClass("all");
-			$(".mMenu").addClass("open");
-			$("html").addClass("hide");
-			$("#menuArea").addClass("open");
-		}else{
-			$("#header").removeClass("all");
-			$(".mMenu").removeClass("open");
-			$("html").removeClass("hide");
-			$("#menuArea").removeClass("open");
-		}
-	});
+		$("body").on("click", "#wrap[data-device='mobile'] .mMenu", function(){ // [MO] MENU OPEN/CLOSE (PC와 동일한 사이드 메뉴 사용)
+			if(!$(".mMenu").hasClass("open")){
+				sideMenuOpen();
+			}else{
+				sideMenuClose();
+			}
+		});
 	$("body").on("click", "#menu.gnb>li:not('.one')>a", function(){// [MO] GNB OPEN
 		var idx = $("#menu.gnb>li:not('.one')>a").index($(this));
 		$("#menu.gnb>li:not('.one')>a").each(function(index){

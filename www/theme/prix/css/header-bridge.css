@@ -41,8 +41,12 @@
 }
 @media (max-width: 1024px) {
   #header #hd_search { display: none; }
-  #header .right-utill a { display: none; }
-  #header .right-utill { gap: 0; margin-right: 0; }
+  #header .right-utill { gap: 10px; margin-right: 0; }
+  #header .right-utill a {
+    display: inline-flex;
+    white-space: nowrap;
+  }
+  #header .right-utill a + a::before { left: -6px; }
 }
 @media (max-width: 768px) {
   #header .list-header_logo_img { height: 20px !important; }
