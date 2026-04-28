@@ -95,16 +95,21 @@
 				'<div class="login-guard">' +
 					'<div class="login-guard__overlay" aria-hidden="true"></div>' +
 					'<div class="login-guard__modal" role="dialog" aria-modal="true" aria-labelledby="tradeChatLoginGuardTitle">' +
+						'<button type="button" class="login-guard__close" id="tradeChatLoginGuardClose" aria-label="닫기">' +
+							'<svg viewBox="0 0 24 24">' +
+								'<line x1="18" y1="6" x2="6" y2="18"></line>' +
+								'<line x1="6" y1="6" x2="18" y2="18"></line>' +
+							'</svg>' +
+						'</button>' +
 						'<div class="login-guard__icon" aria-hidden="true">' +
 							'<svg viewBox="0 0 24 24">' +
-								'<path d="M12 12a4 4 0 1 0 0-8a4 4 0 0 0 0 8Z"></path>' +
-								'<path d="M4 20a8 8 0 0 1 16 0"></path>' +
+								'<path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1s3.1 1.39 3.1 3.1v2z"></path>' +
 							'</svg>' +
 						'</div>' +
-						'<h1 class="login-guard__title" id="tradeChatLoginGuardTitle">로그인 후 이용 가능합니다</h1>' +
-						'<p class="login-guard__desc" id="tradeChatLoginGuardDesc">로그인 후 이용하세요.<br>로그인 페이지로 이동해 주세요.</p>' +
+						'<h1 class="login-guard__title" id="tradeChatLoginGuardTitle">로그인이 필요합니다</h1>' +
+						'<p class="login-guard__desc" id="tradeChatLoginGuardDesc">채팅을 확인하시려면 로그인이 필요합니다.</p>' +
 						'<div class="login-guard__actions">' +
-							'<button type="button" class="login-guard__btn login-guard__btn--ghost" id="tradeChatLoginGuardBack">이전으로</button>' +
+							'<a class="login-guard__btn login-guard__btn--ghost" id="tradeChatLoginGuardSignupLink" href="/bbs/register.php">회원가입</a>' +
 							'<a class="login-guard__btn login-guard__btn--primary" id="tradeChatLoginGuardLink" href="/bbs/login.php">로그인</a>' +
 						'</div>' +
 					'</div>' +
@@ -112,7 +117,7 @@
 
 			document.body.appendChild(guard);
 
-			guard.querySelector('#tradeChatLoginGuardBack').addEventListener('click', function () {
+			guard.querySelector('#tradeChatLoginGuardClose').addEventListener('click', function () {
 				document.documentElement.classList.remove('hide-scroll');
 				guard.classList.remove('is-open');
 			});
@@ -125,7 +130,8 @@
 			var guard = ensureLoginGuardModal();
 			closeModal();
 			guard.querySelector('#tradeChatLoginGuardLink').setAttribute('href', loginUrl);
-			guard.querySelector('#tradeChatLoginGuardDesc').innerHTML = '로그인 후 이용하세요.<br>로그인 페이지로 이동해 주세요.';
+			guard.querySelector('#tradeChatLoginGuardSignupLink').setAttribute('href', '/bbs/register.php');
+			guard.querySelector('#tradeChatLoginGuardDesc').textContent = '채팅을 확인하시려면 로그인이 필요합니다.';
 			document.documentElement.classList.add('hide-scroll');
 			guard.classList.add('is-open');
 		}
