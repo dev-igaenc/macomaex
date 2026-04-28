@@ -1014,6 +1014,7 @@ $banner_sell_stat = 12;
                                     </div>
                                 <?php endif; ?>
                             </div>
+                            <div class="swiper-pagination"></div>
                         </div>
                         <div class="list-grid_more_wrap" id="loadMoreWrap">
                             <button type="button" class="list-grid_more_btn" id="btnLoadMore">&#8635; 다른 추천 보기</button>
