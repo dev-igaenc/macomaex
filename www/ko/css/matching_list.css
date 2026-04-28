@@ -762,15 +762,18 @@ body.ai-mode .mHookSection_title { font-weight: 600; }
     gap: 5px !important;
     margin-bottom: 6px !important;
     align-self: flex-start !important;
+    min-height: 22px !important;
+    max-height: 22px !important;
+    overflow: hidden !important;
 }
 #listWrap .mCompanyCard_badges .mCompanyCard_badge {
     margin-bottom: 0 !important;
 }
 #listWrap .mCompanyCard_badge {
     display: inline-block !important;
-    padding: 3px var(--sp-2, 8px) !important;
-    border-radius: var(--r-xs, 4px) !important;
-    font-size: var(--fs-badge, 11px) !important;
+    padding: 3px 8px !important;
+    border-radius: 4px !important;
+    font-size: 11px !important;
     font-weight: 600 !important;
     margin-bottom: 0 !important;
     align-self: flex-start !important;
@@ -817,7 +820,7 @@ body.ai-mode .mHookSection_title { font-weight: 600; }
     margin-top: 6px !important;
     margin-bottom: 10px !important;
     align-items: center !important;
-    min-height: 0 !important;
+    min-height: 28px !important;
     max-height: 28px !important;
     overflow: hidden !important;
 }

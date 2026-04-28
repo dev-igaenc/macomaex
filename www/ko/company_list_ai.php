@@ -24,6 +24,7 @@ add_stylesheet('<link rel="stylesheet" href="' . G5_URL . '/ko/css/verify-modal.
 add_stylesheet('<link rel="stylesheet" href="' . G5_URL . '/ko/css/ai-loading.css?ver=' . G5_CSS_VER . '">', 216);
 add_stylesheet('<link rel="stylesheet" href="' . G5_URL . '/ko/css/company_list_ai.css?ver=' . (int)$company_list_ai_css_ver . '">', 220);
 
+$g5['body_script'] = ' class="page-company-list-ai"';
 include_once(G5_THEME_PATH . '/head.php');
 
 echo '<style>#pageTop,#sVisual{display:none !important;}</style>';
@@ -69,24 +70,36 @@ function company_list_ai_translate_radar($radar)
     return $out;
 }
 
-function company_list_ai_parse_pd_nm($pd_nm)
+function company_list_ai_normalize_tags($tags)
 {
-    $pd_nm = trim((string)$pd_nm);
-    if ($pd_nm === '') return array();
+    if (!is_array($tags) || empty($tags)) return array();
 
-    $parts = preg_split('/\s*,\s*/u', $pd_nm);
-    if (!is_array($parts)) return array();
-
-    $tags = array();
-    foreach ($parts as $part) {
-        $tag = trim((string)$part);
-        if ($tag === '') continue;
-        $tag = str_replace(' 외', '', $tag);
-        if ($tag === '' || in_array($tag, $tags, true)) continue;
-        $tags[] = $tag;
+    $normalized = array();
+    foreach ($tags as $tag_raw) {
+        $tag = trim((string)$tag_raw);
+        if ($tag === '' || in_array($tag, $normalized, true)) continue;
+        $normalized[] = $tag;
     }
 
-    return $tags;
+    return $normalized;
+}
+
+function company_list_ai_parse_keywords_json($keywords_json)
+{
+    $keywords_json = trim((string)$keywords_json);
+    if ($keywords_json === '') return array();
+
+    $decoded = json_decode($keywords_json, true);
+    if (!is_array($decoded)) return array();
+
+    return company_list_ai_normalize_tags($decoded);
+}
+
+function company_list_ai_resolve_tag_total_count($keyword_count, $tags)
+{
+    $count = (int)$keyword_count;
+    if ($count > 0) return $count;
+    return count(is_array($tags) ? $tags : array());
 }
 
 function company_list_ai_normalize_kedcd($kedcd)
@@ -131,7 +144,7 @@ function company_list_ai_apply_unlock_state($cards, $unlocked_kedcd_map)
     return $cards;
 }
 
-function company_list_ai_fetch_company_pd_nm_map($kedcd_list)
+function company_list_ai_fetch_company_keyword_map($kedcd_list)
 {
     if (!is_array($kedcd_list) || empty($kedcd_list)) return array();
 
@@ -153,7 +166,7 @@ function company_list_ai_fetch_company_pd_nm_map($kedcd_list)
         if (empty($quoted)) continue;
 
         $sql = "
-            SELECT KEDCD, PD_NM
+            SELECT KEDCD, keywords_json, keyword_count
             FROM company
             WHERE KEDCD IN (" . implode(',', $quoted) . ")
         ";
@@ -163,9 +176,14 @@ function company_list_ai_fetch_company_pd_nm_map($kedcd_list)
         while ($row = sql_fetch_array($res)) {
             $k = str_pad(preg_replace('/\D/', '', (string)($row['KEDCD'] ?? '')), 10, '0', STR_PAD_LEFT);
             if (strlen($k) !== 10) continue;
-            $pd_nm = trim((string)($row['PD_NM'] ?? ''));
-            if ($pd_nm === '') continue;
-            $map[$k] = $pd_nm;
+            $keywords_json = trim((string)($row['keywords_json'] ?? ''));
+            $tags = company_list_ai_parse_keywords_json($keywords_json);
+            $keyword_count = max(0, (int)($row['keyword_count'] ?? 0));
+            $map[$k] = array(
+                'keywords_json' => $keywords_json,
+                'tags' => $tags,
+                'keyword_count' => $keyword_count,
+            );
         }
     }
 
@@ -254,22 +272,26 @@ function company_list_ai_ml_item_to_card($item)
     if ($is_venture) $badges[] = '벤처인증';
 
     $tags = array();
-    $pd_nm = trim((string)($item['pd_nm'] ?? $item['PD_NM'] ?? ''));
-    if ($pd_nm !== '') {
-        $tags = company_list_ai_parse_pd_nm($pd_nm);
+    if (isset($item['keywords_json'])) {
+        if (is_array($item['keywords_json'])) {
+            $tags = company_list_ai_normalize_tags($item['keywords_json']);
+        } else {
+            $tags = company_list_ai_parse_keywords_json((string)$item['keywords_json']);
+        }
     }
     if (empty($tags) && isset($item['tags']) && is_array($item['tags'])) {
-        foreach ($item['tags'] as $tag) {
-            $t = trim((string)$tag);
-            if ($t === '' || in_array($t, $tags, true)) continue;
-            $tags[] = $t;
-        }
+        $tags = company_list_ai_normalize_tags($item['tags']);
     } else if (empty($tags) && isset($item['tags']) && is_string($item['tags']) && trim($item['tags']) !== '') {
-        $parts = preg_split('/\s*,\s*/u', trim((string)$item['tags']));
-        foreach ($parts as $tag) {
-            $t = trim((string)$tag);
-            if ($t === '' || in_array($t, $tags, true)) continue;
-            $tags[] = $t;
+        $tags_from_json = company_list_ai_parse_keywords_json((string)$item['tags']);
+        if (!empty($tags_from_json)) {
+            $tags = $tags_from_json;
+        } else {
+            $parts = preg_split('/\s*,\s*/u', trim((string)$item['tags']));
+            foreach ($parts as $tag) {
+                $t = trim((string)$tag);
+                if ($t === '' || in_array($t, $tags, true)) continue;
+                $tags[] = $t;
+            }
         }
     }
     if (empty($tags)) {
@@ -281,6 +303,7 @@ function company_list_ai_ml_item_to_card($item)
         }
     }
     if (empty($tags)) $tags[] = 'AI추천';
+    $tag_total_count = company_list_ai_resolve_tag_total_count($item['keyword_count'] ?? 0, $tags);
 
     return array(
         'kedcd' => $kedcd,
@@ -288,6 +311,7 @@ function company_list_ai_ml_item_to_card($item)
         'score' => $score,
         'badges' => $badges,
         'tags' => $tags,
+        'tag_total_count' => $tag_total_count,
         'radar' => company_list_ai_translate_radar(isset($item['radar']) ? $item['radar'] : array()),
     );
 }
@@ -635,10 +659,13 @@ function company_list_ai_render_card($card, $trade_type, $rank = 0, $src_kedcd =
     $tags_html = '';
     $all_tags = isset($card['tags']) && is_array($card['tags']) ? $card['tags'] : [];
     $tags = array_slice($all_tags, 0, 3);
+    $total_tag_count = isset($card['tag_total_count']) && (int)$card['tag_total_count'] > 0
+        ? (int)$card['tag_total_count']
+        : count($all_tags);
     foreach ($tags as $tag) {
         $tags_html .= '<span class="mCompanyCard_desc_tag">' . htmlspecialchars($tag, ENT_QUOTES, 'UTF-8') . '</span>';
     }
-    $hidden_count = max(0, count($all_tags) - count($tags));
+    $hidden_count = max(0, $total_tag_count - count($tags));
     if ($hidden_count > 0) {
         $tags_html .= '<span class="mCompanyCard_desc_more">+' . $hidden_count . '</span>';
     }
@@ -779,12 +806,15 @@ if (!empty($resolved_base_payload['kedcd'])) {
         $buy_live_ok = true;
         $buy_bucket = company_list_ai_build_bucket($buy_call['data']['results'], 45);
         $buy_items = array_merge($buy_bucket['top3'], $buy_bucket['list']);
-        $buy_pd_nm_map = company_list_ai_fetch_company_pd_nm_map(array_column($buy_items, 'kedcd'));
+        $buy_keyword_map = company_list_ai_fetch_company_keyword_map(array_column($buy_items, 'kedcd'));
         $mapped_buy = array();
         foreach ($buy_items as $bi) {
             $item_kedcd = str_pad(preg_replace('/\D/', '', (string)($bi['kedcd'] ?? '')), 10, '0', STR_PAD_LEFT);
-            if (isset($buy_pd_nm_map[$item_kedcd])) {
-                $bi['pd_nm'] = $buy_pd_nm_map[$item_kedcd];
+            if (isset($buy_keyword_map[$item_kedcd]) && is_array($buy_keyword_map[$item_kedcd])) {
+                $kw_meta = $buy_keyword_map[$item_kedcd];
+                if (!empty($kw_meta['keywords_json'])) $bi['keywords_json'] = $kw_meta['keywords_json'];
+                if (!empty($kw_meta['tags']) && is_array($kw_meta['tags'])) $bi['tags'] = $kw_meta['tags'];
+                if (isset($kw_meta['keyword_count'])) $bi['keyword_count'] = (int)$kw_meta['keyword_count'];
             }
             $card = company_list_ai_ml_item_to_card($bi);
             if (is_array($card)) $mapped_buy[] = $card;
@@ -802,12 +832,15 @@ if (!empty($resolved_base_payload['kedcd'])) {
         $sell_live_ok = true;
         $sell_bucket = company_list_ai_build_bucket($sell_call['data']['results'], 45);
         $sell_items = array_merge($sell_bucket['top3'], $sell_bucket['list']);
-        $sell_pd_nm_map = company_list_ai_fetch_company_pd_nm_map(array_column($sell_items, 'kedcd'));
+        $sell_keyword_map = company_list_ai_fetch_company_keyword_map(array_column($sell_items, 'kedcd'));
         $mapped_sell = array();
         foreach ($sell_items as $si) {
             $item_kedcd = str_pad(preg_replace('/\D/', '', (string)($si['kedcd'] ?? '')), 10, '0', STR_PAD_LEFT);
-            if (isset($sell_pd_nm_map[$item_kedcd])) {
-                $si['pd_nm'] = $sell_pd_nm_map[$item_kedcd];
+            if (isset($sell_keyword_map[$item_kedcd]) && is_array($sell_keyword_map[$item_kedcd])) {
+                $kw_meta = $sell_keyword_map[$item_kedcd];
+                if (!empty($kw_meta['keywords_json'])) $si['keywords_json'] = $kw_meta['keywords_json'];
+                if (!empty($kw_meta['tags']) && is_array($kw_meta['tags'])) $si['tags'] = $kw_meta['tags'];
+                if (isset($kw_meta['keyword_count'])) $si['keyword_count'] = (int)$kw_meta['keyword_count'];
             }
             $card = company_list_ai_ml_item_to_card($si);
             if (is_array($card)) $mapped_sell[] = $card;

@@ -219,7 +219,7 @@
             : buildEmptyStateHtml(getNotice(currentType, 'rest_notice', '추가 추천 결과가 없습니다.'));
 
         if (loadMoreWrap) {
-            loadMoreWrap.style.display = totalRestPages > 1 ? 'flex' : 'none';
+            loadMoreWrap.style.display = restPool.length > 0 ? 'flex' : 'none';
         }
 
         if (shouldScrollToRest && restHeader) {
@@ -264,7 +264,20 @@
         var data = aiData[currentType] || { rest: [] };
         var restPool = Array.isArray(data.rest) ? data.rest : [];
         var totalRestPages = Math.ceil(restPool.length / restPageSize) || 1;
-        restPageIndex = (restPageIndex + 1) % totalRestPages;
+
+        if (totalRestPages > 1) {
+            restPageIndex = (restPageIndex + 1) % totalRestPages;
+        } else if (restPool.length > 1) {
+            // 1페이지뿐이어도 버튼 클릭 시 카드 순서를 회전해 "다른 추천 보기" 동작 작동
+            var rotateBy = Math.min(3, restPool.length - 1);
+            for (var i = 0; i < rotateBy; i++) {
+                restPool.push(restPool.shift());
+            }
+            data.rest = restPool;
+            aiData[currentType] = data;
+            restPageIndex = 0;
+        }
+
         renderCurrent(true);
     });
 

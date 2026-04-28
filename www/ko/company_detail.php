@@ -51,6 +51,29 @@ function trade_request_display_value($value) {
 	return ($value !== '') ? $value : '정보 준비중';
 }
 
+function parse_keywords_json_tags_detail($keywords_json) {
+	$keywords_json = trim((string)$keywords_json);
+	if ($keywords_json === '') return array();
+
+	$decoded = json_decode($keywords_json, true);
+	if (!is_array($decoded)) return array();
+
+	$result = array();
+	foreach ($decoded as $kw) {
+		$trimmed = trim((string)$kw);
+		if ($trimmed === '') continue;
+		$result[] = $trimmed;
+	}
+
+	return array_values(array_unique($result));
+}
+
+function resolve_keyword_tag_total_count_detail($keyword_count, $tags) {
+	$count = (int)$keyword_count;
+	if ($count > 0) return $count;
+	return is_array($tags) ? count($tags) : 0;
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'trade_request_insert') {
 	company_detail_handle_trade_request_insert($member, $_POST);
 }
@@ -76,7 +99,8 @@ $company = sql_fetch("
 		ESTB_DT,
 		LABORER_SUM,
 		ENP_TYP,
-		PD_NM,
+		keywords_json,
+		keyword_count,
 		LOC_ADDRA,
 		LOC_ADDRB,
 		HPAGE_URL
@@ -158,6 +182,14 @@ if (!empty($member['mb_id'])) {
 $companyTitleDisplay = trade_request_display_value($company['ENP_NM'] ?? '');
 $companyAddressDisplay = trade_request_display_value(trim(($company['LOC_ADDRA'] ?? '') . ' ' . ($company['LOC_ADDRB'] ?? '')));
 $companyHomepageDisplay = trade_request_display_value($company['HPAGE_URL'] ?? '');
+$companyKeywordTags = parse_keywords_json_tags_detail($company['keywords_json'] ?? '');
+$companyKeywordTotalCount = resolve_keyword_tag_total_count_detail($company['keyword_count'] ?? 0, $companyKeywordTags);
+$companyKeywordDisplayTags = array_slice($companyKeywordTags, 0, 3);
+$companyKeywordRestCount = max($companyKeywordTotalCount - count($companyKeywordDisplayTags), 0);
+if ($companyKeywordRestCount > 0) {
+	$companyKeywordDisplayTags[] = '+' . $companyKeywordRestCount;
+}
+$companyProductLineText = implode(' · ', $companyKeywordTags);
 
 // 모달에서 쓰는 "우리 기업 정보"는 로그인 회원의 사업자번호 기준 회사 정보로 맞춘다.
 $requesterCompanyData = !empty($member['mb_id'])
@@ -174,11 +206,11 @@ $companyDetailData = array(
 	'title' => $company['ENP_NM'] ?? '',
 	'title_display' => $companyTitleDisplay,
 	'sub' => $industry['k_code_name'] ?? '',
-	'tags' => array(),
+	'tags' => $companyKeywordDisplayTags,
 	'founded' => $foundedYear,
 	'employees' => !empty($company['LABORER_SUM']) ? number_format((float)$company['LABORER_SUM']) . '명' : '',
 	'corp_type' => $companyType,
-	'product_line' => $company['PD_NM'] ?? '',
+	'product_line' => $companyProductLineText,
 	'credit' => $score['total_grade_22'] ?? '',
 	'bzno' => $company['BZNO'] ?? '',
 	'defaultRequestMessage' => $defaultMessage,
@@ -321,7 +353,7 @@ window.MATCH_REQUEST_CONTEXT = {
 		employees: <?php echo json_encode(!empty($company['LABORER_SUM']) ? number_format((float)$company['LABORER_SUM']) . '명' : '', JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>,
 		corpType: <?php echo json_encode($companyType, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>,
 		industry: <?php echo json_encode($industry['k_code_name'] ?? '', JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>,
-		product: <?php echo json_encode($company['PD_NM'] ?? '', JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>
+		product: <?php echo json_encode($companyDetailData['product_line'] ?? '', JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>
 	}
 };
 </script>

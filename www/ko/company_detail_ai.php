@@ -25,24 +25,30 @@ function company_detail_ai_format_badge_percent($value)
     return rtrim(rtrim(number_format($num, 2, '.', ''), '0'), '.');
 }
 
-// 주력 제품 문자열(PD_NM)을 태그 배열로 변환
-function company_detail_ai_parse_pd_nm($pd_nm)
+// keywords_json(JSON 배열)을 태그 배열로 변환
+function company_detail_ai_parse_keywords_json($keywords_json)
 {
-    $pd_nm = trim((string)$pd_nm);
-    if ($pd_nm === '') return array();
+    $keywords_json = trim((string)$keywords_json);
+    if ($keywords_json === '') return array();
 
-    $parts = preg_split('/\s*,\s*/u', $pd_nm);
-    if (!is_array($parts)) return array();
+    $decoded = json_decode($keywords_json, true);
+    if (!is_array($decoded)) return array();
 
     $tags = array();
-    foreach ($parts as $part) {
+    foreach ($decoded as $part) {
         $tag = trim((string)$part);
         if ($tag === '') continue;
-        $tag = str_replace(' 외', '', $tag);
         if ($tag === '' || in_array($tag, $tags, true)) continue;
         $tags[] = $tag;
     }
     return $tags;
+}
+
+function company_detail_ai_resolve_tag_total_count($keyword_count, $tags)
+{
+    $count = (int)$keyword_count;
+    if ($count > 0) return $count;
+    return count(is_array($tags) ? $tags : array());
 }
 
 function company_detail_ai_display_value($value)
@@ -61,7 +67,7 @@ if ($kedcd === '' && isset($_GET['id'])) {
 $company = array();
 if (strlen($kedcd) === 10) {
     // 상세 기본 정보 조회
-    $company = sql_fetch("\n        SELECT KEDCD, ENP_NM, BZNO, PD_NM, BZC_CD, ENP_TYP, LABORER_SUM, ESTB_DT, LOC_ADDRA, LOC_ADDRB, HPAGE_URL\n        FROM company\n        WHERE KEDCD = '" . sql_escape_string($kedcd) . "'\n        LIMIT 1\n    ");
+    $company = sql_fetch("\n        SELECT KEDCD, ENP_NM, BZNO, keywords_json, keyword_count, BZC_CD, ENP_TYP, LABORER_SUM, ESTB_DT, LOC_ADDRA, LOC_ADDRB, HPAGE_URL\n        FROM company\n        WHERE KEDCD = '" . sql_escape_string($kedcd) . "'\n        LIMIT 1\n    ");
 }
 
 $company_name = trim((string)($company['ENP_NM'] ?? ''));
@@ -99,8 +105,10 @@ if (!empty($company['ESTB_DT']) && strlen((string)$company['ESTB_DT']) >= 4) {
 $score = array();
 $industry_name = '';
 $company_type = '법인기업';
-$pd_nm = trim((string)($company['PD_NM'] ?? ''));
-$seed_tags = company_detail_ai_parse_pd_nm($pd_nm);
+$keywords_json = trim((string)($company['keywords_json'] ?? ''));
+$seed_tags = company_detail_ai_parse_keywords_json($keywords_json);
+$seed_tag_total_count = company_detail_ai_resolve_tag_total_count($company['keyword_count'] ?? 0, $seed_tags);
+$seed_product_line = implode(', ', $seed_tags);
 
 if (strlen($kedcd) === 10) {
     $kedcd_sql = sql_escape_string($kedcd);
@@ -156,6 +164,7 @@ $company_seed = array(
     'title_display' => company_detail_ai_display_value($company_name),
     'sub' => $industry_name,
     'tags' => $seed_tags,
+    'tag_total_count' => $seed_tag_total_count,
     'score' => (isset($score['final_total_score_5']) && $score['final_total_score_5'] !== '') ? (float)$score['final_total_score_5'] : null,
     'grow' => (isset($score['growth_score_5']) && $score['growth_score_5'] !== '') ? (float)$score['growth_score_5'] : null,
     'profit' => (isset($score['profit_score_5']) && $score['profit_score_5'] !== '') ? (float)$score['profit_score_5'] : null,
@@ -172,7 +181,7 @@ $company_seed = array(
     'address_display' => company_detail_ai_display_value(trim((string)($company['LOC_ADDRA'] ?? '') . ' ' . (string)($company['LOC_ADDRB'] ?? ''))),
     'homepage' => trim((string)($company['HPAGE_URL'] ?? '')),
     'homepage_display' => company_detail_ai_display_value(trim((string)($company['HPAGE_URL'] ?? ''))),
-    'product_line' => $pd_nm,
+    'product_line' => $seed_product_line,
     'is_unlocked' => $is_detail_unlocked,
     'region_insensitive' => false,
     'clients' => array(),
@@ -351,7 +360,7 @@ window.MATCH_REQUEST_CONTEXT = {
 		employees: <?php echo json_encode(!empty($company['LABORER_SUM']) ? number_format((float)$company['LABORER_SUM']) . '명' : '', JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>,
 		corpType: <?php echo json_encode('법인기업', JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>,
 		industry: <?php echo json_encode($company['BZC_CD'] ?? '', JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>,
-		product: <?php echo json_encode($company['PD_NM'] ?? '', JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>
+		product: <?php echo json_encode($company_seed['product_line'] ?? '', JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>
 	},
 	seedCompany: <?php echo json_encode($company_seed, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>
 };

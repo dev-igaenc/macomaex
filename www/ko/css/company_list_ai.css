@@ -2,6 +2,11 @@
 html { min-height: 100%; background: #FAFBFD; }
 html, body { margin: 0; overflow-x: hidden; font-family: var(--font-base); background: #FAFBFD; }
 #listWrap { background: var(--bg, #FAFBFD); min-height: calc(100vh + 60px); }
+.page-company-list-ai #wrap,
+.page-company-list-ai #wrapper,
+.page-company-list-ai #container {
+    background: #FAFBFD !important;
+}
 .list-header {
     background: var(--card, #fff);
     border-bottom: 1px solid var(--border, #e8e8e8);
@@ -727,6 +732,7 @@ html, body { margin: 0; overflow-x: hidden; font-family: var(--font-base); backg
     gap: 5px !important;
     margin-bottom: 6px !important;
     align-self: flex-start !important;
+    min-height: 22px !important;
 }
 .company-list-ai-real .ai-top3-section-top .mCompanyCard_badge,
 .company-list-ai-real .ai-rest-section .mCompanyCard_badge {

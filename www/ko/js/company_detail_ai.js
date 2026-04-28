@@ -156,6 +156,12 @@ if (/^\d{10}$/.test(demoId)) {
             if (!_mergedTags.length) {
                 _mergedTags = parseTagListFromLine(_base.product_line || _card.product_line || '');
             }
+            var _cardTagTotalCount = Number(_card.tag_total_count || _card.keyword_count || 0);
+            var _baseTagTotalCount = Number(_base.tag_total_count || _base.keyword_count || 0);
+            var _mergedTagTotalCount = Number.isFinite(_cardTagTotalCount) && _cardTagTotalCount > 0
+                ? _cardTagTotalCount
+                : (Number.isFinite(_baseTagTotalCount) && _baseTagTotalCount > 0 ? _baseTagTotalCount : _mergedTags.length);
+            if (_mergedTagTotalCount < _mergedTags.length) _mergedTagTotalCount = _mergedTags.length;
             var _productLine = String(_base.product_line || _card.product_line || '').trim();
             if (!_productLine && _mergedTags.length) {
                 _productLine = _mergedTags.join(', ');
@@ -193,6 +199,7 @@ if (/^\d{10}$/.test(demoId)) {
                 title: _card.title || _base.title || demoId,
                 sub: _card.one_line || _card.industry_nm || _card.industry || _base.sub || '',
                 tags: _mergedTags,
+                tag_total_count: _mergedTagTotalCount,
                 score: _scorePct !== null ? +(_scorePct / 20).toFixed(2) : (Number.isFinite(Number(_base.score)) ? Number(_base.score) : null),
                 ai_match: _scorePct !== null ? Math.round(_scorePct) : (Number.isFinite(Number(_base.ai_match)) ? Math.round(Number(_base.ai_match)) : null),
                 grow: _growScore !== null ? _growScore : (Number.isFinite(Number(_base.grow)) ? Number(_base.grow) : null),
@@ -281,6 +288,27 @@ var co = COMPANIES[demoId];
                 candidate_type: String(found.candidate_type || (currentCard && currentCard.candidate_type) || 'chain2'),
                 one_line: String(found.one_line || '')
             });
+            var foundTags = [];
+            if (Array.isArray(found.tags)) {
+                found.tags.forEach(function (t) {
+                    var v = String(t || '').trim();
+                    if (!v) return;
+                    if (foundTags.indexOf(v) >= 0) return;
+                    foundTags.push(v);
+                });
+            } else if (typeof found.tags === 'string' && String(found.tags).trim() !== '') {
+                parseTagListFromLine(found.tags).forEach(function (t) {
+                    if (foundTags.indexOf(t) >= 0) return;
+                    foundTags.push(t);
+                });
+            }
+            if (foundTags.length) snapshot.tags = foundTags;
+
+            var foundTagTotalCount = Number(found.tag_total_count || found.keyword_count || 0);
+            if (!Number.isFinite(foundTagTotalCount) || foundTagTotalCount <= 0) {
+                foundTagTotalCount = foundTags.length;
+            }
+            if (foundTagTotalCount > 0) snapshot.tag_total_count = foundTagTotalCount;
 
             try {
                 var rawMap = sessionStorage.getItem('_aiCardMap');
@@ -515,7 +543,10 @@ function renderAiDetailLeftCard(co, scoreHtml) {
         allTags = parseTagListFromLine(co.product_line || '');
     }
     var firstTags = allTags.slice(0, 3);
-    var moreN = Math.max(0, allTags.length - firstTags.length);
+    var totalTagCount = Number(co.tag_total_count || co.keyword_count || 0);
+    if (!Number.isFinite(totalTagCount) || totalTagCount <= 0) totalTagCount = allTags.length;
+    if (totalTagCount < allTags.length) totalTagCount = allTags.length;
+    var moreN = Math.max(0, totalTagCount - firstTags.length);
 
     var tagsHtml = '';
     firstTags.forEach(function(t) {
