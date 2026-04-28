@@ -9,6 +9,11 @@ body {
 
 .page-company-detail #container {
 	max-width: none;
+	padding: none;
+}
+
+.page-company-detail #wrap {
+	overflow: visible;
 }
 
 #detailWrap { background: #FAFBFD; min-height: 100vh; }
