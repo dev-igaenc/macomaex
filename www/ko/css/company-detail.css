@@ -6,6 +6,11 @@ body {
 	line-height: var(--lh-relaxed);
 	min-height: 100vh;
 }
+
+.page-company-detail #container {
+	max-width: none;
+}
+
 #detailWrap { background: #FAFBFD; min-height: 100vh; }
 html.in-iframe #header,
 html.in-iframe #sideMenuArea { display: none !important; }
