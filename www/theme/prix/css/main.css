@@ -1692,7 +1692,7 @@ a.mCategories_item { text-decoration: none; color: inherit; display: flex; flex-
     .mCompanyCard_provider_name { font-size: 12px; }
 }
 @media (max-width: 640px) {
-    .mCompanyCard { width: calc(100vw - 48px); max-width: 320px; }
+    .mCompanyCard { width: calc(100vw - 48px); max-width: 375px; }
     .mCompanyCard_content { padding: 18px; }
     .mCompanyCard_title { font-size: 15px; }
     .mCompanyCard_desc { margin-bottom: 8px; gap: 5px; }
