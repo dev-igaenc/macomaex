@@ -298,6 +298,34 @@ if (!function_exists('mailer_prepare_open_tracking')) {
 }
 
 if (!function_exists('mailer_log_mark_opened')) {
+    function mailer_log_request_ip()
+    {
+        $candidates = array(
+            isset($_SERVER['HTTP_CF_CONNECTING_IP']) ? $_SERVER['HTTP_CF_CONNECTING_IP'] : '',
+            isset($_SERVER['HTTP_X_FORWARDED_FOR']) ? $_SERVER['HTTP_X_FORWARDED_FOR'] : '',
+            isset($_SERVER['HTTP_X_REAL_IP']) ? $_SERVER['HTTP_X_REAL_IP'] : '',
+            isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : ''
+        );
+
+        foreach ($candidates as $candidate) {
+            $candidate = trim((string) $candidate);
+            if ($candidate === '') {
+                continue;
+            }
+
+            if (strpos($candidate, ',') !== false) {
+                $parts = explode(',', $candidate);
+                $candidate = trim((string) $parts[0]);
+            }
+
+            if (filter_var($candidate, FILTER_VALIDATE_IP)) {
+                return substr($candidate, 0, 45);
+            }
+        }
+
+        return '';
+    }
+
     function mailer_log_mark_opened($track_token)
     {
         $track_token = preg_replace('/[^a-zA-Z0-9]/', '', (string) $track_token);
@@ -310,7 +338,7 @@ if (!function_exists('mailer_log_mark_opened')) {
         }
 
         $table = mailer_log_table_name();
-        $ip = isset($_SERVER['REMOTE_ADDR']) ? substr((string) $_SERVER['REMOTE_ADDR'], 0, 45) : '';
+        $ip = function_exists('mailer_log_request_ip') ? mailer_log_request_ip() : '';
         $user_agent = isset($_SERVER['HTTP_USER_AGENT']) ? substr((string) $_SERVER['HTTP_USER_AGENT'], 0, 255) : '';
 
         $sql = " update `{$table}` set
@@ -354,10 +382,29 @@ if (!function_exists('mailer_log_mark_clicked')) {
         }
 
         $table = mailer_log_table_name();
+        $ip = function_exists('mailer_log_request_ip') ? mailer_log_request_ip() : '';
+        $user_agent = isset($_SERVER['HTTP_USER_AGENT']) ? substr((string) $_SERVER['HTTP_USER_AGENT'], 0, 255) : '';
+        $has_open_columns = mailer_log_column_exists('first_opened_at')
+            && mailer_log_column_exists('last_opened_at')
+            && mailer_log_column_exists('open_count')
+            && mailer_log_column_exists('last_open_ip')
+            && mailer_log_column_exists('last_open_user_agent');
+
+        $sql_open_extra = '';
+        if ($has_open_columns) {
+            $sql_open_extra = ",
+                    `first_opened_at` = IF(`first_opened_at` IS NULL, NOW(), `first_opened_at`),
+                    `last_opened_at` = NOW(),
+                    `open_count` = IFNULL(`open_count`, 0) + 1,
+                    `last_open_ip` = '" . sql_real_escape_string($ip) . "',
+                    `last_open_user_agent` = '" . sql_real_escape_string($user_agent) . "'";
+        }
+
         $sql = " update `{$table}` set
                     `first_clicked_at` = IF(`first_clicked_at` IS NULL, NOW(), `first_clicked_at`),
                     `last_clicked_at` = NOW(),
-                    `click_count` = IFNULL(`click_count`, 0) + 1
+                    `click_count` = IFNULL(`click_count`, 0) + 1"
+                    . $sql_open_extra . "
                   where `track_token` = '" . sql_real_escape_string($track_token) . "'
                     and `status` = 'SUCCESS' ";
 
@@ -366,6 +413,122 @@ if (!function_exists('mailer_log_mark_clicked')) {
 }
 
 if (!function_exists('mailer_log_write')) {
+    function mailer_file_log_compact_message($message, $max_length = 255)
+    {
+        $message = trim((string)$message);
+        if ($message === '') return '';
+
+        $message = preg_replace('/\s+/u', ' ', $message);
+        $max_length = (int)$max_length;
+        if ($max_length < 1) return $message;
+
+        if (function_exists('mb_strlen') && function_exists('mb_substr')) {
+            if (mb_strlen($message, 'UTF-8') > $max_length) {
+                return mb_substr($message, 0, $max_length - 1, 'UTF-8') . '…';
+            }
+            return $message;
+        }
+
+        if (strlen($message) > $max_length) {
+            return substr($message, 0, $max_length - 3) . '...';
+        }
+
+        return $message;
+    }
+
+    function mailer_file_log_directory_path()
+    {
+        return dirname(__DIR__) . '/logs/mail';
+    }
+
+    function mailer_file_log_file_path($date_ymd = '')
+    {
+        $date_ymd = preg_replace('/[^0-9]/', '', (string)$date_ymd);
+        if ($date_ymd === '') $date_ymd = date('Ymd');
+
+        return mailer_file_log_directory_path() . '/mail_log_' . $date_ymd . '.php';
+    }
+
+    function mailer_file_log_default_message($status)
+    {
+        $status = strtoupper(trim((string)$status));
+        if ($status === 'SUCCESS') return '메일 발송이 완료되었습니다.';
+        if ($status === 'SKIP') return '메일 발송을 건너뛰었습니다.';
+        return '메일 발송에 실패했습니다.';
+    }
+
+    function mailer_file_log_write($log_context, $recipient_email, $subject, $status, $error_message = '', $db_result = null)
+    {
+        $log_context = is_array($log_context) ? $log_context : array();
+        $dir = mailer_file_log_directory_path();
+        if (!is_dir($dir) && !@mkdir($dir, 0775, true) && !is_dir($dir)) {
+            return false;
+        }
+
+        $file_path = mailer_file_log_file_path();
+        $is_new_file = !file_exists($file_path);
+        $logged_at = date('Y-m-d H:i:s');
+
+        $status = strtoupper(trim((string)$status));
+        $mail_type = trim((string)(isset($log_context['mail_type']) ? $log_context['mail_type'] : ''));
+        $related_id = trim((string)(isset($log_context['related_id']) ? $log_context['related_id'] : ''));
+        $track_token = trim((string)(isset($log_context['track_token']) ? $log_context['track_token'] : ''));
+        $recipient_route = trim((string)(isset($log_context['recipient_route']) ? $log_context['recipient_route'] : ''));
+        $skip_reason = trim((string)(isset($log_context['skip_reason']) ? $log_context['skip_reason'] : ''));
+        $request_uri = isset($_SERVER['REQUEST_URI']) ? trim((string)$_SERVER['REQUEST_URI']) : '';
+
+        $client_ip = '';
+        if (function_exists('mailer_log_request_ip')) {
+            $client_ip = trim((string)mailer_log_request_ip());
+        }
+        if ($client_ip === '') {
+            $client_ip = isset($_SERVER['REMOTE_ADDR']) ? trim((string)$_SERVER['REMOTE_ADDR']) : '';
+        }
+
+        $message = mailer_file_log_compact_message($error_message);
+        if ($message === '') {
+            $message = mailer_file_log_default_message($status);
+        }
+
+        $fields = array(
+            'event_type' => 'mail_send',
+            'event_status' => $status,
+            'mail_type' => $mail_type,
+            'related_id' => $related_id,
+            'recipient_email' => trim((string)$recipient_email),
+            'recipient_route' => $recipient_route,
+            'subject' => mailer_file_log_compact_message($subject, 300),
+            'skip_reason' => $skip_reason,
+            'track_token' => $track_token,
+            'db_insert_ok' => is_bool($db_result) ? (int)$db_result : '',
+            'message' => $message,
+            'request_uri' => $request_uri,
+            'client_ip' => $client_ip,
+            'user_agent' => mailer_file_log_compact_message(isset($_SERVER['HTTP_USER_AGENT']) ? (string)$_SERVER['HTTP_USER_AGENT'] : '', 300),
+        );
+
+        $allow_zero_keys = array(
+            'db_insert_ok',
+        );
+
+        $lines = array();
+        if ($is_new_file) {
+            $lines[] = "<?php exit; ?>";
+            $lines[] = '';
+        }
+        $lines[] = '[' . $logged_at . ']';
+        foreach ($fields as $key => $value) {
+            if ($value === '') continue;
+            if ($value === 0 && !in_array($key, $allow_zero_keys, true)) continue;
+            $lines[] = $key . ': ' . $value;
+        }
+        $lines[] = '---';
+        $lines[] = '';
+
+        $body = implode(PHP_EOL, $lines);
+        return @file_put_contents($file_path, $body, FILE_APPEND | LOCK_EX) !== false;
+    }
+
     function mailer_log_write($log_context, $recipient_email, $subject, $status, $error_message = '')
     {
         $table = mailer_log_table_name();
@@ -423,6 +586,8 @@ if (!function_exists('mailer_log_write')) {
         if (!$result) {
             error_log('[mailer_log] insert failed: '.sql_error_info());
         }
+
+        mailer_file_log_write($log_context, $recipient_email, $subject, $status, $error_message, (bool)$result);
 
         return $result;
     }
@@ -589,6 +754,7 @@ function mailer($fname, $fmail, $to, $subject, $content, $type=0, $file="", $cc=
         $mail->Subject = $subject;
         $mail->AltBody = ""; // optional, comment out and test
         $mail->msgHTML($content);
+
         $mail->addAddress($to);
         if ($cc)
             $mail->addCC($cc);
