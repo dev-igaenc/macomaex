@@ -192,6 +192,83 @@ if (!function_exists('mailer_tracking_pixel_url')) {
 }
 
 if (!function_exists('mailer_tracking_resolve_target_url')) {
+    function mailer_tracking_allowed_hosts()
+    {
+        $hosts = array();
+
+        $candidate_urls = array(
+            mailer_tracking_base_url(),
+            defined('G5_URL') ? rtrim((string) G5_URL, '/') : '',
+            defined('G5_BBS_URL') ? rtrim((string) G5_BBS_URL, '/') : '',
+            'https://macomaex.com',
+            'https://www.macomaex.com',
+        );
+
+        foreach ($candidate_urls as $candidate_url) {
+            $candidate_url = trim((string) $candidate_url);
+            if ($candidate_url === '') continue;
+
+            $parts = parse_url($candidate_url);
+            if (!is_array($parts) || empty($parts['host'])) continue;
+
+            $hosts[] = strtolower((string) $parts['host']);
+        }
+
+        $env_allowed_hosts = '';
+        if (function_exists('macomaex_env')) {
+            $env_allowed_hosts = trim((string) macomaex_env('MAIL_CLICK_ALLOWED_HOSTS', ''));
+        } else {
+            $raw_env_allowed_hosts = getenv('MAIL_CLICK_ALLOWED_HOSTS');
+            if ($raw_env_allowed_hosts !== false) {
+                $env_allowed_hosts = trim((string) $raw_env_allowed_hosts);
+            }
+        }
+
+        if ($env_allowed_hosts !== '') {
+            $tokens = preg_split('/[\s,]+/', $env_allowed_hosts, -1, PREG_SPLIT_NO_EMPTY);
+            if (is_array($tokens)) {
+                foreach ($tokens as $token) {
+                    $token = trim((string) $token);
+                    if ($token === '') continue;
+
+                    if (strpos($token, '://') === false) {
+                        $token = 'https://' . $token;
+                    }
+
+                    $parts = parse_url($token);
+                    if (!is_array($parts) || empty($parts['host'])) continue;
+
+                    $hosts[] = strtolower((string) $parts['host']);
+                }
+            }
+        }
+
+        return array_values(array_unique(array_filter($hosts)));
+    }
+
+    function mailer_tracking_host_allowed($target_host, $allowed_hosts)
+    {
+        $target_host = strtolower(trim((string) $target_host));
+        if ($target_host === '' || !is_array($allowed_hosts)) {
+            return false;
+        }
+
+        foreach ($allowed_hosts as $allowed_host) {
+            $allowed_host = strtolower(trim((string) $allowed_host));
+            if ($allowed_host === '') continue;
+
+            if ($target_host === $allowed_host) {
+                return true;
+            }
+
+            if (substr($target_host, -strlen('.' . $allowed_host)) === '.' . $allowed_host) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     function mailer_tracking_resolve_target_url($target_url)
     {
         $target_url = html_entity_decode(trim((string) $target_url), ENT_QUOTES, 'UTF-8');
@@ -211,28 +288,17 @@ if (!function_exists('mailer_tracking_resolve_target_url')) {
         if (!is_array($target_parts) || empty($target_parts['host'])) {
             return '';
         }
-
-        $allowed_urls = array_unique(array_filter(array(
-            mailer_tracking_base_url(),
-            defined('G5_URL') ? rtrim((string) G5_URL, '/') : '',
-            defined('G5_BBS_URL') ? rtrim((string) G5_BBS_URL, '/') : ''
-        )));
-
-        foreach ($allowed_urls as $allowed_url) {
-            $allowed_parts = parse_url($allowed_url);
-            if (!is_array($allowed_parts) || empty($allowed_parts['host'])) {
-                continue;
-            }
-
-            $same_host = strcasecmp((string) $target_parts['host'], (string) $allowed_parts['host']) === 0;
-            $same_port = (int) (isset($target_parts['port']) ? $target_parts['port'] : 0) === (int) (isset($allowed_parts['port']) ? $allowed_parts['port'] : 0);
-
-            if ($same_host && $same_port) {
-                return $target_url;
-            }
+        $scheme = isset($target_parts['scheme']) ? strtolower((string) $target_parts['scheme']) : '';
+        if (!in_array($scheme, array('http', 'https'), true)) {
+            return '';
         }
 
-        return '';
+        $allowed_hosts = mailer_tracking_allowed_hosts();
+        if (!mailer_tracking_host_allowed((string) $target_parts['host'], $allowed_hosts)) {
+            return '';
+        }
+
+        return $target_url;
     }
 }
 
