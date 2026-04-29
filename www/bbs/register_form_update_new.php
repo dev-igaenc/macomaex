@@ -296,7 +296,7 @@ if ($w == '') {
         }
 
         ob_start();
-        include_once ('./register_form_update_mail1.php');
+        include_once ('./mail/register_form_update_mail1.php');
         $content = ob_get_contents();
         ob_end_clean();
 
@@ -316,7 +316,7 @@ if ($w == '') {
         $subject = run_replace('register_form_update_mail_admin_subject', '['.$config['cf_title'].'] '.$mb_nick .' 님께서 회원으로 가입하셨습니다.', $mb_id, $mb_nick);
 
         ob_start();
-        include_once ('./register_form_update_mail2.php');
+        include_once ('./mail/register_form_update_mail2.php');
         $content = ob_get_contents();
         ob_end_clean();
 
@@ -538,7 +538,7 @@ if ($config['cf_use_email_certify'] && $old_email != $mb_email) {
     $certify_href = G5_BBS_URL.'/email_certify.php?mb_id='.$mb_id.'&amp;mb_md5='.$mb_md5;
 
     ob_start();
-    include_once ('./register_form_update_mail3.php');
+    include_once ('./mail/register_form_update_mail3.php');
     $content = ob_get_contents();
     ob_end_clean();
 

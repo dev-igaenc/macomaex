@@ -372,11 +372,15 @@ if (!function_exists('mailer_log_write')) {
         $mail_type = '';
         $related_id = '';
         $track_token = '';
+        $recipient_route = '';
+        $skip_reason = '';
 
         if (is_array($log_context)) {
             $mail_type = isset($log_context['mail_type']) ? trim((string) $log_context['mail_type']) : '';
             $related_id = isset($log_context['related_id']) ? trim((string) $log_context['related_id']) : '';
             $track_token = isset($log_context['track_token']) ? trim((string) $log_context['track_token']) : '';
+            $recipient_route = isset($log_context['recipient_route']) ? trim((string) $log_context['recipient_route']) : '';
+            $skip_reason = isset($log_context['skip_reason']) ? trim((string) $log_context['skip_reason']) : '';
         }
 
         if ($mail_type === '') {
@@ -393,6 +397,16 @@ if (!function_exists('mailer_log_write')) {
         if ($track_token !== '' && mailer_log_column_exists('track_token')) {
             $sql_extra .= ",
                     track_token = '" . sql_real_escape_string($track_token) . "'";
+        }
+
+        if ($recipient_route !== '' && mailer_log_column_exists('recipient_route')) {
+            $sql_extra .= ",
+                    recipient_route = '" . sql_real_escape_string($recipient_route) . "'";
+        }
+
+        if ($skip_reason !== '' && mailer_log_column_exists('skip_reason')) {
+            $sql_extra .= ",
+                    skip_reason = '" . sql_real_escape_string($skip_reason) . "'";
         }
 
         $sql = " insert into `{$table}` set

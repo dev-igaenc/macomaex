@@ -227,7 +227,7 @@ if ($w == 'c') // 댓글 입력
         include_once(G5_LIB_PATH.'/mailer.lib.php');
 
         ob_start();
-        include_once ('./write_update_mail.php');
+        include_once ('./mail/write_update_mail.php');
         $content = ob_get_contents();
         ob_end_clean();
 

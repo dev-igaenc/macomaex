@@ -38,7 +38,7 @@ sql_query(" update {$g5['member_table']} set mb_email_certify2 = '$mb_md5' where
 $certify_href = G5_BBS_URL.'/email_certify.php?mb_id='.$mb_id.'&amp;mb_md5='.$mb_md5;
 
 ob_start();
-include_once ('./register_form_update_mail3.php');
+include_once ('./mail/register_form_update_mail3.php');
 $content = ob_get_contents();
 ob_end_clean();
 
