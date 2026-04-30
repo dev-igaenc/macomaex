@@ -289,6 +289,20 @@
 			}).catch(function () {});
 		}
 
+		function sendFileUploadAttemptLog(file, eventStatus, attemptResult, attemptReason, policyExpected) {
+			var roomId = Number(state.activeRoomId || 0);
+			if (roomId < 1) return;
+			sendUiEvent('file_upload_attempt', roomId, {
+				event_status: String(eventStatus || 'success'),
+				file_name: String((file && file.name) || ''),
+				file_size: Number((file && file.size) || 0),
+				file_mime: String((file && file.type) || ''),
+				attempt_result: String(attemptResult || ''),
+				attempt_reason: String(attemptReason || ''),
+				policy_expected: String(policyExpected || '')
+			});
+		}
+
 		function validateMessageText(text, allowEmpty) {
 			var normalized = normalizeMessageText(text);
 			if (!allowEmpty && !normalized) {
@@ -499,30 +513,40 @@
 
 		async function uploadAndSendFileAttachment(file) {
 			if (!state.channel) {
+				sendFileUploadAttemptLog(file, 'skip', 'blocked', 'channel_not_ready', 'channel_connection_required');
 				throw new Error('채팅 채널 연결 후 파일을 전송할 수 있습니다.');
 			}
 			if (!file) {
 				throw new Error('첨부할 파일을 선택해 주세요.');
 			}
 			if (isExecutableFileBlocked(file)) {
+				sendFileUploadAttemptLog(file, 'skip', 'blocked', 'executable_file_blocked', 'block_executable');
 				throw new Error('실행 가능한 파일 형식은 첨부할 수 없습니다.');
 			}
 			if (Number(file.size || 0) > FILE_UPLOAD_MAX_BYTES) {
+				sendFileUploadAttemptLog(file, 'skip', 'blocked', 'max_size_exceeded', 'max_100mb');
 				throw new Error('파일은 100MB 이하만 첨부할 수 있습니다.');
 			}
 
 			var isImage = file.type && file.type.indexOf('image/') === 0;
 			var uploadResponse = null;
-			if (isImage && typeof state.channel.sendImage === 'function') {
-				uploadResponse = await state.channel.sendImage(file, file.name, file.type);
-			} else if (typeof state.channel.sendFile === 'function') {
-				uploadResponse = await state.channel.sendFile(file, file.name, file.type);
-			} else {
-				throw new Error('현재 채팅 SDK에서는 파일 첨부를 지원하지 않습니다.');
+			try {
+				if (isImage && typeof state.channel.sendImage === 'function') {
+					uploadResponse = await state.channel.sendImage(file, file.name, file.type);
+				} else if (typeof state.channel.sendFile === 'function') {
+					uploadResponse = await state.channel.sendFile(file, file.name, file.type);
+				} else {
+					sendFileUploadAttemptLog(file, 'fail', 'failed', 'sdk_upload_not_supported', 'sdk_upload_support_required');
+					throw new Error('현재 채팅 SDK에서는 파일 첨부를 지원하지 않습니다.');
+				}
+			} catch (error) {
+				sendFileUploadAttemptLog(file, 'fail', 'failed', 'upload_api_failed', 'stream_upload_api');
+				throw error;
 			}
 
 			var uploadedUrl = uploadResponse && (uploadResponse.file || uploadResponse.url || uploadResponse.asset_url);
 			if (!uploadedUrl) {
+				sendFileUploadAttemptLog(file, 'fail', 'failed', 'upload_url_missing', 'stream_upload_response');
 				throw new Error('파일 업로드 URL을 확인할 수 없습니다.');
 			}
 
@@ -542,10 +566,16 @@
 			if (!textValidation.valid) {
 				throw new Error(textValidation.message);
 			}
-			await state.channel.sendMessage({
-				text: textValidation.text,
-				attachments: [attachment]
-			});
+			try {
+				await state.channel.sendMessage({
+					text: textValidation.text,
+					attachments: [attachment]
+				});
+			} catch (error) {
+				sendFileUploadAttemptLog(file, 'fail', 'failed', 'send_message_failed', 'stream_send_message');
+				throw error;
+			}
+			sendFileUploadAttemptLog(file, 'success', 'accepted', 'sent', 'stream_policy_passed');
 			inputEl.value = '';
 		}
 

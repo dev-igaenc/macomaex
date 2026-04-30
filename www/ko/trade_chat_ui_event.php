@@ -21,11 +21,19 @@ $roomId = (int)($_POST['room_id'] ?? 0);
 $uiContext = trim((string)($_POST['ui_context'] ?? 'modal'));
 $searchKeyword = trim((string)($_POST['search_keyword'] ?? ''));
 $searchResultCount = (int)($_POST['search_result_count'] ?? -1);
+$eventStatus = trim((string)($_POST['event_status'] ?? 'success'));
+$fileName = trim((string)($_POST['file_name'] ?? ''));
+$fileSize = (int)($_POST['file_size'] ?? 0);
+$fileMime = trim((string)($_POST['file_mime'] ?? ''));
+$attemptResult = trim((string)($_POST['attempt_result'] ?? ''));
+$attemptReason = trim((string)($_POST['attempt_reason'] ?? ''));
+$policyExpected = trim((string)($_POST['policy_expected'] ?? ''));
 
 $allowedEventMap = array(
 	'chat_room_enter' => 'enter',
 	'chat_room_leave' => 'leave',
 	'chat_room_search' => 'search',
+	'file_upload_attempt' => 'file_upload',
 );
 if (!isset($allowedEventMap[$eventTypeRaw])) {
 	http_response_code(400);
@@ -71,8 +79,25 @@ if ($eventTypeRaw === 'chat_room_search') {
 	}
 }
 
-trade_chat_write_event_log($eventTypeRaw, 'success', $payload);
+if ($eventTypeRaw === 'file_upload_attempt') {
+	$payload['attachment_title'] = $fileName;
+	$payload['file_size'] = $fileSize;
+	$payload['attachment_type'] = $fileMime;
+	$payload['attempt_result'] = $attemptResult;
+	$payload['attempt_reason'] = $attemptReason;
+	if ($attemptReason !== '') {
+		$payload['reason'] = $attemptReason;
+	}
+	if ($policyExpected !== '') {
+		$payload['policy_expected'] = $policyExpected;
+	}
+}
+
+if (!in_array($eventStatus, array('success', 'fail', 'skip'), true)) {
+	$eventStatus = 'success';
+}
+
+trade_chat_write_event_log($eventTypeRaw, $eventStatus, $payload);
 
 echo json_encode(array('success' => true));
 exit;
-
