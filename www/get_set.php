@@ -76,6 +76,33 @@ if (!function_exists('unlisted_value_lock_release')) {
 	}
 }
 
+if (!function_exists('macomaex_payment_log_write')) {
+	function macomaex_payment_log_write($fields) {
+		$log_dir = G5_PATH . '/logs/payments';
+		if (!is_dir($log_dir)) {
+			@mkdir($log_dir, 0777, true);
+		}
+		$log_file = $log_dir . '/payments_log_' . date('Ymd') . '.php';
+		if (!file_exists($log_file)) {
+			@file_put_contents($log_file, "<?php exit; ?>\n\n", FILE_APPEND | LOCK_EX);
+		}
+
+		$lines = array();
+		$lines[] = '[' . date('Y-m-d H:i:s') . ']';
+		foreach ((array)$fields as $key => $value) {
+			if ($value === null) $value = '';
+			if (is_array($value) || is_object($value)) {
+				$value = json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+			}
+			$value = str_replace(array("\r\n", "\r", "\n"), '\n', (string)$value);
+			$lines[] = $key . ': ' . $value;
+		}
+		$lines[] = '---';
+		$lines[] = '';
+		@file_put_contents($log_file, implode("\n", $lines), FILE_APPEND | LOCK_EX);
+	}
+}
+
 
 switch ($type) {
 
@@ -1203,25 +1230,55 @@ switch ($type) {
 	break;
 
 	case "membership_credit_pay": //크레딧 일반결제 주문 생성
+			$payment_log_base = array(
+				'event_type' => 'credit_order_prepare',
+				'context' => 'membership_credit_pay',
+				'request_uri' => isset($_SERVER['REQUEST_URI']) ? (string)$_SERVER['REQUEST_URI'] : '',
+				'request_method' => isset($_SERVER['REQUEST_METHOD']) ? (string)$_SERVER['REQUEST_METHOD'] : '',
+				'mb_id' => isset($member['mb_id']) ? (string)$member['mb_id'] : '',
+				'order_no' => (string)$orderid
+			);
 			if($_SERVER['REQUEST_METHOD'] !== 'POST'){
+				macomaex_payment_log_write(array_merge($payment_log_base, array(
+					'event_status' => 'fail',
+					'reason' => 'invalid_method',
+					'message' => '잘못된 요청 방식입니다.'
+				)));
 				echo "500|잘못된 요청 방식입니다.";
 				exit;
 			}
 			// plan.php 에서 발급한 결제 요청 토큰 검증
 			$session_pay_token = get_session('ss_membership_credit_pay_token');
 			if(!$pay_token || !$session_pay_token || $pay_token !== $session_pay_token){
+				macomaex_payment_log_write(array_merge($payment_log_base, array(
+					'event_status' => 'fail',
+					'reason' => 'invalid_token',
+					'pay_token_present' => $pay_token ? 'Y' : 'N',
+					'message' => '유효하지 않은 요청입니다.'
+				)));
 				echo "500|유효하지 않은 요청입니다.";
 				exit;
 			}
 			if($member['mb_id']) {
 					$stdpay_mid_for_order = (defined('_stdpay_mid') && trim((string)_stdpay_mid) !== '') ? trim((string)_stdpay_mid) : ((defined('_mid') && trim((string)_mid) !== '') ? trim((string)_mid) : '');
 					if(!$stdpay_mid_for_order){
+						macomaex_payment_log_write(array_merge($payment_log_base, array(
+							'event_status' => 'fail',
+							'reason' => 'mid_not_configured',
+							'message' => '일반결제 MID가 설정되지 않았습니다.'
+						)));
 						echo "500|일반결제 MID가 설정되지 않았습니다.";
 						exit;
 					}
 
 					$minfo_manage = sql_fetch("select * from g5_membership_manage where no='{$idx}'");
 					if(!is_array($minfo_manage) || empty($minfo_manage['no'])){
+						macomaex_payment_log_write(array_merge($payment_log_base, array(
+							'event_status' => 'fail',
+							'reason' => 'product_not_found',
+							'membership_parent_no' => (string)$idx,
+							'message' => '상품 정보를 찾을 수 없습니다.'
+						)));
 						echo "500|상품 정보를 찾을 수 없습니다.";
 						exit;
 					}
@@ -1230,10 +1287,22 @@ switch ($type) {
 					$is_credit_manage = true;
 				}
 				if(!$is_credit_manage){
+					macomaex_payment_log_write(array_merge($payment_log_base, array(
+						'event_status' => 'fail',
+						'reason' => 'not_credit_product',
+						'membership_parent_no' => (string)$idx,
+						'plan_title' => (string)$minfo_manage['title'],
+						'message' => '크레딧 결제 대상 상품이 아닙니다.'
+					)));
 					echo "500|크레딧 결제 대상 상품이 아닙니다.";
 					exit;
 				}
 				if(!$orderid){
+					macomaex_payment_log_write(array_merge($payment_log_base, array(
+						'event_status' => 'fail',
+						'reason' => 'missing_order_no',
+						'message' => '주문번호가 없습니다.'
+					)));
 					echo "500|주문번호가 없습니다.";
 					exit;
 				}
@@ -1243,11 +1312,19 @@ switch ($type) {
 				if(strpos((string)$minfo_manage['vat'], '별도') !== false) $price = (int)round($base_price * 1.1);
 				else $price = $base_price;
 				if($price < 1){
+					macomaex_payment_log_write(array_merge($payment_log_base, array(
+						'event_status' => 'fail',
+						'reason' => 'invalid_price',
+						'base_price' => (string)$base_price,
+						'price' => (string)$price,
+						'message' => '유효하지 않은 결제 금액입니다.'
+					)));
 					echo "500|유효하지 않은 결제 금액입니다.";
 					exit;
 				}
 
 					$pinfo=sql_fetch("select * from g5_membership_payment where order_no='{$orderid}' and uid='{$member['mb_id']}'");
+					$write_mode = (!is_array($pinfo) || empty($pinfo['uid'])) ? 'insert' : 'update';
 						if(!is_array($pinfo) || empty($pinfo['uid'])) {
 					$sql="insert g5_membership_payment set ";
 					$sql.="	uid='{$member['mb_id']}',";
@@ -1281,11 +1358,36 @@ switch ($type) {
 			}
 			$result=sql_query($sql);
 			if($result){
+				macomaex_payment_log_write(array_merge($payment_log_base, array(
+					'event_status' => 'success',
+					'write_mode' => $write_mode,
+					'membership_parent_no' => (string)$idx,
+					'plan_title' => (string)$minfo_manage['title'],
+					'price' => (string)$price,
+					'vat_policy' => (strpos((string)$minfo_manage['vat'], '별도') !== false ? 'VAT_EXCLUDED' : 'VAT_INCLUDED'),
+					'mid' => (string)$stdpay_mid_for_order,
+					'message' => '크레딧 일반결제 주문이 생성(또는 갱신)되었습니다.'
+				)));
 				echo "1000|".$orderid;
 			}else{
+				macomaex_payment_log_write(array_merge($payment_log_base, array(
+					'event_status' => 'fail',
+					'write_mode' => $write_mode,
+					'membership_parent_no' => (string)$idx,
+					'plan_title' => (string)$minfo_manage['title'],
+					'price' => (string)$price,
+					'mid' => (string)$stdpay_mid_for_order,
+					'reason' => 'db_upsert_failed',
+					'message' => '결제 등록에 문제가 있습니다.'
+				)));
 				echo "500|결제 등록에 문제가 있습니다.";
 			}
 		}else{
+				macomaex_payment_log_write(array_merge($payment_log_base, array(
+					'event_status' => 'fail',
+					'reason' => 'not_logged_in',
+					'message' => '로그인후 이용하세요.'
+				)));
 				echo "500|로그인후 이용하세요.";
 		}
 	break;
