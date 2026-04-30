@@ -82,6 +82,7 @@ $sql = "select
 			H.id,
 			H.uid,
 			H.tx_type,
+			H.service_code,
 			H.request_type,
 			H.credit_delta,
 			H.credit_after,
@@ -100,13 +101,16 @@ $sql = "select
 			MM.sale as plan_bonus_rate,
 			MM.vat as plan_vat,
 			TR.trade_direction as trade_request_direction,
-			IFNULL(C2.ENP_NM, TR.target_company_name) as company_name
+			IFNULL(C2.ENP_NM, TR.target_company_name) as company_name,
+			-- AI 사용내역 표기용 대상 기업명
+			IFNULL(C3.ENP_NM, '') as ai_company_name
 		from g5_matching_credit_history H
 		left join g5_membership_paybill B on H.order_no=B.order_no
 		left join g5_membership_payment P on H.order_no=P.order_no
 		left join g5_membership_manage MM on P.membership_parent_no=MM.no
 		left join trade_request TR on H.service_code='TRADE_REQUEST' and H.matching_no=TR.tr_no
 		left join company C2 on C2.KEDCD=TR.target_kedcd
+		left join company C3 on C3.KEDCD=H.target_kedcd
 		where
 			LOWER(TRIM(H.uid))=LOWER(TRIM('{$member['mb_id']}'))
 			".($member['mb_email'] ? " or LOWER(TRIM(H.uid))=LOWER(TRIM('{$member['mb_email']}'))" : "")."
@@ -118,6 +122,7 @@ if(!$result){
 				H.id,
 				H.uid,
 				H.tx_type,
+				H.service_code,
 				H.request_type,
 				H.credit_delta,
 				H.credit_after,
@@ -136,12 +141,15 @@ if(!$result){
 				MM.sale as plan_bonus_rate,
 				MM.vat as plan_vat,
 				TR.trade_direction as trade_request_direction,
-				IFNULL(C2.ENP_NM, TR.target_company_name) as company_name
+				IFNULL(C2.ENP_NM, TR.target_company_name) as company_name,
+				-- AI 사용내역 표기용 대상 기업명
+				IFNULL(C3.ENP_NM, '') as ai_company_name
 			from g5_matching_credit_history H
 			left join g5_membership_payment P on H.order_no=P.order_no
 			left join g5_membership_manage MM on P.membership_parent_no=MM.no
 			left join trade_request TR on H.service_code='TRADE_REQUEST' and H.matching_no=TR.tr_no
 			left join company C2 on C2.KEDCD=TR.target_kedcd
+			left join company C3 on C3.KEDCD=H.target_kedcd
 			where
 				LOWER(TRIM(H.uid))=LOWER(TRIM('{$member['mb_id']}'))
 				".($member['mb_email'] ? " or LOWER(TRIM(H.uid))=LOWER(TRIM('{$member['mb_email']}'))" : "")."
@@ -366,6 +374,13 @@ for($i=0; $i<count($history_rows); $i++){
 
                                 $title = $row['memo'] ? $row['memo'] : "[크레딧] 매칭 요청 {$delta} 크레딧 차감";
                                 $company_name = trim((string)$row['company_name']);
+                                $ai_company_name = trim((string)$row['ai_company_name']);
+                                $service_code = strtoupper(trim((string)$row['service_code']));
+                                $use_type = "match";
+                                // service_code 기반으로 AI/매칭 사용내역 타입 분리
+                                if($service_code === "AI_COMPANY_REPORT" || stripos((string)$title, "AI")!==false || stripos((string)$title, "분석")!==false) {
+                                    $use_type = "analyze";
+                                }
 
                                 $is_tm_request = (strpos((string)$title, "TM") !== false);
                                 $request_type_local = strtoupper(trim((string)$row['request_type']));
@@ -385,8 +400,10 @@ for($i=0; $i<count($history_rows); $i++){
                                 if($company_name && $is_match_request_memo){
                                     $title = $is_tm_request ? "TM 서포트 거래 요청 — ".$company_name : "일반 거래 요청 — ".$company_name;
                                 }
-                                $use_type = "match";
-                                if(stripos((string)$title, "AI")!==false || stripos((string)$title, "분석")!==false) $use_type = "analyze";
+                                // memo는 고정값 유지하고, 화면에서만 AI 대상 기업명 suffix 처리
+                                if($use_type=="analyze" && $ai_company_name && strpos((string)$title, "—") === false){
+                                    $title .= " — ".$ai_company_name;
+                                }
                             ?>
                             <div class="pay-card" data-type="<?=$use_type?>">
                                 <div class="pay-card-icon <?=$use_type?>">

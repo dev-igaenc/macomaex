@@ -1175,6 +1175,7 @@ window._bindRadarHover();
 		var suppRaw = tryGet('_aiSuppNames');
 		var isSell = (card.trade_type === 2);
 		var recObj = {
+			kedcd: card.kedcd || '',
 			enp_nm: card.title || '',
 			bzc_cd: card.industry || '',
 			bzc_nm: card.industry_nm || '',
@@ -1194,6 +1195,9 @@ window._bindRadarHover();
 		var payload = {
 			data: {
 				trade_type: card.trade_type || 1,
+				// 서버 once_key 생성용 식별값
+				source_kedcd: card.src_kedcd || tryGet('_aiSrcKedcd') || '',
+				target_kedcd: card.kedcd || '',
 				source_enp_nm: tryGet('_aiSrcCompName'),
 				source_bzc_cd: tryGet('_aiExtBzcCd'),
 				source_bzc_nm: tryGet('_aiExtBzcNm'),
@@ -1240,12 +1244,14 @@ window._bindRadarHover();
 				});
 				if (bar) bar.style.width = '100%';
 				if (res.error) throw new Error(res.error);
+				// 캐시 hit 응답은 거의 즉시 렌더링
+				var renderDelay = res && res.cache_hit ? 40 : 400;
 				setTimeout(function() {
 					var rendered = (typeof marked !== 'undefined')
 						? marked.parse(res.report || '')
 						: '<pre style="white-space:pre-wrap">' + esc(res.report || '') + '</pre>';
 					showAnalysisHtml(rendered);
-				}, 400);
+				}, renderDelay);
 			})
 			.catch(function(err) {
 				clearStepTimers();
@@ -1267,7 +1273,7 @@ window._bindRadarHover();
 				icon: 'purple',
 				iconSvg: '<path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z"/>',
 				title: 'AI 기업 분석을 시작할까요?',
-				desc: '<strong style="color:#6d28d9;">0.5 크레딧</strong>이 차감됩니다.<br><span style="font-size:12px;color:#999;">동일 분석은 6개월내 무료</span>',
+				desc: '<strong style="color:#6d28d9;">1 크레딧</strong>이 차감됩니다.<br><span style="font-size:12px;color:#999;">동일 분석은 2개월내 무료</span>',
 				confirmText: '분석하기',
 				cancelText: '취소',
 				confirmClass: 'purple',
