@@ -59,6 +59,24 @@ if (!function_exists('macomaex_payment_mask_array')) {
 	}
 }
 
+if (!function_exists('macomaex_payment_strip_token_array')) {
+	function macomaex_payment_strip_token_array($data) {
+		if (!is_array($data)) return $data;
+		$stripped = array();
+		foreach ($data as $k => $v) {
+			if ((string)$k === 'authToken') {
+				continue;
+			}
+			if (is_array($v)) {
+				$stripped[$k] = macomaex_payment_strip_token_array($v);
+			} else {
+				$stripped[$k] = $v;
+			}
+		}
+		return $stripped;
+	}
+}
+
 $util = new INIStdPayUtil();
 $prop = new properties();
 $is_test_pay = defined('_test_pay') && strtoupper((string)_test_pay) === 'Y';
@@ -153,12 +171,13 @@ try {
 		"charset" => $charset,
 		"format" => $format
 	);
+	$authMapLog = macomaex_payment_strip_token_array($authMap);
 
 	$httpUtil = new HttpClient();
 	if (!$httpUtil->processHTTP($authUrl, $authMap)) {
 		credit_pay_fail("승인 요청 실패", 'http_process_failed', array(
 			'auth_url' => (string)$authUrl,
-			'pg_request_raw' => json_encode(macomaex_payment_mask_array($authMap), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
+			'pg_request_raw' => json_encode(macomaex_payment_mask_array($authMapLog), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
 		));
 	}
 
@@ -167,7 +186,7 @@ try {
 	if (!is_array($resultMap) || $resultMap['resultCode'] !== '0000') {
 		$msg = isset($resultMap['resultMsg']) ? $resultMap['resultMsg'] : '승인 실패';
 		credit_pay_fail($msg, 'approve_failed', array(
-			'pg_request_raw' => json_encode(macomaex_payment_mask_array($authMap), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+			'pg_request_raw' => json_encode(macomaex_payment_mask_array($authMapLog), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
 			'pg_response_raw' => json_encode(macomaex_payment_mask_array((array)$resultMap), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
 		));
 	}
@@ -206,7 +225,7 @@ try {
 			'membership_parent_no' => (string)$pinfo['membership_parent_no'],
 			'credit_delta' => (string)$charge_credit,
 			'db_tx' => 'commit',
-			'pg_request_raw' => json_encode(macomaex_payment_mask_array($authMap), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+			'pg_request_raw' => json_encode(macomaex_payment_mask_array($authMapLog), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
 			'pg_response_raw' => json_encode(macomaex_payment_mask_array((array)$resultMap), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
 			'message' => '이미 충전 원장이 존재하여 중복 지급을 건너뛰었습니다.'
 		)));
@@ -348,7 +367,7 @@ try {
 		ext_1='".G5_TIME_YMDHIS."\\n'";
 	sql_query($history_status_sql, false);
 
-	$log_send = addslashes(json_encode($authMap, JSON_UNESCAPED_UNICODE));
+	$log_send = addslashes(json_encode($authMapLog, JSON_UNESCAPED_UNICODE));
 	$log_recv = addslashes($authResultString);
 	$log_sql = "insert g5_membership_payment_log set
 		uid='{$pinfo['uid']}',
@@ -376,7 +395,7 @@ try {
 		'credit_before' => (string)$current_credit,
 		'credit_after' => (string)$credit_after,
 		'db_tx' => 'commit',
-		'pg_request_raw' => json_encode(macomaex_payment_mask_array($authMap), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+		'pg_request_raw' => json_encode(macomaex_payment_mask_array($authMapLog), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
 		'pg_response_raw' => json_encode(macomaex_payment_mask_array((array)$resultMap), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
 		'message' => '승인 완료 후 결제 및 크레딧 DB 반영을 완료했습니다.'
 	)));
