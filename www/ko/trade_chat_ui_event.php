@@ -16,6 +16,7 @@ if (empty($member['mb_id'])) {
 	exit;
 }
 
+// 화이트리스트 기반으로 허용된 UI 이벤트만 로그 적재 대상으로 받는다.
 $eventTypeRaw = trim((string)($_POST['event_type'] ?? ''));
 $roomId = (int)($_POST['room_id'] ?? 0);
 $uiContext = trim((string)($_POST['ui_context'] ?? 'modal'));
@@ -47,6 +48,7 @@ if ($roomId < 1) {
 	exit;
 }
 
+// room/member 권한 검증이 통과한 이벤트만 서버 로그에 남긴다.
 $room = trade_chat_find_room_by_id($roomId);
 if (empty($room['room_id'])) {
 	http_response_code(404);
@@ -73,6 +75,7 @@ $payload = array(
 );
 
 if ($eventTypeRaw === 'chat_room_search') {
+	// 검색 이벤트는 키워드/결과 건수를 함께 적재해 사용 패턴을 추적한다.
 	$payload['search_keyword'] = $searchKeyword;
 	if ($searchResultCount >= 0) {
 		$payload['search_result_count'] = $searchResultCount;
@@ -80,6 +83,7 @@ if ($eventTypeRaw === 'chat_room_search') {
 }
 
 if ($eventTypeRaw === 'file_upload_attempt') {
+	// 첨부 시도는 성공/차단과 무관하게 시도 자체 + 정책 원인까지 저장한다.
 	$payload['attachment_title'] = $fileName;
 	$payload['file_size'] = $fileSize;
 	$payload['attachment_type'] = $fileMime;

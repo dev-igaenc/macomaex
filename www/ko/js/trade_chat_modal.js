@@ -266,6 +266,7 @@
 		function sendUiEvent(eventType, roomId, extra) {
 			roomId = Number(roomId || 0);
 			if (!eventType || roomId < 1) return;
+			// UI 이벤트를 서버 공통 엔드포인트로 전송해 DB/일자별 파일 로그를 동시에 남긴다.
 			var payload = new URLSearchParams();
 			payload.append('event_type', String(eventType));
 			payload.append('room_id', String(roomId));
@@ -292,6 +293,7 @@
 		function sendFileUploadAttemptLog(file, eventStatus, attemptResult, attemptReason, policyExpected) {
 			var roomId = Number(state.activeRoomId || 0);
 			if (roomId < 1) return;
+			// 첨부 시도 로그는 최종 성공 여부와 별개로 "시도/원인/결과"를 항상 기록한다.
 			sendUiEvent('file_upload_attempt', roomId, {
 				event_status: String(eventStatus || 'success'),
 				file_name: String((file && file.name) || ''),

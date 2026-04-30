@@ -6,6 +6,7 @@ require_once('libs/properties.php');
 
 if (!function_exists('macomaex_payment_log_write')) {
 	function macomaex_payment_log_write($fields) {
+		// 일자별 결제 로그 파일을 chat 로그와 같은 멀티라인 포맷으로 저장한다.
 		$log_dir = G5_PATH . '/logs/payments';
 		if (!is_dir($log_dir)) {
 			@mkdir($log_dir, 0777, true);
@@ -61,6 +62,7 @@ if (!function_exists('macomaex_payment_mask_array')) {
 
 if (!function_exists('macomaex_payment_strip_token_array')) {
 	function macomaex_payment_strip_token_array($data) {
+		// authToken은 통신에는 사용하되 로그/DB 원문에서는 완전히 제거한다.
 		if (!is_array($data)) return $data;
 		$stripped = array();
 		foreach ($data as $k => $v) {
@@ -98,6 +100,7 @@ $payment_log_base = array(
 
 function credit_pay_fail($msg, $reason = 'payment_failed', $extra = array()) {
 	global $payment_log_base;
+	// 실패 시점의 컨텍스트를 먼저 로그로 남긴 뒤 사용자에게 실패 알림을 노출한다.
 	$log_fields = array_merge($payment_log_base, (array)$extra, array(
 		'event_status' => 'fail',
 		'reason' => (string)$reason,
@@ -171,6 +174,7 @@ try {
 		"charset" => $charset,
 		"format" => $format
 	);
+	// 승인 API 요청 원문의 로그 버전(authToken 제거)을 별도로 유지한다.
 	$authMapLog = macomaex_payment_strip_token_array($authMap);
 
 	$httpUtil = new HttpClient();
@@ -217,6 +221,7 @@ try {
 
 	$already_charge = sql_fetch("select id from g5_matching_credit_history where order_no='{$order_no}' and tx_type='CHARGE' limit 1");
 	if($already_charge['id']){
+		// 재진입/재호출 시 중복 지급을 막기 위해 원장 존재 여부로 idempotency를 보장한다.
 		sql_query("COMMIT");
 		macomaex_payment_log_write(array_merge($payment_log_base, array(
 			'event_status' => 'skip',
@@ -369,6 +374,7 @@ try {
 
 	$log_send = addslashes(json_encode($authMapLog, JSON_UNESCAPED_UNICODE));
 	$log_recv = addslashes($authResultString);
+	// PG 요청/응답 원문을 DB에도 저장하되 요청 원문은 authToken 제외 버전만 사용한다.
 	$log_sql = "insert g5_membership_payment_log set
 		uid='{$pinfo['uid']}',
 		order_no='{$order_no}',
@@ -380,6 +386,7 @@ try {
 	sql_query($log_sql, false);
 
 	sql_query("COMMIT");
+	// 승인/반영 성공 시 운영 추적용 요약 로그를 파일에 남긴다.
 	macomaex_payment_log_write(array_merge($payment_log_base, array(
 		'event_status' => 'success',
 		'uid' => (string)$pinfo['uid'],
