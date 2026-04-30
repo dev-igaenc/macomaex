@@ -332,6 +332,10 @@ function trade_chat_write_daily_file_log($eventType, $status, $payload = array()
 		'delete_status' => trim((string)($payload['delete_status'] ?? '')),
 		'notice_status' => trim((string)($payload['notice_status'] ?? '')),
 		'action_error_code' => trim((string)($payload['action_error_code'] ?? '')),
+		'ui_action' => trim((string)($payload['ui_action'] ?? '')),
+		'ui_context' => trim((string)($payload['ui_context'] ?? '')),
+		'search_keyword' => trim((string)($payload['search_keyword'] ?? '')),
+		'search_result_count' => (int)($payload['search_result_count'] ?? 0),
 		'message' => $errorMessage,
 		'context' => trade_chat_log_context_label($eventType, $status, $payload),
 		'request_uri' => $requestUri,
@@ -382,6 +386,7 @@ function trade_chat_write_daily_file_log($eventType, $status, $payload = array()
 		'scan_error',
 		'infected_count',
 		'http_code',
+		'search_result_count',
 	);
 	foreach ($fields as $key => $value) {
 		if ($value === '') continue;

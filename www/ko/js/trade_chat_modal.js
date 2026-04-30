@@ -23,6 +23,7 @@
 		var sendBtn = document.getElementById('chatSendBtn');
 		var formEl = document.getElementById('tradeChatModalForm');
 		var context = window.__TRADE_CHAT_MODAL_CONTEXT || {};
+		var uiEventUrl = context.uiEventUrl || '/ko/trade_chat_ui_event.php';
 		var FILE_UPLOAD_MAX_BYTES = 100 * 1024 * 1024;
 		var MESSAGE_TEXT_MAX_LENGTH = 2000;
 
@@ -62,7 +63,8 @@
 			bootPromise: null,
 			composerEnabled: false,
 			isSending: false,
-			isUploading: false
+			isUploading: false,
+			lastSearchKeyword: ''
 		};
 
 		// 데스크톱에서는 room list 폭을 토글하고, 모바일에서는 기존 전환 흐름을 유지한다.
@@ -259,6 +261,32 @@
 			return String(value || '')
 				.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, '')
 				.trim();
+		}
+
+		function sendUiEvent(eventType, roomId, extra) {
+			roomId = Number(roomId || 0);
+			if (!eventType || roomId < 1) return;
+			var payload = new URLSearchParams();
+			payload.append('event_type', String(eventType));
+			payload.append('room_id', String(roomId));
+			payload.append('ui_context', 'modal');
+			if (extra && typeof extra === 'object') {
+				Object.keys(extra).forEach(function (key) {
+					var value = extra[key];
+					if (value === null || value === undefined) return;
+					payload.append(String(key), String(value));
+				});
+			}
+			fetch(uiEventUrl, {
+				method: 'POST',
+				credentials: 'same-origin',
+				headers: {
+					'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+					'X-Requested-With': 'XMLHttpRequest'
+				},
+				body: payload.toString(),
+				keepalive: true
+			}).catch(function () {});
 		}
 
 		function validateMessageText(text, allowEmpty) {
@@ -638,9 +666,13 @@
 		}
 
 		async function bindRoom(roomId) {
+			var prevRoomId = Number(state.activeRoomId || 0);
 			var room = findRoomById(roomId);
 			var roomMeta = room ? getRoomStatusMeta(room.roomStatus) : getRoomStatusMeta('');
 			state.activeRoomId = room ? Number(room.roomId) : 0;
+			if (prevRoomId > 0 && prevRoomId !== state.activeRoomId) {
+				sendUiEvent('chat_room_leave', prevRoomId);
+			}
 			cleanupActiveChannel();
 			renderRoomList();
 
@@ -650,6 +682,8 @@
 				setComposerEnabled(false, '채팅방을 먼저 선택해 주세요.');
 				return;
 			}
+
+			sendUiEvent('chat_room_enter', state.activeRoomId);
 
 			setMainHeader(room, roomMeta.header, roomMeta.code);
 
@@ -813,6 +847,7 @@
 		}
 
 		function closeModal() {
+			var leavingRoomId = Number(state.activeRoomId || 0);
 			cleanupActiveChannel();
 			overlay.classList.remove('open');
 			overlay.setAttribute('aria-hidden', 'true');
@@ -821,6 +856,10 @@
 			modal.classList.remove('chat-demo-modal--sidebar-collapsed');
 			document.documentElement.classList.remove('hide-scroll');
 			syncSidebarToggleState();
+			if (leavingRoomId > 0) {
+				sendUiEvent('chat_room_leave', leavingRoomId);
+			}
+			state.activeRoomId = 0;
 		}
 
 		function backToList() {
@@ -854,6 +893,17 @@
 			searchInputEl.addEventListener('input', function () {
 				state.filterKeyword = searchInputEl.value || '';
 				renderRoomList();
+				var keyword = String(state.filterKeyword || '').trim();
+				if (keyword === state.lastSearchKeyword) return;
+				state.lastSearchKeyword = keyword;
+				var resultCount = getFilteredRooms().length;
+				var targetRoomId = Number(state.activeRoomId || (state.bootstrap && state.bootstrap.initialRoomId) || 0);
+				if (targetRoomId > 0) {
+					sendUiEvent('chat_room_search', targetRoomId, {
+						search_keyword: keyword,
+						search_result_count: resultCount
+					});
+				}
 			});
 		}
 
