@@ -974,6 +974,37 @@ if (!function_exists('company_list_ai_normalize_item')) {
         $bzno = preg_replace('/\D/', '', (string)company_list_ai_pick($item, array('bzno', 'bizno', 'biz_no'), ''));
         $enp_nm = trim((string)company_list_ai_pick($item, array('enp_nm', 'enpNm', 'company_name', 'name'), ''));
         $bzc_cd = strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', (string)company_list_ai_pick($item, array('bzc_cd', 'bzcCd'), '')), 0, 10));
+        // 추천 상세/LLM 보고서에서 쓰는 업종/재무 메타 필드 정규화
+        $bzc_nm = trim((string)company_list_ai_pick($item, array('bzc_nm', 'bzcNm'), ''));
+        $sido = trim((string)company_list_ai_pick($item, array('sido', 'region'), ''));
+        $sze = (int)company_list_ai_pick($item, array('sze'), 0);
+        if ($sze < 0) $sze = 0;
+        $company_age = (int)company_list_ai_pick($item, array('company_age'), 0);
+        if ($company_age < 0) $company_age = 0;
+        $sales_growth_pct = company_list_ai_pick($item, array('sales_growth_pct'), null);
+        if ($sales_growth_pct !== null && $sales_growth_pct !== '' && is_numeric($sales_growth_pct)) {
+            $sales_growth_pct = (float)$sales_growth_pct;
+        } else {
+            $sales_growth_pct = null;
+        }
+        $debt_ratio_pct = company_list_ai_pick($item, array('debt_ratio_pct'), null);
+        if ($debt_ratio_pct !== null && $debt_ratio_pct !== '' && is_numeric($debt_ratio_pct)) {
+            $debt_ratio_pct = (float)$debt_ratio_pct;
+        } else {
+            $debt_ratio_pct = null;
+        }
+        $consec_profit_2y = company_list_ai_pick($item, array('consec_profit_2y'), null);
+        if ($consec_profit_2y !== null && $consec_profit_2y !== '') {
+            $consec_profit_2y = (int)$consec_profit_2y ? 1 : 0;
+        } else {
+            $consec_profit_2y = null;
+        }
+        $capital_negative = company_list_ai_pick($item, array('capital_negative'), null);
+        if ($capital_negative !== null && $capital_negative !== '') {
+            $capital_negative = (int)$capital_negative ? 1 : 0;
+        } else {
+            $capital_negative = null;
+        }
         $candidate_type = trim((string)company_list_ai_pick($item, array('candidate_type'), ''));
         $one_line = trim((string)company_list_ai_pick($item, array('one_line', 'reason'), ''));
 
@@ -983,8 +1014,16 @@ if (!function_exists('company_list_ai_normalize_item')) {
             'bzno' => $bzno,
             'enp_nm' => $enp_nm,
             'bzc_cd' => $bzc_cd,
+            'bzc_nm' => $bzc_nm,
+            'sido' => $sido,
+            'sze' => $sze,
             'score' => $score,
             'display_score' => $display_score,
+            'company_age' => $company_age,
+            'sales_growth_pct' => $sales_growth_pct,
+            'debt_ratio_pct' => $debt_ratio_pct,
+            'consec_profit_2y' => $consec_profit_2y,
+            'capital_negative' => $capital_negative,
             'candidate_type' => $candidate_type,
             'radar' => company_list_ai_normalize_radar(company_list_ai_pick($item, array('radar'), array())),
             'one_line' => $one_line,

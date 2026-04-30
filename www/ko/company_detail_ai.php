@@ -323,10 +323,46 @@ include_once(G5_THEME_PATH . '/head.php');
 				</button>
 				<p class="ai-cta-benefit" id="aiCtaBenefitText">두 기업 간 시너지, 거래 적합도, 협력 전략까지<br>AI가 심층 분석한 맞춤 리포트를 받아보세요.</p>
 			</div>
-			<div class="ai-analysis-body" id="aiAnalysisBody" role="region" aria-live="polite" aria-label="AI 분석 결과" style="display:none;"></div>
+				<div class="ai-analysis-body" id="aiAnalysisBody" role="region" aria-live="polite" aria-label="AI 분석 결과" style="display:none;"></div>
+				<!-- LLM 보고서 생성 단계 로딩 템플릿 -->
+				<template id="reportLoadingTpl">
+					<div class="report-loading" id="reportLoadingUi">
+						<div class="report-loading_spinner"></div>
+						<div class="report-loading_title">AI 심층 분석 보고서 생성 중…</div>
+						<ul class="report-loading_steps">
+							<li class="report-loading_step" data-step="0">
+								<span class="report-loading_step_icon">①</span>
+								<span>의뢰사 프로필 및 업종 확인</span>
+							</li>
+							<li class="report-loading_step" data-step="1">
+								<span class="report-loading_step_icon">②</span>
+								<span>추천 기업 ML 데이터 분석</span>
+							</li>
+							<li class="report-loading_step" data-step="2">
+								<span class="report-loading_step_icon">③</span>
+								<span>업종·공급망 구조 파악</span>
+							</li>
+							<li class="report-loading_step" data-step="3">
+								<span class="report-loading_step_icon">④</span>
+								<span>재무 경향 및 안정성 평가</span>
+							</li>
+							<li class="report-loading_step" data-step="4">
+								<span class="report-loading_step_icon">⑤</span>
+								<span>거래 네트워크·시너지 분석</span>
+							</li>
+							<li class="report-loading_step" data-step="5">
+								<span class="report-loading_step_icon">⑥</span>
+								<span>협력 전략 및 실행 계획 수립</span>
+							</li>
+						</ul>
+						<div class="report-loading_bar">
+							<div class="report-loading_bar_fill" id="reportLoadingBarFill"></div>
+						</div>
+					</div>
+				</template>
+			</div>
 		</div>
 	</div>
-</div>
 
 <?php include __DIR__ . '/modal/match_request_modal.php'; ?>
 
@@ -380,5 +416,7 @@ window.MATCH_REQUEST_CONTEXT = {
 <script src="/ko/js/match-request-modal.js?ver=<?php echo $match_request_modal_js_ver; ?>"></script>
 <script src="/ko/js/ai-loading.js?ver=<?php echo $ai_loading_js_ver; ?>"></script>
 <script src="/ko/js/verify-modal.js?ver=<?php echo $verify_modal_js_ver; ?>"></script>
+<!-- LLM 보고서 markdown 렌더링 -->
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script src="/ko/js/company_detail_ai.js?ver=<?php echo $company_detail_ai_js_ver; ?>"></script>
 <?php include_once(G5_THEME_PATH . '/tail.php'); ?>
