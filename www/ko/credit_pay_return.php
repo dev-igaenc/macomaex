@@ -4,6 +4,61 @@ require_once('libs/INIStdPayUtil.php');
 require_once('libs/HttpClient.php');
 require_once('libs/properties.php');
 
+if (!function_exists('macomaex_payment_log_write')) {
+	function macomaex_payment_log_write($fields) {
+		$log_dir = G5_PATH . '/logs/payments';
+		if (!is_dir($log_dir)) {
+			@mkdir($log_dir, 0777, true);
+		}
+		$log_file = $log_dir . '/payments_log_' . date('Ymd') . '.php';
+		if (!file_exists($log_file)) {
+			@file_put_contents($log_file, "<?php exit; ?>\n\n", FILE_APPEND | LOCK_EX);
+		}
+
+		$lines = array();
+		$lines[] = '[' . date('Y-m-d H:i:s') . ']';
+		foreach ((array)$fields as $key => $value) {
+			if ($value === null) $value = '';
+			if (is_array($value) || is_object($value)) {
+				$value = json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+			}
+			$value = str_replace(array("\r\n", "\r", "\n"), '\n', (string)$value);
+			$lines[] = $key . ': ' . $value;
+		}
+		$lines[] = '---';
+		$lines[] = '';
+		@file_put_contents($log_file, implode("\n", $lines), FILE_APPEND | LOCK_EX);
+	}
+}
+
+if (!function_exists('macomaex_payment_mask_value')) {
+	function macomaex_payment_mask_value($key, $value) {
+		$sensitive = array('authToken', 'CARD_Num', 'cardNumber', 'card_num', 'buyertel', 'buyeremail', 'buyeremail', 'buyerTel', 'buyerEmail');
+		if (in_array((string)$key, $sensitive, true)) {
+			$raw = (string)$value;
+			$len = strlen($raw);
+			if ($len <= 4) return str_repeat('*', $len);
+			return substr($raw, 0, 2) . str_repeat('*', $len - 4) . substr($raw, -2);
+		}
+		return $value;
+	}
+}
+
+if (!function_exists('macomaex_payment_mask_array')) {
+	function macomaex_payment_mask_array($data) {
+		if (!is_array($data)) return $data;
+		$masked = array();
+		foreach ($data as $k => $v) {
+			if (is_array($v)) {
+				$masked[$k] = macomaex_payment_mask_array($v);
+				continue;
+			}
+			$masked[$k] = macomaex_payment_mask_value($k, $v);
+		}
+		return $masked;
+	}
+}
+
 $util = new INIStdPayUtil();
 $prop = new properties();
 $is_test_pay = defined('_test_pay') && strtoupper((string)_test_pay) === 'Y';
@@ -12,7 +67,25 @@ $stdpay_mid_test = (defined('_stdpay_mid_test') && trim((string)_stdpay_mid_test
 $stdpay_signkey = (defined('_stdpay_signkey') && trim((string)_stdpay_signkey) !== '') ? trim((string)_stdpay_signkey) : ((defined('_key') && trim((string)_key) !== '') ? trim((string)_key) : '');
 $stdpay_signkey_test = (defined('_stdpay_signkey_test') && trim((string)_stdpay_signkey_test) !== '') ? trim((string)_stdpay_signkey_test) : (($is_test_pay && defined('_key') && trim((string)_key) !== '') ? trim((string)_key) : '');
 
-function credit_pay_fail($msg) {
+$payment_log_base = array(
+	'event_type' => 'credit_payment_approve',
+	'context' => 'credit_pay_return',
+	'request_uri' => isset($_SERVER['REQUEST_URI']) ? (string)$_SERVER['REQUEST_URI'] : '',
+	'request_method' => isset($_SERVER['REQUEST_METHOD']) ? (string)$_SERVER['REQUEST_METHOD'] : '',
+	'mb_id' => isset($member['mb_id']) ? (string)$member['mb_id'] : '',
+	'order_no' => isset($_REQUEST['oid']) ? (string)$_REQUEST['oid'] : '',
+	'pg_result_code' => isset($_REQUEST['resultCode']) ? (string)$_REQUEST['resultCode'] : '',
+	'pg_result_msg' => isset($_REQUEST['resultMsg']) ? (string)$_REQUEST['resultMsg'] : ''
+);
+
+function credit_pay_fail($msg, $reason = 'payment_failed', $extra = array()) {
+	global $payment_log_base;
+	$log_fields = array_merge($payment_log_base, (array)$extra, array(
+		'event_status' => 'fail',
+		'reason' => (string)$reason,
+		'message' => (string)$msg
+	));
+	macomaex_payment_log_write($log_fields);
 	$msg = addslashes($msg);
 	echo "<script>
 		alert('결제실패: {$msg}');
@@ -28,13 +101,13 @@ function credit_pay_fail($msg) {
 try {
 	if (strcmp("0000", $_REQUEST["resultCode"]) != 0) {
 		$msg = isset($_REQUEST["resultMsg"]) ? $_REQUEST["resultMsg"] : "인증 실패";
-		credit_pay_fail($msg);
+		credit_pay_fail($msg, 'auth_result_not_ok');
 	}
 
 	$mid = $_REQUEST["mid"];
 	$allowed_mids = array_filter(array($stdpay_mid, $stdpay_mid_test));
 	if(!$mid || !in_array($mid, $allowed_mids, true)){
-		credit_pay_fail("유효하지 않은 MID");
+		credit_pay_fail("유효하지 않은 MID", 'invalid_mid', array('mid' => (string)$mid));
 	}
 	$signKey = ($stdpay_mid_test && $mid === $stdpay_mid_test) ? $stdpay_signkey_test : $stdpay_signkey;
 	$timestamp = $util->getTimestamp();
@@ -55,7 +128,7 @@ try {
 		&& $isAllowedHost
 		&& preg_match('#/api/payAuth$#', $normalizedPath);
 	if (!$isValidAuthUrl) {
-		credit_pay_fail("authUrl 형식 검증 실패");
+		credit_pay_fail("authUrl 형식 검증 실패", 'invalid_auth_url', array('auth_url' => (string)$authUrl));
 	}
 
 	$signParam = array(
@@ -83,25 +156,32 @@ try {
 
 	$httpUtil = new HttpClient();
 	if (!$httpUtil->processHTTP($authUrl, $authMap)) {
-		credit_pay_fail("승인 요청 실패");
+		credit_pay_fail("승인 요청 실패", 'http_process_failed', array(
+			'auth_url' => (string)$authUrl,
+			'pg_request_raw' => json_encode(macomaex_payment_mask_array($authMap), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
+		));
 	}
 
 	$authResultString = $httpUtil->body;
 	$resultMap = json_decode($authResultString, true);
 	if (!is_array($resultMap) || $resultMap['resultCode'] !== '0000') {
 		$msg = isset($resultMap['resultMsg']) ? $resultMap['resultMsg'] : '승인 실패';
-		credit_pay_fail($msg);
+		credit_pay_fail($msg, 'approve_failed', array(
+			'pg_request_raw' => json_encode(macomaex_payment_mask_array($authMap), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+			'pg_response_raw' => json_encode(macomaex_payment_mask_array((array)$resultMap), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
+		));
 	}
 
 	$order_no = isset($resultMap['MOID']) ? $resultMap['MOID'] : '';
+	$payment_log_base['order_no'] = (string)$order_no;
 	$pinfo = sql_fetch("select * from g5_membership_payment where order_no='{$order_no}'");
 	if(!$pinfo['order_no']){
-		credit_pay_fail("주문 정보 없음");
+		credit_pay_fail("주문 정보 없음", 'order_not_found');
 	}
 	$minfo = sql_fetch("select * from g5_membership_manage where no='{$pinfo['membership_parent_no']}'");
 	$charge_credit = (int)$minfo['matching_cnt'];
 	if($charge_credit < 1){
-		credit_pay_fail("충전 수량이 0입니다.");
+		credit_pay_fail("충전 수량이 0입니다.", 'invalid_charge_credit', array('membership_parent_no' => (string)$pinfo['membership_parent_no']));
 	}
 
 	$tid = addslashes($resultMap['tid']);
@@ -119,6 +199,17 @@ try {
 	$already_charge = sql_fetch("select id from g5_matching_credit_history where order_no='{$order_no}' and tx_type='CHARGE' limit 1");
 	if($already_charge['id']){
 		sql_query("COMMIT");
+		macomaex_payment_log_write(array_merge($payment_log_base, array(
+			'event_status' => 'skip',
+			'reason' => 'already_charged',
+			'uid' => (string)$pinfo['uid'],
+			'membership_parent_no' => (string)$pinfo['membership_parent_no'],
+			'credit_delta' => (string)$charge_credit,
+			'db_tx' => 'commit',
+			'pg_request_raw' => json_encode(macomaex_payment_mask_array($authMap), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+			'pg_response_raw' => json_encode(macomaex_payment_mask_array((array)$resultMap), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+			'message' => '이미 충전 원장이 존재하여 중복 지급을 건너뛰었습니다.'
+		)));
 		echo "<script>
 			if(window.opener && !window.opener.closed){
 				window.opener.location.href='/ko/my_plan.php';
@@ -147,7 +238,7 @@ try {
 	$payment_update = sql_query($payment_update_sql, false);
 	if(!$payment_update){
 		sql_query("ROLLBACK");
-		credit_pay_fail("결제정보 저장 실패");
+		credit_pay_fail("결제정보 저장 실패", 'payment_update_failed', array('db_tx' => 'rollback'));
 	}
 
 	sql_query("insert into g5_membership_paybill select * from g5_membership_payment where order_no='{$order_no}'", false);
@@ -185,7 +276,7 @@ try {
 		$init_ok = sql_query($init_sql, false);
 		if(!$init_ok){
 			sql_query("ROLLBACK");
-			credit_pay_fail("잔액 상태 초기화 실패");
+			credit_pay_fail("잔액 상태 초기화 실패", 'status_init_failed', array('db_tx' => 'rollback'));
 		}
 		$status = sql_fetch("select * from g5_membership_status where uid='{$pinfo['uid']}' for update");
 	}
@@ -216,7 +307,7 @@ try {
 	$history_ok = sql_query($history_sql, false);
 	if(!$history_ok){
 		sql_query("ROLLBACK");
-		credit_pay_fail("원장 기록 실패");
+		credit_pay_fail("원장 기록 실패", 'credit_history_insert_failed', array('db_tx' => 'rollback'));
 	}
 
 	$status_update_sql = "update g5_membership_status set
@@ -231,7 +322,7 @@ try {
 	$status_ok = sql_query($status_update_sql, false);
 	if(!$status_ok){
 		sql_query("ROLLBACK");
-		credit_pay_fail("잔액 반영 실패");
+		credit_pay_fail("잔액 반영 실패", 'status_update_failed', array('db_tx' => 'rollback'));
 	}
 
 	$snapshot = sql_fetch("select * from g5_membership_status where uid='{$pinfo['uid']}'");
@@ -270,6 +361,25 @@ try {
 	sql_query($log_sql, false);
 
 	sql_query("COMMIT");
+	macomaex_payment_log_write(array_merge($payment_log_base, array(
+		'event_status' => 'success',
+		'uid' => (string)$pinfo['uid'],
+		'membership_parent_no' => (string)$pinfo['membership_parent_no'],
+		'tid' => (string)$resultMap['tid'],
+		'pay_method' => (string)$resultMap['payMethod'],
+		'appl_date' => (string)$resultMap['applDate'],
+		'appl_time' => (string)$resultMap['applTime'],
+		'card_code' => (string)$resultMap['CARD_Code'],
+		'card_num_masked' => (string)macomaex_payment_mask_value('CARD_Num', isset($resultMap['CARD_Num']) ? $resultMap['CARD_Num'] : ''),
+		'card_appl_price' => (string)$cardApplPrice,
+		'credit_delta' => (string)$charge_credit,
+		'credit_before' => (string)$current_credit,
+		'credit_after' => (string)$credit_after,
+		'db_tx' => 'commit',
+		'pg_request_raw' => json_encode(macomaex_payment_mask_array($authMap), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+		'pg_response_raw' => json_encode(macomaex_payment_mask_array((array)$resultMap), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+		'message' => '승인 완료 후 결제 및 크레딧 DB 반영을 완료했습니다.'
+	)));
 	echo "<script>
 		if(window.opener && !window.opener.closed){
 			window.opener.location.href='/ko/my_plan.php';
@@ -282,6 +392,6 @@ try {
 
 } catch (Exception $e) {
 	sql_query("ROLLBACK", false);
-	credit_pay_fail($e->getMessage());
+	credit_pay_fail($e->getMessage(), 'exception', array('db_tx' => 'rollback'));
 }
 ?>

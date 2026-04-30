@@ -2,7 +2,47 @@
 include_once("./_common.php");
 require_once('libs/INIStdPayUtil.php');
 
+if (!function_exists('macomaex_payment_log_write')) {
+	function macomaex_payment_log_write($fields) {
+		$log_dir = G5_PATH . '/logs/payments';
+		if (!is_dir($log_dir)) {
+			@mkdir($log_dir, 0777, true);
+		}
+		$log_file = $log_dir . '/payments_log_' . date('Ymd') . '.php';
+		if (!file_exists($log_file)) {
+			@file_put_contents($log_file, "<?php exit; ?>\n\n", FILE_APPEND | LOCK_EX);
+		}
+
+		$lines = array();
+		$lines[] = '[' . date('Y-m-d H:i:s') . ']';
+		foreach ((array)$fields as $key => $value) {
+			if ($value === null) $value = '';
+			if (is_array($value) || is_object($value)) {
+				$value = json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+			}
+			$value = str_replace(array("\r\n", "\r", "\n"), '\n', (string)$value);
+			$lines[] = $key . ': ' . $value;
+		}
+		$lines[] = '---';
+		$lines[] = '';
+		@file_put_contents($log_file, implode("\n", $lines), FILE_APPEND | LOCK_EX);
+	}
+}
+
+$payment_log_base = array(
+	'event_type' => 'pg_ui_enter',
+	'context' => 'credit_pay',
+	'request_uri' => isset($_SERVER['REQUEST_URI']) ? (string)$_SERVER['REQUEST_URI'] : '',
+	'request_method' => isset($_SERVER['REQUEST_METHOD']) ? (string)$_SERVER['REQUEST_METHOD'] : '',
+	'mb_id' => isset($member['mb_id']) ? (string)$member['mb_id'] : ''
+);
+
 if(!$member['mb_id']) {
+macomaex_payment_log_write(array_merge($payment_log_base, array(
+	'event_status' => 'fail',
+	'reason' => 'not_logged_in',
+	'message' => '로그인 후 이용하세요.'
+)));
 ?>
 <script>
 alert("로그인 후 이용하세요.");
@@ -14,6 +54,11 @@ self.close();
 
 $orderid = isset($_GET['orderid']) ? preg_replace('/[^A-Za-z0-9_\-]/', '', $_GET['orderid']) : '';
 if(!$orderid){
+macomaex_payment_log_write(array_merge($payment_log_base, array(
+	'event_status' => 'fail',
+	'reason' => 'missing_order_no',
+	'message' => '주문번호가 없습니다.'
+)));
 ?>
 <script>
 alert("주문번호가 없습니다.");
@@ -25,6 +70,12 @@ self.close();
 
 $pinfo = sql_fetch("select * from g5_membership_payment where order_no='{$orderid}' and uid='{$member['mb_id']}'");
 if(!$pinfo['order_no']){
+macomaex_payment_log_write(array_merge($payment_log_base, array(
+	'event_status' => 'fail',
+	'order_no' => (string)$orderid,
+	'reason' => 'order_not_found',
+	'message' => '결제 주문 정보를 찾을 수 없습니다.'
+)));
 ?>
 <script>
 alert("결제 주문 정보를 찾을 수 없습니다.");
@@ -43,6 +94,13 @@ $stdpay_signkey_test = (defined('_stdpay_signkey_test') && trim((string)_stdpay_
 $mid = trim($pinfo['mid']) ? trim($pinfo['mid']) : $stdpay_mid;
 $signKey = ($stdpay_mid_test && $mid === $stdpay_mid_test) ? $stdpay_signkey_test : $stdpay_signkey;
 if(!$mid || !$signKey){
+macomaex_payment_log_write(array_merge($payment_log_base, array(
+	'event_status' => 'fail',
+	'order_no' => (string)$orderid,
+	'mid' => (string)$mid,
+	'reason' => 'invalid_mid_or_signkey',
+	'message' => '일반결제 키가 설정되지 않았습니다.'
+)));
 ?>
 <script>
 alert("일반결제 키가 설정되지 않았습니다.");
@@ -84,6 +142,18 @@ if(strpos($baseUrl, 'http://') !== 0 && strpos($baseUrl, 'https://') !== 0){
 }
 $returnUrl = $baseUrl . '/ko/credit_pay_return.php';
 $closeUrl = $baseUrl . '/ko/close.php';
+
+macomaex_payment_log_write(array_merge($payment_log_base, array(
+	'event_status' => 'success',
+	'order_no' => (string)$orderNumber,
+	'mid' => (string)$mid,
+	'gopaymethod' => 'Card',
+	'price' => (string)$price,
+	'return_url' => (string)$returnUrl,
+	'close_url' => (string)$closeUrl,
+	'pg_js' => (string)$payJs,
+	'message' => '이니시스 일반결제 UI 호출을 시작했습니다.'
+)));
 ?>
 <!DOCTYPE html>
 <html lang="ko">

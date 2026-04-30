@@ -49,7 +49,7 @@ function company_detail_trade_request_consume_credit($memberId, $trNo, $targetKe
 	if (empty($status['uid']) || $currentCredit < $creditAmount) {
 		return array(
 			'success' => false,
-			'message' => '매칭 가능 크레딧이 부족합니다. (필요: ' . $creditAmount . ')',
+			'message' => '요청 가능 크레딧이 부족합니다. (필요: ' . $creditAmount . ')',
 			'plan_required' => true,
 		);
 	}
@@ -60,7 +60,7 @@ function company_detail_trade_request_consume_credit($memberId, $trNo, $targetKe
 	if (!$deductResult || (int)$affected['cnt'] < 1) {
 		return array(
 			'success' => false,
-			'message' => '매칭 가능 크레딧이 부족합니다. (필요: ' . $creditAmount . ')',
+			'message' => '요청 가능 크레딧이 부족합니다. (필요: ' . $creditAmount . ')',
 			'plan_required' => true,
 		);
 	}
