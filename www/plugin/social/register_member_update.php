@@ -185,7 +185,7 @@ if($result) {
         $subject = '['.$config['cf_title'].'] '.$mb_nick .' 님께서 회원으로 가입하셨습니다.';
 
         ob_start();
-        include_once (G5_BBS_PATH.'/register_form_update_mail2.php');
+        include_once (G5_BBS_PATH.'/mail/register_form_update_mail2.php');
         $content = ob_get_contents();
         ob_end_clean();
 
@@ -238,7 +238,7 @@ if($result) {
         $certify_href = G5_BBS_URL.'/email_certify.php?mb_id='.$mb_id.'&amp;mb_md5='.$mb_md5;
 
         ob_start();
-        include_once (G5_BBS_PATH.'/register_form_update_mail3.php');
+        include_once (G5_BBS_PATH.'/mail/register_form_update_mail3.php');
         $content = ob_get_contents();
         ob_end_clean();
 

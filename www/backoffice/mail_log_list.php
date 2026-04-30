@@ -27,8 +27,7 @@ $allowed_sfl = array(
 $mail_type_labels = array(
     'signup_member' => '회원가입 완료',
     'password_lost' => '비밀번호 찾기',
-    'matching_accept_requester' => '매칭 수락 안내(요청자)',
-    'matching_accept_receiver' => '매칭 수락 안내(수락자)',
+    'trade_request_receiver' => '거래 요청 안내(수신자)',
     'general' => '기타'
 );
 
@@ -39,7 +38,7 @@ if (!isset($allowed_sfl[$sfl])) {
 
 $stx = isset($_GET['stx']) ? trim((string)$_GET['stx']) : '';
 $status = isset($_GET['status']) ? strtoupper(trim((string)$_GET['status'])) : '';
-if (!in_array($status, array('', 'SUCCESS', 'FAIL'), true)) {
+if (!in_array($status, array('', 'SUCCESS', 'FAIL', 'SKIP'), true)) {
     $status = '';
 }
 
@@ -75,7 +74,8 @@ $from_record = ($page - 1) * $rows;
 $summary = sql_fetch(" select
                             count(*) as total_cnt,
                             sum(case when `status` = 'SUCCESS' then 1 else 0 end) as success_cnt,
-                            sum(case when `status` = 'FAIL' then 1 else 0 end) as fail_cnt
+                            sum(case when `status` = 'FAIL' then 1 else 0 end) as fail_cnt,
+                            sum(case when `status` = 'SKIP' then 1 else 0 end) as skip_cnt
                         {$sql_common} ");
 
 $result = sql_query(" select *
@@ -111,6 +111,7 @@ function mail_log_build_qstr($params, $overrides = array())
 }
 .mail-log-badge.success { background: #edf8f0; color: #1d7a34; }
 .mail-log-badge.fail { background: #fdecec; color: #b01717; }
+.mail-log-badge.skip { background: #f1f3f5; color: #4f5d6b; }
 .mail-log-subject, .mail-log-error, .mail-log-email {
     word-break: break-all;
 }
@@ -139,6 +140,9 @@ function mail_log_build_qstr($params, $overrides = array())
         <a href="./mail_log_list.php?<?php echo mail_log_build_qstr($qarr, array('status' => 'FAIL')); ?>" class="btn_ov01">
             <span class="ov_txt">실패</span><span class="ov_num"> <?php echo number_format((int)$summary['fail_cnt']); ?>건</span>
         </a>
+        <a href="./mail_log_list.php?<?php echo mail_log_build_qstr($qarr, array('status' => 'SKIP')); ?>" class="btn_ov01">
+            <span class="ov_txt">스킵</span><span class="ov_num"> <?php echo number_format((int)$summary['skip_cnt']); ?>건</span>
+        </a>
 
         <div style="display:inline-block; margin-left:14px;">
             <label for="date_from">기간</label>
@@ -150,6 +154,7 @@ function mail_log_build_qstr($params, $overrides = array())
                 <option value="" <?php echo get_selected($status, ''); ?>>전체상태</option>
                 <option value="SUCCESS" <?php echo get_selected($status, 'SUCCESS'); ?>>성공</option>
                 <option value="FAIL" <?php echo get_selected($status, 'FAIL'); ?>>실패</option>
+                <option value="SKIP" <?php echo get_selected($status, 'SKIP'); ?>>스킵</option>
             </select>
 
             <select name="sfl" id="sfl">
@@ -192,7 +197,13 @@ function mail_log_build_qstr($params, $overrides = array())
         $list_num = $total_count - (($page - 1) * $rows);
         for ($i = 0; $row = sql_fetch_array($result); $i++) {
             $bg = 'bg' . ($i % 2);
-            $status_class = strtolower($row['status']) === 'success' ? 'success' : 'fail';
+            $status_value = strtoupper(trim((string)$row['status']));
+            $status_class = 'fail';
+            if ($status_value === 'SUCCESS') {
+                $status_class = 'success';
+            } else if ($status_value === 'SKIP') {
+                $status_class = 'skip';
+            }
             $type_label = isset($mail_type_labels[$row['mail_type']]) ? $mail_type_labels[$row['mail_type']] : $mail_type_labels['general'];
             $tr_class = trim($bg . ' ' . ($status_class === 'fail' ? 'mail-log-row-fail' : ''));
             ?>
