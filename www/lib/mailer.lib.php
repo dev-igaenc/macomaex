@@ -821,6 +821,27 @@ function mailer($fname, $fmail, $to, $subject, $content, $type=0, $file="", $cc=
         $mail->AltBody = ""; // optional, comment out and test
         $mail->msgHTML($content);
 
+        // Embed mail icons as CID to avoid SVG stripping issues in major webmail clients.
+        if (defined('G5_PATH')) {
+            $embedded_images = array(
+                'trade-icon-sender' => rtrim((string) G5_PATH, '/') . '/img/mail/trade_icon_sender.png',
+                'trade-icon-arrow' => rtrim((string) G5_PATH, '/') . '/img/mail/trade_icon_arrow.png',
+                'trade-icon-receiver' => rtrim((string) G5_PATH, '/') . '/img/mail/trade_icon_receiver.png',
+            );
+
+            foreach ($embedded_images as $cid => $image_path) {
+                if (strpos((string) $content, 'cid:' . $cid) === false) {
+                    continue;
+                }
+
+                if (!is_file($image_path) || !is_readable($image_path)) {
+                    continue;
+                }
+
+                $mail->addEmbeddedImage($image_path, $cid, basename($image_path), 'base64', 'image/png');
+            }
+        }
+
         $mail->addAddress($to);
         if ($cc)
             $mail->addCC($cc);

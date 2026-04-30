@@ -56,7 +56,7 @@ $mailDateLabel = isset($mailDateLabel) ? (string)$mailDateLabel : date('Y년 m�
         <td style="width:47%;vertical-align:top;">
           <div style="background:#ffffff;border-radius:12px;padding:16px;border:1px solid #e5e7eb;">
             <div style="width:36px;height:36px;background:#eff6ff;border-radius:50%;display:flex;align-items:center;justify-content:center;margin-bottom:10px;">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2h12v20H6z"/><path d="M2 22h20"/><rect x="9" y="10" width="2" height="3"/><rect x="13" y="10" width="2" height="3"/><rect x="9" y="5" width="2" height="3"/><rect x="13" y="5" width="2" height="3"/><rect x="9" y="15" width="2" height="7"/><rect x="13" y="15" width="2" height="7"/></svg>
+              <img src="cid:trade-icon-sender" alt="" width="16" height="16" style="display:block;border:0;outline:none;text-decoration:none;">
             </div>
             <div style="font-size:13px;font-weight:800;color:#111827;margin-bottom:3px;"><?php echo $e($requestCompanyProfileName); ?></div>
             <div style="font-size:11px;color:#6b7280;">발신 기업</div>
@@ -64,13 +64,13 @@ $mailDateLabel = isset($mailDateLabel) ? (string)$mailDateLabel : date('Y년 m�
         </td>
 
         <td align="center" style="width:6%;padding:0 4px;vertical-align:middle;">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="13 6 19 12 13 18"/></svg>
+          <img src="cid:trade-icon-arrow" alt="" width="16" height="16" style="display:block;border:0;outline:none;text-decoration:none;">
         </td>
 
         <td style="width:47%;vertical-align:top;">
           <div style="background:#ffffff;border-radius:12px;padding:16px;border:1px solid #e5e7eb;">
             <div style="width:36px;height:36px;background:#ecfdf5;border-radius:50%;display:flex;align-items:center;justify-content:center;margin-bottom:10px;">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2h12v20H6z"/><path d="M2 22h20"/><rect x="9" y="10" width="2" height="3"/><rect x="13" y="10" width="2" height="3"/><rect x="9" y="5" width="2" height="3"/><rect x="13" y="5" width="2" height="3"/><rect x="9" y="15" width="2" height="7"/><rect x="13" y="15" width="2" height="7"/></svg>
+              <img src="cid:trade-icon-receiver" alt="" width="16" height="16" style="display:block;border:0;outline:none;text-decoration:none;">
             </div>
             <div style="font-size:13px;font-weight:800;color:#111827;margin-bottom:3px;"><?php echo $e($targetCompanyName); ?></div>
             <div style="font-size:11px;color:#6b7280;">수신 기업</div>
