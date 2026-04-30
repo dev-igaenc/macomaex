@@ -420,7 +420,7 @@ switch ($type) {
 						exit;
 					}
 					$already_refund = sql_fetch("select id from g5_matching_credit_history where order_no='{$oid}' and tx_type='REFUND' limit 1");
-					if($already_refund['id']){
+					if(is_array($already_refund) && !empty($already_refund['id'])){
 						membership_refund_lock_release($refund_lock_name);
 						echo "500|이미 환불 처리된 결제입니다.";
 						exit;

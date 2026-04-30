@@ -208,6 +208,7 @@ function trade_chat_log_context_label($eventType, $status, $payload = array()) {
 		'stream_room_sync' => 'GetStream 채널 동기화',
 		'stream_channel_sync' => 'GetStream 채널 생성 또는 조회',
 		'stream_user_upsert' => 'GetStream 사용자 동기화',
+		'file_upload_attempt' => '첨부파일 업로드 시도',
 		'file_scan_webhook' => '첨부파일 스캔 웹훅 수신',
 		'file_scan_result' => '첨부파일 악성코드 스캔 결과',
 		'file_scan_action' => '악성 파일 메시지 후속 조치',
@@ -242,6 +243,7 @@ function trade_chat_log_default_message($eventType, $status, $payload = array())
 			'stream_room_sync' => '채팅 채널 동기화 완료',
 			'stream_channel_sync' => '채팅 채널 생성 또는 조회 완료',
 			'stream_user_upsert' => '채팅 사용자 동기화 완료',
+			'file_upload_attempt' => '첨부파일 업로드 시도를 기록했습니다.',
 			'file_scan_webhook' => '파일 스캔 웹훅 수신 처리 완료',
 			'file_scan_result' => '첨부파일 보안 스캔 완료',
 			'file_scan_action' => '보안 조치가 완료되었습니다.',
@@ -265,6 +267,9 @@ function trade_chat_log_default_message($eventType, $status, $payload = array())
 		}
 		if ($eventType === 'file_scan_webhook' && $reason === 'unsupported_event') {
 			return '지원하지 않는 웹훅 이벤트라 건너뛰었습니다.';
+		}
+		if ($eventType === 'file_upload_attempt' && $reason !== '') {
+			return '첨부파일 업로드가 정책에 의해 차단되었습니다.';
 		}
 		if ($eventType === 'file_scan_webhook' && $reason === 'no_attachments') {
 			return '첨부파일 없는 메시지라 스캔을 건너뛰었습니다.';
@@ -316,8 +321,11 @@ function trade_chat_write_daily_file_log($eventType, $status, $payload = array()
 		'attachment_index' => (int)($payload['attachment_index'] ?? -1),
 		'attachment_type' => trim((string)($payload['attachment_type'] ?? '')),
 		'attachment_title' => trim((string)($payload['attachment_title'] ?? '')),
-		'attachment_url' => trim((string)($payload['attachment_url'] ?? '')),
-		'scan_status' => trim((string)($payload['scan_status'] ?? '')),
+			'attachment_url' => trim((string)($payload['attachment_url'] ?? '')),
+			'attempt_result' => trim((string)($payload['attempt_result'] ?? '')),
+			'attempt_reason' => trim((string)($payload['attempt_reason'] ?? '')),
+			'policy_expected' => trim((string)($payload['policy_expected'] ?? '')),
+			'scan_status' => trim((string)($payload['scan_status'] ?? '')),
 		'scanner' => trim((string)($payload['scanner'] ?? '')),
 		'file_size' => (int)($payload['file_size'] ?? 0),
 		'scan_total' => (int)($payload['scan_total'] ?? 0),
@@ -332,6 +340,10 @@ function trade_chat_write_daily_file_log($eventType, $status, $payload = array()
 		'delete_status' => trim((string)($payload['delete_status'] ?? '')),
 		'notice_status' => trim((string)($payload['notice_status'] ?? '')),
 		'action_error_code' => trim((string)($payload['action_error_code'] ?? '')),
+		'ui_action' => trim((string)($payload['ui_action'] ?? '')),
+		'ui_context' => trim((string)($payload['ui_context'] ?? '')),
+		'search_keyword' => trim((string)($payload['search_keyword'] ?? '')),
+		'search_result_count' => (int)($payload['search_result_count'] ?? 0),
 		'message' => $errorMessage,
 		'context' => trade_chat_log_context_label($eventType, $status, $payload),
 		'request_uri' => $requestUri,
@@ -382,6 +394,7 @@ function trade_chat_write_daily_file_log($eventType, $status, $payload = array()
 		'scan_error',
 		'infected_count',
 		'http_code',
+		'search_result_count',
 	);
 	foreach ($fields as $key => $value) {
 		if ($value === '') continue;

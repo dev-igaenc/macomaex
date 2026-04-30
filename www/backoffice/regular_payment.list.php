@@ -124,7 +124,7 @@ $rnumber=($total_count-($page-1)*$rows)+1;
 				$is_credit_goods = (isset($membershipInfo['title_en']) && strpos($membershipInfo['title_en'], 'CREDIT_') === 0) ? 1 : 0;
 				$refundInfo = sql_fetch("select id from g5_matching_credit_history where order_no='{$row['order_no']}' and tx_type='REFUND' order by id desc limit 1");
 				$is_refunded = (is_array($refundInfo) && !empty($refundInfo['id'])) ? 1 : 0;
-			$status_text = $ms_status_text[$row['status']];
+				$status_text = isset($ms_status_text[$row['status']]) ? $ms_status_text[$row['status']] : (string)$row['status'];
 			$status_btn_class = "btn-primary";
 			if($row['status']=="C") $status_btn_class = "btn-danger";
 			else if($row['status']=="E") $status_btn_class = "btn-secondary";
@@ -177,7 +177,7 @@ $rnumber=($total_count-($page-1)*$rows)+1;
 			<a class="btn btn-danger text-light pay_cancel" oid="<?=$row['order_no']?>" is_credit="<?=$is_credit_goods?>">결제취소</a><br>
 			<?php }?>
             <a href="./regular_payment.view.php?no=<?=$row['no']?>&amp;<?=$qstr?>" class="btn btn_03">확인</a>
-            <a href="./regular_payment.list_update.php?w=d&amp;no=<?php echo $row['no']; ?>&amp;<?=$qstr?>" onclick="return delete_confirm(this);" class="btn btn_02"><span class="sound_only"><?php echo htmlspecialchars2($row['title']); ?> </span>삭제</a>
+	            <a href="./regular_payment.list_update.php?w=d&amp;no=<?php echo $row['no']; ?>&amp;<?=$qstr?>" onclick="return delete_confirm(this);" class="btn btn_02"><span class="sound_only"><?php echo htmlspecialchars2(isset($row['title']) ? $row['title'] : ''); ?> </span>삭제</a>
         </td>
     </tr>
     <?php

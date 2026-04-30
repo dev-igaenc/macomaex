@@ -129,7 +129,7 @@
             var orderid = $('#plan_orderid').val() || $("input[name='orderid']").val();
 
             // 사용자 클릭 제스처 안에서 먼저 팝업을 열어 팝업 차단을 줄인다.
-            var payWindow = window.open('about:blank', 'pyWin', 'width=520px,height=760px');
+            var payWindow = window.open('about:blank', 'pyWin', 'width=860px,height=630px');
             if (!payWindow) {
                 showPlanAlert('팝업이 차단되었습니다. 브라우저 팝업을 허용해 주세요.');
                 return false;

@@ -23,6 +23,7 @@
 		var sendBtn = document.getElementById('chatSendBtn');
 		var formEl = document.getElementById('tradeChatModalForm');
 		var context = window.__TRADE_CHAT_MODAL_CONTEXT || {};
+		var uiEventUrl = context.uiEventUrl || '/ko/trade_chat_ui_event.php';
 		var FILE_UPLOAD_MAX_BYTES = 100 * 1024 * 1024;
 		var MESSAGE_TEXT_MAX_LENGTH = 2000;
 
@@ -62,7 +63,8 @@
 			bootPromise: null,
 			composerEnabled: false,
 			isSending: false,
-			isUploading: false
+			isUploading: false,
+			lastSearchKeyword: ''
 		};
 
 		// 데스크톱에서는 room list 폭을 토글하고, 모바일에서는 기존 전환 흐름을 유지한다.
@@ -259,6 +261,48 @@
 			return String(value || '')
 				.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, '')
 				.trim();
+		}
+
+		function sendUiEvent(eventType, roomId, extra) {
+			roomId = Number(roomId || 0);
+			if (!eventType || roomId < 1) return;
+			// UI 이벤트를 서버 공통 엔드포인트로 전송해 DB/일자별 파일 로그를 동시에 남긴다.
+			var payload = new URLSearchParams();
+			payload.append('event_type', String(eventType));
+			payload.append('room_id', String(roomId));
+			payload.append('ui_context', 'modal');
+			if (extra && typeof extra === 'object') {
+				Object.keys(extra).forEach(function (key) {
+					var value = extra[key];
+					if (value === null || value === undefined) return;
+					payload.append(String(key), String(value));
+				});
+			}
+			fetch(uiEventUrl, {
+				method: 'POST',
+				credentials: 'same-origin',
+				headers: {
+					'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+					'X-Requested-With': 'XMLHttpRequest'
+				},
+				body: payload.toString(),
+				keepalive: true
+			}).catch(function () {});
+		}
+
+		function sendFileUploadAttemptLog(file, eventStatus, attemptResult, attemptReason, policyExpected) {
+			var roomId = Number(state.activeRoomId || 0);
+			if (roomId < 1) return;
+			// 첨부 시도 로그는 최종 성공 여부와 별개로 "시도/원인/결과"를 항상 기록한다.
+			sendUiEvent('file_upload_attempt', roomId, {
+				event_status: String(eventStatus || 'success'),
+				file_name: String((file && file.name) || ''),
+				file_size: Number((file && file.size) || 0),
+				file_mime: String((file && file.type) || ''),
+				attempt_result: String(attemptResult || ''),
+				attempt_reason: String(attemptReason || ''),
+				policy_expected: String(policyExpected || '')
+			});
 		}
 
 		function validateMessageText(text, allowEmpty) {
@@ -471,30 +515,40 @@
 
 		async function uploadAndSendFileAttachment(file) {
 			if (!state.channel) {
+				sendFileUploadAttemptLog(file, 'skip', 'blocked', 'channel_not_ready', 'channel_connection_required');
 				throw new Error('채팅 채널 연결 후 파일을 전송할 수 있습니다.');
 			}
 			if (!file) {
 				throw new Error('첨부할 파일을 선택해 주세요.');
 			}
 			if (isExecutableFileBlocked(file)) {
+				sendFileUploadAttemptLog(file, 'skip', 'blocked', 'executable_file_blocked', 'block_executable');
 				throw new Error('실행 가능한 파일 형식은 첨부할 수 없습니다.');
 			}
 			if (Number(file.size || 0) > FILE_UPLOAD_MAX_BYTES) {
+				sendFileUploadAttemptLog(file, 'skip', 'blocked', 'max_size_exceeded', 'max_100mb');
 				throw new Error('파일은 100MB 이하만 첨부할 수 있습니다.');
 			}
 
 			var isImage = file.type && file.type.indexOf('image/') === 0;
 			var uploadResponse = null;
-			if (isImage && typeof state.channel.sendImage === 'function') {
-				uploadResponse = await state.channel.sendImage(file, file.name, file.type);
-			} else if (typeof state.channel.sendFile === 'function') {
-				uploadResponse = await state.channel.sendFile(file, file.name, file.type);
-			} else {
-				throw new Error('현재 채팅 SDK에서는 파일 첨부를 지원하지 않습니다.');
+			try {
+				if (isImage && typeof state.channel.sendImage === 'function') {
+					uploadResponse = await state.channel.sendImage(file, file.name, file.type);
+				} else if (typeof state.channel.sendFile === 'function') {
+					uploadResponse = await state.channel.sendFile(file, file.name, file.type);
+				} else {
+					sendFileUploadAttemptLog(file, 'fail', 'failed', 'sdk_upload_not_supported', 'sdk_upload_support_required');
+					throw new Error('현재 채팅 SDK에서는 파일 첨부를 지원하지 않습니다.');
+				}
+			} catch (error) {
+				sendFileUploadAttemptLog(file, 'fail', 'failed', 'upload_api_failed', 'stream_upload_api');
+				throw error;
 			}
 
 			var uploadedUrl = uploadResponse && (uploadResponse.file || uploadResponse.url || uploadResponse.asset_url);
 			if (!uploadedUrl) {
+				sendFileUploadAttemptLog(file, 'fail', 'failed', 'upload_url_missing', 'stream_upload_response');
 				throw new Error('파일 업로드 URL을 확인할 수 없습니다.');
 			}
 
@@ -514,10 +568,16 @@
 			if (!textValidation.valid) {
 				throw new Error(textValidation.message);
 			}
-			await state.channel.sendMessage({
-				text: textValidation.text,
-				attachments: [attachment]
-			});
+			try {
+				await state.channel.sendMessage({
+					text: textValidation.text,
+					attachments: [attachment]
+				});
+			} catch (error) {
+				sendFileUploadAttemptLog(file, 'fail', 'failed', 'send_message_failed', 'stream_send_message');
+				throw error;
+			}
+			sendFileUploadAttemptLog(file, 'success', 'accepted', 'sent', 'stream_policy_passed');
 			inputEl.value = '';
 		}
 
@@ -638,9 +698,13 @@
 		}
 
 		async function bindRoom(roomId) {
+			var prevRoomId = Number(state.activeRoomId || 0);
 			var room = findRoomById(roomId);
 			var roomMeta = room ? getRoomStatusMeta(room.roomStatus) : getRoomStatusMeta('');
 			state.activeRoomId = room ? Number(room.roomId) : 0;
+			if (prevRoomId > 0 && prevRoomId !== state.activeRoomId) {
+				sendUiEvent('chat_room_leave', prevRoomId);
+			}
 			cleanupActiveChannel();
 			renderRoomList();
 
@@ -650,6 +714,8 @@
 				setComposerEnabled(false, '채팅방을 먼저 선택해 주세요.');
 				return;
 			}
+
+			sendUiEvent('chat_room_enter', state.activeRoomId);
 
 			setMainHeader(room, roomMeta.header, roomMeta.code);
 
@@ -813,6 +879,7 @@
 		}
 
 		function closeModal() {
+			var leavingRoomId = Number(state.activeRoomId || 0);
 			cleanupActiveChannel();
 			overlay.classList.remove('open');
 			overlay.setAttribute('aria-hidden', 'true');
@@ -821,6 +888,10 @@
 			modal.classList.remove('chat-demo-modal--sidebar-collapsed');
 			document.documentElement.classList.remove('hide-scroll');
 			syncSidebarToggleState();
+			if (leavingRoomId > 0) {
+				sendUiEvent('chat_room_leave', leavingRoomId);
+			}
+			state.activeRoomId = 0;
 		}
 
 		function backToList() {
@@ -854,6 +925,17 @@
 			searchInputEl.addEventListener('input', function () {
 				state.filterKeyword = searchInputEl.value || '';
 				renderRoomList();
+				var keyword = String(state.filterKeyword || '').trim();
+				if (keyword === state.lastSearchKeyword) return;
+				state.lastSearchKeyword = keyword;
+				var resultCount = getFilteredRooms().length;
+				var targetRoomId = Number(state.activeRoomId || (state.bootstrap && state.bootstrap.initialRoomId) || 0);
+				if (targetRoomId > 0) {
+					sendUiEvent('chat_room_search', targetRoomId, {
+						search_keyword: keyword,
+						search_result_count: resultCount
+					});
+				}
 			});
 		}
 
