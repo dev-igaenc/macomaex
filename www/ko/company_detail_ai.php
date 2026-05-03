@@ -57,6 +57,19 @@ function company_detail_ai_display_value($value)
     return ($value !== '') ? $value : '정보 준비중';
 }
 
+function company_detail_ai_extract_report_from_llm_log_content($raw_content)
+{
+    $raw_content = trim((string)$raw_content);
+    if ($raw_content === '') return '';
+    $decoded = json_decode($raw_content, true);
+    if (!is_array($decoded)) return '';
+    $status = strtoupper(trim((string)($decoded['status'] ?? '')));
+    $report = trim((string)($decoded['report'] ?? ''));
+    // 성공 로그의 report 본문만 즉시표시 대상으로 사용
+    if ($status === 'SUCCESS' && $report !== '') return $report;
+    return '';
+}
+
 // 상세 대상 기업 식별자(kedcd)는 kedcd 또는 id 파라미터로 받는다.
 $kedcd = isset($_GET['kedcd']) ? preg_replace('/\D/', '', (string)$_GET['kedcd']) : '';
 if ($kedcd === '' && isset($_GET['id'])) {
@@ -147,6 +160,44 @@ if (strlen($kedcd) === 10) {
 
 if (!empty($company['ENP_TYP']) && isset($enp_typt[$company['ENP_TYP']])) {
     $company_type = $enp_typt[$company['ENP_TYP']];
+}
+
+$preloaded_ai_report_markdown = '';
+$preloaded_ai_once_key = '';
+if (!empty($member['mb_id'])) {
+    $preload_trade_type = isset($_GET['trade_type']) ? (int)$_GET['trade_type'] : 1;
+    if ($preload_trade_type !== 2) $preload_trade_type = 1;
+
+    $preload_src_kedcd = isset($_GET['src_kedcd']) ? preg_replace('/\D/', '', (string)$_GET['src_kedcd']) : '';
+    if (strlen($preload_src_kedcd) !== 10) {
+        $preload_src_kedcd = preg_replace('/\D/', '', (string)($member['mb_company'] ?? ''));
+    }
+
+    if (strlen($preload_src_kedcd) === 10) {
+        // API와 동일 키: 동일 분석 이력에서 최근 성공 리포트 재사용
+        $preloaded_ai_once_key = hash('sha256', 'AI_COMPANY_REPORT:' . (string)$member['mb_id'] . ':' . $preload_src_kedcd . ':' . $kedcd . ':' . $preload_trade_type);
+        $once_key_sql = sql_escape_string($preloaded_ai_once_key);
+        $result_log = sql_query("
+            SELECT c_content
+            FROM company_llm_log
+            WHERE c_once_key = '{$once_key_sql}'
+              AND c_trade_type = '{$preload_trade_type}'
+              AND c_datetime >= date_sub(now(), interval 2 month)
+            ORDER BY c_id DESC
+            LIMIT 10
+        ", false);
+
+        if ($result_log) {
+            // 최근 로그부터 순회하며 즉시표시 가능한 성공 리포트 1건을 선택
+            while ($row_log = sql_fetch_array($result_log)) {
+                $report_md = company_detail_ai_extract_report_from_llm_log_content($row_log['c_content'] ?? '');
+                if ($report_md !== '') {
+                    $preloaded_ai_report_markdown = $report_md;
+                    break;
+                }
+            }
+        }
+    }
 }
 
 $is_detail_unlocked = false;
@@ -405,6 +456,10 @@ window.MATCH_REQUEST_CONTEXT = {
 		product: <?php echo json_encode($company_seed['product_line'] ?? '', JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>
 	},
 	seedCompany: <?php echo json_encode($company_seed, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>
+};
+window.PRELOADED_AI_REPORT = {
+	markdown: <?php echo json_encode($preloaded_ai_report_markdown, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>,
+	once_key: <?php echo json_encode($preloaded_ai_once_key, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>
 };
 </script>
 <script src="/ko/js/mock-data.js?ver=<?php echo $mock_data_js_ver; ?>"></script>

@@ -1032,6 +1032,10 @@ window._bindRadarHover();
 	var ctaOverlay = document.getElementById('aiCtaOverlay');
 	var benefitText = document.getElementById('aiCtaBenefitText');
 	if (!btn || !body) return;
+	var preloadedReportMarkdown = '';
+	try {
+		preloadedReportMarkdown = String((window.PRELOADED_AI_REPORT && window.PRELOADED_AI_REPORT.markdown) || '').trim();
+	} catch (e0) { preloadedReportMarkdown = ''; }
 	var richSrc = (window.RICH_ANALYSIS && window.RICH_ANALYSIS[demoId]) || co.ai_analysis_html || '';
 	var demoHtml = richSrc.replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{2B55}\u{FE00}-\u{FEFF}]/gu, '');
 
@@ -1117,6 +1121,25 @@ window._bindRadarHover();
 		items.forEach(function(el) { el.style.opacity='0'; el.style.transform='translateY(8px)'; el.style.transition='opacity 0.3s, transform 0.3s'; });
 		items.forEach(function(el, i) { setTimeout(function() { el.style.opacity='1'; el.style.transform='translateY(0)'; }, i * 60); });
 		setTimeout(function() { btn.disabled = false; }, items.length * 60);
+	}
+
+	function showPreloadedAnalysisIfAny() {
+		// 상세 진입 시 서버에서 미리 내려준 리포트가 있으면 버튼 없이 즉시 렌더
+		if (!preloadedReportMarkdown) return false;
+		if (blurBg) blurBg.style.display = 'none';
+		if (ctaOverlay) ctaOverlay.style.display = 'none';
+		if (btn) {
+			btn.disabled = true;
+			btn.style.display = 'none';
+			btn.setAttribute('aria-hidden', 'true');
+		}
+		body.style.display = '';
+		var rendered = (typeof marked !== 'undefined')
+			? marked.parse(preloadedReportMarkdown)
+			: '<pre style="white-space:pre-wrap">' + esc(preloadedReportMarkdown) + '</pre>';
+		showAnalysisHtml(rendered);
+		if (btn) btn.disabled = true;
+		return true;
 	}
 
 	function runAnalysis() {
@@ -1260,6 +1283,8 @@ window._bindRadarHover();
 				btn.disabled = false;
 			});
 	}
+
+	if (showPreloadedAnalysisIfAny()) return;
 
 	btn.addEventListener('click', function () {
 		// 비로그인 차단
