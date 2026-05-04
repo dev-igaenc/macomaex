@@ -427,6 +427,48 @@ function llm_report_log_write($sourceKedcd, $targetKedcd, $tradeType, $onceKey, 
     return $result;
 }
 
+function llm_report_extract_success_report_from_content($rawContent) {
+    $rawContent = trim((string)$rawContent);
+    if ($rawContent === '') return array();
+    $decoded = json_decode($rawContent, true);
+    if (!is_array($decoded)) return array();
+    $status = strtoupper(trim((string)($decoded['status'] ?? '')));
+    $report = trim((string)($decoded['report'] ?? ''));
+    if ($status !== 'SUCCESS' || $report === '') return array();
+    return array(
+        'report' => $report,
+        'provider' => trim((string)($decoded['provider'] ?? '')),
+        'model' => trim((string)($decoded['model'] ?? '')),
+        'elapsed_ms' => isset($decoded['elapsed_ms']) ? (int)$decoded['elapsed_ms'] : 0,
+    );
+}
+
+function llm_report_pick_recent_cached_report($onceKey, $tradeType, $months = 1) {
+    $onceKey = trim((string)$onceKey);
+    $tradeType = ((int)$tradeType === 2) ? 2 : 1;
+    $months = (int)$months;
+    if ($months < 1) $months = 1;
+    if ($onceKey === '') return array();
+
+    $onceKeySql = sql_escape_string($onceKey);
+    $result = sql_query("
+        SELECT c_content
+        FROM company_llm_log
+        WHERE c_once_key = '{$onceKeySql}'
+          AND c_trade_type = '{$tradeType}'
+          AND c_datetime >= date_sub(now(), interval {$months} month)
+        ORDER BY c_id DESC
+        LIMIT 10
+    ", false);
+    if (!$result) return array();
+
+    while ($row = sql_fetch_array($result)) {
+        $picked = llm_report_extract_success_report_from_content($row['c_content'] ?? '');
+        if (!empty($picked['report'])) return $picked;
+    }
+    return array();
+}
+
 function _sze_label($sze) {
     switch ((int)$sze) {
         case 1: return '소상공인';
@@ -559,12 +601,40 @@ if ($targetKedcd === '') {
     echo json_encode(array('error' => '추천 대상 기업 정보가 없어 분석을 진행할 수 없습니다.'), JSON_UNESCAPED_UNICODE);
     exit;
 }
-// AI 분석 재열람 무과금 기간 (정책: 2개월)
+// 정책 분리:
+// - 결과 재사용(LLM 재호출 생략): 1개월
+// - 크레딧 재차감 면제: 2개월
+$cacheWindowMonths = 1;
 $creditWindowMonths = 2;
 $analysisOnceKey = llm_report_build_once_key($memberId, $sourceKedcd, $targetKedcd, $tradeType);
 if ($analysisOnceKey === '') {
     http_response_code(400);
     echo json_encode(array('error' => '분석 식별키 생성에 실패했습니다.'), JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+// 최근 1개월 내 동일 분석 성공 리포트가 있으면 LLM 재호출 없이 즉시 반환
+$cachedReport = llm_report_pick_recent_cached_report($analysisOnceKey, $tradeType, $cacheWindowMonths);
+if (!empty($cachedReport['report'])) {
+    llm_report_write_daily_file_log($sourceKedcd, $targetKedcd, $tradeType, $analysisOnceKey, 'SKIP', array(
+        'stage' => 'cache_hit',
+        'provider' => (string)($cachedReport['provider'] ?? ''),
+        'model' => (string)($cachedReport['model'] ?? ''),
+        'elapsed_ms' => isset($cachedReport['elapsed_ms']) ? (int)$cachedReport['elapsed_ms'] : 0,
+        'credit_charged' => 0,
+        'reused_within_window' => 1,
+        'message' => '최근 성공 리포트 재사용으로 LLM 호출 생략',
+    ));
+    echo json_encode(array(
+        'report' => (string)$cachedReport['report'],
+        'trade_type' => $tradeType,
+        'trade_label' => $tradeLabel,
+        'provider' => (string)($cachedReport['provider'] ?? ''),
+        'model' => (string)($cachedReport['model'] ?? ''),
+        'elapsed_ms' => isset($cachedReport['elapsed_ms']) ? (int)$cachedReport['elapsed_ms'] : 0,
+        'cache_hit' => true,
+        'credit_charged' => false,
+    ), JSON_UNESCAPED_UNICODE);
     exit;
 }
 
@@ -727,7 +797,7 @@ $creditCost = 1;
 $creditCharged = false;
 $creditOnceKey = $analysisOnceKey;
 $hasRecentUse = llm_report_has_recent_use($memberId, $analysisOnceKey, $creditWindowMonths);
-// 2개월 이내 재조회는 크레딧 재차감 없이 그대로 분석을 진행한다.
+// 2개월 이내 재조회는 크레딧 재차감 없이 그대로 분석을 진행
 if (!$hasRecentUse) {
     // 첫 조회(2개월 내 이력 없음)일 때만 1크레딧 차감
     $creditTx = llm_report_consume_credit_once($memberId, $sourceKedcd, $targetKedcd, $tradeType, $creditCost);

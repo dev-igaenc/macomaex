@@ -185,7 +185,7 @@ if (!empty($member['mb_id'])) {
             FROM company_llm_log
             WHERE c_once_key = '{$once_key_sql}'
               AND c_trade_type = '{$preload_trade_type}'
-              AND c_datetime >= date_sub(now(), interval 2 month)
+              AND c_datetime >= date_sub(now(), interval 1 month)
             ORDER BY c_id DESC
             LIMIT 10
         ", false);
