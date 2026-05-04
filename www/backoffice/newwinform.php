@@ -165,8 +165,8 @@ jQuery(function($){
     <tr>
         <th scope="row"><label for="nw_link">링크<strong class="sound_only"> </strong></label></th>
         <td>
-            <input type="text" name="nw_link" value="<?php echo get_sanitize_input($nw['nw_link']); ?>" id="nw_link"  class="frm_input " size="80">
-			<input type="checkbox" id="nw_blank" name="nw_blank"  class="selec_chk" value="_blank" <?if($nw['nw_blank']) echo "checked";?>><label for="nw_blank">새창</label>
+            <input type="text" name="nw_link" value="<?php echo get_sanitize_input(isset($nw['nw_link']) ? $nw['nw_link'] : ''); ?>" id="nw_link"  class="frm_input " size="80">
+				<input type="checkbox" id="nw_blank" name="nw_blank"  class="selec_chk" value="_blank" <?php if (!empty($nw['nw_blank'])) echo "checked"; ?>><label for="nw_blank">새창</label>
         </td>
     </tr>
     <tr>
