@@ -377,10 +377,12 @@ if (!function_exists('company_list_ai_collect_partner_names')) {
 }
 
 if (!function_exists('company_list_ai_pick_company_api_log')) {
-    function company_list_ai_pick_company_api_log($bizno, $today_only)
+    function company_list_ai_pick_company_api_log($bizno, $today_only, $max_age_months = 0)
     {
         $bizno = preg_replace('/\D/', '', (string)$bizno);
         if (strlen($bizno) !== 10) return null;
+        $max_age_months = (int)$max_age_months;
+        if ($max_age_months < 0) $max_age_months = 0;
 
         $bizno_sql = sql_real_escape_string($bizno);
         $sql = "select c_bizno, c_kedcd, c_content, c_datetime
@@ -388,6 +390,8 @@ if (!function_exists('company_list_ai_pick_company_api_log')) {
                 where c_bizno='{$bizno_sql}'";
         if ($today_only) {
             $sql .= " and DATE(c_datetime)='" . date('Y-m-d') . "'";
+        } else if ($max_age_months > 0) {
+            $sql .= " and c_datetime >= date_sub(now(), interval {$max_age_months} month)";
         }
         $sql .= " order by c_datetime desc limit 1";
 
@@ -480,33 +484,33 @@ if (!function_exists('company_list_ai_resolve_base_payload_by_bizno')) {
             );
         }
 
-        // 1) 오늘 캐시
-        $today_row = company_list_ai_pick_company_api_log($bizno, true);
-        if (is_array($today_row) && !empty($today_row['c_content'])) {
-            $parsed = company_list_ai_build_base_payload_from_kodata_json($today_row['c_content'], $today_row['c_kedcd']);
+        // 1) 최근 1개월 캐시
+        $recent_row = company_list_ai_pick_company_api_log($bizno, false, 1);
+        if (is_array($recent_row) && !empty($recent_row['c_content'])) {
+            $parsed = company_list_ai_build_base_payload_from_kodata_json($recent_row['c_content'], $recent_row['c_kedcd']);
             if (!empty($parsed['ok'])) {
                 company_list_ai_write_event_log('bizno_resolve', 'success', array(
                     'action' => 'resolve_base_payload',
                     'bizno' => $bizno,
                     'kedcd' => (string)($parsed['base_payload']['kedcd'] ?? ''),
-                    'source' => 'company_api_log_today',
-                    'cache_scope' => 'today',
-                    'cache_datetime' => (string)$today_row['c_datetime'],
+                    'source' => 'company_api_log_1m',
+                    'cache_scope' => '1month',
+                    'cache_datetime' => (string)$recent_row['c_datetime'],
                     'from_cache' => 1,
                 ));
                 return array(
                     'ok' => true,
                     'status' => 200,
                     'error' => '',
-                    'source' => 'company_api_log_today',
-                    'cached_datetime' => (string)$today_row['c_datetime'],
+                    'source' => 'company_api_log_1m',
+                    'cached_datetime' => (string)$recent_row['c_datetime'],
                     'base_payload' => $parsed['base_payload'],
                 );
             }
         }
 
-        // 2) 최근 캐시(로컬 개발에서 Kodata IP 제한 시 fallback)
-        $latest_row = company_list_ai_pick_company_api_log($bizno, false);
+        // 2) 최신 캐시(기간 제한 없음, 로컬 개발에서 Kodata IP 제한 시 fallback)
+        $latest_row = company_list_ai_pick_company_api_log($bizno, false, 0);
         if (is_array($latest_row) && !empty($latest_row['c_content'])) {
             $parsed = company_list_ai_build_base_payload_from_kodata_json($latest_row['c_content'], $latest_row['c_kedcd']);
             if (!empty($parsed['ok'])) {
