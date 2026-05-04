@@ -238,7 +238,7 @@ if (!empty($_COOKIE['g5_admin_btn_gnb'])) {
 			$idx_v["SMS 관리"]="fa-edit";
 			$idx_v["기업 DB"]="fa-database";
 			$idx_v["맴버쉽관리"]="fa-user-o";
-			$idx_v["매칭"]="fa-building-o";
+			$idx_v["거래"]="fa-building-o";
 			$idx_v["결제"]="fa-credit-card";
 			$idx_v["배너관리"]="fa-picture-o";
 			$idx_v["공지사항"]="fa-exclamation-circle";

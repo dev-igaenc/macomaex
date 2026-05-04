@@ -4,7 +4,7 @@
 
 	include_once (G5_ADMIN_PATH.'/admin.head.php');
 
-$g5['title'] = '실시간매칭';
+$g5['title'] = '거래현황';
 
 $allowed_search_fields = array(
 	'B.mb_name' => 'B.mb_name',
