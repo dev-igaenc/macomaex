@@ -680,10 +680,14 @@ if (!function_exists('company_list_ai_save_ml_log')) {
 }
 
 // company_ml_log 조회 (당일/최신)
+// - $today_only=true  : 당일 캐시만 조회
+// - $today_only=false : 최신 캐시 조회 + 필요 시 $max_age_months 기간 제한 적용
 if (!function_exists('company_list_ai_pick_ml_log')) {
-    function company_list_ai_pick_ml_log($bizno, $kedcd, $trade_type, $today_only = true)
+    function company_list_ai_pick_ml_log($bizno, $kedcd, $trade_type, $today_only = true, $max_age_months = 0)
     {
         $trade_type = ((int)$trade_type === 2) ? 2 : 1;
+        $max_age_months = (int)$max_age_months;
+        if ($max_age_months < 0) $max_age_months = 0;
 
         $bizno = preg_replace('/\D/', '', (string)$bizno);
         if (strlen($bizno) !== 10) $bizno = '';
@@ -700,6 +704,8 @@ if (!function_exists('company_list_ai_pick_ml_log')) {
         if ($bizno !== '') $where[] = "c_bizno='" . sql_real_escape_string($bizno) . "'";
         if ($kedcd !== '') $where[] = "c_kedcd='" . sql_real_escape_string($kedcd) . "'";
         if ($today_only) $where[] = "DATE(c_datetime)='" . date('Y-m-d') . "'";
+        // 무제한 latest 조회를 막기 위해 기간 제한이 있으면 추가 필터링
+        else if ($max_age_months > 0) $where[] = "c_datetime >= date_sub(now(), interval {$max_age_months} month)";
 
         $sql = "select c_id, c_bizno, c_kedcd, c_trade_type, c_content, c_datetime
                 from company_ml_log

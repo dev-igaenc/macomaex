@@ -248,17 +248,21 @@ $resolve_meta = array();
 $base_payload = company_list_ai_api_resolve_source_base_payload($src_kedcd_raw, $bizno_raw, $_GET, $resolve_meta);
 $src_kedcd = isset($resolve_meta['kedcd']) ? company_list_ai_api_normalize_kedcd($resolve_meta['kedcd']) : '';
 $ml_log_bizno = isset($resolve_meta['bizno']) ? company_list_ai_api_normalize_bizno($resolve_meta['bizno']) : '';
+// EC2 추천 캐시 1개월만 재사용
+$ml_cache_window_months = 1;
 
 $cache_candidates = array(
     array('today_only' => true, 'source' => 'company_ml_log_today'),
-    array('today_only' => false, 'source' => 'company_ml_log_latest'),
+    // 최신 캐시도 무제한이 아닌 1개월 이내만 허용
+    array('today_only' => false, 'source' => 'company_ml_log_latest_1m'),
 );
 $checked_cache_sources = array();
 
 foreach ($cache_candidates as $candidate) {
     $today_only = !empty($candidate['today_only']);
     $cache_source = (string)$candidate['source'];
-    $row = company_list_ai_pick_ml_log($ml_log_bizno, $src_kedcd, $trade_type, $today_only);
+    // today_only=false 인 latest 조회도 1개월 제한을 적용
+    $row = company_list_ai_pick_ml_log($ml_log_bizno, $src_kedcd, $trade_type, $today_only, $ml_cache_window_months);
     if (!is_array($row) || empty($row['c_content'])) continue;
 
     $checked_cache_sources[] = $cache_source;
