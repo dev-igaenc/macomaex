@@ -213,7 +213,8 @@ if (/^\d{10}$/.test(demoId)) {
             COMPANIES[demoId] = Object.assign({}, _base, {
                 id: demoId,
                 title: _card.title || _base.title || demoId,
-                sub: _card.one_line || _card.industry_nm || _card.industry || _base.sub || '',
+                // 좌측 서브 라인은 업종명 우선(업종코드 표시는 제외)
+                sub: _card.industry_nm || _base.sub || _card.one_line || '',
                 tags: _mergedTags,
                 tag_total_count: _mergedTagTotalCount,
                 score: _scorePct !== null ? +(_scorePct / 20).toFixed(2) : (Number.isFinite(Number(_base.score)) ? Number(_base.score) : null),
