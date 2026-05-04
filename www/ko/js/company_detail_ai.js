@@ -1235,7 +1235,7 @@ window._bindRadarHover();
 			}
 		};
 
-		fetch('/api/llm_report.php', {
+		fetch('/ko/llm_report_api.php', {
 			method: 'POST',
 			headers: {'Content-Type': 'application/json; charset=utf-8'},
 			body: JSON.stringify(payload)

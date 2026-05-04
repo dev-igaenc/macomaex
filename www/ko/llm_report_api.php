@@ -1,6 +1,6 @@
 <?php
 /**
- * /api/llm_report.php
+ * /ko/llm_report_api.php
  * LLM 기반 기업 추천 심층 분석 보고서 생성 API
  *
  * POST JSON body:
@@ -62,6 +62,126 @@ function llm_env($name, $default = '') {
     $v = getenv($name);
     if ($v === false || $v === null || $v === '') return (string)$default;
     return (string)$v;
+}
+
+function llm_report_compact_log_message($message, $maxLength = 255) {
+    $message = trim((string)$message);
+    if ($message === '') return '';
+
+    $message = preg_replace('/\s+/u', ' ', $message);
+    $maxLength = (int)$maxLength;
+    if ($maxLength < 1) return $message;
+
+    if (function_exists('mb_strlen') && function_exists('mb_substr')) {
+        if (mb_strlen($message, 'UTF-8') > $maxLength) {
+            return mb_substr($message, 0, $maxLength - 1, 'UTF-8') . '…';
+        }
+        return $message;
+    }
+
+    if (strlen($message) > $maxLength) {
+        return substr($message, 0, $maxLength - 3) . '...';
+    }
+    return $message;
+}
+
+function llm_report_log_directory_path() {
+    return dirname(__DIR__) . '/logs/llm_report';
+}
+
+function llm_report_log_file_path($dateYmd = '') {
+    $dateYmd = preg_replace('/[^0-9]/', '', (string)$dateYmd);
+    if ($dateYmd === '') $dateYmd = date('Ymd');
+    return llm_report_log_directory_path() . '/llm_report_log_' . $dateYmd . '.php';
+}
+
+function llm_report_log_default_message($status, $payload = array()) {
+    $status = strtoupper(trim((string)$status));
+    $stage = trim((string)($payload['stage'] ?? ''));
+
+    if ($status === 'SUCCESS') return 'AI 기업 분석 보고서 생성 완료';
+    if ($stage === 'env') return 'LLM API 키 설정 오류';
+    if ($stage === 'credit') return 'AI 분석 크레딧 처리 오류';
+    if ($stage === 'gemini_connect' || $stage === 'openai_connect') return 'LLM 연결 실패';
+    if ($stage === 'gemini_http' || $stage === 'openai_http') return 'LLM API 응답 오류';
+    if ($stage === 'extract') return '보고서 텍스트 추출 실패';
+
+    return 'AI 기업 분석 보고서 생성 중 오류';
+}
+
+function llm_report_write_daily_file_log($sourceKedcd, $targetKedcd, $tradeType, $onceKey, $status, $payload = array()) {
+    $payload = is_array($payload) ? $payload : array('value' => $payload);
+    $status = strtoupper(trim((string)$status));
+    if (!in_array($status, array('SUCCESS', 'ERROR', 'SKIP'), true)) $status = 'ERROR';
+
+    $dir = llm_report_log_directory_path();
+    if (!is_dir($dir) && !@mkdir($dir, 0775, true) && !is_dir($dir)) {
+        return false;
+    }
+
+    $filePath = llm_report_log_file_path();
+    $isNewFile = !file_exists($filePath);
+    $loggedAt = date('Y-m-d H:i:s');
+
+    $report = (string)($payload['report'] ?? '');
+    $payloadForFile = $payload;
+    if (isset($payloadForFile['report'])) unset($payloadForFile['report']);
+    $payloadJson = empty($payloadForFile)
+        ? '{}'
+        : json_encode($payloadForFile, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    if ($payloadJson === false) $payloadJson = '{}';
+
+    $message = llm_report_compact_log_message((string)($payload['message'] ?? ''), 300);
+    if ($message === '') {
+        $message = llm_report_log_default_message($status, $payload);
+    }
+
+    $reportLength = 0;
+    if ($report !== '') {
+        $reportLength = function_exists('mb_strlen')
+            ? (int)mb_strlen($report, 'UTF-8')
+            : (int)strlen($report);
+    }
+
+    $fields = array(
+        'event_status' => $status,
+        'stage' => trim((string)($payload['stage'] ?? '')),
+        'source_kedcd' => preg_replace('/\D/', '', (string)$sourceKedcd),
+        'target_kedcd' => preg_replace('/\D/', '', (string)$targetKedcd),
+        'trade_type' => ((int)$tradeType === 2 ? 2 : 1),
+        'once_key' => trim((string)$onceKey),
+        'provider' => trim((string)($payload['provider'] ?? '')),
+        'model' => trim((string)($payload['model'] ?? '')),
+        'http_code' => isset($payload['http_code']) ? (int)$payload['http_code'] : '',
+        'elapsed_ms' => isset($payload['elapsed_ms']) ? (int)$payload['elapsed_ms'] : '',
+        'credit_charged' => isset($payload['credit_charged']) ? (int)!empty($payload['credit_charged']) : '',
+        'reused_within_window' => isset($payload['reused_within_window']) ? (int)!empty($payload['reused_within_window']) : '',
+        'report_length' => $reportLength > 0 ? $reportLength : '',
+        'message' => $message,
+        'request_uri' => trim((string)($_SERVER['REQUEST_URI'] ?? '')),
+        'client_ip' => trim((string)($_SERVER['REMOTE_ADDR'] ?? '')),
+        'user_agent' => llm_report_compact_log_message((string)($_SERVER['HTTP_USER_AGENT'] ?? ''), 300),
+        'payload_json' => $payloadJson,
+    );
+
+    $allowZeroKeys = array('http_code', 'elapsed_ms', 'credit_charged', 'reused_within_window');
+
+    $lines = array();
+    if ($isNewFile) {
+        $lines[] = "<?php exit; ?>";
+        $lines[] = '';
+    }
+    $lines[] = '[' . $loggedAt . ']';
+    foreach ($fields as $key => $value) {
+        if ($value === '') continue;
+        if ($value === 0 && !in_array($key, $allowZeroKeys, true)) continue;
+        $lines[] = $key . ': ' . $value;
+    }
+    $lines[] = '---';
+    $lines[] = '';
+
+    $body = implode(PHP_EOL, $lines);
+    return @file_put_contents($filePath, $body, FILE_APPEND | LOCK_EX) !== false;
 }
 
 // 동일 분석(회원/의뢰사/대상기업/거래방향) 재사용 판정용 키
@@ -291,7 +411,7 @@ function llm_report_log_write($sourceKedcd, $targetKedcd, $tradeType, $onceKey, 
     $contentSql = sql_escape_string($content);
     $ipSql = sql_escape_string($ip);
 
-    sql_query("insert into company_llm_log set
+    $result = sql_query("insert into company_llm_log set
         c_bizno='{$biznoSql}',
         c_kedcd='{$sourceSql}',
         c_target_kedcd='{$targetSql}',
@@ -300,6 +420,11 @@ function llm_report_log_write($sourceKedcd, $targetKedcd, $tradeType, $onceKey, 
         c_content='{$contentSql}',
         c_datetime=now(),
         c_ip='{$ipSql}'", false);
+
+    $status = strtoupper(trim((string)($payload['status'] ?? 'ERROR')));
+    llm_report_write_daily_file_log($sourceKedcd, $targetKedcd, $tradeType, $onceKey, $status, is_array($payload) ? $payload : array());
+
+    return $result;
 }
 
 function _sze_label($sze) {
