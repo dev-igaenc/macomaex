@@ -141,6 +141,30 @@
         var titleEl = cardEl.querySelector('.mCompanyCard_title');
         var scorePct = Number(linkEl.getAttribute('data-score') || 0);
         if (!Number.isFinite(scorePct) || scorePct < 0) scorePct = 0;
+        // company_detail_ai에서 LLM payload를 만들 수 있도록 카드 메타를 함께 수집
+        var candidateType = String(linkEl.getAttribute('data-candidate-type') || 'chain2').trim() || 'chain2';
+        var bzcCd = String(linkEl.getAttribute('data-bzc-cd') || '').trim();
+        var bzcNm = String(linkEl.getAttribute('data-bzc-nm') || '').trim();
+        var sido = String(linkEl.getAttribute('data-sido') || '').trim();
+        var sze = parseInt(String(linkEl.getAttribute('data-sze') || '0'), 10);
+        if (!Number.isFinite(sze) || sze < 0) sze = 0;
+        var companyAge = parseInt(String(linkEl.getAttribute('data-company-age') || '0'), 10);
+        if (!Number.isFinite(companyAge) || companyAge < 0) companyAge = 0;
+        var salesGrowthPct = linkEl.getAttribute('data-sales-growth-pct');
+        var debtRatioPct = linkEl.getAttribute('data-debt-ratio-pct');
+        var consecProfit2y = linkEl.getAttribute('data-consec-profit-2y');
+        var capitalNegative = linkEl.getAttribute('data-capital-negative');
+        var oneLine = String(linkEl.getAttribute('data-one-line') || '').trim();
+
+        var parseNullableNumber = function (value) {
+            if (value == null || value === '') return null;
+            var n = Number(value);
+            return Number.isFinite(n) ? n : null;
+        };
+        var parseNullableBinary = function (value) {
+            if (value == null || value === '') return null;
+            return Number(value) ? 1 : 0;
+        };
 
         var tags = [];
         cardEl.querySelectorAll('.mCompanyCard_desc_tag').forEach(function(el) {
@@ -178,6 +202,15 @@
             kedcd: kedcd,
             src_kedcd: srcKedcd,
             title: titleEl ? String(titleEl.textContent || '').trim() : '',
+            industry: bzcCd,
+            industry_nm: bzcNm,
+            region: sido,
+            sze: sze,
+            company_age: companyAge,
+            sales_growth_pct: parseNullableNumber(salesGrowthPct),
+            debt_ratio_pct: parseNullableNumber(debtRatioPct),
+            consec_profit_2y: parseNullableBinary(consecProfit2y),
+            capital_negative: parseNullableBinary(capitalNegative),
             tags: tags,
             badges: badges,
             badge_growth: badgeGrowth,
@@ -187,7 +220,8 @@
             trade_type: Number(linkEl.getAttribute('data-trade-type') || 1) || 1,
             ai_match: Math.round(scorePct),
             score: Number((scorePct / 20).toFixed(2)),
-            candidate_type: 'chain2'
+            candidate_type: candidateType,
+            one_line: oneLine
         };
     }
 

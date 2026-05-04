@@ -377,10 +377,12 @@ if (!function_exists('company_list_ai_collect_partner_names')) {
 }
 
 if (!function_exists('company_list_ai_pick_company_api_log')) {
-    function company_list_ai_pick_company_api_log($bizno, $today_only)
+    function company_list_ai_pick_company_api_log($bizno, $today_only, $max_age_months = 0)
     {
         $bizno = preg_replace('/\D/', '', (string)$bizno);
         if (strlen($bizno) !== 10) return null;
+        $max_age_months = (int)$max_age_months;
+        if ($max_age_months < 0) $max_age_months = 0;
 
         $bizno_sql = sql_real_escape_string($bizno);
         $sql = "select c_bizno, c_kedcd, c_content, c_datetime
@@ -388,6 +390,8 @@ if (!function_exists('company_list_ai_pick_company_api_log')) {
                 where c_bizno='{$bizno_sql}'";
         if ($today_only) {
             $sql .= " and DATE(c_datetime)='" . date('Y-m-d') . "'";
+        } else if ($max_age_months > 0) {
+            $sql .= " and c_datetime >= date_sub(now(), interval {$max_age_months} month)";
         }
         $sql .= " order by c_datetime desc limit 1";
 
@@ -480,33 +484,33 @@ if (!function_exists('company_list_ai_resolve_base_payload_by_bizno')) {
             );
         }
 
-        // 1) 오늘 캐시
-        $today_row = company_list_ai_pick_company_api_log($bizno, true);
-        if (is_array($today_row) && !empty($today_row['c_content'])) {
-            $parsed = company_list_ai_build_base_payload_from_kodata_json($today_row['c_content'], $today_row['c_kedcd']);
+        // 1) 최근 1개월 캐시
+        $recent_row = company_list_ai_pick_company_api_log($bizno, false, 1);
+        if (is_array($recent_row) && !empty($recent_row['c_content'])) {
+            $parsed = company_list_ai_build_base_payload_from_kodata_json($recent_row['c_content'], $recent_row['c_kedcd']);
             if (!empty($parsed['ok'])) {
                 company_list_ai_write_event_log('bizno_resolve', 'success', array(
                     'action' => 'resolve_base_payload',
                     'bizno' => $bizno,
                     'kedcd' => (string)($parsed['base_payload']['kedcd'] ?? ''),
-                    'source' => 'company_api_log_today',
-                    'cache_scope' => 'today',
-                    'cache_datetime' => (string)$today_row['c_datetime'],
+                    'source' => 'company_api_log_1m',
+                    'cache_scope' => '1month',
+                    'cache_datetime' => (string)$recent_row['c_datetime'],
                     'from_cache' => 1,
                 ));
                 return array(
                     'ok' => true,
                     'status' => 200,
                     'error' => '',
-                    'source' => 'company_api_log_today',
-                    'cached_datetime' => (string)$today_row['c_datetime'],
+                    'source' => 'company_api_log_1m',
+                    'cached_datetime' => (string)$recent_row['c_datetime'],
                     'base_payload' => $parsed['base_payload'],
                 );
             }
         }
 
-        // 2) 최근 캐시(로컬 개발에서 Kodata IP 제한 시 fallback)
-        $latest_row = company_list_ai_pick_company_api_log($bizno, false);
+        // 2) 최신 캐시(기간 제한 없음, 로컬 개발에서 Kodata IP 제한 시 fallback)
+        $latest_row = company_list_ai_pick_company_api_log($bizno, false, 0);
         if (is_array($latest_row) && !empty($latest_row['c_content'])) {
             $parsed = company_list_ai_build_base_payload_from_kodata_json($latest_row['c_content'], $latest_row['c_kedcd']);
             if (!empty($parsed['ok'])) {
@@ -680,10 +684,14 @@ if (!function_exists('company_list_ai_save_ml_log')) {
 }
 
 // company_ml_log 조회 (당일/최신)
+// - $today_only=true  : 당일 캐시만 조회
+// - $today_only=false : 최신 캐시 조회 + 필요 시 $max_age_months 기간 제한 적용
 if (!function_exists('company_list_ai_pick_ml_log')) {
-    function company_list_ai_pick_ml_log($bizno, $kedcd, $trade_type, $today_only = true)
+    function company_list_ai_pick_ml_log($bizno, $kedcd, $trade_type, $today_only = true, $max_age_months = 0)
     {
         $trade_type = ((int)$trade_type === 2) ? 2 : 1;
+        $max_age_months = (int)$max_age_months;
+        if ($max_age_months < 0) $max_age_months = 0;
 
         $bizno = preg_replace('/\D/', '', (string)$bizno);
         if (strlen($bizno) !== 10) $bizno = '';
@@ -700,6 +708,8 @@ if (!function_exists('company_list_ai_pick_ml_log')) {
         if ($bizno !== '') $where[] = "c_bizno='" . sql_real_escape_string($bizno) . "'";
         if ($kedcd !== '') $where[] = "c_kedcd='" . sql_real_escape_string($kedcd) . "'";
         if ($today_only) $where[] = "DATE(c_datetime)='" . date('Y-m-d') . "'";
+        // 무제한 latest 조회를 막기 위해 기간 제한이 있으면 추가 필터링
+        else if ($max_age_months > 0) $where[] = "c_datetime >= date_sub(now(), interval {$max_age_months} month)";
 
         $sql = "select c_id, c_bizno, c_kedcd, c_trade_type, c_content, c_datetime
                 from company_ml_log
@@ -974,6 +984,37 @@ if (!function_exists('company_list_ai_normalize_item')) {
         $bzno = preg_replace('/\D/', '', (string)company_list_ai_pick($item, array('bzno', 'bizno', 'biz_no'), ''));
         $enp_nm = trim((string)company_list_ai_pick($item, array('enp_nm', 'enpNm', 'company_name', 'name'), ''));
         $bzc_cd = strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', (string)company_list_ai_pick($item, array('bzc_cd', 'bzcCd'), '')), 0, 10));
+        // 추천 상세/LLM 보고서에서 쓰는 업종/재무 메타 필드 정규화
+        $bzc_nm = trim((string)company_list_ai_pick($item, array('bzc_nm', 'bzcNm'), ''));
+        $sido = trim((string)company_list_ai_pick($item, array('sido', 'region'), ''));
+        $sze = (int)company_list_ai_pick($item, array('sze'), 0);
+        if ($sze < 0) $sze = 0;
+        $company_age = (int)company_list_ai_pick($item, array('company_age'), 0);
+        if ($company_age < 0) $company_age = 0;
+        $sales_growth_pct = company_list_ai_pick($item, array('sales_growth_pct'), null);
+        if ($sales_growth_pct !== null && $sales_growth_pct !== '' && is_numeric($sales_growth_pct)) {
+            $sales_growth_pct = (float)$sales_growth_pct;
+        } else {
+            $sales_growth_pct = null;
+        }
+        $debt_ratio_pct = company_list_ai_pick($item, array('debt_ratio_pct'), null);
+        if ($debt_ratio_pct !== null && $debt_ratio_pct !== '' && is_numeric($debt_ratio_pct)) {
+            $debt_ratio_pct = (float)$debt_ratio_pct;
+        } else {
+            $debt_ratio_pct = null;
+        }
+        $consec_profit_2y = company_list_ai_pick($item, array('consec_profit_2y'), null);
+        if ($consec_profit_2y !== null && $consec_profit_2y !== '') {
+            $consec_profit_2y = (int)$consec_profit_2y ? 1 : 0;
+        } else {
+            $consec_profit_2y = null;
+        }
+        $capital_negative = company_list_ai_pick($item, array('capital_negative'), null);
+        if ($capital_negative !== null && $capital_negative !== '') {
+            $capital_negative = (int)$capital_negative ? 1 : 0;
+        } else {
+            $capital_negative = null;
+        }
         $candidate_type = trim((string)company_list_ai_pick($item, array('candidate_type'), ''));
         $one_line = trim((string)company_list_ai_pick($item, array('one_line', 'reason'), ''));
 
@@ -983,8 +1024,16 @@ if (!function_exists('company_list_ai_normalize_item')) {
             'bzno' => $bzno,
             'enp_nm' => $enp_nm,
             'bzc_cd' => $bzc_cd,
+            'bzc_nm' => $bzc_nm,
+            'sido' => $sido,
+            'sze' => $sze,
             'score' => $score,
             'display_score' => $display_score,
+            'company_age' => $company_age,
+            'sales_growth_pct' => $sales_growth_pct,
+            'debt_ratio_pct' => $debt_ratio_pct,
+            'consec_profit_2y' => $consec_profit_2y,
+            'capital_negative' => $capital_negative,
             'candidate_type' => $candidate_type,
             'radar' => company_list_ai_normalize_radar(company_list_ai_pick($item, array('radar'), array())),
             'one_line' => $one_line,

@@ -213,7 +213,8 @@ if (/^\d{10}$/.test(demoId)) {
             COMPANIES[demoId] = Object.assign({}, _base, {
                 id: demoId,
                 title: _card.title || _base.title || demoId,
-                sub: _card.one_line || _card.industry_nm || _card.industry || _base.sub || '',
+                // 좌측 서브 라인은 업종명 우선(업종코드 표시는 제외)
+                sub: _card.industry_nm || _base.sub || _card.one_line || '',
                 tags: _mergedTags,
                 tag_total_count: _mergedTagTotalCount,
                 score: _scorePct !== null ? +(_scorePct / 20).toFixed(2) : (Number.isFinite(Number(_base.score)) ? Number(_base.score) : null),
@@ -323,6 +324,16 @@ var co = COMPANIES[demoId];
                 kedcd: targetKedcd,
                 src_kedcd: srcKedcd,
                 title: String(found.enp_nm || co.title || ''),
+                // 상세 보고서 payload에서 쓰는 카드 메타 필드
+                industry: String(found.bzc_cd || ''),
+                industry_nm: String(found.bzc_nm || ''),
+                region: String(found.sido || ''),
+                sze: Number(found.sze || 0) || 0,
+                company_age: Number(found.company_age || 0) || 0,
+                sales_growth_pct: (found.sales_growth_pct != null && found.sales_growth_pct !== '' && Number.isFinite(Number(found.sales_growth_pct))) ? Number(found.sales_growth_pct) : null,
+                debt_ratio_pct: (found.debt_ratio_pct != null && found.debt_ratio_pct !== '' && Number.isFinite(Number(found.debt_ratio_pct))) ? Number(found.debt_ratio_pct) : null,
+                consec_profit_2y: (found.consec_profit_2y != null && found.consec_profit_2y !== '') ? (Number(found.consec_profit_2y) ? 1 : 0) : null,
+                capital_negative: (found.capital_negative != null && found.capital_negative !== '') ? (Number(found.capital_negative) ? 1 : 0) : null,
                 radar: found.radar,
                 trade_type: pageTradeType,
                 ai_match: Math.round(scorePct),
@@ -1020,8 +1031,13 @@ window._bindRadarHover();
 	var body = document.getElementById('aiAnalysisBody');
 	var blurBg = document.getElementById('aiBlurBg');
 	var ctaOverlay = document.getElementById('aiCtaOverlay');
+	var tradeTypeText = document.getElementById('aiCtaTradeTypeText');
 	var benefitText = document.getElementById('aiCtaBenefitText');
 	if (!btn || !body) return;
+	var preloadedReportMarkdown = '';
+	try {
+		preloadedReportMarkdown = String((window.PRELOADED_AI_REPORT && window.PRELOADED_AI_REPORT.markdown) || '').trim();
+	} catch (e0) { preloadedReportMarkdown = ''; }
 	var richSrc = (window.RICH_ANALYSIS && window.RICH_ANALYSIS[demoId]) || co.ai_analysis_html || '';
 	var demoHtml = richSrc.replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{2B55}\u{FE00}-\u{FEFF}]/gu, '');
 
@@ -1029,6 +1045,12 @@ window._bindRadarHover();
 		if (!benefitText) return;
 		benefitText.innerHTML = '두 기업 간 시너지, 거래 적합도, 협력 전략까지<br>AI가 심층 분석한 맞춤 리포트를 받아보세요.';
 	}
+	function updateTradeTypeText() {
+		if (!tradeTypeText) return;
+		// URL trade_type 기준으로 헤더 우측 추천 타입 라벨을 동기화한다.
+		tradeTypeText.textContent = (pageTradeType === 2) ? '판매처 추천' : '구매처 추천';
+	}
+	updateTradeTypeText();
 	updateBenefitText();
 	var authWait2 = setInterval(function() {
 		if (window._isLoggedIn) {
@@ -1103,10 +1125,41 @@ window._bindRadarHover();
 		body.innerHTML = '';
 		body.appendChild(wrap);
 		body.classList.add('ai-analysis-result-ready');
-		var items = wrap.querySelectorAll('h2, h3, h4, table, blockquote, li, p');
+		var items = wrap.querySelectorAll('h1, h2, h3, h4, table, blockquote, li, p');
 		items.forEach(function(el) { el.style.opacity='0'; el.style.transform='translateY(8px)'; el.style.transition='opacity 0.3s, transform 0.3s'; });
 		items.forEach(function(el, i) { setTimeout(function() { el.style.opacity='1'; el.style.transform='translateY(0)'; }, i * 60); });
 		setTimeout(function() { btn.disabled = false; }, items.length * 60);
+	}
+
+	function renderMarkdownToSafeHtml(markdownText) {
+		var md = String(markdownText || '');
+		if (typeof marked === 'undefined') {
+			return '<pre style="white-space:pre-wrap">' + esc(md) + '</pre>';
+		}
+		// LLM markdown -> HTML 렌더 후 sanitize 하여 XSS를 차단한다.
+		var renderedHtml = marked.parse(md);
+		if (window.DOMPurify && typeof window.DOMPurify.sanitize === 'function') {
+			return window.DOMPurify.sanitize(renderedHtml);
+		}
+		// sanitize 모듈이 없는 경우 fail-safe: HTML 실행 대신 텍스트로 출력
+		return '<pre style="white-space:pre-wrap">' + esc(md) + '</pre>';
+	}
+
+	function showPreloadedAnalysisIfAny() {
+		// 상세 진입 시 서버에서 미리 내려준 리포트가 있으면 버튼 없이 즉시 렌더
+		if (!preloadedReportMarkdown) return false;
+		if (blurBg) blurBg.style.display = 'none';
+		if (ctaOverlay) ctaOverlay.style.display = 'none';
+		if (btn) {
+			btn.disabled = true;
+			btn.style.display = 'none';
+			btn.setAttribute('aria-hidden', 'true');
+		}
+		body.style.display = '';
+		var rendered = renderMarkdownToSafeHtml(preloadedReportMarkdown);
+		showAnalysisHtml(rendered);
+		if (btn) btn.disabled = true;
+		return true;
 	}
 
 	function runAnalysis() {
@@ -1115,42 +1168,138 @@ window._bindRadarHover();
 		if (ctaOverlay) ctaOverlay.style.display = 'none';
 		body.style.display = '';
 		body.classList.remove('ai-analysis-result-ready');
-		body.innerHTML = '<p class="ai-analysis-loading" role="status"><span class="ai-dot-pulse" aria-hidden="true"></span> AI가 기업 정보를 분석하고 있습니다…</p>';
 
-			// 분석 요청값 구성
-			var card = getCardSnapshotForDemo(demoId);
-		var srcKedcd = '';
-		try { srcKedcd = sessionStorage.getItem('_aiSrcKedcd') || ''; } catch(e) {}
-		var tgtKedcd      = card ? (card.kedcd         || '') : '';
-		var tradeType     = card ? (card.trade_type    || 1)  : 1;
-		var candidateType = card ? (card.candidate_type|| 'chain2') : 'chain2';
+		var tpl = document.getElementById('reportLoadingTpl');
+		if (tpl) {
+			body.innerHTML = '';
+			body.appendChild(tpl.content.cloneNode(true));
+		} else {
+			body.innerHTML = '<p class="ai-analysis-loading" role="status"><span class="ai-dot-pulse" aria-hidden="true"></span> AI가 기업 정보를 분석하고 있습니다…</p>';
+		}
 
-		// 키 없으면 데모 HTML 표시
-		if (!srcKedcd || !tgtKedcd) {
+		// 시안과 동일하게 단계형 로딩 UX를 먼저 보여준 뒤 응답을 렌더링
+		var STEP_DELAYS = [700, 2000, 3300, 4600, 5900, 7200];
+		var stepTimers = [];
+		STEP_DELAYS.forEach(function(delay, i) {
+			stepTimers.push(setTimeout(function() {
+				var steps = body.querySelectorAll('.report-loading_step');
+				var bar = body.querySelector('.report-loading_bar_fill');
+				steps.forEach(function(s, si) {
+					s.classList.remove('active');
+					if (si < i) {
+						s.classList.add('done');
+						var icon = s.querySelector('.report-loading_step_icon');
+						if (icon) icon.textContent = '✓';
+					}
+				});
+				if (steps[i]) steps[i].classList.add('active');
+				if (bar) bar.style.width = ((i + 1) / STEP_DELAYS.length * 88) + '%';
+			}, delay));
+		});
+
+		function clearStepTimers() {
+			stepTimers.forEach(function(t) { clearTimeout(t); });
+		}
+
+		function tryGet(k) {
+			try { return sessionStorage.getItem(k) || ''; } catch (e) { return ''; }
+		}
+
+		var card = getCardSnapshotForDemo(demoId);
+		if (!card || !card.radar || Object.keys(card.radar).length < 2) {
+			clearStepTimers();
 			setTimeout(function() {
-				showAnalysisHtml(demoHtml || '<p>분석 문구가 준비되지 않았습니다.</p>');
+				showAnalysisHtml(demoHtml || '<p>ML 추천 데이터가 없습니다. 기업 목록에서 다시 시도해 주세요.</p>');
 			}, 400);
 			return;
 		}
 
-		var url = '/ko/company_list_ai_api.php?action=analyze'
-			+ '&src_kedcd='      + encodeURIComponent(srcKedcd)
-			+ '&tgt_kedcd='      + encodeURIComponent(tgtKedcd)
-			+ '&trade_type='     + encodeURIComponent(tradeType)
-			+ '&candidate_type=' + encodeURIComponent(candidateType);
+		var custRaw = tryGet('_aiCustNames');
+		var suppRaw = tryGet('_aiSuppNames');
+		var isSell = (card.trade_type === 2);
+		var recObj = {
+			kedcd: card.kedcd || '',
+			enp_nm: card.title || '',
+			bzc_cd: card.industry || '',
+			bzc_nm: card.industry_nm || '',
+			sido: card.region || '',
+			sze: card.sze || 3,
+			display_score: card.ai_match || 0,
+			candidate_type: card.candidate_type || 'chain2',
+			radar: card.radar || {},
+			company_age: card.company_age || 0,
+			sales_growth_pct: card.sales_growth_pct != null ? card.sales_growth_pct : null,
+			debt_ratio_pct: card.debt_ratio_pct != null ? card.debt_ratio_pct : null,
+			consec_profit_2y: card.consec_profit_2y != null ? card.consec_profit_2y : null,
+			capital_negative: card.capital_negative || 0
+		};
 
-		fetch(url)
-			.then(function(r) { return r.json(); })
-			.then(function(data) {
-				if (data.error) throw new Error(data.error);
-				showAnalysisHtml(buildAnalysisHtml(data.analysis || {}, data.radar, data.score));
+		// EC2/ML 추천 카드 + 의뢰사 세션값을 합쳐 LLM 보고서 요청 payload 구성
+		var payload = {
+			data: {
+				trade_type: card.trade_type || 1,
+				// 서버 once_key 생성용 식별값
+				source_kedcd: card.src_kedcd || tryGet('_aiSrcKedcd') || '',
+				target_kedcd: card.kedcd || '',
+				source_enp_nm: tryGet('_aiSrcCompName'),
+				source_bzc_cd: tryGet('_aiExtBzcCd'),
+				source_bzc_nm: tryGet('_aiExtBzcNm'),
+				source_sido: tryGet('_aiExtSido'),
+				source_sze: tryGet('_aiExtSze') || '3',
+				source_mpd: tryGet('_aiExtMpd'),
+				source_sales: parseFloat(tryGet('_aiExtSales')) || 0,
+				source_cust_names: custRaw ? custRaw.split('|').filter(Boolean) : [],
+				source_supp_names: suppRaw ? suppRaw.split('|').filter(Boolean) : [],
+				buy_top1: isSell ? null : recObj,
+				sell_top1: isSell ? recObj : null
+			}
+		};
+
+		fetch('/ko/llm_report_api.php', {
+			method: 'POST',
+			headers: {'Content-Type': 'application/json; charset=utf-8'},
+			body: JSON.stringify(payload)
+		})
+			.then(function(r) {
+				return r.text().then(function(text) {
+					var parsed = null;
+					try { parsed = JSON.parse(text); } catch (e) {}
+					if (!r.ok) {
+						var errMsg = (parsed && parsed.error) ? parsed.error : ('HTTP ' + r.status);
+						throw new Error(errMsg);
+					}
+					// PHP 경고/HTML 응답 섞임을 JSON 파싱 단계에서 명확히 에러 처리
+					if (!parsed || typeof parsed !== 'object') {
+						throw new Error('API 응답이 JSON 형식이 아닙니다. 서버 에러 로그를 확인해 주세요.');
+					}
+					return parsed;
+				});
 			})
+			.then(function(res) {
+				clearStepTimers();
+				var steps = body.querySelectorAll('.report-loading_step');
+				var bar = body.querySelector('.report-loading_bar_fill');
+				steps.forEach(function(s) {
+					s.classList.remove('active');
+					s.classList.add('done');
+					var icon = s.querySelector('.report-loading_step_icon');
+					if (icon) icon.textContent = '✓';
+				});
+				if (bar) bar.style.width = '100%';
+				if (res.error) throw new Error(res.error);
+				// 응답 수신 즉시 렌더링(추가 지연 없음)
+				var rendered = renderMarkdownToSafeHtml(res.report || '');
+				showAnalysisHtml(rendered);
+				})
 			.catch(function(err) {
+				clearStepTimers();
 				body.innerHTML = '<div class="ai-analysis-result"><p style="color:#e53935;">분석 중 오류가 발생했습니다: ' + esc(err && err.message ? err.message : '알 수 없는 오류') + '</p></div>';
 				body.classList.add('ai-analysis-result-ready');
 				btn.disabled = false;
 			});
 	}
+
+	if (showPreloadedAnalysisIfAny()) return;
 
 	btn.addEventListener('click', function () {
 		// 비로그인 차단
@@ -1164,7 +1313,7 @@ window._bindRadarHover();
 				icon: 'purple',
 				iconSvg: '<path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z"/>',
 				title: 'AI 기업 분석을 시작할까요?',
-				desc: '<strong style="color:#6d28d9;">0.5 크레딧</strong>이 차감됩니다.<br><span style="font-size:12px;color:#999;">동일 분석은 6개월내 무료</span>',
+				desc: '<strong style="color:#6d28d9;">1 크레딧</strong>이 차감됩니다.<br><span style="font-size:12px;color:#999;">동일 분석은 2개월내 무료</span>',
 				confirmText: '분석하기',
 				cancelText: '취소',
 				confirmClass: 'purple',
@@ -1228,18 +1377,20 @@ window._bindRadarHover();
     .then(function(r) { return r.text(); })
     .then(function(txt) {
       var p = (txt || '').split('|');
-      if (p[0] === '1000') {
-        try {
-          var info = JSON.parse(p.slice(1).join('|'));
-          var enp  = info.CONTENTS && info.CONTENTS.ENPintr0000;
-          var compName = (enp && (enp.enp_nm_trd || enp.enp_nm)) || '';
+	      if (p[0] === '1000') {
+	        try {
+	          var info = JSON.parse(p.slice(1).join('|'));
+	          var enp  = info.CONTENTS && info.CONTENTS.ENPintr0000;
+	          var compName = (enp && (enp.enp_nm_trd || enp.enp_nm)) || '';
           _pendingKedcd = String(enp && enp.kedcd || '').replace(/\D/g, '').padStart(10, '0');
-          // 콜드스타트 데이터 저장
-          try {
-            sessionStorage.setItem('_aiExtBzcCd', String(enp && enp.bzc_cd || ''));
-            sessionStorage.setItem('_aiExtSido',  String(enp && enp.loc_addra || '').trim().slice(0,3));
-            sessionStorage.setItem('_aiExtSze',   String(enp && enp.enp_sze  || '3'));
-          } catch(e2) {}
+	          // 상세 LLM 보고서 프롬프트에서 쓰는 의뢰사 컨텍스트 세션값 저장
+	          try {
+	            sessionStorage.setItem('_aiSrcCompName', compName);
+	            sessionStorage.setItem('_aiExtBzcNm', String(enp && enp.bzc_nm || ''));
+	            sessionStorage.setItem('_aiExtBzcCd', String(enp && enp.bzc_cd || ''));
+	            sessionStorage.setItem('_aiExtSido',  String(enp && enp.loc_addra || '').trim().slice(0,3));
+	            sessionStorage.setItem('_aiExtSze',   String(enp && enp.enp_sze  || '3'));
+	          } catch(e2) {}
           openVerify(compName);
         } catch(e) { openVerify(''); }
       }

@@ -57,6 +57,19 @@ function company_detail_ai_display_value($value)
     return ($value !== '') ? $value : '정보 준비중';
 }
 
+function company_detail_ai_extract_report_from_llm_log_content($raw_content)
+{
+    $raw_content = trim((string)$raw_content);
+    if ($raw_content === '') return '';
+    $decoded = json_decode($raw_content, true);
+    if (!is_array($decoded)) return '';
+    $status = strtoupper(trim((string)($decoded['status'] ?? '')));
+    $report = trim((string)($decoded['report'] ?? ''));
+    // 성공 로그의 report 본문만 즉시표시 대상으로 사용
+    if ($status === 'SUCCESS' && $report !== '') return $report;
+    return '';
+}
+
 // 상세 대상 기업 식별자(kedcd)는 kedcd 또는 id 파라미터로 받는다.
 $kedcd = isset($_GET['kedcd']) ? preg_replace('/\D/', '', (string)$_GET['kedcd']) : '';
 if ($kedcd === '' && isset($_GET['id'])) {
@@ -68,6 +81,10 @@ if ($kedcd === '' && isset($_GET['id'])) {
 if (strlen($kedcd) !== 10 || preg_match('/^0+$/', $kedcd)) {
     alert('잘못된 접근입니다. AI 추천 목록에서 다시 선택해 주세요.', '/ko/company_list_ai.php');
 }
+// 상세 진입 trade_type(1=구매처, 2=판매처)에 따라 상단 라벨을 분기한다.
+$detail_trade_type = isset($_GET['trade_type']) ? (int)$_GET['trade_type'] : 1;
+if ($detail_trade_type !== 2) $detail_trade_type = 1;
+$detail_trade_type_label = ($detail_trade_type === 2) ? '판매처 추천' : '구매처 추천';
 
 $company = array();
 // 상세 기본 정보 조회
@@ -147,6 +164,43 @@ if (strlen($kedcd) === 10) {
 
 if (!empty($company['ENP_TYP']) && isset($enp_typt[$company['ENP_TYP']])) {
     $company_type = $enp_typt[$company['ENP_TYP']];
+}
+
+$preloaded_ai_report_markdown = '';
+$preloaded_ai_once_key = '';
+if (!empty($member['mb_id'])) {
+    $preload_trade_type = $detail_trade_type;
+
+    $preload_src_kedcd = isset($_GET['src_kedcd']) ? preg_replace('/\D/', '', (string)$_GET['src_kedcd']) : '';
+    if (strlen($preload_src_kedcd) !== 10) {
+        $preload_src_kedcd = preg_replace('/\D/', '', (string)($member['mb_company'] ?? ''));
+    }
+
+    if (strlen($preload_src_kedcd) === 10) {
+        // API와 동일 키: 동일 분석 이력에서 최근 성공 리포트 재사용
+        $preloaded_ai_once_key = hash('sha256', 'AI_COMPANY_REPORT:' . (string)$member['mb_id'] . ':' . $preload_src_kedcd . ':' . $kedcd . ':' . $preload_trade_type);
+        $once_key_sql = sql_escape_string($preloaded_ai_once_key);
+        $result_log = sql_query("
+            SELECT c_content
+            FROM company_llm_log
+            WHERE c_once_key = '{$once_key_sql}'
+              AND c_trade_type = '{$preload_trade_type}'
+              AND c_datetime >= date_sub(now(), interval 1 month)
+            ORDER BY c_id DESC
+            LIMIT 10
+        ", false);
+
+        if ($result_log) {
+            // 최근 로그부터 순회하며 즉시표시 가능한 성공 리포트 1건을 선택
+            while ($row_log = sql_fetch_array($result_log)) {
+                $report_md = company_detail_ai_extract_report_from_llm_log_content($row_log['c_content'] ?? '');
+                if ($report_md !== '') {
+                    $preloaded_ai_report_markdown = $report_md;
+                    break;
+                }
+            }
+        }
+    }
 }
 
 $is_detail_unlocked = false;
@@ -286,10 +340,11 @@ include_once(G5_THEME_PATH . '/head.php');
 	</div>
 
 	<div class="ai-analyze-full">
-		<div class="card section-card ai-analyze-card" style="position:relative;overflow:hidden;min-height:480px;">
-			<div class="ai-analyze-head" style="position:relative;z-index:3;">
-				<h3>AI 기업 분석</h3>
-			</div>
+			<div class="card section-card ai-analyze-card" style="position:relative;overflow:hidden;min-height:480px;">
+				<div class="ai-analyze-head" style="position:relative;z-index:3;">
+					<h3>AI 기업 분석</h3>
+					<p class="ai-cta-trade-type" id="aiCtaTradeTypeText"><?php echo htmlspecialchars($detail_trade_type_label, ENT_QUOTES, 'UTF-8'); ?></p>
+				</div>
 			<div class="ai-blur-bg" id="aiBlurBg" aria-hidden="true">
 				<div class="ai-blur-content ai-analysis-result">
 					<h3>1. 거래 밸류에이션 요약</h3>
@@ -315,18 +370,54 @@ include_once(G5_THEME_PATH . '/head.php');
 					<h4>유의사항</h4>
 					<p>거래처 유사성 점수가 상대적으로 낮아 초기 파일럿 거래를 통한 신뢰 구축이 권장됩니다.</p>
 				</div>
-			</div>
-			<div class="ai-cta-overlay" id="aiCtaOverlay">
-				<button type="button" class="btn-ai-analyze-cta" id="btnAiAnalyze">
-					<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z"/></svg>
-					분석하기
+				</div>
+				<div class="ai-cta-overlay" id="aiCtaOverlay">
+					<button type="button" class="btn-ai-analyze-cta" id="btnAiAnalyze">
+						<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z"/></svg>
+						분석하기
 				</button>
 				<p class="ai-cta-benefit" id="aiCtaBenefitText">두 기업 간 시너지, 거래 적합도, 협력 전략까지<br>AI가 심층 분석한 맞춤 리포트를 받아보세요.</p>
 			</div>
-			<div class="ai-analysis-body" id="aiAnalysisBody" role="region" aria-live="polite" aria-label="AI 분석 결과" style="display:none;"></div>
+				<div class="ai-analysis-body" id="aiAnalysisBody" role="region" aria-live="polite" aria-label="AI 분석 결과" style="display:none;"></div>
+				<!-- LLM 보고서 생성 단계 로딩 템플릿 -->
+				<template id="reportLoadingTpl">
+					<div class="report-loading" id="reportLoadingUi">
+						<div class="report-loading_spinner"></div>
+						<div class="report-loading_title">AI 심층 분석 보고서 생성 중…</div>
+						<ul class="report-loading_steps">
+							<li class="report-loading_step" data-step="0">
+								<span class="report-loading_step_icon">①</span>
+								<span>의뢰사 프로필 및 업종 확인</span>
+							</li>
+							<li class="report-loading_step" data-step="1">
+								<span class="report-loading_step_icon">②</span>
+								<span>추천 기업 ML 데이터 분석</span>
+							</li>
+							<li class="report-loading_step" data-step="2">
+								<span class="report-loading_step_icon">③</span>
+								<span>업종·공급망 구조 파악</span>
+							</li>
+							<li class="report-loading_step" data-step="3">
+								<span class="report-loading_step_icon">④</span>
+								<span>재무 경향 및 안정성 평가</span>
+							</li>
+							<li class="report-loading_step" data-step="4">
+								<span class="report-loading_step_icon">⑤</span>
+								<span>거래 네트워크·시너지 분석</span>
+							</li>
+							<li class="report-loading_step" data-step="5">
+								<span class="report-loading_step_icon">⑥</span>
+								<span>협력 전략 및 실행 계획 수립</span>
+							</li>
+						</ul>
+						<div class="report-loading_bar">
+							<div class="report-loading_bar_fill" id="reportLoadingBarFill"></div>
+						</div>
+					</div>
+				</template>
+			</div>
 		</div>
 	</div>
-</div>
 
 <?php include __DIR__ . '/modal/match_request_modal.php'; ?>
 
@@ -370,6 +461,10 @@ window.MATCH_REQUEST_CONTEXT = {
 	},
 	seedCompany: <?php echo json_encode($company_seed, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>
 };
+window.PRELOADED_AI_REPORT = {
+	markdown: <?php echo json_encode($preloaded_ai_report_markdown, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>,
+	once_key: <?php echo json_encode($preloaded_ai_once_key, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>
+};
 </script>
 <script src="/ko/js/mock-data.js?ver=<?php echo $mock_data_js_ver; ?>"></script>
 <script src="/ko/js/badges.js?ver=<?php echo $badges_js_ver; ?>"></script>
@@ -380,5 +475,9 @@ window.MATCH_REQUEST_CONTEXT = {
 <script src="/ko/js/match-request-modal.js?ver=<?php echo $match_request_modal_js_ver; ?>"></script>
 <script src="/ko/js/ai-loading.js?ver=<?php echo $ai_loading_js_ver; ?>"></script>
 <script src="/ko/js/verify-modal.js?ver=<?php echo $verify_modal_js_ver; ?>"></script>
+<!-- LLM 보고서 markdown 렌더링 -->
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<!-- LLM markdown 렌더 결과 XSS 방지를 위한 sanitize -->
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3.2.6/dist/purify.min.js"></script>
 <script src="/ko/js/company_detail_ai.js?ver=<?php echo $company_detail_ai_js_ver; ?>"></script>
 <?php include_once(G5_THEME_PATH . '/tail.php'); ?>
