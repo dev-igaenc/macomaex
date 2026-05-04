@@ -1273,17 +1273,14 @@ window._bindRadarHover();
 					var icon = s.querySelector('.report-loading_step_icon');
 					if (icon) icon.textContent = '✓';
 				});
-				if (bar) bar.style.width = '100%';
-				if (res.error) throw new Error(res.error);
-				// 캐시 hit 응답은 거의 즉시 렌더링
-				var renderDelay = res && res.cache_hit ? 40 : 400;
-				setTimeout(function() {
+					if (bar) bar.style.width = '100%';
+					if (res.error) throw new Error(res.error);
+					// 응답 수신 즉시 렌더링(추가 지연 없음)
 					var rendered = (typeof marked !== 'undefined')
 						? marked.parse(res.report || '')
 						: '<pre style="white-space:pre-wrap">' + esc(res.report || '') + '</pre>';
 					showAnalysisHtml(rendered);
-				}, renderDelay);
-			})
+				})
 			.catch(function(err) {
 				clearStepTimers();
 				body.innerHTML = '<div class="ai-analysis-result"><p style="color:#e53935;">분석 중 오류가 발생했습니다: ' + esc(err && err.message ? err.message : '알 수 없는 오류') + '</p></div>';
