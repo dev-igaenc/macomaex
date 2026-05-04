@@ -477,5 +477,7 @@ window.PRELOADED_AI_REPORT = {
 <script src="/ko/js/verify-modal.js?ver=<?php echo $verify_modal_js_ver; ?>"></script>
 <!-- LLM 보고서 markdown 렌더링 -->
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<!-- LLM markdown 렌더 결과 XSS 방지를 위한 sanitize -->
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3.2.6/dist/purify.min.js"></script>
 <script src="/ko/js/company_detail_ai.js?ver=<?php echo $company_detail_ai_js_ver; ?>"></script>
 <?php include_once(G5_THEME_PATH . '/tail.php'); ?>

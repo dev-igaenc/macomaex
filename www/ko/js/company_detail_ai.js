@@ -1131,6 +1131,20 @@ window._bindRadarHover();
 		setTimeout(function() { btn.disabled = false; }, items.length * 60);
 	}
 
+	function renderMarkdownToSafeHtml(markdownText) {
+		var md = String(markdownText || '');
+		if (typeof marked === 'undefined') {
+			return '<pre style="white-space:pre-wrap">' + esc(md) + '</pre>';
+		}
+		// LLM markdown -> HTML 렌더 후 sanitize 하여 XSS를 차단한다.
+		var renderedHtml = marked.parse(md);
+		if (window.DOMPurify && typeof window.DOMPurify.sanitize === 'function') {
+			return window.DOMPurify.sanitize(renderedHtml);
+		}
+		// sanitize 모듈이 없는 경우 fail-safe: HTML 실행 대신 텍스트로 출력
+		return '<pre style="white-space:pre-wrap">' + esc(md) + '</pre>';
+	}
+
 	function showPreloadedAnalysisIfAny() {
 		// 상세 진입 시 서버에서 미리 내려준 리포트가 있으면 버튼 없이 즉시 렌더
 		if (!preloadedReportMarkdown) return false;
@@ -1142,9 +1156,7 @@ window._bindRadarHover();
 			btn.setAttribute('aria-hidden', 'true');
 		}
 		body.style.display = '';
-		var rendered = (typeof marked !== 'undefined')
-			? marked.parse(preloadedReportMarkdown)
-			: '<pre style="white-space:pre-wrap">' + esc(preloadedReportMarkdown) + '</pre>';
+		var rendered = renderMarkdownToSafeHtml(preloadedReportMarkdown);
 		showAnalysisHtml(rendered);
 		if (btn) btn.disabled = true;
 		return true;
@@ -1273,13 +1285,11 @@ window._bindRadarHover();
 					var icon = s.querySelector('.report-loading_step_icon');
 					if (icon) icon.textContent = '✓';
 				});
-					if (bar) bar.style.width = '100%';
-					if (res.error) throw new Error(res.error);
-					// 응답 수신 즉시 렌더링(추가 지연 없음)
-					var rendered = (typeof marked !== 'undefined')
-						? marked.parse(res.report || '')
-						: '<pre style="white-space:pre-wrap">' + esc(res.report || '') + '</pre>';
-					showAnalysisHtml(rendered);
+				if (bar) bar.style.width = '100%';
+				if (res.error) throw new Error(res.error);
+				// 응답 수신 즉시 렌더링(추가 지연 없음)
+				var rendered = renderMarkdownToSafeHtml(res.report || '');
+				showAnalysisHtml(rendered);
 				})
 			.catch(function(err) {
 				clearStepTimers();
