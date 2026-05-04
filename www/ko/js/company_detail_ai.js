@@ -1031,9 +1031,26 @@ window._bindRadarHover();
 	var body = document.getElementById('aiAnalysisBody');
 	var blurBg = document.getElementById('aiBlurBg');
 	var ctaOverlay = document.getElementById('aiCtaOverlay');
+	var analyzeCard = document.querySelector('.ai-analyze-card');
+	var analyzeHead = analyzeCard ? analyzeCard.querySelector('.ai-analyze-head') : null;
 	var tradeTypeText = document.getElementById('aiCtaTradeTypeText');
 	var benefitText = document.getElementById('aiCtaBenefitText');
 	if (!btn || !body) return;
+
+	function syncAiOverlayTop() {
+		if (!analyzeCard || !analyzeHead) return;
+		var headHeight = Math.ceil(analyzeHead.getBoundingClientRect().height || 0);
+		var overlayTop = Math.max(60, headHeight + 14);
+		analyzeCard.style.setProperty('--ai-overlay-top', overlayTop + 'px');
+	}
+	syncAiOverlayTop();
+	window.addEventListener('resize', syncAiOverlayTop);
+	window.addEventListener('orientationchange', syncAiOverlayTop);
+	if (typeof ResizeObserver !== 'undefined' && analyzeHead) {
+		var headResizeObserver = new ResizeObserver(syncAiOverlayTop);
+		headResizeObserver.observe(analyzeHead);
+	}
+
 	var preloadedReportMarkdown = '';
 	try {
 		preloadedReportMarkdown = String((window.PRELOADED_AI_REPORT && window.PRELOADED_AI_REPORT.markdown) || '').trim();
@@ -1049,6 +1066,7 @@ window._bindRadarHover();
 		if (!tradeTypeText) return;
 		// URL trade_type 기준으로 헤더 우측 추천 타입 라벨을 동기화한다.
 		tradeTypeText.textContent = (pageTradeType === 2) ? '판매처 추천' : '구매처 추천';
+		syncAiOverlayTop();
 	}
 	updateTradeTypeText();
 	updateBenefitText();
@@ -1071,7 +1089,7 @@ window._bindRadarHover();
 		h += '<h3>1. 거래 밸류에이션 요약</h3>';
 		if (a.summary) h += '<p>' + esc(a.summary) + '</p>';
 		if (radar) {
-			h += '<table><thead><tr><th>핵심 지표</th><th>점수</th></tr></thead><tbody>';
+				h += '<table class="ai-kpi-table"><thead><tr><th>핵심 지표</th><th>점수</th></tr></thead><tbody>';
 			Object.keys(radarLabels).forEach(function(k) {
 				if (radar[k] != null) {
 					h += '<tr><td>' + radarLabels[k] + '</td><td>' + Math.round(radar[k]) + '</td></tr>';
