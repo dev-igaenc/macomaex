@@ -2,17 +2,58 @@
 include_once('./_common.php');
 if ($is_admin != 'super') exit;
 // 엑셀 다운로드 함수
-function array_to_excel($headers, $rows, $filename){
-    header('Content-Type: application/vnd.ms-excel; charset=utf-8');
-    header('Content-Disposition: attachment; filename="' . $filename . '.xls"');
-    header('Cache-Control: max-age=0');
-    $out = fopen('php://output', 'w');
-    fputs($out, "\xEF\xBB\xBF"); // UTF-8 with BOM
-    fputcsv($out, $headers, "\t");
-    foreach ($rows as $row) {
-        fputcsv($out, $row, "\t");
+require_once G5_PATH . '/lib/PHPExcel.php';
+
+function excel_col_name($index) {
+    $name = '';
+    $index = (int)$index;
+    while ($index > 0) {
+        $mod = ($index - 1) % 26;
+        $name = chr(65 + $mod) . $name;
+        $index = (int)(($index - $mod) / 26);
     }
-    fclose($out);
+    return $name;
+}
+
+function array_to_excel($headers, $rows, $filename){
+    $obj = new PHPExcel();
+    $obj->setActiveSheetIndex(0);
+    $sheet = $obj->getActiveSheet();
+    $sheet->setTitle('거래현황');
+
+    for ($i = 0; $i < count($headers); $i++) {
+        $col = excel_col_name($i + 1);
+        $sheet->setCellValueExplicit($col . '1', (string)$headers[$i], PHPExcel_Cell_DataType::TYPE_STRING);
+    }
+
+    $row_no = 2;
+    for ($r = 0; $r < count($rows); $r++) {
+        $line = $rows[$r];
+        for ($c = 0; $c < count($headers); $c++) {
+            $col = excel_col_name($c + 1);
+            $value = isset($line[$c]) ? (string)$line[$c] : '';
+            $sheet->setCellValueExplicit($col . $row_no, $value, PHPExcel_Cell_DataType::TYPE_STRING);
+        }
+        $row_no++;
+    }
+
+    for ($c = 0; $c < count($headers); $c++) {
+        $sheet->getColumnDimension(excel_col_name($c + 1))->setAutoSize(true);
+    }
+
+    $safe_filename = preg_replace('/[^a-zA-Z0-9_\-가-힣]/u', '_', (string)$filename);
+    if (!$safe_filename) $safe_filename = 'trade_list';
+
+    while (ob_get_level() > 0) {
+        ob_end_clean();
+    }
+
+    header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    header('Content-Disposition: attachment; filename="' . $safe_filename . '.xlsx"');
+    header('Cache-Control: max-age=0');
+
+    $writer = PHPExcel_IOFactory::createWriter($obj, 'Excel2007');
+    $writer->save('php://output');
 }
 
 $allowed_search_fields = array(
