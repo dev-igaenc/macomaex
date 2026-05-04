@@ -53,7 +53,7 @@ if (empty($rec) || !is_array($rec)) {
     exit;
 }
 
-$tradeLabel = $isSell ? '매출처' : '매입처';
+$tradeLabel = $isSell ? '판매처' : '구매처';
 
 function llm_env($name, $default = '') {
     if (function_exists('macomaex_env')) {
