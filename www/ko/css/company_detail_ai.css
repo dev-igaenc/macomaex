@@ -656,6 +656,25 @@ html.in-iframe { --header-h: 0px; }
 	gap: 14px;
 	background: radial-gradient(ellipse at center, rgba(255,255,255,0.75) 0%, rgba(255,255,255,0.6) 60%, rgba(255,255,255,0.4) 100%);
 }
+.ai-cta-trade-type {
+	margin: 0;
+	padding: 7px 12px;
+	font-size: 12px;
+	line-height: 1.4;
+	font-weight: 600;
+	color: #5b21b6;
+	background: rgba(109, 40, 217, 0.1);
+	border: 1px solid rgba(109, 40, 217, 0.2);
+	border-radius: 999px;
+}
+.ai-analyze-head .ai-cta-trade-type {
+	margin-left: auto;
+	white-space: nowrap;
+}
+.ai-cta-trade-type strong {
+	color: #4c1d95;
+	font-weight: 800;
+}
 .btn-ai-analyze-cta {
 	display: inline-flex;
 	align-items: center;

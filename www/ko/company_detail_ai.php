@@ -81,6 +81,10 @@ if ($kedcd === '' && isset($_GET['id'])) {
 if (strlen($kedcd) !== 10 || preg_match('/^0+$/', $kedcd)) {
     alert('잘못된 접근입니다. AI 추천 목록에서 다시 선택해 주세요.', '/ko/company_list_ai.php');
 }
+// 상세 진입 trade_type(1=구매처, 2=판매처)에 따라 상단 라벨을 분기한다.
+$detail_trade_type = isset($_GET['trade_type']) ? (int)$_GET['trade_type'] : 1;
+if ($detail_trade_type !== 2) $detail_trade_type = 1;
+$detail_trade_type_label = ($detail_trade_type === 2) ? '판매처 추천' : '구매처 추천';
 
 $company = array();
 // 상세 기본 정보 조회
@@ -165,8 +169,7 @@ if (!empty($company['ENP_TYP']) && isset($enp_typt[$company['ENP_TYP']])) {
 $preloaded_ai_report_markdown = '';
 $preloaded_ai_once_key = '';
 if (!empty($member['mb_id'])) {
-    $preload_trade_type = isset($_GET['trade_type']) ? (int)$_GET['trade_type'] : 1;
-    if ($preload_trade_type !== 2) $preload_trade_type = 1;
+    $preload_trade_type = $detail_trade_type;
 
     $preload_src_kedcd = isset($_GET['src_kedcd']) ? preg_replace('/\D/', '', (string)$_GET['src_kedcd']) : '';
     if (strlen($preload_src_kedcd) !== 10) {
@@ -337,10 +340,11 @@ include_once(G5_THEME_PATH . '/head.php');
 	</div>
 
 	<div class="ai-analyze-full">
-		<div class="card section-card ai-analyze-card" style="position:relative;overflow:hidden;min-height:480px;">
-			<div class="ai-analyze-head" style="position:relative;z-index:3;">
-				<h3>AI 기업 분석</h3>
-			</div>
+			<div class="card section-card ai-analyze-card" style="position:relative;overflow:hidden;min-height:480px;">
+				<div class="ai-analyze-head" style="position:relative;z-index:3;">
+					<h3>AI 기업 분석</h3>
+					<p class="ai-cta-trade-type" id="aiCtaTradeTypeText"><?php echo htmlspecialchars($detail_trade_type_label, ENT_QUOTES, 'UTF-8'); ?></p>
+				</div>
 			<div class="ai-blur-bg" id="aiBlurBg" aria-hidden="true">
 				<div class="ai-blur-content ai-analysis-result">
 					<h3>1. 거래 밸류에이션 요약</h3>
@@ -366,11 +370,11 @@ include_once(G5_THEME_PATH . '/head.php');
 					<h4>유의사항</h4>
 					<p>거래처 유사성 점수가 상대적으로 낮아 초기 파일럿 거래를 통한 신뢰 구축이 권장됩니다.</p>
 				</div>
-			</div>
-			<div class="ai-cta-overlay" id="aiCtaOverlay">
-				<button type="button" class="btn-ai-analyze-cta" id="btnAiAnalyze">
-					<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z"/></svg>
-					분석하기
+				</div>
+				<div class="ai-cta-overlay" id="aiCtaOverlay">
+					<button type="button" class="btn-ai-analyze-cta" id="btnAiAnalyze">
+						<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z"/></svg>
+						분석하기
 				</button>
 				<p class="ai-cta-benefit" id="aiCtaBenefitText">두 기업 간 시너지, 거래 적합도, 협력 전략까지<br>AI가 심층 분석한 맞춤 리포트를 받아보세요.</p>
 			</div>

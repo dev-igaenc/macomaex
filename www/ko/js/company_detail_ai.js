@@ -1030,6 +1030,7 @@ window._bindRadarHover();
 	var body = document.getElementById('aiAnalysisBody');
 	var blurBg = document.getElementById('aiBlurBg');
 	var ctaOverlay = document.getElementById('aiCtaOverlay');
+	var tradeTypeText = document.getElementById('aiCtaTradeTypeText');
 	var benefitText = document.getElementById('aiCtaBenefitText');
 	if (!btn || !body) return;
 	var preloadedReportMarkdown = '';
@@ -1043,6 +1044,12 @@ window._bindRadarHover();
 		if (!benefitText) return;
 		benefitText.innerHTML = '두 기업 간 시너지, 거래 적합도, 협력 전략까지<br>AI가 심층 분석한 맞춤 리포트를 받아보세요.';
 	}
+	function updateTradeTypeText() {
+		if (!tradeTypeText) return;
+		// URL trade_type 기준으로 헤더 우측 추천 타입 라벨을 동기화한다.
+		tradeTypeText.textContent = (pageTradeType === 2) ? '판매처 추천' : '구매처 추천';
+	}
+	updateTradeTypeText();
 	updateBenefitText();
 	var authWait2 = setInterval(function() {
 		if (window._isLoggedIn) {
