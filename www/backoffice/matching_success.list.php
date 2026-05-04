@@ -7,58 +7,45 @@
 $g5['title'] = '거래현황';
 
 $allowed_search_fields = array(
-	'B.mb_name' => 'B.mb_name',
-	'B.mb_email' => 'B.mb_email',
-	'B.mb_8' => 'B.mb_8',
-	'C.mb_name' => 'C.mb_name',
-	'H.request_type' => 'H.request_type',
+	'TR.request_company_name' => 'TR.request_company_name',
+	'M_req.mb_email' => 'M_req.mb_email',
+	'M_req.mb_8' => 'M_req.mb_8',
+	'TR.target_company_name' => 'TR.target_company_name',
+	'TR.trade_type' => 'TR.trade_type',
 );
-$search_field = isset($allowed_search_fields[$sfl]) ? $allowed_search_fields[$sfl] : 'B.mb_name';
+$search_field = isset($allowed_search_fields[$sfl]) ? $allowed_search_fields[$sfl] : 'TR.request_company_name';
 
-$sql_common = " from g5_matching A
-left join g5_member B on A.request_id=B.mb_id
-left join g5_member C on A.receive_id=C.mb_id";
-$sql_search = " where del !='D' ";
+$sql_common = " from trade_request TR
+left join g5_member M_req on TR.request_mb_id = M_req.mb_id
+left join (
+	select MM.*
+	from g5_member MM
+	inner join (
+		select mb_company, max(mb_no) as max_mb_no
+		from g5_member
+		where ifnull(mb_company, '') != ''
+		group by mb_company
+	) MX on MM.mb_company = MX.mb_company and MM.mb_no = MX.max_mb_no
+) M_tgt on M_tgt.mb_company = TR.target_kedcd";
+$sql_search = " where 1=1 ";
 
 if ($stx) {
+	$stx_sql = sql_escape_string($stx);
 	$request_type_keyword = strtoupper(trim((string)$stx));
 	$request_type_normalized = preg_replace('/\s+/', '', $request_type_keyword);
 	$sql_search .= " and ( ";
 	switch ($search_field) {
-		case 'H.request_type':
-			$latest_tm_exists_sql = "exists (
-				select 1
-				from g5_matching_credit_history H1
-				inner join (
-					select matching_no, max(id) as max_id
-					from g5_matching_credit_history
-					where tx_type='USE' and matching_no is not null and matching_no != ''
-					group by matching_no
-				) H2 on H1.matching_no = H2.matching_no and H1.id = H2.max_id
-				where H1.matching_no = A.no
-				  and upper(trim(ifnull(H1.request_type, ''))) = 'TM'
-			)";
+		case 'TR.trade_type':
 			if ($request_type_normalized !== '' && (strpos($request_type_normalized, 'TM') !== false || strpos($request_type_normalized, '티엠') !== false)) {
-				$sql_search .= " {$latest_tm_exists_sql} ";
+				$sql_search .= " upper(trim(ifnull(TR.trade_type, ''))) = 'TM' ";
 			} else if ($request_type_normalized !== '' && (strpos($request_type_normalized, 'BASIC') !== false || strpos($request_type_normalized, '기본') !== false || strpos($request_type_normalized, '일반') !== false)) {
-				$sql_search .= " not {$latest_tm_exists_sql} ";
+				$sql_search .= " upper(trim(ifnull(TR.trade_type, ''))) != 'TM' ";
 			} else {
-				$sql_search .= " exists (
-					select 1
-					from g5_matching_credit_history H1
-					inner join (
-						select matching_no, max(id) as max_id
-						from g5_matching_credit_history
-						where tx_type='USE' and matching_no is not null and matching_no != ''
-						group by matching_no
-					) H2 on H1.matching_no = H2.matching_no and H1.id = H2.max_id
-					where H1.matching_no = A.no
-					  and ifnull(H1.request_type, '') like '%{$stx}%'
-				) ";
+				$sql_search .= " ifnull(TR.trade_type, '') like '%{$stx_sql}%' ";
 			}
 			break;
 		default :
-			$sql_search .= " ({$search_field} like '%{$stx}%') ";
+			$sql_search .= " ({$search_field} like '%{$stx_sql}%') ";
 			break;
 	}
 	$sql_search .= " ) ";
@@ -68,45 +55,41 @@ if ($stx) {
 $sql = " select count(*) as cnt " . $sql_common . $sql_search;
 $row = sql_fetch($sql);
 $total_count = $row['cnt'];
-$display_count = 254;
+$display_count = $total_count;
 
 $rows = $config['cf_page_rows'];
 $total_page  = ceil($total_count / $rows);  // 전체 페이지 계산
 if ($page < 1) { $page = 1; } // 페이지가 없으면 첫 페이지 (1 페이지)
 $from_record = ($page - 1) * $rows; // 시작 열을 구함
 
-$sql = "select *,
-		C.mb_name as r_name
-		$sql_common $sql_search order by no desc limit $from_record, {$config['cf_page_rows']} ";
+$sql = "select
+		TR.tr_no,
+		TR.created_at,
+		TR.trade_type,
+		TR.approval_status,
+		TR.request_company_name,
+		TR.request_bzno,
+		TR.target_company_name,
+		TR.target_bzno,
+		TR.target_kedcd,
+		TR.message_content,
+		TR.adm_chk,
+		TR.adm_memo,
+		TR.chat_room_id,
+		M_req.mb_6 as req_manager_name,
+		M_req.mb_7 as req_manager_position,
+		M_req.mb_email as req_manager_email,
+		M_req.mb_8 as req_manager_phone,
+		M_tgt.mb_no as tgt_mb_no,
+		M_tgt.mb_6 as tgt_manager_name,
+		M_tgt.mb_7 as tgt_manager_position,
+		M_tgt.mb_8 as tgt_manager_phone,
+		M_tgt.mb_email as tgt_manager_email
+		$sql_common $sql_search order by TR.tr_no desc limit $from_record, {$config['cf_page_rows']} ";
 $result = sql_query($sql);
-
-// 현재 페이지 대상 매칭번호만 뽑아서 최신 USE 이력을 조회 (전체 이력 집계 쿼리 회피)
 $rows_list = array();
-$matching_no_list = array();
 for ($ri=0; $row=sql_fetch_array($result); $ri++) {
 	$rows_list[] = $row;
-	$matching_no = isset($row['no']) ? (int)$row['no'] : 0;
-	if($matching_no > 0) $matching_no_list[] = $matching_no;
-}
-
-$history_map = array();
-if(!empty($matching_no_list)) {
-	$matching_no_list = array_values(array_unique($matching_no_list));
-	$matching_no_in = implode(',', $matching_no_list);
-	if($matching_no_in !== '') {
-		$history_sql = "select H1.matching_no, H1.request_type, H1.created_at
-					from g5_matching_credit_history H1
-					inner join (
-						select matching_no, max(id) as max_id
-						from g5_matching_credit_history
-						where tx_type='USE' and matching_no in ({$matching_no_in})
-						group by matching_no
-					) H2 on H1.matching_no = H2.matching_no and H1.id = H2.max_id";
-		$history_result = sql_query($history_sql);
-		for ($hi=0; $hrow=sql_fetch_array($history_result); $hi++) {
-			$history_map[(string)$hrow['matching_no']] = $hrow;
-		}
-	}
 }
 
 $rnumber=($total_count-($page-1)*$rows)+1;
@@ -127,11 +110,11 @@ $rnumber=($total_count-($page-1)*$rows)+1;
 
 <label for="sfl" class="sound_only">검색대상</label>
 <select name="sfl" id="sfl">
-    <option value="B.mb_name"<?php echo get_selected($sfl, "B.mb_name"); ?>>매칭요청</option>
-    <option value="B.mb_email"<?php echo get_selected($sfl, "B.mb_email"); ?>>이메일</option>
-	<option value="B.mb_8"<?php echo get_selected($sfl, "B.mb_8"); ?>>연락처</option>
-	<option value="C.mb_name"<?php echo get_selected($sfl, "C.mb_name"); ?>>매칭수락</option>
-	<option value="H.request_type"<?php echo get_selected($sfl, "H.request_type"); ?>>요청구분</option>
+    <option value="TR.request_company_name"<?php echo get_selected($sfl, "TR.request_company_name"); ?>>요청업체</option>
+    <option value="M_req.mb_email"<?php echo get_selected($sfl, "M_req.mb_email"); ?>>이메일</option>
+	<option value="M_req.mb_8"<?php echo get_selected($sfl, "M_req.mb_8"); ?>>연락처</option>
+	<option value="TR.target_company_name"<?php echo get_selected($sfl, "TR.target_company_name"); ?>>대상업체</option>
+	<option value="TR.trade_type"<?php echo get_selected($sfl, "TR.trade_type"); ?>>요청구분</option>
 </select>
 <label for="stx" class="sound_only">검색어<strong class="sound_only"> 필수</strong></label>
 <input type="text" name="stx" value="<?php echo $stx ?>" id="stx"  class=" frm_input">
@@ -148,70 +131,62 @@ $rnumber=($total_count-($page-1)*$rows)+1;
 		<th scope="col">요청구분</th>
 		<th scope="col">요청시간</th>
 		<th scope="col">TM 24시간</th>
-        <th scope="col">매칭요청</th>
+	        <th scope="col">요청업체</th>
 		<th scope="col">사업자등록번호</th>
         <th scope="col">담당자이름</th>
 		<th scope="col">직위</th>
 		<th scope="col">이메일</th>
 		<th scope="col">연락처</th>
-        <th scope="col">매칭수락</th>
-        <th scope="col">사업자등록번호</th>
-		<th scope="col">담당자이름</th>
-        <th scope="col">직위</th>
-		<th scope="col">연락처</th>
-		<th scope="col">이메일</th>
+	        <th scope="col">대상업체</th>
+	        <th scope="col">대상 사업자등록번호</th>
+			<th scope="col">대상 담당자이름</th>
+	        <th scope="col">대상 직위</th>
+			<th scope="col">대상 연락처</th>
+			<th scope="col">대상 이메일</th>
 		<th scope="col" style="width:200px">메세지</th>
 		<th scope="col">체크</th>
 		<!--th scope="col">관리</th-->
     </tr>
     </thead>
     <tbody>
-    <?php for ($i=0; $i<count($rows_list); $i++) {
-			$v = $rows_list[$i];
-				$kind = $v['rc_kind'];
-				$requestCon	= getUserInfo($v['request_id']);
-				$recieveCon	= getUserInfo($v['receive_id']);
-
-				$recieveCon2	= getComapyInfo($v['KEDCD']);
-				// 매칭 회원정보 기본값 처리
-				if(!is_array($requestCon)) $requestCon = array('mb_name'=>'-', 'mb_4'=>'-', 'mb_6'=>'-', 'mb_7'=>'-', 'mb_email'=>'-', 'mb_8'=>'-');
-				if(!is_array($recieveCon)) $recieveCon = array('mb_no'=>'', 'mb_6'=>'', 'mb_7'=>'', 'mb_8'=>'', 'mb_email'=>'');
-				if(!is_array($recieveCon2)) $recieveCon2 = array('ENP_NM'=>'-', 'BZNO'=>'');
+	    <?php for ($i=0; $i<count($rows_list); $i++) {
+				$v = $rows_list[$i];
 				$status = "";
-			$statusClass = "";
-			$history_info = isset($history_map[(string)$v['no']]) ? $history_map[(string)$v['no']] : array();
-			$request_type = strtoupper(trim((string)(isset($history_info['request_type']) ? $history_info['request_type'] : '')));
-			if($request_type !== "TM") $request_type = "BASIC";
-			$request_type_text = ($request_type === "TM") ? "TM 요청" : "일반 요청";
-			$request_type_class = ($request_type === "TM") ? "btn btn-sm bg-primary text-light" : "btn btn-sm bg-secondary text-light";
-			$request_time = trim((string)(isset($history_info['created_at']) ? $history_info['created_at'] : ''));
-			if(!$request_time) $request_time = trim((string)$v['regdate']);
-			if(!$request_time) $request_time = "-";
-			$tm_elapsed_hour = 0;
-			if($request_time !== "-"){
-				$req_ts = strtotime($request_time);
-				if($req_ts !== false){
-					$tm_elapsed_hour = (int)floor((time() - $req_ts) / 3600);
-					if($tm_elapsed_hour < 0) $tm_elapsed_hour = 0;
+				$statusClass = "";
+				$request_type = strtoupper(trim((string)$v['trade_type']));
+				if($request_type !== "TM") $request_type = "BASIC";
+				$request_type_text = $request_type;
+				$request_type_class = ($request_type === "TM") ? "btn btn-sm bg-primary text-light" : "btn btn-sm bg-secondary text-light";
+				$request_time = trim((string)$v['created_at']);
+				if(!$request_time) $request_time = "-";
+				$tm_elapsed_hour = 0;
+				if($request_time !== "-"){
+					$req_ts = strtotime($request_time);
+					if($req_ts !== false){
+						$tm_elapsed_hour = (int)floor((time() - $req_ts) / 3600);
+						if($tm_elapsed_hour < 0) $tm_elapsed_hour = 0;
+					}
 				}
-			}
-			if($v['receive_approval'] == "N"){
-				$status = "매칭요청중";
-				$statusClass = "btn btn-sm bg-secondary text-secondary text-light";
-			}else if($v['receive_approval'] == "Y"){
-				$status = "매칭완료";
-				$statusClass = "btn btn-sm bg-success text-light";
-			}else if($v['receive_approval'] == "R"){
-				$status = "매칭거절";
-				$statusClass = "btn btn-sm bg-danger text-light";
-			}
-			$tm_24h_text = "-";
-			$tm_24h_class = "btn btn-sm bg-light text-dark";
-			if($request_type === "TM"){
-				if($v['receive_approval'] == "N"){
-					if($tm_elapsed_hour >= 24){
-						$tm_24h_text = "24시간 경과";
-						$tm_24h_class = "btn btn-sm bg-danger text-light";
+				if((string)$v['approval_status'] === "0"){
+					$status = "거래요청중";
+					$statusClass = "btn btn-sm bg-secondary text-secondary text-light";
+				}else if((string)$v['approval_status'] === "1"){
+					$status = "거래진행중";
+					$statusClass = "btn btn-sm bg-success text-light";
+				}else if((string)$v['approval_status'] === "2"){
+					$status = "거래거절";
+					$statusClass = "btn btn-sm bg-danger text-light";
+				}else{
+					$status = "-";
+					$statusClass = "btn btn-sm bg-light text-dark";
+				}
+				$tm_24h_text = "-";
+				$tm_24h_class = "btn btn-sm bg-light text-dark";
+				if($request_type === "TM"){
+					if((string)$v['approval_status'] === "0"){
+						if($tm_elapsed_hour >= 24){
+							$tm_24h_text = "24시간 경과";
+							$tm_24h_class = "btn btn-sm bg-danger text-light";
 					}else{
 						$tm_24h_text = "24시간 이내 {$tm_elapsed_hour}h";
 						$tm_24h_class = "btn btn-sm bg-info text-light";
@@ -228,33 +203,33 @@ $rnumber=($total_count-($page-1)*$rows)+1;
 			else if($adm_chk_text == "연락완료") $adm_chk_class = "btn btn-sm btn-primary";
 
 	
-	?>
-    <tr>
-        <td class="td_id"><span class="<?=$statusClass?>"><?=$status?></span></td>
-		<td class="td_center"><span class="<?=$request_type_class?>"><?=$request_type_text?></span></td>
-		<td class="td_center"><?=$request_time?></td>
-		<td class="td_center"><span class="<?=$tm_24h_class?>"><?=$tm_24h_text?></span></td>
-        <td class="td_center">
-													<?=$requestCon['mb_name']?>
-		</td>
-		<td class="td_center"><?=$requestCon['mb_4']?></td>
-		<td class="td_center"><?=$requestCon['mb_6']?></td>
-		<td class="td_center"><?=$requestCon['mb_7']?></td>
-		<td class="td_center"><?=$requestCon['mb_email']?></td>
-		<td class="td_center"><?=$requestCon['mb_8']?></td>
-		<td class="td_center"><?=$recieveCon2['ENP_NM']?></td>
-		<td class="td_center"><?=licenseNum($recieveCon2['BZNO']);?></td>
-		<td class="td_center"><?if($recieveCon['mb_6']){?><?=$recieveCon['mb_6']?><?}else{?>-<?}?></td>
-		<td class="td_center"><?if($recieveCon['mb_7']){?><?=$recieveCon['mb_7']?><?}else{?>-<?}?></td>
-		<td class="td_center"><?if($recieveCon['mb_8']){?><?=$recieveCon['mb_8']?><?}else{?>-<?}?></td>
-		<td class="td_center"><?if($recieveCon['mb_email']){?><?=$recieveCon['mb_email']?><?}else{?>-<?}?></td>
-		<td class="td_center"><?=nl2br($v['contents'])?></td>
-		<td class="td_center">
-		<?if($status!="매칭완료" && $status != "매칭거절"){?>
-			<span id="chk_k" class="<?=$adm_chk_class?>" idx="<?=$v['no']?>" chk="<?=$adm_chk_text?>"><?=$adm_chk_text?></span>
-			<?if(!$recieveCon['mb_no']){?><br><a href="member_form.php?ADDKEDCD=<?=$v['KEDCD']?>" target="_blank" class="btn btn-sm btn-warning text-light">회원등록</a><?}?>
-		<?}?>
-		</td>
+		?>
+	    <tr>
+	        <td class="td_id"><span class="<?=$statusClass?>"><?=$status?></span></td>
+			<td class="td_center"><span class="<?=$request_type_class?>"><?=$request_type_text?></span></td>
+			<td class="td_center"><?=$request_time?></td>
+			<td class="td_center"><span class="<?=$tm_24h_class?>"><?=$tm_24h_text?></span></td>
+	        <td class="td_center">
+														<?=trim((string)$v['request_company_name']) ? $v['request_company_name'] : '-'?>
+			</td>
+			<td class="td_center"><?=trim((string)$v['request_bzno']) ? licenseNum($v['request_bzno']) : '-'?></td>
+			<td class="td_center"><?=trim((string)$v['req_manager_name']) ? $v['req_manager_name'] : '-'?></td>
+			<td class="td_center"><?=trim((string)$v['req_manager_position']) ? $v['req_manager_position'] : '-'?></td>
+			<td class="td_center"><?=trim((string)$v['req_manager_email']) ? $v['req_manager_email'] : '-'?></td>
+			<td class="td_center"><?=trim((string)$v['req_manager_phone']) ? $v['req_manager_phone'] : '-'?></td>
+			<td class="td_center"><?=trim((string)$v['target_company_name']) ? $v['target_company_name'] : '-'?></td>
+			<td class="td_center"><?=trim((string)$v['target_bzno']) ? licenseNum($v['target_bzno']) : '-'?></td>
+			<td class="td_center"><?=trim((string)$v['tgt_manager_name']) ? $v['tgt_manager_name'] : '-'?></td>
+			<td class="td_center"><?=trim((string)$v['tgt_manager_position']) ? $v['tgt_manager_position'] : '-'?></td>
+			<td class="td_center"><?=trim((string)$v['tgt_manager_phone']) ? $v['tgt_manager_phone'] : '-'?></td>
+			<td class="td_center"><?=trim((string)$v['tgt_manager_email']) ? $v['tgt_manager_email'] : '-'?></td>
+			<td class="td_center"><?=nl2br((string)$v['message_content'])?></td>
+			<td class="td_center">
+			<?if($status!="거래진행중" && $status != "거래거절"){?>
+				<span id="chk_k" class="<?=$adm_chk_class?>" idx="<?=$v['tr_no']?>" chk="<?=$adm_chk_text?>"><?=$adm_chk_text?></span>
+				<?if(!(int)$v['tgt_mb_no']){?><br><a href="member_form.php?ADDKEDCD=<?=$v['target_kedcd']?>" target="_blank" class="btn btn-sm btn-warning text-light">회원등록</a><?}?>
+			<?}?>
+			</td>
 
         <!--td class="td_mng td_mng_l">
             <a href="./matching_success_update.php?w=d&amp;no=<?php echo $v['no']; ?>&amp;<?=$qstr?>" onclick="return delete_confirm(this);" class="btn btn_02"><span class="sound_only"><?php echo htmlspecialchars2($v['title']); ?> </span>삭제</a>
