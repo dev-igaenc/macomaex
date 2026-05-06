@@ -190,7 +190,7 @@ include_once(G5_LIB_PATH.'/popular.lib.php');
                     </a>
                 </li>
                 <li class="one">
-                    <a href="<?php echo $link_0301; ?>">
+                    <a href="/ko/company_list_ai_demo.php?entry=matching_ai_demo">
                         <span class="snav-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg></span>AI 추천
                     </a>
                 </li>
