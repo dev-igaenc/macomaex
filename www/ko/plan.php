@@ -6,9 +6,11 @@ $board['bo_9'] = '1'; // 2뎁스
 
 $plan_css_ver = file_exists(__DIR__ . '/css/plan.css') ? filemtime(__DIR__ . '/css/plan.css') : time();
 $plan_js_ver = file_exists(__DIR__ . '/js/plan.js') ? filemtime(__DIR__ . '/js/plan.js') : time();
+$trade_chat_modal_css_ver = file_exists(__DIR__ . '/css/trade_chat_modal.css') ? filemtime(__DIR__ . '/css/trade_chat_modal.css') : time();
 $hide_theme_svisual = true;
 $hide_theme_pagetop = true;
 add_stylesheet('<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">', 180);
+add_stylesheet('<link rel="stylesheet" href="/ko/css/trade_chat_modal.css?ver=' . $trade_chat_modal_css_ver . '">', 190);
 add_stylesheet('<link rel="stylesheet" href="/ko/css/plan.css?ver=' . $plan_css_ver . '">', 200);
 add_javascript('<script src="/ko/js/plan.js?ver=' . $plan_js_ver . '"></script>', 200);
 include_once(G5_THEME_PATH . '/head.php');
