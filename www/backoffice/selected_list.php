@@ -100,6 +100,7 @@ $colspan = 10;
     for ($i=0; $row=sql_fetch_array($result); $i++) {
         $bg = 'bg'.($i%2);
 		$mship=sql_fetch("select title from g5_membership_manage where no='{$row['s_membership']}'");
+		$mship_title = (is_array($mship) && isset($mship['title']) && trim((string)$mship['title']) !== '') ? $mship['title'] : '-';
 		if($row['s_status']=="S") $status="<span class='btn btn-sm btn-primary'>이용중</span>";
 		if($row['s_status']=="E") $status="<span class='btn btn-sm btn-secondary'>종료</span>";
     ?>
@@ -111,7 +112,7 @@ $colspan = 10;
         </td>
         <td><?php echo $rnumber-$i; ?></td>
         <td><?php echo $row['s_subject']; ?></td>
-        <td class=""><?=$mship['title']; ?></td>
+	        <td class=""><?=$mship_title; ?></td>
         <td class="td_datetime"><?php echo substr($row['s_start'], 0, 10); ?></td>
         <td class="td_datetime"> <?php echo substr($row['s_end'], 0, 10); ?></td>
 		<td class="td_datetime"> <?php echo substr($row['s_modi'], 0, 10); ?></td>
