@@ -114,6 +114,10 @@ function print_menu2($key, $no = '')
 
     $str = "";
     $hidden_trade_submenus = array('500200', '500300', '500400');
+    $hidden_payment_menu_links = array(
+        '/payment.list.php',
+        '/payment.membership.list.php'
+    );
     for ($i = 1; $i < count($menu[$key]); $i++) {
         if (!isset($menu[$key][$i])) {
             continue;
@@ -122,6 +126,14 @@ function print_menu2($key, $no = '')
         // 거래(menu500)에서는 거래현황(500100)만 노출하고 제조사/유통사/기타는 숨김
         if ($key === 'menu500' && in_array((string)$menu[$key][$i][0], $hidden_trade_submenus, true)) {
             continue;
+        }
+
+        // 결제 메뉴 개편 중 고객 결제 관리/맴버쉽 결제 히스토리만 URL 기준으로 숨김
+        $menu_link = isset($menu[$key][$i][2]) ? (string)$menu[$key][$i][2] : '';
+        foreach ($hidden_payment_menu_links as $hidden_link) {
+            if ($menu_link !== '' && strpos($menu_link, $hidden_link) !== false) {
+                continue 2;
+            }
         }
 
         if ($is_admin != 'super' && (!array_key_exists($menu[$key][$i][0], $auth) || !strstr($auth[$menu[$key][$i][0]], 'r'))) {
