@@ -340,8 +340,8 @@ include_once(G5_THEME_PATH . '/head.php');
 	</div>
 
 	<div class="ai-analyze-full">
-			<div class="card section-card ai-analyze-card" style="position:relative;overflow:hidden;min-height:480px;">
-				<div class="ai-analyze-head" style="position:relative;z-index:3;">
+			<div class="card section-card ai-analyze-card">
+				<div class="ai-analyze-head">
 					<h3>AI 기업 분석</h3>
 					<p class="ai-cta-trade-type" id="aiCtaTradeTypeText"><?php echo htmlspecialchars($detail_trade_type_label, ENT_QUOTES, 'UTF-8'); ?></p>
 				</div>
@@ -349,7 +349,7 @@ include_once(G5_THEME_PATH . '/head.php');
 				<div class="ai-blur-content ai-analysis-result">
 					<h3>1. 거래 밸류에이션 요약</h3>
 					<p>양사 간의 결합은 <strong>데이터 기반 전략적 파트너십</strong>으로 정의됩니다.</p>
-					<table><thead><tr><th>핵심 지표</th><th>점수</th></tr></thead><tbody>
+						<table class="ai-kpi-table"><thead><tr><th>핵심 지표</th><th>점수</th></tr></thead><tbody>
 					<tr><td>공급망 근접도</td><td>--</td></tr>
 					<tr><td>거래처 유사성</td><td>--</td></tr>
 					<tr><td>거래 활성도</td><td>--</td></tr>
