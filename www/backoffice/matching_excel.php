@@ -19,7 +19,7 @@ function array_to_excel($headers, $rows, $filename){
     $obj = new PHPExcel();
     $obj->setActiveSheetIndex(0);
     $sheet = $obj->getActiveSheet();
-    $sheet->setTitle('거래현황');
+    $sheet->setTitle('거래 현황');
 
     for ($i = 0; $i < count($headers); $i++) {
         $col = excel_col_name($i + 1);
@@ -126,21 +126,21 @@ $sql = "select
 $result = sql_query($sql);
 $headers = array(
     '상태',
-    '요청구분',
-    '요청시간',
+    '요청 구분',
+    '요청 시간',
     'TM 24시간',
-    '요청업체',
+    '요청 업체',
     '사업자등록번호',
     '담당자이름',
     '직위',
     '이메일',
     '연락처',
-    '대상업체',
-    '대상 사업자등록번호',
-    '대상 담당자이름',
-    '대상 직위',
-    '대상 연락처',
-    '대상 이메일',
+    '대상 업체',
+    '사업자등록번호',
+    '담당자이름',
+    '직위',
+    '연락처',
+    '이메일',
     '메세지',
     '체크',
 );

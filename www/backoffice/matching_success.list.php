@@ -4,7 +4,7 @@
 
 	include_once (G5_ADMIN_PATH.'/admin.head.php');
 
-$g5['title'] = '거래현황';
+$g5['title'] = '거래 현황';
 
 $allowed_search_fields = array(
 	'TR.request_company_name' => 'TR.request_company_name',
@@ -128,21 +128,21 @@ $rnumber=($total_count-($page-1)*$rows)+1;
     <thead>
     <tr>
         <th scope="col">상태</th>
-		<th scope="col">요청구분</th>
-		<th scope="col">요청시간</th>
+		<th scope="col">요청 구분</th>
+		<th scope="col">요청 시간</th>
 		<th scope="col">TM 24시간</th>
-	        <th scope="col">요청업체</th>
+	        <th scope="col">요청 업체</th>
 		<th scope="col">사업자등록번호</th>
-        <th scope="col">담당자이름</th>
+        <th scope="col">담당자 이름</th>
 		<th scope="col">직위</th>
 		<th scope="col">이메일</th>
 		<th scope="col">연락처</th>
-	        <th scope="col">대상업체</th>
-	        <th scope="col">대상 사업자등록번호</th>
-			<th scope="col">대상 담당자이름</th>
-	        <th scope="col">대상 직위</th>
-			<th scope="col">대상 연락처</th>
-			<th scope="col">대상 이메일</th>
+	        <th scope="col">대상 업체</th>
+	        <th scope="col">사업자등록번호</th>
+			<th scope="col">담당자 이름</th>
+	        <th scope="col">직위</th>
+			<th scope="col">연락처</th>
+			<th scope="col">이메일</th>
 		<th scope="col" style="width:200px">메세지</th>
 		<th scope="col">체크</th>
 		<!--th scope="col">관리</th-->

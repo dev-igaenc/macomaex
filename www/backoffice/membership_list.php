@@ -7,7 +7,7 @@ auth_check_menu($auth, $sub_menu, "r");
 if( !isset($g5['content_table']) ){
     die('<meta charset="utf-8">/data/dbconfig.php 파일에 <strong>$g5[\'content_table\'] = G5_TABLE_PREFIX.\'content\';</strong> 를 추가해 주세요.');
 }
-$g5['title'] = '맴버쉽관리';
+$g5['title'] = '크레딧 관리';
 include_once (G5_ADMIN_PATH.'/admin.head.php');
 
 $sql_common = " from g5_membership_manage ";
