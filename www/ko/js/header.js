@@ -99,7 +99,7 @@
       '<ul id="list">' +
         '<li><a href="/pages/matching/matching_mfr.php"><span>기업거래</span></a></li>' +
         '<li><a href="/pages/shorts/shorts.php"><span>기업홍보관</span></a></li>' +
-        '<li><a href="/pages/payment/payment.php"><span>멤버십 요금제</span></a></li>' +
+        '<li><a href="/pages/payment/payment.php"><span>크레딧 요금제</span></a></li>' +
         '<li><a href="/pages/board/board.list.php?board_no=55"><span>커뮤니티</span></a></li>' +
       '</ul>' +
     '</div>';
@@ -157,7 +157,7 @@
           '<li class="one"><a href="about.html">' +
             '<span class="snav-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></span>매커멕스란</a></li>' +
           '<li class="one"><a href="plan.html">' +
-            '<span class="snav-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 16L3 6l5.5 5L12 2l3.5 9L21 6l-2 10H5z"/><line x1="5" y1="20" x2="19" y2="20"/></svg></span>멤버십 요금제</a></li>' +
+            '<span class="snav-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 16L3 6l5.5 5L12 2l3.5 9L21 6l-2 10H5z"/><line x1="5" y1="20" x2="19" y2="20"/></svg></span>크레딧 요금제</a></li>' +
 
           '<li class="side-divider"></li>' +
 

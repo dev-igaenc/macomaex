@@ -67,7 +67,7 @@
 		$txtActive_page = "커뮤니티";
 	} else if ($pagenum == "4" || $pagenum == 4) {
 		$lnbActive_page4 = "class=\"active\"";
-		$txtActive_page = "멤버십 요금제";
+		$txtActive_page = "크레딧 요금제";
 	}
 
 	if ($board_no == "52" || $board_no == 52) {
