@@ -181,7 +181,8 @@ $mailDateLabel = isset($mailDateLabel) ? (string)$mailDateLabel : date('Y년 m�
 
   <tr><td style="background:#ffffff;border-top:1px solid #e5e7eb;padding:18px 28px;text-align:center;">
     <div style="font-size:11px;color:#9ca3af;line-height:1.9;">
-      매커멕스(macomaex.com)가 회원사의 거래 요청을 대신 전달한 메일입니다.
+      본 메일은 귀사와 관련된 기업 간 거래 요청에 따른 안내이며, 광고 목적이 아닙니다.<br>
+      해당 요청은 로그인 / 회원가입 후 채팅을 통해 상세 협의가 가능합니다.
     </div>
     <div style="font-size:11px;color:#9ca3af;margin-top:6px;">문의: <a href="mailto:admin@macomaex.com" style="color:#3b82f6;text-decoration:none;">admin@macomaex.com</a></div>
   </td></tr>
