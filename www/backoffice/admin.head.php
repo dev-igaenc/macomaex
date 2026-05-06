@@ -113,8 +113,14 @@ function print_menu2($key, $no = '')
     global $menu, $auth_menu, $is_admin, $auth, $g5, $sub_menu;
 
     $str = "";
+    $hidden_trade_submenus = array('500200', '500300', '500400');
     for ($i = 1; $i < count($menu[$key]); $i++) {
         if (!isset($menu[$key][$i])) {
+            continue;
+        }
+
+        // 거래(menu500)에서는 거래현황(500100)만 노출하고 제조사/유통사/기타는 숨김
+        if ($key === 'menu500' && in_array((string)$menu[$key][$i][0], $hidden_trade_submenus, true)) {
             continue;
         }
 
