@@ -107,11 +107,9 @@ $rnumber=($total_count-($page-1)*$rows)+1;
         <th scope="col">이메일주소</th>
 		<th scope="col">결제일</th>
 		<th scope="col">금액</th>
-		<th scope="col">이용시작일</th>
-		<th scope="col">이용종료일</th>
 		<th scope="col">전문가컨설팅	</th>
-		<th scope="col">상태	</th>
 		<th scope="col">이용상품	</th>
+		<th scope="col">상태	</th>
 		<th scope="col">관리</th>
     </tr>
     </thead>
@@ -119,8 +117,29 @@ $rnumber=($total_count-($page-1)*$rows)+1;
 	    <?php for ($i=0; $row=sql_fetch_array($result); $i++) {
 				$membershipInfo	= getMembership($row['membership_parent_no']);
 				$paymentInfo			= getPaymentInfo($row['order_no']);
+				$biz_no_raw = isset($row['mb_4']) ? trim((string)$row['mb_4']) : '';
+				$biz_no_digits = preg_replace('/[^0-9]/', '', $biz_no_raw);
+				$biz_no_display = $biz_no_raw;
+				if (preg_match('/^[0-9]{10}$/', $biz_no_digits)) {
+					$biz_no_display = substr($biz_no_digits, 0, 3) . '-' . substr($biz_no_digits, 3, 2) . '-' . substr($biz_no_digits, 5, 5);
+				}
+				if ($biz_no_display === '') {
+					$biz_no_display = '-';
+				}
+				$company_name_display = isset($row['mb_name']) ? trim((string)$row['mb_name']) : '';
+				if ($company_name_display === '') {
+					$company_name_display = '-';
+				}
+				$email_display = isset($row['mb_email']) ? trim((string)$row['mb_email']) : '';
+				if ($email_display === '') {
+					$email_display = '-';
+				}
 				if(!is_array($membershipInfo)) $membershipInfo = array('title'=>'-', 'title_en'=>'');
 				if(!is_array($paymentInfo)) $paymentInfo = array('price'=>0);
+				$product_title_display = isset($membershipInfo['title']) ? trim((string)$membershipInfo['title']) : '';
+				if ($product_title_display === '') {
+					$product_title_display = '-';
+				}
 				$is_credit_goods = (isset($membershipInfo['title_en']) && strpos($membershipInfo['title_en'], 'CREDIT_') === 0) ? 1 : 0;
 				$refundInfo = sql_fetch("select id from g5_matching_credit_history where order_no='{$row['order_no']}' and tx_type='REFUND' order by id desc limit 1");
 				$is_refunded = (is_array($refundInfo) && !empty($refundInfo['id'])) ? 1 : 0;
@@ -134,8 +153,15 @@ $rnumber=($total_count-($page-1)*$rows)+1;
 				$status_text = "환불완료";
 				$status_btn_class = "btn-dark";
 			}
-			$timestamp = strtotime("+1 days", strtotime($row['date_end']." 00:00:00"));
-			$duedate=date("Y-m-d", $timestamp);
+			$duedate = '-';
+			if (!empty($row['date_end'])) {
+				$end_timestamp = strtotime($row['date_end']." 00:00:00");
+				if ($end_timestamp) {
+					$duedate = date("Y-m-d", strtotime("+1 days", $end_timestamp));
+				}
+			}
+			$price_value = isset($paymentInfo['price']) ? (int)$paymentInfo['price'] : 0;
+			$price_display = $price_value > 0 ? number_format($price_value, 0).'원' : '-';
 			$pay_cnt=sql_fetch("select count(*) as cnt from  g5_membership_status_history where uid='{$row['uid']}'");
 
 			if($pay_cnt['cnt']==1 && $status_text=="결제완료") $status_text="첫결제";
@@ -143,15 +169,11 @@ $rnumber=($total_count-($page-1)*$rows)+1;
 	?>
     <tr>
         <td class="td_id"><?=$rnumber=$rnumber-1?></td>
-        <td class="td_center" title="<?php echo $row['uid']; ?>"><?php echo $row['mb_name']; ?></td>
-		<td class="td_center"><?php echo $row['mb_4']; ?></td>
-		<td class="td_center"><?php echo $row['mb_email']; ?></td>
+        <td class="td_center" title="<?php echo $row['uid']; ?>"><?php echo $company_name_display; ?></td>
+		<td class="td_center"><?php echo $biz_no_display; ?></td>
+		<td class="td_center"><?php echo $email_display; ?></td>
 		<td class="td_center"><?=$duedate?></td>
-		<td class="td_center">
-			<?=number_format($paymentInfo['price'],0)?>원
-		</td>
-		<td class="td_center"><?=$row['date_begin']?></td>
-		<td class="td_center"><?=$row['date_end']?></td>
+		<td class="td_center"><?=$price_display?></td>
 		<td class="td_center">
 			<?php if($row['expert_consulting_cnt']>0 and ($row['status']=="S" or  $row['status']=="T")){?>
 				<?php if(!$row['expert_consulting_able_cnt']){?>
@@ -163,13 +185,13 @@ $rnumber=($total_count-($page-1)*$rows)+1;
 				-
 			<?php }?>
 		</td>
+		<td class="td_center"><?=$product_title_display?></td>
 		<td class="td_center td_mng" title="열람 <?=$row['open_able_cnt']?> / <?=$row['open_cnt']?><br>매칭 <?=$row['matching_able_cnt']?> / <?=$row['matching_cnt']?>">			<!--//상태(S:유지, C:취소, E:종료)-->
 			<span class="btn btn-sm <?=$status_btn_class?>">
 				<?=$status_text?>
 			</span>
 			<?php if($row['coupon']){?><p  class="btn btn-sm bg-dark text-light">쿠폰사용</p><?php }?>
 		</td>
-		<td class="td_center"><?=$membershipInfo['title']?></td>
         <td class="td_mng td_mng_l">
 			<?php if($is_refunded){?>
 			<span class="btn btn-sm btn-secondary">환불완료</span><br>
@@ -183,7 +205,7 @@ $rnumber=($total_count-($page-1)*$rows)+1;
     <?php
     }
     if ($i == 0) {
-        echo '<tr><td colspan="8" class="empty_table">자료가 한건도 없습니다.</td></tr>';
+        echo '<tr><td colspan="10" class="empty_table">자료가 한건도 없습니다.</td></tr>';
     }
     ?>
     </tbody>

@@ -113,9 +113,30 @@ function print_menu2($key, $no = '')
     global $menu, $auth_menu, $is_admin, $auth, $g5, $sub_menu;
 
     $str = "";
+    if (!isset($menu[$key]) || !is_array($menu[$key])) {
+        return $str;
+    }
+    $hidden_trade_submenus = array('500200', '500300', '500400');
+    $hidden_payment_menu_links = array(
+        '/payment.list.php',
+        '/payment.membership.list.php'
+    );
     for ($i = 1; $i < count($menu[$key]); $i++) {
         if (!isset($menu[$key][$i])) {
             continue;
+        }
+
+        // 거래(menu500)에서는 거래현황(500100)만 노출하고 제조사/유통사/기타는 숨김
+        if ($key === 'menu500' && in_array((string)$menu[$key][$i][0], $hidden_trade_submenus, true)) {
+            continue;
+        }
+
+        // 결제 메뉴 개편 중 고객 결제 관리/맴버쉽 결제 히스토리만 URL 기준으로 숨김
+        $menu_link = isset($menu[$key][$i][2]) ? (string)$menu[$key][$i][2] : '';
+        foreach ($hidden_payment_menu_links as $hidden_link) {
+            if ($menu_link !== '' && strpos($menu_link, $hidden_link) !== false) {
+                continue 2;
+            }
         }
 
         if ($is_admin != 'super' && (!array_key_exists($menu[$key][$i][0], $auth) || !strstr($auth[$menu[$key][$i][0]], 'r'))) {
@@ -238,7 +259,7 @@ if (!empty($_COOKIE['g5_admin_btn_gnb'])) {
 			$idx_v["SMS 관리"]="fa-edit";
 			$idx_v["기업 DB"]="fa-database";
 			$idx_v["맴버쉽관리"]="fa-user-o";
-			$idx_v["매칭"]="fa-building-o";
+			$idx_v["거래"]="fa-building-o";
 			$idx_v["결제"]="fa-credit-card";
 			$idx_v["배너관리"]="fa-picture-o";
 			$idx_v["공지사항"]="fa-exclamation-circle";
@@ -266,16 +287,17 @@ if (!empty($_COOKIE['g5_admin_btn_gnb'])) {
                     $current_class = " on";
                 }
 
-                $button_title = $menu['menu' . $key][0][1];
-				$button_link = $menu['menu' . $key][0][2];
-				$button_one = $menu['menu' . $key][0][8];
-				if($button_one==1) $linkz='href="'.$button_link.'"';
-				else $linkz='';
+	                $button_title = $menu['menu' . $key][0][1];
+					$button_link = $menu['menu' . $key][0][2];
+					$button_one = $menu['menu' . $key][0][8];
+					$button_icon = isset($idx_v[$button_title]) ? $idx_v[$button_title] : 'fa-circle-o';
+					if($button_one==1) $linkz='href="'.$button_link.'"';
+					else $linkz='';
 				//$mb_auth=explode("|",$member['mb_auth']);
 				//$chk = array_search($menu['menu' . $key][0][0], $mb_auth);
 
             ?>
-                  <li><a <?=$linkz?>><i class="fa <?=$idx_v[ $button_title]?>"></i> <?php echo $button_title; ?> <?if($button_one!=1){?><span class="fa fa-chevron-down"></span><?}?></a>
+	                  <li><a <?=$linkz?>><i class="fa <?=$button_icon?>"></i> <?php echo $button_title; ?> <?if($button_one!=1){?><span class="fa fa-chevron-down"></span><?}?></a>
                     <ul class="nav child_menu">
                       <?php echo print_menu1('menu' . $key, 1); ?>
                     </ul>

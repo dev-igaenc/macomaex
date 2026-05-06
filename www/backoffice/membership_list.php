@@ -7,7 +7,7 @@ auth_check_menu($auth, $sub_menu, "r");
 if( !isset($g5['content_table']) ){
     die('<meta charset="utf-8">/data/dbconfig.php 파일에 <strong>$g5[\'content_table\'] = G5_TABLE_PREFIX.\'content\';</strong> 를 추가해 주세요.');
 }
-$g5['title'] = '맴버쉽관리';
+$g5['title'] = '요금제 관리';
 include_once (G5_ADMIN_PATH.'/admin.head.php');
 
 $sql_common = " from g5_membership_manage ";
@@ -41,14 +41,11 @@ $result = sql_query($sql);
     <thead>
     <tr>
         <th scope="col">번호</th>
-        <th scope="col">멤버십명</th>
-		<th scope="col">기간</th>
+        <th scope="col">요금제명</th>
         <th scope="col">금액</th>
 		<th scope="col">VAT</th>
 		<th scope="col">결제타입</th>
-		<th scope="col">정보 열람 횟수</th>
-		<th scope="col">매칭 요청 횟수</th>
-		<th scope="col">셀렉티드 횟수</th>
+		<th scope="col">크레딧</th>
 		<th scope="col">설명</th>
 		<th scope="col">관리</th>
     </tr>
@@ -62,17 +59,14 @@ $result = sql_query($sql);
     <tr>
         <td class="td_id"><?php echo $i+1; ?></td>
         <td class="td_center"><?php echo $row['title']; ?><br><?php echo $row['title_en']; ?></td>
-		<td class="td_center"><?php echo $row['month']; ?> 달</td>
-			<td class="td_center">
-				<?if($row['price_origin']>-1){?><p class="text-secondary <?if($row['sale']){?>throu<?}?>"><?php echo is_numeric($row['price_origin']) ? number_format((float)$row['price_origin']) : $row['price_origin']; ?></p><?}?>
-				<?if(isset($row['sale']) && is_numeric($row['sale'])){?><p class="text-info"><?php echo number_format((float)$row['sale']); ?>%</p><?}?>
-				<?if($row['price_sale']){?><p class="text-bold"><?php echo is_numeric($row['price_sale']) ? number_format((float)$row['price_sale']) : $row['price_sale']; ?></p><?}?>
-			</td>
+		<td class="td_center">
+			<?if($row['price_origin']>-1){?><p class="text-secondary <?if($row['sale']){?>throu<?}?>"><?php echo is_numeric($row['price_origin']) ? number_format((float)$row['price_origin']) : $row['price_origin']; ?></p><?}?>
+			<?if(isset($row['sale']) && is_numeric($row['sale'])){?><p class="text-info"><?php echo number_format((float)$row['sale']); ?>%</p><?}?>
+			<?if($row['price_sale']){?><p class="text-bold"><?php echo is_numeric($row['price_sale']) ? number_format((float)$row['price_sale']) : $row['price_sale']; ?></p><?}?>
+		</td>
 		<td class="td_center"><?php echo $row['vat']; ?></td>
 		<td class="td_center"><?php echo $row['pay_type']; ?></td>
-		<td class="td_center"><?php if($row['open_cnt']=="-") echo "무제한"; else  echo $row['open_cnt'];?></td>
 		<td class="td_center"><?php if($row['matching_cnt']=="-") echo "무제한"; else  echo $row['matching_cnt'];?></td>
-		<td class="td_center"><?=$row['selected_cnt'];?></td>
 		<td class="td_center"><?php echo nl2br($row['desc']); ?></td>
         <td class="td_mng td_mng_l">
             <a href="./membership_form.php?w=u&amp;no=<?php echo $row['no']; ?>" class="btn btn_03"><span class="sound_only"><?php echo htmlspecialchars2($row['title']); ?> </span>수정</a>
@@ -82,7 +76,7 @@ $result = sql_query($sql);
     <?php
     }
     if ($i == 0) {
-        echo '<tr><td colspan="11" class="empty_table">자료가 한건도 없습니다.</td></tr>';
+        echo '<tr><td colspan="8" class="empty_table">자료가 한건도 없습니다.</td></tr>';
     }
     ?>
     </tbody>

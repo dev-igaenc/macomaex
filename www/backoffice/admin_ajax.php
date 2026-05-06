@@ -184,17 +184,17 @@ switch ($type) {
 		if($result) echo "1000";
 		else echo "500";
         break;
-    case "matching_admchk": //매칭 관리자체크
+	    case "matching_admchk": //매칭 관리자체크
 
-		if(!$idx) {echo "500"; exit;}
-		$matching = sql_fetch("select
-				A.no,
-				IFNULL(TRIM(A.adm_chk), '') as adm_chk,
-				UPPER(TRIM(IFNULL((select request_type from g5_matching_credit_history where matching_no=A.no and tx_type='USE' order by id desc limit 1), ''))) as request_type
-			from g5_matching A
-			where A.no='{$idx}'
-			limit 1");
-		if(!$matching['no']) {echo "500"; exit;}
+			if(!$idx) {echo "500"; exit;}
+			$matching = sql_fetch("select
+					TR.tr_no as no,
+					IFNULL(TRIM(TR.adm_chk), '') as adm_chk,
+					UPPER(TRIM(IFNULL(TR.trade_type, ''))) as request_type
+				from trade_request TR
+				where TR.tr_no='{$idx}'
+				limit 1");
+			if(!$matching['no']) {echo "500"; exit;}
 
 		$current_chk = trim((string)$matching['adm_chk']);
 		if(!$current_chk) $current_chk = trim((string)$chk);
@@ -215,10 +215,10 @@ switch ($type) {
 			else $ret = $st_done;
 		}
 
-		$result=sql_query("update g5_matching set adm_chk='{$ret}' where no='{$idx}'");
-		if($result) echo $ret;
-		else echo "500";
-        break;
+			$result=sql_query("update trade_request set adm_chk='{$ret}' where tr_no='{$idx}'");
+			if($result) echo $ret;
+			else echo "500";
+	        break;
 
     case "zip_pass": //패스워드 변경
 

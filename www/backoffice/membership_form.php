@@ -7,14 +7,18 @@ auth_check_menu($auth, $sub_menu, 'w');
 if ($is_admin != 'super')
     alert_close('최고관리자만 접근 가능합니다.');
 
-$g5['title'] = '맴버쉽관리';
+$g5['title'] = '요금제 관리';
 
 $w = isset($_GET['w']) ? clean_xss_tags($_GET['w'], 1, 1) : '';
 $no = isset($_GET['no']) ? preg_replace('/[^0-9a-zA-Z]/', '', $_GET['no']) : '';
+$po = array();
 
 if ($w == 'u')  {
     $sql = " select * from g5_membership_manage where no = '{$no}' ";
     $po = sql_fetch($sql);
+    if (!is_array($po)) {
+        $po = array();
+    }
 }
 
 include_once('./admin.head.php');
@@ -35,82 +39,64 @@ include_once('./admin.head.php');
 		<div class="tbl_frm01 tbl_wrap">
 			<table>
 				<tr>
-					<th scope="row"><label for="title">멤버십명</label></th>
+					<th scope="row"><label for="title">요금제명</label></th>
 					<td>
-						<input type="text" name="title" value="<?php echo get_text($po['title']) ?>" id="title" class="frm_input" size="80">
+							<input type="text" name="title" value="<?php echo get_text($po['title'] ?? '') ?>" id="title" class="frm_input" size="80">
 					</td>
 				</tr>
 				<tr>
-					<th scope="row"><label for="title_en">멤버십명 (영문)</label></th>
+					<th scope="row"><label for="title_en">요금제명 (영문)</label></th>
 					<td>
-						<input type="text" name="title_en" value="<?php echo get_text($po['title_en']) ?>" id="title_en" class="frm_input" size="80">
-					</td>
-				</tr>
-				<tr>
-					<th scope="row"><label for="month">기간</label></th>
-					<td>
-						<input type="text" name="month" value="<?php echo get_text($po['month']) ?>" id="month" class="frm_input small">
+							<input type="text" name="title_en" value="<?php echo get_text($po['title_en'] ?? '') ?>" id="title_en" class="frm_input" size="80">
 					</td>
 				</tr>
 				<tr>
 					<th scope="row"><label for="price_origin">가격</label></th>
 					<td>
-						<input type="text" name="price_origin" value="<?php echo get_text($po['price_origin']) ?>" id="price_origin" class="frm_input small">
+							<input type="text" name="price_origin" value="<?php echo get_text($po['price_origin'] ?? '') ?>" id="price_origin" class="frm_input small">
 					</td>
 				</tr>
 				<tr>
 					<th scope="row"><label for="price_sale">세일가격</label></th>
 					<td>
-						<input type="text" name="price_sale" value="<?php echo get_text($po['price_sale']) ?>" id="price_sale" class="frm_input small">
+							<input type="text" name="price_sale" value="<?php echo get_text($po['price_sale'] ?? '') ?>" id="price_sale" class="frm_input small">
 					</td>
 				</tr>
 				<tr>
 					<th scope="row"><label for="sale">세일(%)</label></th>
 					<td>
-						<input type="text" name="sale" value="<?php echo get_text($po['sale']) ?>" id="sale" class="frm_input small">
+							<input type="text" name="sale" value="<?php echo get_text($po['sale'] ?? '') ?>" id="sale" class="frm_input small">
 					</td>
 				</tr>
 				<tr>
 					<th scope="row"><label for="vat">VAT</label></th>
 					<td>
-						<input type="text" name="vat" value="<?php echo get_text($po['vat']) ?>" id="vat" class="frm_input small">
+							<input type="text" name="vat" value="<?php echo get_text($po['vat'] ?? '') ?>" id="vat" class="frm_input small">
 					</td>
 				</tr>
 				<tr>
 					<th scope="row"><label for="pay_type">결제타입</label></th>
 					<td>
-						<input type="text" name="pay_type" value="<?php echo get_text($po['pay_type']) ?>" id="pay_type" class="frm_input small">
+							<input type="text" name="pay_type" value="<?php echo get_text($po['pay_type'] ?? '') ?>" id="pay_type" class="frm_input small">
 					</td>
 				</tr>
 				<tr>
 					<th scope="row"><label for="desc">상세</label></th>
 					<td>
-						<textarea name="desc" id="desc" class="frm_textarea" style="width:630px"><?php echo get_text($po['desc']) ?></textarea>
+							<textarea name="desc" id="desc" class="frm_textarea" style="width:630px"><?php echo get_text($po['desc'] ?? '') ?></textarea>
 					</td>
 				</tr>
 				<tr>
-					<th scope="row"><label for="open_cnt">회원사 정보열람 횟수</label></th>
+					<th scope="row"><label for="matching_cnt">크레딧</label></th>
 					<td>
-						<input type="text" name="open_cnt" value="<?php echo get_text($po['open_cnt']) ?>" id="open_cnt" class="frm_input small">
-					</td>
-				</tr>
-				<tr>
-					<th scope="row"><label for="matching_cnt">매칭요청 횟수</label></th>
-					<td>
-						<input type="text" name="matching_cnt" value="<?php echo get_text($po['matching_cnt']) ?>" id="matching_cnt" class="frm_input small">
-					</td>
-				</tr>
-				<tr>
-					<th scope="row"><label for="selected_cnt">셀렉티드 횟수</label></th>
-					<td>
-						<input type="text" name="selected_cnt" value="<?php echo get_text($po['selected_cnt']) ?>" id="selected_cnt" class="frm_input small">
+							<input type="text" name="matching_cnt" value="<?php echo get_text($po['matching_cnt'] ?? '') ?>" id="matching_cnt" class="frm_input small">
 					</td>
 				</tr>
 				<?if($w!=""){?>
 				<tr>
 					<th scope="row"><label for="regdate">등록일자</label></th>
 					<td>
-						<input type="text" name="regdate" value="<?php echo get_text($po['regdate']) ?>" id="regdate" class="frm_input small" >
+							<input type="text" name="regdate" value="<?php echo get_text($po['regdate'] ?? '') ?>" id="regdate" class="frm_input small" >
 					</td>
 				</tr>
 				<?}?>
