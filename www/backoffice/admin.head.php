@@ -113,6 +113,9 @@ function print_menu2($key, $no = '')
     global $menu, $auth_menu, $is_admin, $auth, $g5, $sub_menu;
 
     $str = "";
+    if (!isset($menu[$key]) || !is_array($menu[$key])) {
+        return $str;
+    }
     $hidden_trade_submenus = array('500200', '500300', '500400');
     $hidden_payment_menu_links = array(
         '/payment.list.php',
@@ -284,16 +287,17 @@ if (!empty($_COOKIE['g5_admin_btn_gnb'])) {
                     $current_class = " on";
                 }
 
-                $button_title = $menu['menu' . $key][0][1];
-				$button_link = $menu['menu' . $key][0][2];
-				$button_one = $menu['menu' . $key][0][8];
-				if($button_one==1) $linkz='href="'.$button_link.'"';
-				else $linkz='';
+	                $button_title = $menu['menu' . $key][0][1];
+					$button_link = $menu['menu' . $key][0][2];
+					$button_one = $menu['menu' . $key][0][8];
+					$button_icon = isset($idx_v[$button_title]) ? $idx_v[$button_title] : 'fa-circle-o';
+					if($button_one==1) $linkz='href="'.$button_link.'"';
+					else $linkz='';
 				//$mb_auth=explode("|",$member['mb_auth']);
 				//$chk = array_search($menu['menu' . $key][0][0], $mb_auth);
 
             ?>
-                  <li><a <?=$linkz?>><i class="fa <?=$idx_v[ $button_title]?>"></i> <?php echo $button_title; ?> <?if($button_one!=1){?><span class="fa fa-chevron-down"></span><?}?></a>
+	                  <li><a <?=$linkz?>><i class="fa <?=$button_icon?>"></i> <?php echo $button_title; ?> <?if($button_one!=1){?><span class="fa fa-chevron-down"></span><?}?></a>
                     <ul class="nav child_menu">
                       <?php echo print_menu1('menu' . $key, 1); ?>
                     </ul>
