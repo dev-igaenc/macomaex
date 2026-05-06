@@ -13,7 +13,6 @@ check_admin_token();
 
 $check_keys = array(
 'no',
-'month',
 'title',
 'title_en',
 'price_origin',
@@ -22,7 +21,6 @@ $check_keys = array(
 'vat',
 'pay_type',
 'desc',
-'open_cnt',
 'matching_cnt',
 'regdate'
 );
@@ -38,7 +36,6 @@ foreach( $_POST as $key=>$value ){
 if ($w == '')
 {
     $sql = " insert g5_membership_manage  set
-					month='{$month}',
 					title='{$title}',
 					title_en='{$title_en}',
 					price_origin='{$price_origin}',
@@ -47,9 +44,7 @@ if ($w == '')
 					vat='{$vat}',
 					pay_type='{$pay_type}',
 					`desc`='{$desc}',
-					open_cnt='{$open_cnt}',
 					matching_cnt='{$matching_cnt}',
-					selected_cnt='{$selected_cnt}',
 					regdate='".G5_TIME_YMD."'";
     sql_query($sql);
 
@@ -58,7 +53,6 @@ if ($w == '')
 else if ($w == 'u')
 {
     $sql = " update g5_membership_manage  set
-					month='{$month}',
 					title='{$title}',
 					title_en='{$title_en}',
 					price_origin='{$price_origin}',
@@ -67,9 +61,7 @@ else if ($w == 'u')
 					vat='{$vat}',
 					pay_type='{$pay_type}',
 					`desc`='{$desc}',
-					open_cnt='{$open_cnt}',
 					matching_cnt='{$matching_cnt}',
-					selected_cnt='{$selected_cnt}',
 					regdate='".G5_TIME_YMD."'
 					where no = '{$_REQUEST['no']}' ";
     sql_query($sql);
