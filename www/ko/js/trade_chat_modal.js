@@ -665,11 +665,9 @@
 				return '<button type="button" class="chat-room-item' + (active ? ' active' : '') + '" data-room-id="' + room.roomId + '">' +
 					'<div class="chat-room-avatar">' + escapeHtml(room.initial || '채') + '</div>' +
 					'<div class="chat-room-info">' +
+						'<span class="chat-room-time">' + escapeHtml(timeText) + '</span>' +
 						'<div class="chat-room-name">' + escapeHtml(room.title || '채팅방') + '</div>' +
 						'<div class="chat-room-preview">' + escapeHtml(room.preview || '최근 대화가 없습니다.') + '</div>' +
-					'</div>' +
-					'<div class="chat-room-meta">' +
-						'<span class="chat-room-time">' + escapeHtml(timeText) + '</span>' +
 					'</div>' +
 				'</button>';
 			}).join('');

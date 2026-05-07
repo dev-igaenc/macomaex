@@ -240,6 +240,8 @@
 	font-size: 10px;
 	color: #b0b8c8;
 	white-space: nowrap;
+	display: block;
+	margin-bottom: 2px;
 }
 
 .chat-room-unread {
