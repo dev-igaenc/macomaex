@@ -16,11 +16,23 @@ body {
 	overflow: visible;
 }
 
-#detailWrap { background: #FAFBFD; min-height: 100vh; }
+#detailWrap {
+	background: #FAFBFD;
+	min-height: 100vh;
+	/* top-nav sticky offset must match theme header wrapper offset */
+	--header-h: 60px;
+}
+@media (max-width: 768px) {
+	#detailWrap { --header-h: 56px; }
+}
 html.in-iframe #header,
 html.in-iframe #sideMenuArea { display: none !important; }
 html.in-iframe body { padding-top: 0 !important; margin-top: 0 !important; }
-html.in-iframe #detailWrap { padding-top: 0 !important; margin-top: 0 !important; }
+html.in-iframe #detailWrap {
+	padding-top: 0 !important;
+	margin-top: 0 !important;
+	--header-h: 0px;
+}
 html.in-iframe .page-wrap { padding-top: 0 !important; margin-top: 0 !important; }
 html.in-iframe { --header-h: 0px; }
 html.in-iframe #detailWrap .btn-back { display: none !important; }
