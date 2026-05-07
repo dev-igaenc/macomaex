@@ -1231,9 +1231,9 @@ switch ($type) {
 	break;
 
 	case "membership_credit_pay": //크레딧 일반결제 주문 생성
-			$payment_log_base = array(
-				'event_type' => 'credit_order_prepare',
-				'context' => 'membership_credit_pay',
+				$payment_log_base = array(
+					'event_type' => 'credit_order_prepare',
+					'context' => 'membership_credit_pay',
 				'request_uri' => isset($_SERVER['REQUEST_URI']) ? (string)$_SERVER['REQUEST_URI'] : '',
 				'request_method' => isset($_SERVER['REQUEST_METHOD']) ? (string)$_SERVER['REQUEST_METHOD'] : '',
 				'mb_id' => isset($member['mb_id']) ? (string)$member['mb_id'] : '',
@@ -1261,16 +1261,17 @@ switch ($type) {
 				exit;
 			}
 			if($member['mb_id']) {
-					$stdpay_mid_for_order = (defined('_stdpay_mid') && trim((string)_stdpay_mid) !== '') ? trim((string)_stdpay_mid) : ((defined('_mid') && trim((string)_mid) !== '') ? trim((string)_mid) : '');
-					if(!$stdpay_mid_for_order){
-						macomaex_payment_log_write(array_merge($payment_log_base, array(
-							'event_status' => 'fail',
-							'reason' => 'mid_not_configured',
-							'message' => '일반결제 MID가 설정되지 않았습니다.'
-						)));
-						echo "500|일반결제 MID가 설정되지 않았습니다.";
-						exit;
-					}
+						// PC/모바일 동일 일반결제 MID를 사용
+						$order_mid_for_pg = (defined('_stdpay_mid') && trim((string)_stdpay_mid) !== '') ? trim((string)_stdpay_mid) : ((defined('_mid') && trim((string)_mid) !== '') ? trim((string)_mid) : '');
+						if(!$order_mid_for_pg){
+							macomaex_payment_log_write(array_merge($payment_log_base, array(
+								'event_status' => 'fail',
+								'reason' => 'mid_not_configured',
+								'message' => '일반결제 MID가 설정되지 않았습니다.'
+							)));
+							echo "500|일반결제 MID가 설정되지 않았습니다.";
+							exit;
+						}
 
 					$minfo_manage = sql_fetch("select * from g5_membership_manage where no='{$idx}'");
 					if(!is_array($minfo_manage) || empty($minfo_manage['no'])){
@@ -1334,12 +1335,12 @@ switch ($type) {
 					$sql.="	price='{$price}',";
 					$sql.="	complete_yn='N',";
 					$sql.="	regdate=now(),";
-					$sql.="	name='{$member['mb_name']}',";
-					$sql.="	phone='{$member['mb_8']}',";
-					$sql.="	email='{$member['mb_email']}',";
-					$sql.="	mid='{$stdpay_mid_for_order}',";
-				$sql.="	membership_parent_no='{$idx}'	";
-			}else{
+						$sql.="	name='{$member['mb_name']}',";
+						$sql.="	phone='{$member['mb_8']}',";
+						$sql.="	email='{$member['mb_email']}',";
+						$sql.="	mid='{$order_mid_for_pg}',";
+					$sql.="	membership_parent_no='{$idx}'	";
+				}else{
 					$sql="update g5_membership_payment set ";
 					$sql.="	order_goods='[크레딧] {$minfo_manage['title']}',";
 					$sql.="	price='{$price}',";
@@ -1350,25 +1351,25 @@ switch ($type) {
 					$sql.="	appl_time='',";
 					$sql.="	appl_num='',";
 					$sql.="	regdate=now(),";
-					$sql.="	name='{$member['mb_name']}',";
-					$sql.="	phone='{$member['mb_8']}',";
-					$sql.="	email='{$member['mb_email']}',";
-					$sql.="	mid='{$stdpay_mid_for_order}',";
-				$sql.="	membership_parent_no='{$idx}'	";
-				$sql.="	where no='{$pinfo['no']}'";
-			}
+						$sql.="	name='{$member['mb_name']}',";
+						$sql.="	phone='{$member['mb_8']}',";
+						$sql.="	email='{$member['mb_email']}',";
+						$sql.="	mid='{$order_mid_for_pg}',";
+					$sql.="	membership_parent_no='{$idx}'	";
+					$sql.="	where no='{$pinfo['no']}'";
+				}
 			$result=sql_query($sql);
 			if($result){
 				macomaex_payment_log_write(array_merge($payment_log_base, array(
 					'event_status' => 'success',
 					'write_mode' => $write_mode,
 					'membership_parent_no' => (string)$idx,
-					'plan_title' => (string)$minfo_manage['title'],
-					'price' => (string)$price,
-					'vat_policy' => (strpos((string)$minfo_manage['vat'], '별도') !== false ? 'VAT_EXCLUDED' : 'VAT_INCLUDED'),
-					'mid' => (string)$stdpay_mid_for_order,
-					'message' => '크레딧 일반결제 주문이 생성(또는 갱신)되었습니다.'
-				)));
+						'plan_title' => (string)$minfo_manage['title'],
+						'price' => (string)$price,
+						'vat_policy' => (strpos((string)$minfo_manage['vat'], '별도') !== false ? 'VAT_EXCLUDED' : 'VAT_INCLUDED'),
+						'mid' => (string)$order_mid_for_pg,
+						'message' => '크레딧 일반결제 주문이 생성(또는 갱신)되었습니다.'
+					)));
 				echo "1000|".$orderid;
 			}else{
 				macomaex_payment_log_write(array_merge($payment_log_base, array(
@@ -1377,7 +1378,7 @@ switch ($type) {
 					'membership_parent_no' => (string)$idx,
 					'plan_title' => (string)$minfo_manage['title'],
 					'price' => (string)$price,
-					'mid' => (string)$stdpay_mid_for_order,
+					'mid' => (string)$order_mid_for_pg,
 					'reason' => 'db_upsert_failed',
 					'message' => '결제 등록에 문제가 있습니다.'
 				)));

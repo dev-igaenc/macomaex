@@ -1,4 +1,4 @@
-<?
+<?php
 include_once("./_common.php");
 require_once('libs/INIStdPayUtil.php');
 
@@ -46,9 +46,9 @@ macomaex_payment_log_write(array_merge($payment_log_base, array(
 ?>
 <script>
 alert("로그인 후 이용하세요.");
-self.close();
+location.href = "/bbs/login.php?url=/ko/plan.php";
 </script>
-<?
+<?php
 	exit;
 }
 
@@ -62,9 +62,9 @@ macomaex_payment_log_write(array_merge($payment_log_base, array(
 ?>
 <script>
 alert("주문번호가 없습니다.");
-self.close();
+location.href = "/ko/plan.php";
 </script>
-<?
+<?php
 	exit;
 }
 
@@ -79,9 +79,9 @@ macomaex_payment_log_write(array_merge($payment_log_base, array(
 ?>
 <script>
 alert("결제 주문 정보를 찾을 수 없습니다.");
-self.close();
+location.href = "/ko/plan.php";
 </script>
-<?
+<?php
 	exit;
 }
 
@@ -104,9 +104,9 @@ macomaex_payment_log_write(array_merge($payment_log_base, array(
 ?>
 <script>
 alert("일반결제 키가 설정되지 않았습니다.");
-self.close();
+location.href = "/ko/plan.php";
 </script>
-<?
+<?php
 	exit;
 }
 

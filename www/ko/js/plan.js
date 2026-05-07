@@ -1,4 +1,9 @@
 (function($) {
+    function isLikelyMobileBrowser() {
+        var ua = navigator.userAgent || navigator.vendor || window.opera || '';
+        return /android|iphone|ipad|ipod|mobile|windows phone/i.test(ua);
+    }
+
     function showPlanAlert(message, callback) {
         if (typeof jAlert === 'function') {
             jAlert(message, '알림', function() {
@@ -21,6 +26,35 @@
 
     function getLoginReturnUrl() {
         return '/bbs/login.php?url=' + encodeURIComponent(window.location.pathname + window.location.search);
+    }
+
+    function submitCreditPayPopup(creditPayUrl, orderid) {
+        var formId = 'creditPayPopupForm';
+        var fieldId = 'creditPayPopupOrderid';
+        var form = document.getElementById(formId);
+        var orderField;
+
+        if (!form) {
+            form = document.createElement('form');
+            form.id = formId;
+            form.method = 'GET';
+            form.target = 'pyWin';
+            form.style.display = 'none';
+
+            orderField = document.createElement('input');
+            orderField.type = 'hidden';
+            orderField.name = 'orderid';
+            orderField.id = fieldId;
+            form.appendChild(orderField);
+
+            document.body.appendChild(form);
+        } else {
+            orderField = document.getElementById(fieldId);
+        }
+
+        form.action = creditPayUrl;
+        orderField.value = orderid;
+        form.submit();
     }
 
     // 기업목록(matching_list.js)의 로그인 필요 모달과 동일한 UI/동작을 재사용한다.
@@ -88,8 +122,10 @@
         var loginUrl = $root.data('loginUrl') || '/bbs/login.php?url=/ko/plan.php';
         var myPlanUrl = $root.data('myPlanUrl') || '/ko/my_plan.php';
         var creditPayUrl = $root.data('creditPayUrl') || '/ko/credit_pay.php';
+        var creditMobilePayUrl = $root.data('creditMobilePayUrl') || '/ko/credit_pay_mobile.php';
         var membershipCreditPayToken = String($root.data('membershipCreditPayToken') || '');
         var isSubmittingPayment = false;
+        var isMobileFlow = isLikelyMobileBrowser();
 
         /*
         현재 미사용: 쿠폰 결제 플로우 복구 대비 보존
@@ -186,15 +222,18 @@
             var idx = $(this).attr('idx');
             var orderid = $('#plan_orderid').val() || $("input[name='orderid']").val();
 
-            // 사용자 클릭 제스처 안에서 먼저 팝업을 열어 팝업 차단을 줄인다.
-            var payWindow = window.open('about:blank', 'pyWin', 'width=860px,height=630px');
-            if (!payWindow) {
-                showPlanAlert('팝업이 차단되었습니다. 브라우저 팝업을 허용해 주세요.');
-                return false;
+            var payWindow = null;
+            if (!isMobileFlow) {
+                // 사용자 클릭 제스처 안에서 먼저 팝업을 열어 팝업 차단을 줄인다.
+                payWindow = window.open('about:blank', 'pyWin', 'width=860px,height=630px');
+                if (!payWindow) {
+                    showPlanAlert('팝업이 차단되었습니다. 브라우저 팝업을 허용해 주세요.');
+                    return false;
+                }
             }
 
             if (!orderid || !idx || !membershipCreditPayToken) {
-                if (!payWindow.closed) payWindow.close();
+                if (payWindow && !payWindow.closed) payWindow.close();
                 showPlanAlert('결제에 문제가 있습니다.');
                 return false;
             }
@@ -208,14 +247,20 @@
             }).done(function(response) {
                 var parts = $.trim(String(response)).split('|');
                 if (parts[0] === '1000' && parts[1]) {
-                    payWindow.location.href = creditPayUrl + '?orderid=' + encodeURIComponent(parts[1]);
+                    if (isMobileFlow) {
+                        // 모바일은 일반결제 전용 엔드포인트로 바로 이동한다.
+                        window.location.href = creditMobilePayUrl + '?orderid=' + encodeURIComponent(parts[1]);
+                        return;
+                    }
+                    // 기존 멤버십 결제 방식과 동일하게, DOM에 유지되는 form을 pyWin으로 submit한다.
+                    submitCreditPayPopup(creditPayUrl, parts[1]);
                     return;
                 }
 
-                if (!payWindow.closed) payWindow.close();
+                if (payWindow && !payWindow.closed) payWindow.close();
                 showPlanAlert(parts[1] || '처리에 오류가 있습니다.');
             }).fail(function() {
-                if (!payWindow.closed) payWindow.close();
+                if (payWindow && !payWindow.closed) payWindow.close();
                 showPlanAlert('처리에 오류가 있습니다.');
             }).always(function() {
                 isSubmittingPayment = false;

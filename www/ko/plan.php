@@ -21,8 +21,15 @@ $signature_util = new INIStdPayUtil();
 $timestamp = $signature_util->getTimestamp();
 $orderid = (defined('_test_pay') && _test_pay == 'Y') ? 'DemoTest_' . $timestamp : 'M_' . $timestamp;
 // membership_credit_pay 요청 검증 토큰
-$membership_credit_pay_token = uniqid('', true);
-set_session('ss_membership_credit_pay_token', $membership_credit_pay_token);
+$membership_credit_pay_token = get_session('ss_membership_credit_pay_token');
+if (!$membership_credit_pay_token) {
+    try {
+        $membership_credit_pay_token = bin2hex(random_bytes(16));
+    } catch (Exception $e) {
+        $membership_credit_pay_token = sha1(uniqid('', true) . mt_rand());
+    }
+    set_session('ss_membership_credit_pay_token', $membership_credit_pay_token);
+}
 
 $signup_bonus = (defined('_new_member_signup_credit') && (int)_new_member_signup_credit > 0)
     ? (int)_new_member_signup_credit
@@ -182,6 +189,7 @@ if (!function_exists('plan_display_title_en')) {
     data-login-url="/bbs/login.php?url=/ko/plan.php"
     data-my-plan-url="/ko/my_plan.php"
     data-credit-pay-url="/ko/credit_pay.php"
+    data-credit-mobile-pay-url="/ko/credit_pay_mobile.php"
     data-membership-credit-pay-token="<?= htmlspecialchars($membership_credit_pay_token, ENT_QUOTES) ?>"
 >
     <div class="plan-page">
