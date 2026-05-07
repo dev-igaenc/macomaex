@@ -31,6 +31,7 @@ add_stylesheet('<link rel="stylesheet" href="'.G5_URL.'/ko/css/company-card.css?
 add_stylesheet('<link rel="stylesheet" href="'.G5_URL.'/ko/css/favorite.css?ver='.G5_CSS_VER.'">', 212);
 add_stylesheet('<link rel="stylesheet" href="'.G5_URL.'/ko/css/section-header.css?ver='.G5_CSS_VER.'">', 213);
 add_stylesheet('<link rel="stylesheet" href="'.G5_URL.'/ko/css/list-sidebar.css?ver='.G5_CSS_VER.'">', 214);
+add_stylesheet('<link rel="stylesheet" href="'.G5_URL.'/ko/css/trade_chat_modal.css?ver='.G5_CSS_VER.'">', 215);
 add_stylesheet('<link rel="stylesheet" href="'.G5_URL.'/ko/css/matching_list.css?ver='.$matching_list_css_ver.'">', 220);
 include_once(G5_THEME_PATH.'/head.php');
 

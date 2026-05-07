@@ -185,6 +185,9 @@ function get_processed_companies($order_by_col, $limit = 3, $unlocked_bzno_map =
     $limit = (int)$limit;
     if ($limit < 1) $limit = 3;
 
+    // 상단 카드 중복 노출 방지를 위해 limit보다 넉넉히 가져온 뒤 PHP에서 중복 제거
+    $fetch_limit = max($limit * 30, 30);
+
     $sql = "SELECT a.KEDCD, a.BZNO, a.ENP_NM, a.ENP_NM_TRD, a.keywords_json, a.keyword_count, a.VENP_YN,
                    COALESCE(b.growth_score_5, 0) AS growth_score_5,
                    COALESCE(b.profit_score_5, 0) AS profit_score_5,
@@ -196,16 +199,38 @@ function get_processed_companies($order_by_col, $limit = 3, $unlocked_bzno_map =
             LEFT JOIN company_score_final_dedup b ON a.KEDCD = b.KEDCD
             WHERE b.{$order_by_col} IS NOT NULL
             ORDER BY b.{$order_by_col} DESC, b.final_total_score_5 DESC
-            LIMIT {$limit}";
+            LIMIT {$fetch_limit}";
 
     $result = sql_query($sql);
     $list = array();
+    $seen_company_keys = array();
+    $seen_name_keys = array();
 
     while($row = sql_fetch_array($result)) {
         $rawName = trim((string)$row['ENP_NM_TRD']) !== '' ? $row['ENP_NM_TRD'] : $row['ENP_NM'];
         $normalizedBzno = normalize_bzno_for_unlock($row['BZNO'] ?? '');
         $isUnlocked = ($normalizedBzno !== '' && !empty($unlocked_bzno_map[$normalizedBzno]));
         $row['display_name'] = $isUnlocked ? $rawName : mask_company_name_for_list($rawName);
+
+        // 같은 기업 중복 제거: BZNO 우선, 없으면 KEDCD 기준
+        $kedcd = trim((string)($row['KEDCD'] ?? ''));
+        $companyKey = '';
+        if ($normalizedBzno !== '') {
+            $companyKey = 'BZNO:' . $normalizedBzno;
+        } else if ($kedcd !== '') {
+            $companyKey = 'KEDCD:' . $kedcd;
+        }
+        if ($companyKey !== '' && isset($seen_company_keys[$companyKey])) continue;
+
+        // 식별키가 비어있는 경우에만 회사명(원본명)으로 보조 중복 제거
+        $nameKey = '';
+        if ($companyKey === '') {
+            $nameBase = (string)$rawName;
+            $nameBase = function_exists('mb_strtolower') ? mb_strtolower($nameBase, 'UTF-8') : strtolower($nameBase);
+            $nameKey = preg_replace('/\s+/u', '', $nameBase);
+            if ($nameKey !== '' && isset($seen_name_keys[$nameKey])) continue;
+        }
+
         $row['growth_score_5'] = clamp_score_5($row['growth_score_5']);
         $row['profit_score_5'] = clamp_score_5($row['profit_score_5']);
         $row['stability_score_5'] = clamp_score_5($row['stability_score_5']);
@@ -230,7 +255,10 @@ function get_processed_companies($order_by_col, $limit = 3, $unlocked_bzno_map =
         $row['KEYWORD_TAGS'] = array_values(array_unique($tags));
         $row['keyword_count'] = max(0, (int)($row['keyword_count'] ?? 0));
 
+        if ($companyKey !== '') $seen_company_keys[$companyKey] = true;
+        if ($nameKey !== '') $seen_name_keys[$nameKey] = true;
         $list[] = $row;
+        if (count($list) >= $limit) break;
     }
     return $list;
 }

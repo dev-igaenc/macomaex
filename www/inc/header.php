@@ -85,7 +85,7 @@
 				</li>
 				
 				<li>
-					<a href="<?=$promotion?>">멤버십 요금제</a>
+					<a href="<?=$promotion?>">크레딧 요금제</a>
 				</li>
 				
 				<li>
@@ -133,7 +133,7 @@
 						<a href="<?=$rate?>">기업홍보관</a>
 					</li>
 					<li>
-						<a href="<?=$promotion?>">멤버십 요금제</a>
+						<a href="<?=$promotion?>">크레딧 요금제</a>
 					</li>
 				
 					<li>
