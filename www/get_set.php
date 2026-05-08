@@ -2,6 +2,7 @@
 include_once('./_common.php');
 include_once(G5_LIB_PATH.'/connect.lib.php');
 include_once(G5_LIB_PATH.'/outlogin.lib.php');
+include_once(G5_PATH.'/extend/user.extend.php');
 
 // Input normalization for legacy query-building code paths.
 $type = isset($_REQUEST['type']) ? trim((string)$_REQUEST['type']) : '';
@@ -135,10 +136,22 @@ switch ($type) {
 	case "main_comp_chk": //사업자등록증으로 api검색
 		if($comnum) {
 			$comnum=str_replace("-","",$comnum);
+			if(!preg_match('/^[0-9]{10}$/', $comnum)) {
+				echo "500|INVALID_BIZNO|사업자등록번호 형식을 확인해 주세요.";
+				exit;
+			}
 
-			//오늘 검색 로그에서 있으면 API말고 로그에서 가져오기
-			$log_chk=sql_fetch("select * from company_api_log where c_bizno='{$comnum}' and DATE(c_datetime)='".date("Y-m-d")."'");
-			if(!$log_chk['c_content']){
+			// 오늘 검색 로그 우선 사용
+			$log_chk=sql_fetch("select * from company_api_log where c_bizno='{$comnum}' and DATE(c_datetime)='".date("Y-m-d")."' order by c_datetime desc limit 1");
+			// 외부 API 장애/제한 시를 대비해 최신 캐시 fallback 확보
+			if(empty($log_chk['c_content'])) {
+				$latest_log = sql_fetch("select * from company_api_log where c_bizno='{$comnum}' and c_content!='' order by c_datetime desc limit 1");
+				if (!empty($latest_log['c_content'])) {
+					echo "1000|".$latest_log['c_content'];
+					exit;
+				}
+			}
+			if(empty($log_chk['c_content'])){
 				//사용자 토큰 받기
 				$TOKEN_URL = "https://218.55.37.214:6059/enpinfo?userid=igaenconl&process=S&bzno={$comnum}&pidagryn=Y&jmno=ig001&format=XML&Length=10000";
 				//----------curl 변수 세팅----------
@@ -148,7 +161,7 @@ switch ($type) {
 				 $ch = curl_init();  //curl 형태 초기화
 				 curl_setopt ($ch, CURLOPT_URL,$TOKEN_URL); //접속할 URL 주소 
 				 curl_setopt ($ch, CURLOPT_SSL_VERIFYPEER, FALSE); 
-				 curl_setopt ($ch, CURLOPT_SSLVERSION,1); 
+				 curl_setopt ($ch, CURLOPT_SSL_VERIFYHOST, 0); 
 				 curl_setopt ($ch, CURLOPT_HEADER, 0); 
 				 curl_setopt ($ch, CURLOPT_FOLLOWLOCATION, 1);
 				 curl_setopt ($ch, CURLOPT_COOKIEJAR, $cookie_nm);
@@ -201,7 +214,7 @@ switch ($type) {
 					$kedcd=$row->ENPintr0000->kedcd;
 				}
 				//API 로그에 기록
-				sql_fetch("insert company_api_log set c_bizno='{$comnum}', c_kedcd='{$kedcd}', c_content='{$json}', c_datetime=now(), c_ip='{$_SERVER["REMOTE_ADDR"]}'");
+				sql_query("insert company_api_log set c_bizno='{$comnum}', c_kedcd='{$kedcd}', c_content='{$json}', c_datetime=now(), c_ip='{$_SERVER["REMOTE_ADDR"]}'");
 				echo "1000|".$json;
 			}else{
 				//DB에 있으면 DB값 가져옴
@@ -298,7 +311,7 @@ switch ($type) {
 										}
 
 								//API 로그에 기록
-								sql_fetch("insert company_api_log set c_bizno='{$comnum}', c_kedcd='{$KEDCD}', c_content='{$com_data[1]}', c_datetime=now(), c_ip='{$_SERVER["REMOTE_ADDR"]}'");
+								sql_query("insert company_api_log set c_bizno='{$comnum}', c_kedcd='{$KEDCD}', c_content='{$com_data[1]}', c_datetime=now(), c_ip='{$_SERVER["REMOTE_ADDR"]}'");
 								echo "1000|".$enp_nm_trd."|".$KEDCD;
 							}else{
 								echo "501";

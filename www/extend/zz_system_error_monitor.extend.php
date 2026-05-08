@@ -193,7 +193,13 @@ if (!function_exists('system_error_fallback_file_log')) {
         @error_log($line . PHP_EOL, 3, $legacy_log_file);
 
         if ($php_error_log && $php_error_log !== $legacy_log_file) {
-            @error_log($line . PHP_EOL, 3, $php_error_log);
+            $php_error_log_dir = dirname($php_error_log);
+            $can_write_php_error_log = (@is_file($php_error_log) && @is_writable($php_error_log))
+                || (@is_dir($php_error_log_dir) && @is_writable($php_error_log_dir));
+
+            if ($can_write_php_error_log) {
+                @error_log($line . PHP_EOL, 3, $php_error_log);
+            }
         }
     }
 }
