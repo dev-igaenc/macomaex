@@ -242,12 +242,63 @@ switch ($type) {
 					}else{
 						//등록된 정보가 없으면 API로 가져와서 등록함
 						//API 로그기록에 정보가 남아있는지 체크 있으면 해당 기록에서 그냥 가져오기
-						$log_chk=sql_fetch("select * from company_api_log where c_bizno='{$comnum}' and DATE(c_datetime)='".date("Y-m-d")."'");
-						if (empty($log_chk['c_content'])) {
-							$com_d=getKODATA($comnum);
-							$com_data=explode("|",$com_d);
-							if($com_data[0]==1000){
-								$com_info=json_decode($com_data[1]);
+							$log_chk=sql_fetch("select * from company_api_log where c_bizno='{$comnum}' and DATE(c_datetime)='".date("Y-m-d")."' order by c_datetime desc limit 1");
+							if (empty($log_chk['c_content'])) {
+								$latest_log = sql_fetch("select * from company_api_log where c_bizno='{$comnum}' and c_content!='' order by c_datetime desc limit 1");
+								if (!empty($latest_log['c_content'])) {
+									$log_chk = $latest_log;
+								}
+							}
+							if (empty($log_chk['c_content'])) {
+								$TOKEN_URL = "https://218.55.37.214:6059/enpinfo?userid=igaenconl&process=S&bzno={$comnum}&pidagryn=Y&jmno=ig001&format=XML&Length=10000";
+								$agent = 'Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.0)';
+								$cookie_nm = './cookie.txt';
+
+								$ch = curl_init();
+								curl_setopt($ch, CURLOPT_URL, $TOKEN_URL);
+								curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, FALSE);
+								curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+								curl_setopt($ch, CURLOPT_HEADER, 0);
+								curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);
+								curl_setopt($ch, CURLOPT_COOKIEJAR, $cookie_nm);
+								curl_setopt($ch, CURLOPT_COOKIEFILE, $cookie_nm);
+								curl_setopt($ch, CURLOPT_USERAGENT, $agent);
+								curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+								curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+								$html_ori = curl_exec($ch);
+								$curl_error = curl_error($ch);
+								$curl_errno = curl_errno($ch);
+								curl_close($ch);
+
+								if ($html_ori === false) {
+									macomaex_kodata_log('curl_failed', array(
+										'context' => 'join_comp_chk',
+										'comnum' => $comnum,
+										'curl_errno' => $curl_errno,
+										'curl_error' => $curl_error,
+									));
+									echo "501";
+									exit;
+								}
+
+								$parsed = macomaex_parse_kodata_xml($html_ori, array(
+									'context' => 'join_comp_chk',
+									'comnum' => $comnum,
+								));
+								if (empty($parsed['success'])) {
+									echo "501";
+									exit;
+								}
+
+								$xml = $parsed['xml'];
+								if ((string)$xml->HEADER->errcd !== "00") {
+									echo "501";
+									exit;
+								}
+
+								$com_data = array("1000", $parsed['json']);
+								if($com_data[0]==1000){
+									$com_info=json_decode($com_data[1]);
 								$KEDCD=$com_info->CONTENTS->ENPintr0000->kedcd;
 								$enp_nm=$com_info->CONTENTS->ENPintr0000->enp_nm;
 								$enp_nm_trd=$com_info->CONTENTS->ENPintr0000->enp_nm_trd;//회사명
