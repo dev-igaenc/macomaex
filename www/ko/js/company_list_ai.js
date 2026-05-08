@@ -50,6 +50,12 @@
     var restPageIndex = 0;
     var top3Swiper = null;
     var restSwiper = null;
+    var isDemoMode = false;
+    try {
+        isDemoMode = (new URLSearchParams(window.location.search).get('entry') === 'matching_ai_demo');
+    } catch (e) {
+        isDemoMode = false;
+    }
 
     function destroySwiper(instance) {
         if (!instance || typeof instance.destroy !== 'function') return null;
@@ -62,6 +68,7 @@
         restSwiper = destroySwiper(restSwiper);
 
         if (typeof Swiper === 'undefined' || window.innerWidth > 1024) return;
+        if (isDemoMode) return;
 
         var topEl = document.querySelector('.ai-top3-swiper');
         if (topEl) {
@@ -364,6 +371,7 @@
     document.addEventListener('click', function(event) {
         var linkEl = event.target && event.target.closest ? event.target.closest('.company-ai-link') : null;
         if (!linkEl) return;
+        if (linkEl.tagName !== 'A') return;
         saveCardSnapshot(linkEl);
     });
 

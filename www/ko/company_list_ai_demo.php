@@ -398,7 +398,6 @@ function company_list_ai_render_card($card, $trade_type, $rank = 0)
     $title = htmlspecialchars($title_masked, ENT_QUOTES, 'UTF-8');
     $score = (int)$card['score'];
     $trade_q = (int)$trade_type;
-    $url = '/ko/company_detail_ai.php?kedcd=' . rawurlencode($card['kedcd']) . '&trade_type=' . $trade_q;
     $is_top3 = ($rank > 0);
 
     $tags_html = '';
@@ -419,7 +418,7 @@ function company_list_ai_render_card($card, $trade_type, $rank = 0)
 
     $html = '<div class="swiper-slide">';
     if ($is_top3) $html .= company_list_ai_render_rank_medal($rank);
-    $html .= '<a href="' . $url . '" class="company-ai-link" data-kedcd="' . $kedcd . '" data-trade-type="' . $trade_q . '" data-score="' . $score . '" style="text-decoration:none;color:inherit;">';
+    $html .= '<div class="company-ai-link" data-kedcd="' . $kedcd . '" data-trade-type="' . $trade_q . '" data-score="' . $score . '" style="color:inherit;">';
     $html .= '<div class="mCompanyCard company-ai-card" style="position:relative;">';
     $html .= '<div class="mCompanyCard_content">';
     $html .= '<div class="mCompanyCard_ai_match"><span class="mCompanyCard_ai_match_label">AI 적합도</span><span><span class="mCompanyCard_ai_match_value">' . $score . '</span><span class="mCompanyCard_ai_match_unit">%</span></span></div>';
@@ -433,7 +432,7 @@ function company_list_ai_render_card($card, $trade_type, $rank = 0)
     $html .= '</div>';
     $html .= '</div>';
     $html .= '</div>';
-    $html .= '</a>';
+    $html .= '</div>';
     $html .= '</div>';
 
     return $html;

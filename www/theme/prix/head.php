@@ -574,11 +574,27 @@ function requestMainCompCheck(comnum, $form, opts) {
 		alert("서버 통신 중 오류가 발생했습니다.");
 		restoreButton();
 	});
-}
+	}
 
-// 공통 검색 처리 로직
-$(document).on("click", "#main_submit, #main_submit_index, #hd_submit, #sub_submit", function(e){
-	e.preventDefault();
+	// Enter 제출 시에도 클릭 검색 로직과 동일하게 처리
+	$(document).on("submit", "#match_hd, #match_index, #match", function(e){
+		e.preventDefault();
+		var id = this.id || "";
+		if (id === "match_hd") {
+			$("#hd_submit").trigger("click");
+			return false;
+		}
+		if (id === "match_index") {
+			$("#main_submit_index").trigger("click");
+			return false;
+		}
+		$("#sub_submit").trigger("click");
+		return false;
+	});
+
+	// 공통 검색 처리 로직
+	$(document).on("click", "#main_submit, #main_submit_index, #hd_submit, #sub_submit", function(e){
+		e.preventDefault();
 	var $this = $(this);
 	
 	// 현재 클릭된 버튼의 컨텍스트에 맞는 input과 form 찾기
@@ -647,17 +663,14 @@ $(document).on("click", "#main_submit, #main_submit_index, #hd_submit, #sub_subm
 					overlay.classList.add("is_open");
 					overlay.setAttribute("aria-hidden", "false");
 				}
-			} else {
-				if ($form && $form.length) {
-					$form.find("input[name='cominfo']").val("");
-				}
-				openAiGuideModal({
-					title: "기업 정보 없음",
-					text: "입력하신 사업자 번호로 등록된 기업 정보를 찾지 못했습니다.",
-					text2: "사업자 번호를 다시 확인해 주세요."
-				});
-				}
-			} catch(e) {
+				} else {
+					if ($form && $form.length) {
+						$form.find("input[name='cominfo']").val("");
+					}
+					// DB/캐시 miss 시 main_comp_chk로 실시간 재조회
+					requestMainCompCheck(comnumDigits, $form);
+					}
+				} catch(e) {
 				console.error("Lookup error:", e);
 				requestMainCompCheck(comnumDigits, $form);
 			}
