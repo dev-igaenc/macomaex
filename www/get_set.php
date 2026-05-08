@@ -4,6 +4,11 @@ include_once(G5_LIB_PATH.'/connect.lib.php');
 include_once(G5_LIB_PATH.'/outlogin.lib.php');
 include_once(G5_PATH.'/extend/user.extend.php');
 
+if (!headers_sent()) {
+	header('X-Get-Set-Debug: join-comp-check-v2');
+	header('X-Get-Set-File: ' . __FILE__);
+}
+
 // Input normalization for legacy query-building code paths.
 $type = isset($_REQUEST['type']) ? trim((string)$_REQUEST['type']) : '';
 $id = isset($_REQUEST['id']) ? sql_real_escape_string(trim((string)$_REQUEST['id'])) : '';
@@ -101,6 +106,84 @@ if (!function_exists('macomaex_payment_log_write')) {
 		$lines[] = '---';
 		$lines[] = '';
 		@file_put_contents($log_file, implode("\n", $lines), FILE_APPEND | LOCK_EX);
+	}
+}
+
+if (!function_exists('macomaex_join_comp_chk_log_write')) {
+	function macomaex_join_comp_chk_log_write($fields) {
+		$log_dirs = array(
+			G5_PATH . '/data/log',
+			G5_PATH . '/logs',
+		);
+		$log_file = '';
+		foreach ($log_dirs as $dir) {
+			if (!is_dir($dir)) @mkdir($dir, 0777, true);
+			if (is_dir($dir) && is_writable($dir)) {
+				$log_file = $dir . '/join_comp_chk_' . date('Ymd') . '.log';
+				break;
+			}
+		}
+		if ($log_file === '') return;
+
+		$lines = array();
+		$lines[] = '[' . date('Y-m-d H:i:s') . ']';
+		foreach ((array)$fields as $key => $value) {
+			if ($value === null) $value = '';
+			if (is_array($value) || is_object($value)) {
+				$value = json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+			}
+			$value = str_replace(array("\r\n", "\r", "\n"), '\n', (string)$value);
+			$lines[] = $key . ': ' . $value;
+		}
+		$lines[] = '---';
+		$lines[] = '';
+		@file_put_contents($log_file, implode("\n", $lines), FILE_APPEND | LOCK_EX);
+	}
+}
+
+if (!function_exists('macomaex_join_comp_chk_log_file_path')) {
+	function macomaex_join_comp_chk_log_file_path() {
+		$log_dirs = array(
+			G5_PATH . '/data/log',
+			G5_PATH . '/logs',
+		);
+		foreach ($log_dirs as $dir) {
+			if (is_dir($dir) && is_writable($dir)) {
+				return $dir . '/join_comp_chk_' . date('Ymd') . '.log';
+			}
+		}
+		return '';
+	}
+}
+
+if (!function_exists('macomaex_sql_last_error_text')) {
+	function macomaex_sql_last_error_text() {
+		global $g5;
+		$link = isset($g5['connect_db']) ? $g5['connect_db'] : null;
+		if (function_exists('mysqli_error') && defined('G5_MYSQLI_USE') && G5_MYSQLI_USE && $link) {
+			return (string)mysqli_error($link);
+		}
+		if (function_exists('mysql_error')) {
+			return (string)mysql_error();
+		}
+		return '';
+	}
+}
+
+if (!function_exists('macomaex_sql_exec_with_log')) {
+	function macomaex_sql_exec_with_log($sql, $context, $extra = array()) {
+		$result = sql_query($sql, false);
+		if ($result === false) {
+			macomaex_join_comp_chk_log_write(array_merge(array(
+				'stage' => 'sql_failed',
+				'context' => (string)$context,
+				'db_error' => macomaex_sql_last_error_text(),
+				'sql' => $sql,
+				'request_uri' => isset($_SERVER['REQUEST_URI']) ? (string)$_SERVER['REQUEST_URI'] : '',
+				'remote_ip' => isset($_SERVER['REMOTE_ADDR']) ? (string)$_SERVER['REMOTE_ADDR'] : '',
+			), (array)$extra));
+		}
+		return $result;
 	}
 }
 
@@ -229,28 +312,63 @@ switch ($type) {
 	break;
 
 	case "join_comp_chk": //사업자등록증으로 api검색
+		if (!headers_sent()) {
+			$log_file_path = macomaex_join_comp_chk_log_file_path();
+			header('X-Join-Log-Path: ' . ($log_file_path ? $log_file_path : 'NOT_WRITABLE'));
+			header('X-Join-G5-Path: ' . G5_PATH);
+		}
+		macomaex_join_comp_chk_log_write(array(
+			'stage' => 'request_enter',
+			'type' => $type,
+			'raw_comnum' => isset($_REQUEST['comnum']) ? (string)$_REQUEST['comnum'] : '',
+			'normalized_comnum' => $comnum,
+			'r_mb_id' => $r_mb_id,
+			'request_uri' => isset($_SERVER['REQUEST_URI']) ? (string)$_SERVER['REQUEST_URI'] : '',
+			'remote_ip' => isset($_SERVER['REMOTE_ADDR']) ? (string)$_SERVER['REMOTE_ADDR'] : '',
+		));
 		if($comnum) {
 			if($r_mb_id) $mem_chk=sql_fetch("select count(*) as cnt from g5_member where mb_leave_date='' and mb_4='$comnum' and mb_id!='{$r_mb_id}'");
 			else $mem_chk=sql_fetch("select count(*) as cnt from g5_member where mb_leave_date='' and mb_4='$comnum'");
-			if($mem_chk['cnt']>0) {echo "502|이미 등록된 회원 있습니다."; exit;}
+			if($mem_chk['cnt']>0) {
+				macomaex_join_comp_chk_log_write(array(
+					'stage' => 'member_duplicate',
+					'normalized_comnum' => $comnum,
+					'count' => (int)$mem_chk['cnt'],
+				));
+				echo "502|이미 등록된 회원 있습니다."; exit;
+			}
 			$comnum=str_replace("-","",$comnum);
 					$chk=sql_fetch("select * from company where BZNO='$comnum'");
 
 					if (!empty($chk['KEDCD'])) { 
 						if(!$chk['ENP_NM_TRD']) $chk['ENP_NM_TRD']=$chk['ENP_NM'];
+						macomaex_join_comp_chk_log_write(array(
+							'stage' => 'company_hit',
+							'comnum' => $comnum,
+							'kedcd' => $chk['KEDCD'],
+						));
 						echo "1000|".$chk['ENP_NM_TRD']."|".$chk['KEDCD'];
+						exit;
 					}else{
 						//등록된 정보가 없으면 API로 가져와서 등록함
 						//API 로그기록에 정보가 남아있는지 체크 있으면 해당 기록에서 그냥 가져오기
 							$log_chk=sql_fetch("select * from company_api_log where c_bizno='{$comnum}' and DATE(c_datetime)='".date("Y-m-d")."' order by c_datetime desc limit 1");
-							if (empty($log_chk['c_content'])) {
-								$latest_log = sql_fetch("select * from company_api_log where c_bizno='{$comnum}' and c_content!='' order by c_datetime desc limit 1");
-								if (!empty($latest_log['c_content'])) {
-									$log_chk = $latest_log;
+								if (empty($log_chk['c_content'])) {
+									$latest_log = sql_fetch("select * from company_api_log where c_bizno='{$comnum}' and c_content!='' order by c_datetime desc limit 1");
+									if (!empty($latest_log['c_content'])) {
+										$log_chk = $latest_log;
+										macomaex_join_comp_chk_log_write(array(
+											'stage' => 'api_log_latest_hit',
+											'comnum' => $comnum,
+										));
+									}
 								}
-							}
-							if (empty($log_chk['c_content'])) {
-								$TOKEN_URL = "https://218.55.37.214:6059/enpinfo?userid=igaenconl&process=S&bzno={$comnum}&pidagryn=Y&jmno=ig001&format=XML&Length=10000";
+								if (empty($log_chk['c_content'])) {
+									macomaex_join_comp_chk_log_write(array(
+										'stage' => 'api_call_start',
+										'comnum' => $comnum,
+									));
+									$TOKEN_URL = "https://218.55.37.214:6059/enpinfo?userid=igaenconl&process=S&bzno={$comnum}&pidagryn=Y&jmno=ig001&format=XML&Length=10000";
 								$agent = 'Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.0)';
 								$cookie_nm = './cookie.txt';
 
@@ -270,8 +388,14 @@ switch ($type) {
 								$curl_errno = curl_errno($ch);
 								curl_close($ch);
 
-								if ($html_ori === false) {
-									macomaex_kodata_log('curl_failed', array(
+									if ($html_ori === false) {
+										macomaex_join_comp_chk_log_write(array(
+											'stage' => 'api_call_failed',
+											'comnum' => $comnum,
+											'curl_errno' => $curl_errno,
+											'curl_error' => $curl_error,
+										));
+										macomaex_kodata_log('curl_failed', array(
 										'context' => 'join_comp_chk',
 										'comnum' => $comnum,
 										'curl_errno' => $curl_errno,
@@ -285,16 +409,27 @@ switch ($type) {
 									'context' => 'join_comp_chk',
 									'comnum' => $comnum,
 								));
-								if (empty($parsed['success'])) {
-									echo "501";
-									exit;
-								}
+									if (empty($parsed['success'])) {
+										macomaex_join_comp_chk_log_write(array(
+											'stage' => 'api_parse_failed',
+											'comnum' => $comnum,
+											'error_code' => isset($parsed['error_code']) ? $parsed['error_code'] : '',
+											'error_message' => isset($parsed['error_message']) ? $parsed['error_message'] : '',
+										));
+										echo "501";
+										exit;
+									}
 
 								$xml = $parsed['xml'];
-								if ((string)$xml->HEADER->errcd !== "00") {
-									echo "501";
-									exit;
-								}
+									if ((string)$xml->HEADER->errcd !== "00") {
+										macomaex_join_comp_chk_log_write(array(
+											'stage' => 'api_business_error',
+											'comnum' => $comnum,
+											'errcd' => (string)$xml->HEADER->errcd,
+										));
+										echo "501";
+										exit;
+									}
 
 								$com_data = array("1000", $parsed['json']);
 								if($com_data[0]==1000){
@@ -362,14 +497,29 @@ switch ($type) {
 										}
 
 								//API 로그에 기록
-								sql_query("insert company_api_log set c_bizno='{$comnum}', c_kedcd='{$KEDCD}', c_content='{$com_data[1]}', c_datetime=now(), c_ip='{$_SERVER["REMOTE_ADDR"]}'");
-								echo "1000|".$enp_nm_trd."|".$KEDCD;
+									$api_log_sql = "insert company_api_log set c_bizno='{$comnum}', c_kedcd='{$KEDCD}', c_content='{$com_data[1]}', c_datetime=now(), c_ip='{$_SERVER["REMOTE_ADDR"]}'";
+									macomaex_sql_exec_with_log($api_log_sql, 'join_comp_chk.company_api_log', array('comnum' => $comnum, 'kedcd' => $KEDCD));
+									macomaex_join_comp_chk_log_write(array(
+										'stage' => 'api_call_success',
+										'comnum' => $comnum,
+										'kedcd' => $KEDCD,
+									));
+									echo "1000|".$enp_nm_trd."|".$KEDCD;
+									exit;
+								}else{
+									macomaex_join_comp_chk_log_write(array(
+										'stage' => 'api_payload_invalid',
+										'comnum' => $comnum,
+									));
+									echo "501";
+									exit;
+								}
 							}else{
-								echo "501";
-								exit;
-							}
-						}else{
-								//API기록에서 정보가져옴
+									macomaex_join_comp_chk_log_write(array(
+										'stage' => 'api_log_today_hit',
+										'comnum' => $comnum,
+									));
+									//API기록에서 정보가져옴
 								$com_info=json_decode($log_chk['c_content']);
 								//print_r($com_info); exit;
 								$KEDCD=$com_info->CONTENTS->ENPintr0000->kedcd;
@@ -454,8 +604,14 @@ switch ($type) {
 								
 
 								if(!$enp_nm_trd) $enp_nm_trd=$enp_nm;
-								echo "1000|".$enp_nm_trd."|".$KEDCD;
-						}
+									macomaex_join_comp_chk_log_write(array(
+										'stage' => 'api_log_success',
+										'comnum' => $comnum,
+										'kedcd' => $KEDCD,
+									));
+									echo "1000|".$enp_nm_trd."|".$KEDCD;
+									exit;
+								}
 
 						if(is_object($enp_scd_chg_dt)) unset($enp_scd_chg_dt);
 						if(is_object($grp_nm)) unset($grp_nm);
@@ -543,7 +699,7 @@ switch ($type) {
 						$sql.="SALES='{$fs_val9}', ";
 						$sql.="ext_1='API 입력' ";
 
-						sql_query($sql);
+						macomaex_sql_exec_with_log($sql, 'join_comp_chk.company', array('comnum' => $comnum, 'kedcd' => $KEDCD));
 						}
 
 						if(is_object($fs_val9))  unset($fs_val9);
@@ -565,7 +721,7 @@ switch ($type) {
 						$sql.="PROFIT='{$fs_val11}', ";//영업이익
 						$sql.="TERMNETPROFIT='{$fs_val16}' ";//당기순이익
 						
-						sql_query($sql);
+						macomaex_sql_exec_with_log($sql, 'join_comp_chk.company_financial.fs', array('comnum' => $comnum, 'kedcd' => $KEDCD, 'acct_dt' => $fs_acct_dt));
 						}
 
 						if(is_object($fs1_acct_dt))  unset($fs1_acct_dt);
@@ -585,7 +741,7 @@ switch ($type) {
 						$sql.="SALES='{$fs1_val9}', ";//매출액
 						$sql.="PROFIT='{$fs1_val11}', ";//영업이익
 						$sql.="TERMNETPROFIT='{$fs1_val16}' ";//당기순이익
-						sql_query($sql);
+						macomaex_sql_exec_with_log($sql, 'join_comp_chk.company_financial.fs1', array('comnum' => $comnum, 'kedcd' => $KEDCD, 'acct_dt' => $fs1_acct_dt));
 						}
 
 						if(is_object($fs2_acct_dt))  unset($fs2_acct_dt);
@@ -605,7 +761,7 @@ switch ($type) {
 						$sql.="SALES='{$fs2_val9}', ";//매출액
 						$sql.="PROFIT='{$fs2_val11}', ";//영업이익
 						$sql.="TERMNETPROFIT='{$fs2_val16}' ";//당기순이익
-						sql_query($sql);
+						macomaex_sql_exec_with_log($sql, 'join_comp_chk.company_financial.fs2', array('comnum' => $comnum, 'kedcd' => $KEDCD, 'acct_dt' => $fs2_acct_dt));
 						}
 
 						//주식정보
@@ -617,12 +773,16 @@ switch ($type) {
 						$sql.="CSTK_CN='{$CSTK_CN}', "; //보통주식총계
 						$sql.="PSTK_CN='{$PSTK_CN}', ";//우선주식총계
 						$sql.="ext_1='API 입력' ";//추가필드
-						sql_query($sql);
+						macomaex_sql_exec_with_log($sql, 'join_comp_chk.company_stock', array('comnum' => $comnum, 'kedcd' => $KEDCD, 'std_dt' => $STD_DT));
 						}
 
 
 					}
 		}else{
+			macomaex_join_comp_chk_log_write(array(
+				'stage' => 'invalid_request_empty_comnum',
+				'raw_comnum' => isset($_REQUEST['comnum']) ? (string)$_REQUEST['comnum'] : '',
+			));
 			echo "500|올바른 방법으로 이용해주세요.";
 		}
 	break;
