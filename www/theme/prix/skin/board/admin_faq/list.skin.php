@@ -3,6 +3,7 @@ if (!defined('_GNUBOARD_')) exit; // 개별 페이지 접근 불가
 include_once(G5_LIB_PATH.'/thumbnail.lib.php');
 // 선택옵션으로 인해 셀합치기가 가변적으로 변함
 $colspan = 7;
+$lt_class = isset($lt_class) ? $lt_class : '';
 
 if ($is_checkbox) $colspan++;
 if ($is_good) $colspan++;

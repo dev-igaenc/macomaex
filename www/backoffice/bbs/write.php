@@ -365,7 +365,7 @@ if ($w == '') {
 }
 
 set_session('ss_bo_table', $_REQUEST['bo_table']);
-set_session('ss_wr_id', $_REQUEST['wr_id']);
+set_session('ss_wr_id', isset($_REQUEST['wr_id']) ? $_REQUEST['wr_id'] : '');
 
 $subject = "";
 if (isset($write['wr_subject'])) {

@@ -308,7 +308,7 @@ $stable_list = get_processed_companies('stability_score_5', 3, $unlocked_bzno_ma
                     </div>
                     <div class="mVisual_quick_body">
                         <strong>받은 요청</strong>
-                        <span>수락 · 거절</span>
+                        <span>확인하기</span>
                     </div>
                     <svg class="mVisual_quick_arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
                 </a>

@@ -21,7 +21,7 @@ if (!defined('_GNUBOARD_')) exit; // 개별 페이지 접근 불가
     <input type="hidden" name="sst" value="<?php echo $sst ?>">
     <input type="hidden" name="sod" value="<?php echo $sod ?>">
     <input type="hidden" name="page" value="<?php echo $page ?>">
-	<input type="hidden" name="rt" value="<?php echo $rt ?>">
+		<input type="hidden" name="rt" value="<?php echo isset($rt) ? $rt : ''; ?>">
     <?php
     $option = '';
     $option_hidden = '';
@@ -89,7 +89,7 @@ if (!defined('_GNUBOARD_')) exit; // 개별 페이지 접근 불가
 				<?php if($is_admin){?>
 				<tr class="">
 					<th scope="row"><span class="">등록일</span></th>
-					<td><input type="text" name="wr_datetime" value="<?php echo substr($write['wr_datetime'],0,10) ?>" id="wr_datetime"  class="datetimepicker small" size="50" maxlength="255" placeholder="미입력 시 현재 날짜로 등록됩니다."></td>
+						<td><input type="text" name="wr_datetime" value="<?php echo substr($write['wr_datetime'] ?? '',0,10) ?>" id="wr_datetime"  class="datetimepicker small" size="50" maxlength="255" placeholder="미입력 시 현재 날짜로 등록됩니다."></td>
 				</tr>
 				<?php }?>
 				<tr>
@@ -101,7 +101,7 @@ if (!defined('_GNUBOARD_')) exit; // 개별 페이지 접근 불가
 					<td>
 						<?php if ($option) { ?>
 						<ul class="board_option">
-							<?php// echo $option ?>
+								<?php // echo $option; ?>
 						</ul>
 						<?php } ?>
 						<div class="wr_content <?php echo $is_dhtml_editor ? $config['cf_editor'] : ''; ?>">
