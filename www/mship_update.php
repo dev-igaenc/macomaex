@@ -196,8 +196,9 @@ $SignatureUtil = new INIStdPayUtil();
 		$postdata["timestamp"] = $timestamp;
 		$postdata["clientIp"] = $clientIp;
 
-		$payinfo=sql_fetch("select * from g5_membership_payment where order_no='{$row[order_no]}'"); // 기존 결제 예정 정보
+		$payinfo=sql_fetch("select * from g5_membership_payment where order_no='{$row['order_no']}'"); // 기존 결제 예정 정보
 		$minfo=sql_fetch("select * from g5_membership_manage where no='{$payinfo['membership_parent_no']}'"); // 맴버쉽 정보
+		$charge_credit = (int)$minfo['matching_cnt'];
 		
 		//// Data 상세
 		$detail = array();
@@ -293,6 +294,21 @@ $SignatureUtil = new INIStdPayUtil();
 			//echo $sql."<br>";
 			sql_query($sql);
 
+			// 크레딧 원장 기록 (자동결제 충전)
+			$current_credit_after = (int)$minfo['matching_cnt'];
+			$memo = addslashes('자동결제 충전');
+			$sql = "insert into g5_matching_credit_history
+					set uid='{$payinfo['uid']}',
+						tx_type='CHARGE',
+						credit_delta='{$charge_credit}',
+						credit_after='{$current_credit_after}',
+						order_no='{$orderid}',
+						matching_no='',
+						memo='{$memo}',
+						created_at=now()
+					on duplicate key update id=id";
+			sql_query($sql);
+
 			$sql="insert g5_membership_payment set ";
 			$sql.="	uid='{$payinfo['uid']}',";
 			$sql.="	order_no='{$orderid}',";
@@ -357,7 +373,7 @@ $SignatureUtil = new INIStdPayUtil();
 			
 
 			//셀렉티드 추가 처리
-			if($minfo[selected_cnt]>0){
+			if($minfo['selected_cnt']>0){
 
 				$timestamp = strtotime("+1 months");
 				$date_end=date("Y-m-d H:i:s", $timestamp);
@@ -381,14 +397,14 @@ $SignatureUtil = new INIStdPayUtil();
 				$KEDCD=sql_fetch("select mb_company as kedcd from g5_member where mb_id='{$payinfo['uid']}'");
 				$sql="insert g5_selected set ";
 				$sql.="s_subject='{$payinfo['name']}',";
-				$sql.="KEDCD='{$KEDCD[kedcd]}',";
+				$sql.="KEDCD='{$KEDCD['kedcd']}',";
 				$sql.="s_membership='{$row['membership_parent_no']}',";
 				$sql.="mb_id='{$payinfo['uid']}',";
 				$sql.="s_start='{$date_begin}',";
 				$sql.="s_end='{$date_end}',";
 				$sql.="s_info='',";
 				$sql.="s_cnt='0',";
-				$sql.="s_cnt_limit='{$minfo[selected_cnt]}',";
+				$sql.="s_cnt_limit='{$minfo['selected_cnt']}',";
 				$sql.="s_modi='',";
 				$sql.="s_status='S',";
 				$sql.="s_datetime=now()";

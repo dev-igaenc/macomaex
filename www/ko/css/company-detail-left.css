@@ -1,0 +1,150 @@
+/* ===== 기업 핵심 정보 카드 공통 스타일 =====
+ * company_detail.html / company_detail_ai.html 공유
+ * 점수(성장성…종합) 섹션은 각 페이지에서 별도 관리
+ * ================================================= */
+
+/* 카드 공통 */
+.card {
+    background: var(--card);
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow);
+    padding: 20px;
+    position: relative;
+}
+
+/* 배지 */
+#detailWrap .card .mCompanyCard_badges { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+#detailWrap .mCompanyCard_badge { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 500; line-height: 1.2; white-space: nowrap; }
+#detailWrap .mCompanyCard_badge_top_growth    { background: #dbeafe; color: #1e40af; }
+#detailWrap .mCompanyCard_badge_top_stability { background: #ede9fe; color: #5b21b6; }
+#detailWrap .mCompanyCard_badge_venture       { background: #10b981; color: #fff; }
+#detailWrap .mCompanyCard_badge_placeholder   { background: #f3f4f6; color: #9ca3af; }
+
+/* 카드 제목 */
+.card-title-row {
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #eee;
+}
+.card-title-label {
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.card-title-label::before {
+    content: '';
+    display: inline-block;
+    width: 4px;
+    height: 20px;
+    background: linear-gradient(180deg, var(--detail-accent, #2563eb), var(--detail-accent-dark, #1e40af));
+    border-radius: 2px;
+}
+
+/* 회사 프로필 */
+.profile-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+.profile-head h1   { font-size: 18px; font-weight: 700; letter-spacing: -0.02em; margin: 0; }
+.profile-head .sub { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
+
+/* 업종 태그 */
+.industry-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 16px;
+}
+.tag-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.2;
+    color: #0369a1;
+    background: var(--blue-soft);
+    border-radius: 999px;
+}
+
+/* 기업 정보 그리드 */
+.info-grid {
+    display: grid;
+    grid-template-columns: 118px 1fr;
+    gap: 10px 16px;
+    font-size: 14px;
+}
+.info-grid dt                 { color: var(--text-muted); font-weight: 500; align-self: start; line-height: 1.35; }
+.info-grid dd                 { font-weight: 600; }
+.info-grid dd.info-product-line { line-height: 1.45; font-weight: 600; word-break: keep-all; }
+.info-grid dd.info-masked     { color: #bbb; letter-spacing: 0.05em; user-select: none; }
+.info-mask-notice             { margin-top: 10px; font-size: 13px; color: #7c3aed; background: #f5f0ff; border: 1px solid #ede9fe; border-radius: 8px; padding: 10px 14px; line-height: 1.5; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 480px) { .info-mask-notice { font-size: clamp(10px, 3vw, 13px); padding: 8px 10px; } }
+
+/* 재무상태 물음표 툴팁 */
+.credit-q-wrap {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    vertical-align: 1px;
+    margin-left: 4px;
+}
+.credit-q {
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    background: #e8e8e8;
+    color: #999;
+    font-size: 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-weight: 700;
+    line-height: 1;
+}
+.credit-q:hover { background: #ddd; color: #666; }
+.credit-q-tooltip {
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    margin-bottom: 8px;
+    background: #333;
+    color: #fff;
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 1.6;
+    white-space: nowrap;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s, visibility 0.2s;
+    z-index: 20;
+    pointer-events: none;
+}
+.credit-q-tooltip::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 5px solid transparent;
+    border-top-color: #333;
+}
+.credit-q-tooltip strong { color: #fbbf24; }
+.credit-q-tooltip .credit-q-sub {
+    display: block;
+    margin-top: 6px;
+    font-size: 11px;
+    color: rgba(255,255,255,0.6);
+}
+.credit-q-wrap:hover .credit-q-tooltip { opacity: 1; visibility: visible; }

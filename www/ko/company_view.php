@@ -59,7 +59,7 @@ $tel=explode("-",$com['TEL_NO']);
 if($com['CONO_PID']) $com['CONO_PID']=substr($com['CONO_PID'],0,6)."-".substr($com['CONO_PID'],-7);
 
 $view_chk="true"; //임시처리
-$kssc9=getKsscInfo9($com[KSIC9_BZC_CD]);
+$kssc9=getKsscInfo9($com['KSIC9_BZC_CD']);
 
 if($member['mb_id']){
 	$matcing=sql_fetch("SELECT * from g5_matching where del != 'D' and  request_id='{$member['mb_id']}' and KEDCD='{$cd}'");//매칭요청
@@ -90,7 +90,7 @@ $sales=getFinanceInfo($cd);
 
 <div class="company-view" no><div class="layer-in new">
 	<div class="cv-name">
-		<strong><?=$com[ENP_NM]?></strong>
+		<strong><?=$com['ENP_NM']?></strong>
 		<div class="option">
 			<button type="button" star class="<?if($favorite['ms_id']){?>active<?}?> star_btn" kedcd="<?=$cd?>"><img src="/images/icon_star.svg" alt=""></button>
 			<a href="javascript:copyUrl('<?=$_REQUEST['cd']?>')" link><img src="/images/icon_link.svg" alt=""></a>
@@ -114,25 +114,25 @@ $sales=getFinanceInfo($cd);
 			<div class="cv-info-conts">
 				<dl>
 					<dt>설립일자</dt>
-					<dd><span><?=substr($com[ESTB_DT],0,4)?>-<?=substr($com[ESTB_DT],4,2)?></span></dd>
+					<dd><span><?=substr($com['ESTB_DT'],0,4)?>-<?=substr($com['ESTB_DT'],4,2)?></span></dd>
 				</dl>
 
 				<dl>
 					<dt>법인(주민)번호</dt>
-					<dd><span><?=substr($com[CONO_PID],0,6)?><?=substr($com[CONO_PID],6,7)?></span></dd>
+					<dd><span><?=substr($com['CONO_PID'],0,6)?><?=substr($com['CONO_PID'],6,7)?></span></dd>
 				</dl>
 				<dl>
 					<dt>사업자번호</dt>
-					<dd><span><?=licenseNum($com[BZNO]);?></span></dd>
+					<dd><span><?=licenseNum($com['BZNO']);?></span></dd>
 				</dl>
 
 				<dl>
 					<dt>고용인원</dt>
-					<dd><span><?=number_format($com[LABORER_SUM])?>명</span></dd>
+					<dd><span><?=number_format($com['LABORER_SUM'])?>명</span></dd>
 				</dl>
 				<dl>
 					<dt>기업규모</dt>
-					<dd><span><?=$ENP_SZE[$com[ENP_SZE]]?></span></dd>
+					<dd><span><?=$ENP_SZE[$com['ENP_SZE']]?></span></dd>
 				</dl>
 			</div>
 		</div>
@@ -141,25 +141,25 @@ $sales=getFinanceInfo($cd);
 			<div class="cv-info-conts">
 				<dl>
 					<dt>기업유형</dt>
-					<dd><?=$enp_typt[$com[ENP_TYP]]?></dd>
+					<dd><?=$enp_typt[$com['ENP_TYP']]?></dd>
 				</dl>
 				<dl>
 					<dt>주요제품</dt>
-					<dd><?=$com[PD_NM]?></dd>
+					<dd><?=$com['PD_NM']?></dd>
 				</dl>
 
 				<dl>
 					<dt>표준산업분류(9차)</dt>
-					<dd>(<?=$com[KSIC9_BZC_CD]?>) <?=$kssc9[k_code_name]?></dd>
+					<dd>(<?=$com['KSIC9_BZC_CD']?>) <?=$kssc9['k_code_name']?></dd>
 				</dl>
 				<dl>
 					<dt>표준산업분류</dt>
-					<dd>(<?=$com[BZC_CD]?>) <?=$kssc[k_code_name]?></dd>
+					<dd>(<?=$com['BZC_CD']?>) <?=$kssc['k_code_name']?></dd>
 				</dl>
 
 				<dl>
 					<dt>직전연도 매출액</dt>
-					<dd><?=number_format($sales[0][SALES]*1000);?>원</dd>
+					<dd><?=number_format($sales[0]['SALES']*1000);?>원</dd>
 				</dl>
 			</div>
 		</div>
@@ -172,7 +172,7 @@ $sales=getFinanceInfo($cd);
 						<?if(!$matcing or $matcing['receive_approval']=="N"){?>
 						수락 후 공개
 						<?}else{?>
-						<a href="tel:<?=$receve_info[mb_8]?>"><?=$receve_info[mb_8]?></a>
+						<a href="tel:<?=$receve_info['mb_8']?>"><?=$receve_info['mb_8']?></a>
 						<?}?>
 					</dd>
 				</dl>
@@ -182,17 +182,17 @@ $sales=getFinanceInfo($cd);
 						<?if(!$matcing or $matcing['receive_approval']=="N"){?>
 						수락 후 공개
 						<?}else{?>
-						<a href="mailto:<?=$receve_info[mb_5]?>" u><?=$receve_info[mb_5]?></a>
+						<a href="mailto:<?=$receve_info['mb_5']?>" u><?=$receve_info['mb_5']?></a>
 						<?}?>
 					</dd>
 				</dl>
 				<dl>
 					<dt>홈페이지</dt>
-					<dd><a href="http://<?=$com[HPAGE_URL]?>" target="_blank" u><?=$com[HPAGE_URL]?></a></dd>
+					<dd><a href="http://<?=$com['HPAGE_URL']?>" target="_blank" u><?=$com['HPAGE_URL']?></a></dd>
 				</dl>
 				<dl>
 					<dt>주소(도로명)</dt>
-					<dd><a href="https://map.kakao.com/?q=<?=$com[LOC_RDNM_ADDRA]?> <?=$com[LOC_RDNM_ADDRB]?>" target="_blank"><?=$com[LOC_RDNM_ADDRA]?><br /><?=$com[LOC_RDNM_ADDRB]?></a></dd>
+					<dd><a href="https://map.kakao.com/?q=<?=$com['LOC_RDNM_ADDRA']?> <?=$com['LOC_RDNM_ADDRB']?>" target="_blank"><?=$com['LOC_RDNM_ADDRA']?><br /><?=$com['LOC_RDNM_ADDRB']?></a></dd>
 				</dl>
 
 				<div class="cv-character">

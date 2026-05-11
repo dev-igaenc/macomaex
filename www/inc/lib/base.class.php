@@ -53,6 +53,11 @@ if (!function_exists('macomaex_load_env')) {
 
 macomaex_load_env(dirname(dirname(dirname(dirname(__FILE__)))) . '/.env');
 
+if (!defined('MACOMAEX_PHP81_COMPAT_ALLOW')) {
+	define('MACOMAEX_PHP81_COMPAT_ALLOW', true);
+}
+include_once(dirname(dirname(dirname(__FILE__))) . '/lib/php81_compat.lib.php');
+
 
 session_start();
 
@@ -208,7 +213,7 @@ $NO_ADMIN_LNB_BOARD_MENU_ROLE_OPEN = false; /*게시판 권한 관리 */
 
 $devIArrIP = array("220.72.73.182", "125.128.228.224","1.228.9.177");
 
-if(in_array($_SERVER[REMOTE_ADDR], $devIArrIP)){
+if(in_array($_SERVER['REMOTE_ADDR'], $devIArrIP)){
 	$NO_ADMIN_LNB_BOARD_MENU_OPEN = true;
 	$NO_ADMIN_LNB_BOARD_MENU_ROLE_OPEN = true;
 	$NO_ADMIN_GNB_MEMBER_OPEN = true;

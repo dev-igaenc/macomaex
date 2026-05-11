@@ -201,7 +201,7 @@ $QUERY_STRING = str_replace("&page={$page}","",$QUERY_STRING);
 <script>
 var p_true = "<?= $page!='1' ? '1':'0' ?>";
 var page = eval("<?=$page?>");
-var tCnt = eval("<?=$board[bo_count_write]?>");
+var tCnt = eval("<?=$board['bo_count_write']?>");
 $(document).ready(function(){
 	/* AJAX 히스토리 불러오기*/
 	var data = history.state;

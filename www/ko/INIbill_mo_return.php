@@ -193,8 +193,8 @@ if($_REQUEST["resultcode"]=="00"){
 	if($msinfo_row[0]) { 
 		//기존 맴버쉽이 살아있는 경우 기존 남아있는 매칭, 전문가 컨설팅  이월시킴
 		$old_membership=$msinfo_row[0];
-		$old_matching_able_cnt=$old_membership[matching_able_cnt];
-		$expert_consulting_able_cnt=$old_membership[expert_consulting_able_cnt];
+		$old_matching_able_cnt=$old_membership['matching_able_cnt'];
+		$expert_consulting_able_cnt=$old_membership['expert_consulting_able_cnt'];
 		$minfo['matching_cnt'] = $minfo['matching_cnt'] + $old_matching_able_cnt;
 		$minfo['expert_consulting_cnt'] =  $minfo['expert_consulting_cnt'] + $expert_consulting_able_cnt;
 
@@ -242,7 +242,7 @@ if($_REQUEST["resultcode"]=="00"){
 	sql_query($sql);
 
 	//셀렉티드 추가 처리
-	if($minfo[selected_cnt]>0){
+	if($minfo['selected_cnt']>0){
 
 		$timestamp = strtotime("+1 months");
 		$date_end=date("Y-m-d H:i:s", $timestamp);
@@ -265,14 +265,14 @@ if($_REQUEST["resultcode"]=="00"){
 		}
 		$sql="insert g5_selected set ";
 		$sql.="s_subject='{$member['mb_name']}',";
-		$sql.="KEDCD='{$member[mb_company]}',";
-		$sql.="s_membership='{$minfo[no]}',";
+		$sql.="KEDCD='{$member['mb_company']}',";
+		$sql.="s_membership='{$minfo['no']}',";
 		$sql.="mb_id='{$member['mb_id']}',";
 		$sql.="s_start='{$date_begin}',";
 		$sql.="s_end='{$date_end}',";
 		$sql.="s_info='',";
 		$sql.="s_cnt='0',";
-		$sql.="s_cnt_limit='{$minfo[selected_cnt]}',";
+		$sql.="s_cnt_limit='{$minfo['selected_cnt']}',";
 		$sql.="s_modi='',";
 		$sql.="s_status='S',";
 		$sql.="s_datetime=now()";

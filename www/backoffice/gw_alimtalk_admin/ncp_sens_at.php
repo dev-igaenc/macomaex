@@ -154,12 +154,20 @@ class NCP_SENS_AT extends NCP_SENS
 
         // 단일 템플릿을 가져온다.
         $res = $this->get_templates($this->templateCode);
+        if (!is_array($res) || empty($res[0]) || !is_array($res[0])) {
+            return false;
+        }
+
         $res = $res[0];
 
-        $this->buttons = $this->set_buttons($res['buttons']); // 해당 버튼을 세팅
+        $this->buttons = $this->set_buttons(isset($res['buttons']) && is_array($res['buttons']) ? $res['buttons'] : array()); // 해당 버튼을 세팅
 
         // #{필드1}, #{필드2}, #{필드3}, #{필드4}, #{필드5}, #{필드6}, #{필드7}, #{필드8}, #{필드9}, #{필드10}
-        $content = $res['content'];
+        $content = isset($res['content']) ? $res['content'] : '';
+
+        if ($content === '') {
+            return false;
+        }
 
         $content = str_replace('#{필드1}',	$this->user_field1,		$content);
         $content = str_replace('#{필드2}',	$this->user_field2,		$content);

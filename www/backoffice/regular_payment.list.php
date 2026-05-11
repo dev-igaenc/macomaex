@@ -1,10 +1,10 @@
-<?
+<?php
 	$sub_menu = '700100';
 	include_once('./_common.php');
 
 	include_once (G5_ADMIN_PATH.'/admin.head.php');
 
-$g5['title'] = '정기결제 관리';
+$g5['title'] = '결제 관리';
 
 
 /*
@@ -75,8 +75,8 @@ $rnumber=($total_count-($page-1)*$rows)+1;
 <a href="?sfl=status&stx=C" class="btn btn-sm btn-danger" title="7일이내 취소 환불된 맴버쉽">취소환불</a>
 <a href="?sfl=status&stx=T" class="btn btn-sm btn-warning" title="7일이후 사용건수 있는경우 만료 후 정지될 맴버쉽">만료정지</a-->
 <a href="?sfl=status&stx=S" class="btn btn-sm btn-primary" title="정상유지 맴버쉽">결제완료</a>
-<a href="?sfl=status&stx=E" class="btn btn-sm btn-secondary text-light" title="기간이 지난 맴버쉽">구독종료</a>
-<a href="?sfl=status&stx=C" class="btn btn-sm btn-danger" title="7일이내 취소 환불된 맴버쉽">구독취소</a>
+<a href="?sfl=status&stx=E" class="btn btn-sm btn-secondary text-light" title="기간이 지난 맴버쉽">이용종료</a>
+<a href="?sfl=status&stx=C" class="btn btn-sm btn-danger" title="취소/환불된 결제">취소완료</a>
 <a href="?sfl=status&stx=T" class="btn btn-sm btn-warning" title="7일이후 사용건수 있는경우 만료 후 정지될 맴버쉽">취소예정</a>
   <script>
   $( function() {
@@ -107,67 +107,105 @@ $rnumber=($total_count-($page-1)*$rows)+1;
         <th scope="col">이메일주소</th>
 		<th scope="col">결제일</th>
 		<th scope="col">금액</th>
-		<th scope="col">이용시작일</th>
-		<th scope="col">이용종료일</th>
 		<th scope="col">전문가컨설팅	</th>
-		<th scope="col">상태	</th>
 		<th scope="col">이용상품	</th>
+		<th scope="col">상태	</th>
 		<th scope="col">관리</th>
     </tr>
     </thead>
     <tbody>
-    <?php for ($i=0; $row=sql_fetch_array($result); $i++) {
-			$membershipInfo	= getMembership($row['membership_parent_no']);
-			$paymentInfo			= getPaymentInfo($row['order_no']);
-			$timestamp = strtotime("+1 days", strtotime($row['date_end']." 00:00:00"));
-			$duedate=date("Y-m-d", $timestamp);
+	    <?php for ($i=0; $row=sql_fetch_array($result); $i++) {
+				$membershipInfo	= getMembership($row['membership_parent_no']);
+				$paymentInfo			= getPaymentInfo($row['order_no']);
+				$biz_no_raw = isset($row['mb_4']) ? trim((string)$row['mb_4']) : '';
+				$biz_no_digits = preg_replace('/[^0-9]/', '', $biz_no_raw);
+				$biz_no_display = $biz_no_raw;
+				if (preg_match('/^[0-9]{10}$/', $biz_no_digits)) {
+					$biz_no_display = substr($biz_no_digits, 0, 3) . '-' . substr($biz_no_digits, 3, 2) . '-' . substr($biz_no_digits, 5, 5);
+				}
+				if ($biz_no_display === '') {
+					$biz_no_display = '-';
+				}
+				$company_name_display = isset($row['mb_name']) ? trim((string)$row['mb_name']) : '';
+				if ($company_name_display === '') {
+					$company_name_display = '-';
+				}
+				$email_display = isset($row['mb_email']) ? trim((string)$row['mb_email']) : '';
+				if ($email_display === '') {
+					$email_display = '-';
+				}
+				if(!is_array($membershipInfo)) $membershipInfo = array('title'=>'-', 'title_en'=>'');
+				if(!is_array($paymentInfo)) $paymentInfo = array('price'=>0);
+				$product_title_display = isset($membershipInfo['title']) ? trim((string)$membershipInfo['title']) : '';
+				if ($product_title_display === '') {
+					$product_title_display = '-';
+				}
+				$is_credit_goods = (isset($membershipInfo['title_en']) && strpos($membershipInfo['title_en'], 'CREDIT_') === 0) ? 1 : 0;
+				$refundInfo = sql_fetch("select id from g5_matching_credit_history where order_no='{$row['order_no']}' and tx_type='REFUND' order by id desc limit 1");
+				$is_refunded = (is_array($refundInfo) && !empty($refundInfo['id'])) ? 1 : 0;
+				$status_text = isset($ms_status_text[$row['status']]) ? $ms_status_text[$row['status']] : (string)$row['status'];
+			$status_btn_class = "btn-primary";
+			if($row['status']=="C") $status_btn_class = "btn-danger";
+			else if($row['status']=="E") $status_btn_class = "btn-secondary";
+			else if($row['status']=="T") $status_btn_class = "btn-warning";
+
+			if($is_refunded){
+				$status_text = "환불완료";
+				$status_btn_class = "btn-dark";
+			}
+			$duedate = '-';
+			if (!empty($row['date_end'])) {
+				$end_timestamp = strtotime($row['date_end']." 00:00:00");
+				if ($end_timestamp) {
+					$duedate = date("Y-m-d", strtotime("+1 days", $end_timestamp));
+				}
+			}
+			$price_value = isset($paymentInfo['price']) ? (int)$paymentInfo['price'] : 0;
+			$price_display = $price_value > 0 ? number_format($price_value, 0).'원' : '-';
 			$pay_cnt=sql_fetch("select count(*) as cnt from  g5_membership_status_history where uid='{$row['uid']}'");
 
-			//if($pay_cnt['cnt']>1 && $ms_status_text[$row['status']]=="결제완료") $ms_status_text[$row['status']]="결제완료";
-			if($pay_cnt['cnt']==1 && $ms_status_text[$row['status']]=="결제완료") $ms_status_text[$row['status']]="첫결제";
+			if($pay_cnt['cnt']==1 && $status_text=="결제완료") $status_text="첫결제";
 			
 	?>
     <tr>
         <td class="td_id"><?=$rnumber=$rnumber-1?></td>
-        <td class="td_center" title="<?php echo $row['uid']; ?>"><?php echo $row['mb_name']; ?></td>
-		<td class="td_center"><?php echo $row['mb_4']; ?></td>
-		<td class="td_center"><?php echo $row['mb_email']; ?></td>
+        <td class="td_center" title="<?php echo $row['uid']; ?>"><?php echo $company_name_display; ?></td>
+		<td class="td_center"><?php echo $biz_no_display; ?></td>
+		<td class="td_center"><?php echo $email_display; ?></td>
 		<td class="td_center"><?=$duedate?></td>
+		<td class="td_center"><?=$price_display?></td>
 		<td class="td_center">
-			<?=number_format($paymentInfo['price'],0)?>원
-		</td>
-		<td class="td_center"><?=$row['date_begin']?></td>
-		<td class="td_center"><?=$row['date_end']?></td>
-		<td class="td_center">
-			<?if($row['expert_consulting_cnt']>0 and ($row['status']=="S" or  $row['status']=="T")){?>
-				<?if(!$row['expert_consulting_able_cnt']){?>
+			<?php if($row['expert_consulting_cnt']>0 and ($row['status']=="S" or  $row['status']=="T")){?>
+				<?php if(!$row['expert_consulting_able_cnt']){?>
 				<button type="button" class="btn btn-sm btn-info euse" idx="<?=$row['no']?>">사용</button>
-				<?}else{?>
+				<?php }else{?>
 				<button type="button" class="btn btn-sm btn-secondary euse" idx="<?=$row['no']?>">미사용</button>
-				<?}?>
-			<?}else{?>
+				<?php }?>
+			<?php }else{?>
 				-
-			<?}?>
+			<?php }?>
 		</td>
+		<td class="td_center"><?=$product_title_display?></td>
 		<td class="td_center td_mng" title="열람 <?=$row['open_able_cnt']?> / <?=$row['open_cnt']?><br>매칭 <?=$row['matching_able_cnt']?> / <?=$row['matching_cnt']?>">			<!--//상태(S:유지, C:취소, E:종료)-->
-			<span class="btn btn-sm <?if($row['status']=="S"){?>btn-primary<?}?><?if($row['status']=="C"){?>btn-danger<?}?><?if($row['status']=="E"){?>btn-secondary<?}?><?if($row['status']=="T"){?>btn-warning<?}?>">
-				<?=$ms_status_text[$row['status']]?>
+			<span class="btn btn-sm <?=$status_btn_class?>">
+				<?=$status_text?>
 			</span>
-			<?if($row['coupon']){?><p  class="btn btn-sm bg-dark text-light">쿠폰사용</p><?}?>
+			<?php if($row['coupon']){?><p  class="btn btn-sm bg-dark text-light">쿠폰사용</p><?php }?>
 		</td>
-		<td class="td_center"><?=$membershipInfo['title']?></td>
         <td class="td_mng td_mng_l">
-			<?if($row['status']=="S" or $row['status']=="T"){?>
-			<a class="btn btn-danger text-light pay_cancel" oid="<?=$row['order_no']?>">결제취소</a><br>
-			<?}?>
+			<?php if($is_refunded){?>
+			<span class="btn btn-sm btn-secondary">환불완료</span><br>
+			<?php }else if($row['status']=="S" or $row['status']=="T"){?>
+			<a class="btn btn-danger text-light pay_cancel" oid="<?=$row['order_no']?>" is_credit="<?=$is_credit_goods?>">결제취소</a><br>
+			<?php }?>
             <a href="./regular_payment.view.php?no=<?=$row['no']?>&amp;<?=$qstr?>" class="btn btn_03">확인</a>
-            <a href="./regular_payment.list_update.php?w=d&amp;no=<?php echo $row['no']; ?>&amp;<?=$qstr?>" onclick="return delete_confirm(this);" class="btn btn_02"><span class="sound_only"><?php echo htmlspecialchars2($row['title']); ?> </span>삭제</a>
+	            <a href="./regular_payment.list_update.php?w=d&amp;no=<?php echo $row['no']; ?>&amp;<?=$qstr?>" onclick="return delete_confirm(this);" class="btn btn_02"><span class="sound_only"><?php echo htmlspecialchars2(isset($row['title']) ? $row['title'] : ''); ?> </span>삭제</a>
         </td>
     </tr>
     <?php
     }
     if ($i == 0) {
-        echo '<tr><td colspan="8" class="empty_table">자료가 한건도 없습니다.</td></tr>';
+        echo '<tr><td colspan="10" class="empty_table">자료가 한건도 없습니다.</td></tr>';
     }
     ?>
     </tbody>
@@ -177,8 +215,12 @@ $rnumber=($total_count-($page-1)*$rows)+1;
 <script>
 $(".pay_cancel").click(function(){
 	oid=$(this).attr("oid");
+	isCredit=$(this).attr("is_credit");
 	if(oid){
-		if(confirm("결제 취소시 멤버십도 종료됩니다.\n정말 결제 취소하시겠습니까?")){
+		msg = (isCredit=="1")
+			? "결제 취소(환불) 시 충전 크레딧이 회수됩니다.\n정말 결제 취소하시겠습니까?"
+			: "결제 취소시 멤버십도 종료됩니다.\n정말 결제 취소하시겠습니까?";
+		if(confirm(msg)){
 				$.post( "./admin_ajax.php", {
 					type: 'pay_cancel',
 					oid:oid
@@ -224,6 +266,6 @@ $(".euse").click(function(){
 
 })
 </script>
-<?
+<?php
 include_once (G5_ADMIN_PATH.'/admin.tail.php');
 ?>

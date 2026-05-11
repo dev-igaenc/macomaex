@@ -48,6 +48,11 @@ $sop = strtolower($sop);
 if ($sop != 'and' && $sop != 'or')
     $sop = 'and';
 
+// 검색 보조 파라미터 기본값
+$wr_6 = isset($wr_6) ? trim((string)$wr_6) : '';
+$wr_7 = isset($wr_7) ? trim((string)$wr_7) : '';
+$add_sql = '';
+
 // 분류 선택 또는 검색어가 있다면
 $stx = trim($stx);
 //검색인지 아닌지 구분하는 변수 초기화
@@ -212,7 +217,7 @@ if ($is_search_bbs) {
     $sql = " select distinct wr_parent from {$write_table} where {$sql_search} {$add_sql} {$sql_order} limit {$from_record}, $page_rows ";
 } else {
     $sql = " select * from {$write_table} where wr_is_comment = 0 {$add_sql}";
-	if($wr_6) $sqadd_sql.= " and wr_6 like ('%{$wr_6}%')";
+    if($wr_6) $sql .= " and wr_6 like ('%{$wr_6}%')";
     if($wr_7) $sql.= " and wr_7 like ('%{$wr_7}%')";
     if(!empty($notice_array))
         $sql .= " and wr_id not in (".implode(', ', $notice_array).") ";

@@ -1,11 +1,11 @@
 <?
 	ob_start();
-	include_once $_SERVER[DOCUMENT_ROOT]."/inc/lib/base.class.php";
+	include_once $_SERVER['DOCUMENT_ROOT']."/inc/lib/base.class.php";
 
 
 
-	$no		= $_REQUEST[no];
-	$kind		= $_REQUEST[kind];
+	$no		= $_REQUEST['no'];
+	$kind		= $_REQUEST['kind'];
 	
 
 	$query = " select no, parent_no, register_id, kind, award_file, regdate  from nb_matching_award where no = $no and kind = '$kind'";

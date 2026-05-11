@@ -98,25 +98,25 @@ if (!defined('_GNUBOARD_')) exit; // 개별 페이지 접근 불가
 				<tr>
 					<th scope="row"><span class="">품명	</span></th>
 					<td>
-						<input type="text" name="wr_2" value="<?php echo $write[wr_2] ?>" class="small" id="wr_2"  size="50" maxlength="255" placeholder="ESCA-FC-N093">
-						<input type="text" name="wr_1" value="<?php echo $write[wr_1] ?>" class="small" id="wr_1"  size="50" maxlength="255" placeholder="링크입력 - 조달청 나라장터 URL(http:shopping.g2b.go.kr)의 해당 항목으로 연결">
+						<input type="text" name="wr_2" value="<?php echo $write['wr_2'] ?>" class="small" id="wr_2"  size="50" maxlength="255" placeholder="ESCA-FC-N093">
+						<input type="text" name="wr_1" value="<?php echo $write['wr_1'] ?>" class="small" id="wr_1"  size="50" maxlength="255" placeholder="링크입력 - 조달청 나라장터 URL(http:shopping.g2b.go.kr)의 해당 항목으로 연결">
 					</td>
 				</tr>
 				<tr>
 					<th scope="row"><span class="">규격	</span></th>
-					<td><input type="text" name="wr_3" value="<?php echo $write[wr_3] ?>" id="wr_3"   size="50" maxlength="255" placeholder=""></td>
+					<td><input type="text" name="wr_3" value="<?php echo $write['wr_3'] ?>" id="wr_3"   size="50" maxlength="255" placeholder=""></td>
 				</tr>
 				<tr>
 					<th scope="row"><span class="">모델명	</span></th>
-					<td><input type="text" name="wr_4" value="<?php echo $write[wr_4] ?>" id="wr_4"  size="50" maxlength="255" placeholder=""></td>
+					<td><input type="text" name="wr_4" value="<?php echo $write['wr_4'] ?>" id="wr_4"  size="50" maxlength="255" placeholder=""></td>
 				</tr>
 				<tr>
 					<th scope="row"><span class="">제조사	</span></th>
-					<td><input type="text" name="wr_5" value="<?php echo $write[wr_5] ?>" id="wr_5"  size="50" maxlength="255" placeholder=""></td>
+					<td><input type="text" name="wr_5" value="<?php echo $write['wr_5'] ?>" id="wr_5"  size="50" maxlength="255" placeholder=""></td>
 				</tr>
 				<tr>
 					<th scope="row"><span class="">단가(원)	</span></th>
-					<td><input type="text" name="wr_6" value="<?php echo $write[wr_6] ?>" id="wr_6"  size="50" maxlength="255" placeholder="" onkeyup="chkNumber(this)"></td>
+					<td><input type="text" name="wr_6" value="<?php echo $write['wr_6'] ?>" id="wr_6"  size="50" maxlength="255" placeholder="" onkeyup="chkNumber(this)"></td>
 				</tr>
 				<tr>
 					<th scope="row"><span class="">식별번호</span></th>

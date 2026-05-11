@@ -1,0 +1,95 @@
+/* ===== 섹션 헤더 공통 모듈 =====
+ * 사용법:
+ *   <link rel="stylesheet" href="/css/section-header.css">
+ *
+ * 구조:
+ *   <div class="mHookSection_header">
+ *     <div class="mHookSection_label mHookSection_label--growth">...</div>
+ *     <div class="mHookSection_titleRow">
+ *       <h2 class="mHookSection_title">제목</h2>
+ *     </div>
+ *     <p class="mHookSection_subtitle">설명</p>
+ *   </div>
+ */
+
+.mHookSection_header { margin-bottom: var(--sp-10, 40px); }
+
+.mHookSection_label {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-1h, 6px);
+    font-size: var(--fs-tag, 12px);
+    font-weight: 600;
+    line-height: 1;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 5px var(--sp-3, 12px);
+    border-radius: var(--r-3xl, 20px);
+    margin-bottom: var(--sp-3, 12px);
+}
+.mHookSection_label span:first-child { display: flex; align-items: center; }
+
+/* ── 색상 변형 ── */
+.mHookSection_label--growth  { background: #dbeafe; color: #1e40af; }
+.mHookSection_label--stable  { background: #ede9fe; color: #5b21b6; }
+.mHookSection_label--ai-top3 { background: #FFF9DB; color: #E67700; }
+.mHookSection_label--ai-rest { background: #EDF2FF; color: #3B5BDB; }
+
+.mHookSection_titleRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.mHookSection_title {
+    font-size: var(--fs-section-title, 28px);
+    font-weight: 800;
+    line-height: var(--lh-snug, 1.3);
+    color: #1A1D29;
+    letter-spacing: -0.02em;
+    margin: 0;
+}
+
+.mHookSection_subtitle {
+    font-size: var(--fs-body, 15px);
+    font-weight: 400;
+    color: #5A5F72;
+    margin-top: var(--sp-2, 8px);
+    line-height: var(--lh-normal, 1.5);
+}
+
+/* ── 더보기 버튼 ── */
+.mHookSection_more {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 6px 14px;
+    border-radius: 20px;
+    text-decoration: none;
+    transition: color 0.2s, background 0.2s, border-color 0.2s;
+}
+.mHookSection_more::after {
+    content: '';
+    width: 6px; height: 6px;
+    border-right: 2px solid currentColor;
+    border-top: 2px solid currentColor;
+    transform: rotate(45deg);
+    margin-left: 2px;
+}
+.mHookSection_label--growth ~ .mHookSection_titleRow .mHookSection_more {
+    color: #1e40af; background: #dbeafe; border: 1px solid rgba(30,64,175,0.25);
+}
+.mHookSection_label--growth ~ .mHookSection_titleRow .mHookSection_more:hover {
+    color: #1e3a8a; background: #bfdbfe; border-color: #1e40af;
+}
+.mHookSection_label--stable ~ .mHookSection_titleRow .mHookSection_more {
+    color: #5b21b6; background: #ede9fe; border: 1px solid rgba(91,33,182,0.25);
+}
+.mHookSection_label--stable ~ .mHookSection_titleRow .mHookSection_more:hover {
+    color: #4c1d95; background: #ddd6fe; border-color: #5b21b6;
+}
+
+/* ── 반응형 ── */
+/* 반응형은 design-tokens.css의 --fs-section-title, --sp-10 변수가 처리 */

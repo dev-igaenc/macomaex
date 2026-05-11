@@ -37,13 +37,13 @@ include_once(G5_LIB_PATH.'/thumbnail.lib.php');
 				<td class="view_cont">
 					<?php
 					// 파일 출력
-					$v_img_count = count($view['file']);
+					$view_files = (isset($view['file']) && is_array($view['file'])) ? $view['file'] : array();
+					$v_img_count = count($view_files);
 					if($v_img_count) {
 						echo "<div id=\"bo_v_img\">\n";
-						for ($i=0; $i<=count($view['file']); $i++) {
-							if ($view['file'][$i]['view']) {
-								//echo $view['file'][$i]['view'];
-								echo get_view_thumbnail($view['file'][$i]['view']);
+						for ($i=0; $i<$v_img_count; $i++) {
+							if (!empty($view_files[$i]['view'])) {
+								echo get_view_thumbnail($view_files[$i]['view']);
 							}
 						}
 						echo "</div>\n";
@@ -56,9 +56,9 @@ include_once(G5_LIB_PATH.'/thumbnail.lib.php');
 
 					<?php
 					$cnt = 0;
-					if ($view['file']['count']) {
-						for ($i=0; $i<count($view['file']); $i++) {
-							if (isset($view['file'][$i]['source']) && $view['file'][$i]['source'] && !$view['file'][$i]['view'])
+					if (!empty($view['file']['count'])) {
+						for ($i=0; $i<$v_img_count; $i++) {
+							if (isset($view_files[$i]['source']) && $view_files[$i]['source'] && empty($view_files[$i]['view']))
 								$cnt++;
 						}
 					}
@@ -67,12 +67,12 @@ include_once(G5_LIB_PATH.'/thumbnail.lib.php');
 					<div class="view_file">
 						<?php
 						// 가변 파일
-						for ($i=0; $i<count($view['file']); $i++) {
-							if (isset($view['file'][$i]['source']) && $view['file'][$i]['source'] && !$view['file'][$i]['view']) {
+						for ($i=0; $i<$v_img_count; $i++) {
+							if (isset($view_files[$i]['source']) && $view_files[$i]['source'] && empty($view_files[$i]['view'])) {
 						?>
-						<a href="<?php echo $view['file'][$i]['href'];  ?>"><?php echo $view['file'][$i]['source'] ?>
-							<!-- <?php echo $view['file'][$i]['content'] ?> (<?php echo $view['file'][$i]['size'] ?>)
-							<span class="bo_v_file_cnt"><?php echo $view['file'][$i]['download'] ?>회 다운로드 | DATE : <?php echo $view['file'][$i]['datetime'] ?></span> -->
+						<a href="<?php echo $view_files[$i]['href'];  ?>"><?php echo $view_files[$i]['source'] ?>
+							<!-- <?php echo $view_files[$i]['content'] ?> (<?php echo $view_files[$i]['size'] ?>)
+							<span class="bo_v_file_cnt"><?php echo $view_files[$i]['download'] ?>회 다운로드 | DATE : <?php echo $view_files[$i]['datetime'] ?></span> -->
 						</a>
 						<?php }  } ?>
 					</div>

@@ -23,36 +23,36 @@ define('G5_ADMIN_HTTPS_BBS_URL', https_url(G5_ADMIN_BBS_DIR, false));
 ** query string
 */
 $arr_query = array();
-if($_REQUEST['sca']) $arr_query[] = 'sca='.$_REQUEST['sca'];
-if($_REQUEST['sod'])  $arr_query[] = 'sod='.$_REQUEST['sod'];
-if($_REQUEST['sst'])  $arr_query[] = 'sst='.$_REQUEST['sst'];
-if($_REQUEST['sfl'])  $arr_query[] = 'sfl='.$_REQUEST['sfl'];
-if($_REQUEST['stx'])  $arr_query[] = 'stx='.$_REQUEST['stx'];
-if($_REQUEST['target']) $arr_query[] = 'target='.$_REQUEST['target'];
-if($_REQUEST['view']) $arr_query[] = 'view='.$_REQUEST['view'];
-if($_REQUEST['gr_id']) $arr_query[] = 'gr_id='.$_REQUEST['gr_id'];
-if($_REQUEST['bo_table']) $arr_query[] = 'bo_table='.$_REQUEST['bo_table'];
-if($_REQUEST['rows']) $arr_query[] = 'rows='.$_REQUEST['rows'];
-if($_REQUEST['gsearch']) $arr_query[] = 'gsearch='.$_REQUEST['gsearch'];
-if($_REQUEST['page']) $arr_query[] = 'page='.$_REQUEST['page'];
+$sca = isset($_REQUEST['sca']) ? $_REQUEST['sca'] : '';
+$sod = isset($_REQUEST['sod']) ? $_REQUEST['sod'] : '';
+$sst = isset($_REQUEST['sst']) ? $_REQUEST['sst'] : '';
+$sfl = isset($_REQUEST['sfl']) ? $_REQUEST['sfl'] : '';
+$stx = isset($_REQUEST['stx']) ? $_REQUEST['stx'] : '';
+$target = isset($_REQUEST['target']) ? $_REQUEST['target'] : '';
+$view = isset($_REQUEST['view']) ? $_REQUEST['view'] : '';
+$gr_id = isset($_REQUEST['gr_id']) ? $_REQUEST['gr_id'] : '';
+$bo_table = isset($_REQUEST['bo_table']) ? $_REQUEST['bo_table'] : '';
+$rows = isset($_REQUEST['rows']) ? $_REQUEST['rows'] : '';
+$gsearch = isset($_REQUEST['gsearch']) ? $_REQUEST['gsearch'] : '';
+$page = isset($_REQUEST['page']) ? $_REQUEST['page'] : '';
+
+if($sca) $arr_query[] = 'sca='.$sca;
+if($sod)  $arr_query[] = 'sod='.$sod;
+if($sst)  $arr_query[] = 'sst='.$sst;
+if($sfl)  $arr_query[] = 'sfl='.$sfl;
+if($stx)  $arr_query[] = 'stx='.$stx;
+if($target) $arr_query[] = 'target='.$target;
+if($view) $arr_query[] = 'view='.$view;
+if($gr_id) $arr_query[] = 'gr_id='.$gr_id;
+if($bo_table) $arr_query[] = 'bo_table='.$bo_table;
+if($rows) $arr_query[] = 'rows='.$rows;
+if($gsearch) $arr_query[] = 'gsearch='.$gsearch;
+if($page) $arr_query[] = 'page='.$page;
 $qstr = "&amp;".implode("&amp;", $arr_query);
 
-$sca = $_REQUEST['sca'];
-$sod = $_REQUEST['sod'];
-$sst = $_REQUEST['sst'];
-$sfl = $_REQUEST['sfl'];
-$stx = $_REQUEST['stx'];
-$target = $_REQUEST['target'];
-$view= $_REQUEST['view'];
-$gr_id = $_REQUEST['gr_id'];
-$bo_table = $_REQUEST['bo_table'];
-$rows = $_REQUEST['rows'];
-$gsearch = $_REQUEST['gsearch'];
-$page = $_REQUEST['page'];
-
-$level2 = ($_COOKIE["write_list_level2"]) ? 1 : 0;
-$level3 = ($_COOKIE["write_list_level3"]) ? 1 : 0;
-$gsearch = ($_COOKIE["gsearch"]) ? 1 : 0;
+$level2 = !empty($_COOKIE["write_list_level2"]) ? 1 : 0;
+$level3 = !empty($_COOKIE["write_list_level3"]) ? 1 : 0;
+$gsearch = !empty($_COOKIE["gsearch"]) ? 1 : 0;
 $level2_display= $level2?"":"none";
 $level3_display= $level3?"":"none";
 $rowspan = 1;
@@ -336,7 +336,7 @@ function get_member_board($mb_id="", $gr_id="", $bo_table=""){
 		$result = sql_query("SELECT gr_id FROM ".$g5['group_member_table']." WHERE mb_id='".$mb_id."' ");
 		$group_member_board = array();
 		while($row = sql_fetch_array($result))
-			$group_member_board[] = "'" . $row[gr_id] . "'";
+			$group_member_board[] = "'" . $row['gr_id'] . "'";
 
 		if ($group_member_board)
 			$sql_gr_use_access = " or b.gr_id in ( " . implode("," , $group_member_board) . ")";
@@ -472,6 +472,7 @@ function get_board_select($name, $selected='', $event='', $gr_id="")
 function get_board_button($name, $selected='', $event='', $gr_id="")
 {
     global $g5, $is_admin, $member;
+	$str = '';
 	if ($gr_id) $gr_id=" AND gr_id='".$gr_id."' ";
     $sql = " SELECT bo_table, bo_subject from ".$g5['board_table']." WHERE 1 ".$gr_id." AND bo_table <> 'mailer' ";
     $sql .= " ORDER BY bo_table ";
@@ -488,6 +489,7 @@ function get_board_button($name, $selected='', $event='', $gr_id="")
 function get_board_button2($name, $selected='', $event='', $gr_id="")
 {
     global $g5, $is_admin, $member;
+	$str = '';
 	if ($gr_id) $gr_id=" AND gr_id='".$gr_id."' ";
     $sql = " SELECT bo_table, bo_subject from ".$g5['board_table']."  ";
     $sql .= " ORDER BY bo_10 asc, bo_9 asc, bo_8 asc ";

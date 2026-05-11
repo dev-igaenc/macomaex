@@ -57,20 +57,20 @@ else if ($w == 'u')
 }
 else if ($w == 'd')
 {
-	if(!$_REQUEST[no]) alert('제대로 된 값이 넘어오지 않았습니다.');
-	$mb_info=sql_query("seletct * from {$g5['member_table']} where mb_no='{$_REQUEST[no]}'");
+	if(!$_REQUEST['no']) alert('제대로 된 값이 넘어오지 않았습니다.');
+	$mb_info=sql_query("seletct * from {$g5['member_table']} where mb_no='{$_REQUEST['no']}'");
 	//회원삭제
-	sql_query("delete from {$g5['member_table']} where mb_no='{$_REQUEST[no]}'");
+	sql_query("delete from {$g5['member_table']} where mb_no='{$_REQUEST['no']}'");
 	//매칭정보 삭제??
 	//즐겨찾기 정보 삭제??
 	//맴버쉽 결제 정보 삭제??
 	//고객 결제 정보 삭제??
 	//수동 입력데이터라면 
-	if(strpos($mb_info[mb_company],"M")>-1) {
+	if(strpos($mb_info['mb_company'],"M")>-1) {
 		//회사정보 삭제 처리 
-		sql_query("delete from company where KEDCD='{$mb_info[mb_company]}'");
+		sql_query("delete from company where KEDCD='{$mb_info['mb_company']}'");
 		//회사신용정보 삭제 처리 
-		sql_query("delete from company_credit where KEDCD='{$mb_info[mb_company]}'");
+		sql_query("delete from company_credit where KEDCD='{$mb_info['mb_company']}'");
 	}
 }
 

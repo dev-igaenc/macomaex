@@ -19,21 +19,21 @@
 
 		foreach( $arrPopup as $k=>$v ){
 
-			if( $_COOKIE["AuthPopupClose_" . $v[no]] <> "Y" ) {
-				$_img = $UPLOAD_WDIR_POPUP."/" . $v[p_img];
+			if( $_COOKIE["AuthPopupClose_" . $v['no']] <> "Y" ) {
+				$_img = $UPLOAD_WDIR_POPUP."/" . $v['p_img'];
 				$_s = @getimagesize($_img);
-				$app_div_name = "event_popup_div_" . $v[no];
+				$app_div_name = "event_popup_div_" . $v['no'];
 
 				echo "
 						<div id='". $app_div_name ."'>
-							<div class='popup' style='POSITION: absolute;Z-INDEX: 1000; LEFT:".$v[p_left]."px;TOP:".$v[p_top]."px;' class='". $app_div_name ."'>
+							<div class='popup' style='POSITION: absolute;Z-INDEX: 1000; LEFT:".$v['p_left']."px;TOP:".$v['p_top']."px;' class='". $app_div_name ."'>
 								<div class='img'>
-									<A HREF='".$v[p_link]."' target='".$v[p_target]."'><img src='". $_img ."' alt='".$v[p_title]."' style='width : 100%;'/></a>
+									<A HREF='".$v['p_link']."' target='".$v['p_target']."'><img src='". $_img ."' alt='".$v['p_title']."' style='width : 100%;'/></a>
 								</div>
 								<div class='btn_area' >
 							
-									<input type=\"checkbox\" id=\"agree_check".$v[no]."\"  class='no_checkbox' onclick=\"common_frame.location.href=('./inc/lib/popup.close.php?_mode=popup_close&uid=".$v[no]."')\" >
-									<label for=\"agree_check".$v[no]."\"'>
+									<input type=\"checkbox\" id=\"agree_check".$v['no']."\"  class='no_checkbox' onclick=\"common_frame.location.href=('./inc/lib/popup.close.php?_mode=popup_close&uid=".$v['no']."')\" >
+									<label for=\"agree_check".$v['no']."\"'>
 									
 										<span class='no_checkbox_common_txt'>오늘하루 창닫기</span>
 									</label>		

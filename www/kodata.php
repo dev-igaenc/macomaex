@@ -96,7 +96,7 @@ try {
              $fileSize = filesize($localFilePath);
 			 $chk=sql_fetch("select * from company_update where FILE='".$file_name."'");
 			
-			 if(!$chk[c_id]){
+			 if(!$chk['c_id']){
 				$sql = " insert company_update
 							set FILE = '$file_name',
 							ACCT_DT=now()
@@ -104,7 +104,7 @@ try {
 				sql_query($sql);
 			 }
 		
-			if($chk[STATUS]!="S"){
+			if($chk['STATUS']!="S"){
 
 
 

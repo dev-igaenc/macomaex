@@ -817,7 +817,7 @@ function get_member($mb_id, $fields='*', $is_cache=false)
 {
     global $g5;
 
-    if (preg_match("/[^0-9a-z_@-.]+/i", $mb_id))
+    if (preg_match("/[^0-9a-z_@.\-]+/i", $mb_id))
         return array();
 
     static $cache = array();
@@ -2601,16 +2601,25 @@ class html_process {
     {
         global $config, $g5, $member;
 
+        $lo_location = isset($g5['lo_location']) ? $g5['lo_location'] : '';
+        $lo_url = isset($g5['lo_url']) ? $g5['lo_url'] : '';
+        if ($lo_location === '') {
+            $lo_location = isset($_SERVER['REQUEST_URI']) ? addslashes(clean_xss_tags($_SERVER['REQUEST_URI'])) : '';
+        }
+        if ($lo_url === '') {
+            $lo_url = isset($_SERVER['REQUEST_URI']) ? addslashes(clean_xss_tags($_SERVER['REQUEST_URI'])) : '';
+        }
+
         // 현재접속자 처리
         $tmp_sql = " select count(*) as cnt from {$g5['login_table']} where lo_ip = '{$_SERVER['REMOTE_ADDR']}' ";
         $tmp_row = sql_fetch($tmp_sql);
         $http_host = isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : $_SERVER['SERVER_NAME'];
 
         if ($tmp_row['cnt']) {
-            $tmp_sql = " update {$g5['login_table']} set mb_id = '{$member['mb_id']}', lo_datetime = '".G5_TIME_YMDHIS."', lo_location = '{$g5['lo_location']}', lo_url = '{$g5['lo_url']}' where lo_ip = '{$_SERVER['REMOTE_ADDR']}' ";
+            $tmp_sql = " update {$g5['login_table']} set mb_id = '{$member['mb_id']}', lo_datetime = '".G5_TIME_YMDHIS."', lo_location = '{$lo_location}', lo_url = '{$lo_url}' where lo_ip = '{$_SERVER['REMOTE_ADDR']}' ";
             sql_query($tmp_sql, FALSE);
         } else {
-            $tmp_sql = " insert into {$g5['login_table']} ( lo_ip, mb_id, lo_datetime, lo_location, lo_url ) values ( '{$_SERVER['REMOTE_ADDR']}', '{$member['mb_id']}', '".G5_TIME_YMDHIS."', '{$g5['lo_location']}',  '{$g5['lo_url']}' ) ";
+            $tmp_sql = " insert into {$g5['login_table']} ( lo_ip, mb_id, lo_datetime, lo_location, lo_url ) values ( '{$_SERVER['REMOTE_ADDR']}', '{$member['mb_id']}', '".G5_TIME_YMDHIS."', '{$lo_location}',  '{$lo_url}' ) ";
             sql_query($tmp_sql, FALSE);
 
             // 시간이 지난 접속은 삭제한다

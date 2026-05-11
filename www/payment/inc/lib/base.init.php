@@ -1,9 +1,9 @@
 <?php
-	include_once $_SERVER[DOCUMENT_ROOT]."/inc/lib/base.class.php";
+	include_once $_SERVER['DOCUMENT_ROOT']."/inc/lib/base.class.php";
 	ini_set('display_errors', 'on');
 	error_reporting(-1);
 
-	$path = $_SERVER[DOCUMENT_ROOT]."/upload";
+	$path = $_SERVER['DOCUMENT_ROOT']."/upload";
 	if(is_dir($path))
 		echo "ok";
 	else

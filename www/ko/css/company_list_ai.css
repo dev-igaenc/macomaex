@@ -1,0 +1,1078 @@
+/* 리스트 페이지 레이아웃 */
+html { min-height: 100%; background: #FAFBFD; }
+html, body { margin: 0; overflow-x: hidden; font-family: var(--font-base); background: #FAFBFD; }
+#listWrap { background: var(--bg, #FAFBFD); min-height: calc(100vh + 60px); }
+.page-company-list-ai #wrap,
+.page-company-list-ai #wrapper,
+.page-company-list-ai #container {
+    background: #FAFBFD !important;
+}
+.list-header {
+    background: var(--card, #fff);
+    border-bottom: 1px solid var(--border, #e8e8e8);
+    padding: 16px 0;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+.list-header .inner {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 var(--page-gutter, 24px);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--sp-6, 24px);
+}
+.list-header_logo { font-size: 22px; font-weight: 700; color: #222; text-decoration: none; }
+.list-header_logo:hover { color: #452EFF; }
+.list-header_search_form {
+    flex: 1;
+    max-width: 560px;
+    position: relative;
+    height: 52px;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    background: #fff;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.06);
+    overflow: hidden;
+}
+.list-header_search_form:focus-within {
+    border-color: rgba(37, 99, 235, 0.55);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(37, 99, 235, 0.24);
+}
+.list-header_search_form .list-header_search {
+    width: 100%;
+    height: 100%;
+    padding: 0 160px 0 20px;
+    border: none;
+    border-radius: 0;
+    font-size: 16px;
+    color: #222;
+    background: transparent;
+    outline: none;
+}
+.list-header_search_form .list-header_search::placeholder { color: #888; }
+@keyframes listBtnAurora {
+    0%, 100% { background-position: 0% 50%; }
+    50%       { background-position: 100% 50%; }
+}
+.list-header_search_form .list-header_search_btn {
+    position: absolute;
+    right: 6px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: 42px;
+    padding: 0 20px;
+    border: none;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #a78bfa, #818cf8, #60a5fa, #f472b6, #c084fc);
+    background-size: 300% 300%;
+    animation: listBtnAurora 4s ease infinite;
+    cursor: pointer;
+    color: #fff;
+    font-size: 15px;
+    font-weight: 600;
+    white-space: nowrap;
+    min-width: 156px;
+    box-shadow: 0 4px 16px rgba(167,139,250,0.45);
+    transition: box-shadow 0.3s ease, transform 0.3s ease;
+}
+.list-header_search_form .list-header_search_btn:hover {
+    box-shadow: 0 6px 22px rgba(167,139,250,0.65);
+    transform: translateY(-50%) scale(1.02);
+    color: #fff;
+}
+.list-header_search_form .list-header_search_btn .sparkle {
+    width: 16px;
+    height: 16px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transform-origin: 30% 80%;
+    animation: wandWiggle 1.6s ease-in-out infinite;
+}
+.list-header_search_form .list-header_search_btn .sparkle svg {
+    width: 100%;
+    height: 100%;
+    fill: #fff;
+    filter: drop-shadow(0 0 2px rgba(255,255,255,0.5));
+    animation: wandGlow 1.6s ease-in-out infinite;
+}
+@keyframes wandWiggle {
+    0%, 100% { transform: rotate(-10deg) translateY(0); }
+    35% { transform: rotate(4deg) translateY(-1px); }
+    70% { transform: rotate(-2deg) translateY(0); }
+}
+@keyframes wandGlow {
+    0%, 100% { filter: drop-shadow(0 0 2px rgba(255,255,255,0.45)); }
+    50% { filter: drop-shadow(0 0 6px rgba(255,255,255,0.95)); }
+}
+
+.list-header_actions { display: flex; align-items: center; gap: 8px; }
+.list-header_actions a {
+    font-size: 14px;
+    color: #555;
+    text-decoration: none;
+    padding: 8px 14px;
+    border-radius: 8px;
+}
+.list-header_actions a:hover { color: #452EFF; background: #ede9ff; }
+.list-header_actions .btn_primary {
+    background: #452EFF;
+    color: #fff !important;
+}
+.list-header_actions .btn_primary:hover { background: #3824d9; }
+.list-header_icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px !important;
+    color: #333 !important;
+}
+.list-header_icon:hover { color: #452EFF !important; background: #ede9ff; }
+.list-header_icon svg { display: block; flex-shrink: 0; }
+.list-header_center { display: none; font-size: 17px; font-weight: 700; color: #222; }
+.list-header_search_btn {
+    display: none;
+    width: 44px;
+    height: 44px;
+    align-items: center;
+    justify-content: center;
+    color: #333;
+    text-decoration: none;
+    border-radius: 50%;
+}
+.list-header_search_btn:hover { background: #f0f0f0; color: #452EFF; }
+
+.list-cat-tab-wrap { display: none !important; }
+
+.list-body .inner {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 24px;
+    box-sizing: border-box;
+}
+@media (max-width: 900px) {
+    .list-cat-tab-wrap { display: none !important; }
+}
+/* 탭 카테고리 */
+.list-cat-tabs {
+    display: flex;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding: 0 16px;
+    gap: 0;
+    border-bottom: 1px solid #e8e8e8;
+}
+.list-cat-tabs::-webkit-scrollbar { display: none; }
+.list-cat-tabs a {
+    display: block;
+    padding: 12px 16px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #888;
+    text-decoration: none;
+    white-space: nowrap;
+    flex-shrink: 0;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+}
+.list-cat-tabs a:hover { color: #3B5BDB; }
+.list-cat-tabs a.on {
+    color: #3B5BDB;
+    font-weight: 700;
+    border-bottom-color: #3B5BDB;
+}
+/* 서브 카테고리 스와이프 */
+.list-cat-sub {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding: 10px 16px;
+    display: flex;
+    gap: 8px;
+}
+.list-cat-sub::-webkit-scrollbar { display: none; }
+.list-cat-sub:empty { display: none; }
+.list-cat-sub a {
+    display: block;
+    padding: 6px 14px;
+    font-size: 13px;
+    color: #444;
+    text-decoration: none;
+    border-radius: 20px;
+    background: #FAFBFD;
+    white-space: nowrap;
+    flex-shrink: 0;
+    transition: all 0.2s;
+}
+.list-cat-sub a:hover { background: rgba(59,91,219,0.07); color: #3B5BDB; }
+.list-cat-sub a.on { background: rgba(59,91,219,0.12); color: #3B5BDB; font-weight: 600; }
+
+/* ===== 모바일 최적화 (참고 사진 스타일) ===== */
+@media (max-width: 768px) {
+    #listWrap { background: #FAFBFD; }
+    .list-header { padding: 12px 0; }
+    .list-header .inner { padding: 0 16px; gap: 12px; }
+    .list-header_logo { font-size: 18px; }
+    .list-header_center { display: none; }
+    .list-header_search_form { max-width: none; flex: 1; height: 48px; }
+    .list-header_search_form .list-header_search { font-size: 14px; padding: 0 130px 0 16px; }
+    .list-header_search_form .list-header_search_btn { height: 38px; min-width: 124px; padding: 0 14px; right: 5px; font-size: 13px; gap: 5px; }
+    .list-header_search_form .list-header_search_btn .sparkle { width: 14px; height: 14px; }
+    .list-header_actions .btn_primary,
+    .list-header_actions a { display: none; }
+
+    .list-body .inner { padding: 0 0 24px; }
+
+    /* 사이드바/스와이프: 900px에서 이미 처리 */
+
+    .list-main { padding: 0 16px; }
+    .list-top {
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 16px;
+        padding-top: 16px;
+    }
+    .list-count { display: none; }
+    .list-sort { width: auto; flex-shrink: 0; }
+    .sort-dropdown-btn { min-height: 40px; }
+
+    .list-grid { gap: 12px; padding-bottom: 24px; }
+    .mCompanyCard { min-height: auto; }
+    .mCompanyCard_content { padding: 16px; }
+    .mCompanyCard_bookmark { top: 12px; right: 12px; }
+    .mCompanyCard_bookmark svg { width: 18px; height: 18px; }
+    .mCompanyCard .mCompanyCard_fav { top: 16px; right: 16px; width: 32px; height: 32px; }
+    .mCompanyCard_title { font-size: 15px; margin-bottom: 0; -webkit-line-clamp: 2; }
+    .mCompanyCard_desc { margin-bottom: 8px; gap: 4px; }
+    .mCompanyCard_desc_tag { font-size: 12px; padding: 4px 10px; border-radius: 16px; }
+    .mCompanyCard_rating { padding: 10px; gap: 12px; margin-bottom: 10px; }
+    .mCompanyCard_rating_left { min-width: 64px; }
+    .mCompanyCard_rating_score { font-size: 22px; }
+    .mCompanyCard_rating_stars svg { width: 14px; height: 14px; }
+    .mCompanyCard_rating_stars .star-partial { width: 14px; height: 14px; }
+    .mCompanyCard_rating_bar_label { font-size: 11px; width: 48px; }
+    .mCompanyCard_rating_bar_chart { min-width: 0; }
+    .mCompanyCard_rating_bar_count { font-size: 11px; min-width: 34px; }
+    .mCompanyCard_footer { padding-top: 8px; }
+    .mCompanyCard_price { font-size: 16px; }
+    .mCompanyCard_price_icon { width: 28px; height: 28px; }
+    .mCompanyCard_provider_name { font-size: 12px; }
+}
+
+.list-main { flex: 1; min-width: 0; overflow: hidden; }
+.list-top {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+.list-type-wrap { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.list-type-switch {
+    position: relative;
+    display: inline-flex;
+    border: 1px solid #c7d2fe;
+    border-radius: 20px;
+    padding: 3px;
+    background: linear-gradient(180deg, #e0e7ff 0%, #d4dcfd 100%);
+    box-shadow: inset 0 1px 2px rgba(59,91,219,0.1), 0 1px 0 rgba(255,255,255,0.6);
+}
+.list-type-switch .list-type-slider {
+    position: absolute;
+    top: 3px;
+    bottom: 3px;
+    left: 3px;
+    border-radius: 17px;
+    background: linear-gradient(180deg, #fff 0%, #f5f7ff 100%);
+    border: 1px solid rgba(59,91,219,0.15);
+    box-shadow: 0 1px 4px rgba(59,91,219,0.15), 0 1px 0 rgba(255,255,255,0.9) inset;
+    transition: left 0.3s ease-out, width 0.3s ease-out;
+    pointer-events: none;
+    z-index: 0;
+}
+.list-type-switch .list-type-btn {
+    position: relative;
+    z-index: 1;
+    padding: 6px 14px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #7c8fda;
+    background: transparent;
+    border: none;
+    border-radius: 17px;
+    cursor: pointer;
+    transition: color 0.25s ease-out;
+}
+.list-type-switch .list-type-btn:hover { color: #3B5BDB; }
+.list-type-switch .list-type-btn.on { color: #3B5BDB; font-weight: 600; }
+.list-count { font-size: 15px; color: #555; margin: 0; }
+.list-count strong { color: #222; }
+.list-search-query { color: #452EFF; font-weight: 500; }
+.list-sort {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 14px;
+    color: #666;
+    position: relative;
+}
+.list-sort select { display: none; }
+/* 커스텀 드롭다운 */
+.sort-dropdown {
+    position: relative;
+}
+.sort-dropdown-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: 38px;
+    padding: 0 12px 0 14px;
+    border: 1px solid #e0e0e0;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #222;
+    background: #fff;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: border-color 0.18s, box-shadow 0.18s;
+    user-select: none;
+}
+.sort-dropdown-btn:hover {
+    border-color: #c0c0c0;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+}
+.sort-dropdown-btn.open {
+    border-color: #3B5BDB;
+    box-shadow: 0 0 0 3px rgba(59,91,219,0.12);
+}
+.sort-dropdown-chevron {
+    width: 16px;
+    height: 16px;
+    color: #888;
+    transition: transform 0.2s ease;
+    flex-shrink: 0;
+}
+.sort-dropdown-btn.open .sort-dropdown-chevron {
+    transform: rotate(180deg);
+}
+.sort-dropdown-menu {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    min-width: 140px;
+    background: #fff;
+    border: 1px solid #e8e8e8;
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.10), 0 2px 6px rgba(0,0,0,0.06);
+    padding: 6px;
+    z-index: 200;
+    opacity: 0;
+    transform: translateY(-6px) scale(0.97);
+    pointer-events: none;
+    transition: opacity 0.18s ease, transform 0.18s ease;
+    transform-origin: top right;
+}
+.sort-dropdown-menu.open {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    pointer-events: all;
+}
+.sort-dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 12px;
+    font-size: 13.5px;
+    font-weight: 500;
+    color: #444;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.13s, color 0.13s;
+    white-space: nowrap;
+}
+.sort-dropdown-item:hover {
+    background: rgba(59,91,219,0.07);
+    color: #3B5BDB;
+}
+.sort-dropdown-item.selected {
+    color: #3B5BDB;
+    font-weight: 600;
+    background: rgba(59,91,219,0.10);
+}
+.sort-dropdown-item.selected::after {
+    content: '';
+    display: block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #3B5BDB;
+    margin-left: auto;
+    flex-shrink: 0;
+}
+
+/* ===== AI 추천 모드 ===== */
+.company-list-ai-real #listWrap { background: #FAFBFD; }
+
+/* AI 모드: 스위치 보라 계열 */
+.company-list-ai-real .list-type-switch {
+    background: linear-gradient(180deg, #ede9fe 0%, #e0d7fd 100%);
+    border-color: #c4b5fd;
+    box-shadow: inset 0 1px 2px rgba(109,40,217,0.1), 0 1px 0 rgba(255,255,255,0.6);
+}
+.company-list-ai-real .list-type-switch .list-type-slider {
+    border-color: rgba(109,40,217,0.15);
+    box-shadow: 0 1px 4px rgba(109,40,217,0.15), 0 1px 0 rgba(255,255,255,0.9) inset;
+}
+.company-list-ai-real .list-type-switch .list-type-btn { color: #a78bfa; }
+.company-list-ai-real .list-type-switch .list-type-btn:hover { color: #6d28d9; }
+.company-list-ai-real .list-type-switch .list-type-btn.on { color: #6d28d9; font-weight: 600; }
+.company-list-ai-real .list-body .inner { grid-template-columns: 1fr; }
+/* AI 추천 페이지 배지 색상: 테마 공통(main.css) 덮어쓰기 차단 */
+.company-list-ai-real .mCompanyCard_badge_top_growth {
+    background: #dbeafe !important;
+    color: #1e40af !important;
+}
+.company-list-ai-real .mCompanyCard_badge_top_stability {
+    background: #ede9fe !important;
+    color: #5b21b6 !important;
+}
+.company-list-ai-real .mCompanyCard_badge_venture {
+    background: #10b981 !important;
+    color: #fff !important;
+}
+/* AI 카드: 높이 콘텐츠 기준, 하단 여백 통일 */
+.company-list-ai-real .mCompanyCard_content { padding-bottom: 16px; display: flex; flex-direction: column; }
+.company-list-ai-real .mCompanyCard_content .radar-card { margin-top: 8px; }
+.company-ai-link {
+    display: block;
+    width: 100%;
+}
+.company-ai-link .mCompanyCard {
+    width: 100% !important;
+    max-width: none !important;
+    min-width: 0 !important;
+}
+.company-ai-link .mCompanyCard_content { width: 100%; }
+.ai-top3-swiper .swiper-slide .mCompanyCard { height: auto; }
+.ai-top3-swiper .swiper-slide .mCompanyCard_content { padding-bottom: 16px; }
+
+/* AI 배너 */
+.ai-banner {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 32px 24px 0;
+    box-sizing: border-box;
+}
+.ai-banner_card {
+    background: linear-gradient(135deg, #1e3a8a 0%, #4338ca 50%, #6d28d9 100%);
+    border-radius: 20px;
+    padding: 36px 40px;
+    color: #fff;
+    position: relative;
+    overflow: hidden;
+}
+.ai-banner_card::before {
+    content: '';
+    position: absolute;
+    top: -40px; right: -40px;
+    width: 200px; height: 200px;
+    background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+    border-radius: 50%;
+}
+.ai-banner_card::after {
+    content: '';
+    position: absolute;
+    bottom: -60px; left: 30%;
+    width: 300px; height: 300px;
+    background: radial-gradient(circle, rgba(99,102,241,0.3) 0%, transparent 70%);
+    border-radius: 50%;
+}
+.ai-banner_top {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+    position: relative;
+    z-index: 1;
+}
+.ai-banner_icon {
+    width: 40px; height: 40px;
+    background: rgba(255,255,255,0.15);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(8px);
+}
+.ai-banner_icon svg { width: 22px; height: 22px; fill: #c4b5fd; }
+.ai-banner_label {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    color: #c4b5fd;
+    text-transform: uppercase;
+}
+.ai-banner_title {
+    font-size: 24px;
+    font-weight: 700;
+    line-height: 1.4;
+    margin-bottom: 6px;
+    position: relative;
+    z-index: 1;
+}
+.ai-banner_desc {
+    font-size: 15px;
+    color: rgba(255,255,255,0.75);
+    line-height: 1.5;
+    position: relative;
+    z-index: 1;
+}
+.ai-banner_stats {
+    display: flex;
+    gap: 24px;
+    margin-top: 20px;
+    position: relative;
+    z-index: 1;
+}
+.ai-banner_stat {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.ai-banner_stat_value {
+    font-size: 22px;
+    font-weight: 700;
+    color: #fff;
+}
+.ai-banner_stat_label {
+    font-size: 12px;
+    color: rgba(255,255,255,0.6);
+}
+.ai-banner_refresh {
+    margin-top: 20px;
+    padding: 10px 24px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #fff;
+    background: rgba(255,255,255,0.15);
+    border: 1px solid rgba(255,255,255,0.25);
+    border-radius: 10px;
+    cursor: pointer;
+    backdrop-filter: blur(8px);
+    transition: all 0.2s;
+    position: relative;
+    z-index: 1;
+}
+.ai-banner_refresh:hover {
+    background: rgba(255,255,255,0.25);
+    border-color: rgba(255,255,255,0.4);
+}
+
+/* AI 섹션 타이틀 폰트 두께 */
+.company-list-ai-real .mHookSection_title { font-weight: 600; }
+
+/* AI 적합도 배너 */
+.mCompanyCard_ai_match {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: linear-gradient(135deg, #6d28d9 0%, #4c1d95 100%);
+    color: #fff;
+    padding: 10px 28px;
+    border-radius: 11px 11px 0 0;
+    margin: -16px -20px 14px -20px;
+}
+.mCompanyCard_ai_match_label {
+    font-size: 14px;
+    font-weight: 600;
+    color: #fff;
+}
+.mCompanyCard_ai_match_value {
+    font-size: 24px;
+    font-weight: 800;
+    color: #fff;
+    letter-spacing: -0.02em;
+    line-height: 1;
+}
+.mCompanyCard_ai_match_unit {
+    font-size: 14px;
+    font-weight: 600;
+    opacity: 0.85;
+}
+
+/* TOP3 Swiper - 데스크톱은 그리드, 태블릿/모바일은 스와이프 */
+.ai-top3-swiper { overflow: visible; }
+.ai-top3-swiper .swiper-wrapper { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; align-items: start; }
+.ai-top3-swiper .swiper-slide { width: auto !important; position: relative; overflow: visible; padding-top: 28px; }
+@media (max-width: 1024px) {
+    .ai-top3-swiper { overflow-x: auto; overflow-y: visible; -webkit-overflow-scrolling: touch; padding-bottom: 12px; scroll-snap-type: x mandatory; }
+    .ai-top3-swiper .swiper-wrapper { display: flex !important; gap: 16px; flex-wrap: nowrap; }
+    .ai-top3-swiper .swiper-slide { min-width: 280px; width: 75% !important; flex-shrink: 0; scroll-snap-align: start; }
+}
+@media (max-width: 640px) {
+    .ai-top3-swiper .swiper-slide { min-width: 260px; width: 85% !important; }
+}
+
+/* AI 상위 3개 강조 */
+.ai-top3-swiper .swiper-slide .mCompanyCard { display: flex; flex-direction: column; }
+/* TOP3 카드: 일반 카드와 동일 패딩 */
+/* 랭킹 헥사곤 배지 */
+.ai-top3_rank {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 2;
+    width: 72px; height: 80px;
+}
+.ai-top3_rank .rank-medal {
+    width: 100%; height: 100%;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.ai-top3_rank .rank-medal svg.hex-bg { width: 100%; height: 100%; }
+.ai-top3_rank .rank-label {
+    position: absolute;
+    top: 24%;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 10px;
+    font-weight: 700;
+    color: rgba(255,255,255,0.8);
+    letter-spacing: 1px;
+    line-height: 1;
+}
+.ai-top3_rank .rank-num {
+    position: absolute;
+    top: 48%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 28px;
+    font-weight: 900;
+    color: #fff;
+    line-height: 1;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.15);
+}
+/* 반짝임 */
+.ai-top3_rank .sparkle-dot {
+    position: absolute;
+    width: 10px; height: 10px;
+}
+.ai-top3_rank .sparkle-dot svg { width: 100%; height: 100%; }
+.ai-top3_rank .sparkle-dot:nth-child(3) { top: -4px; right: -2px; width: 14px; height: 14px; }
+.ai-top3_rank .sparkle-dot:nth-child(4) { top: 6px; left: -6px; width: 11px; height: 11px; opacity: 0.7; }
+.ai-top3_rank .sparkle-dot:nth-child(5) { bottom: 8px; right: -8px; width: 9px; height: 9px; opacity: 0.5; }
+.ai-top3_rank .sparkle-dot:nth-child(6) { bottom: -2px; left: 4px; width: 8px; height: 8px; opacity: 0.4; }
+/* TOP3 헤더 하단 여백 — ALL 섹션과 카드 간격 시각적 통일 */
+.ai-top3 { margin-top: 48px; }
+.ai-top3 .mHookSection_header { margin-bottom: 0; }
+/* 섹션 헤더: 시안처럼 뱃지/제목/설명을 세로로 배치 */
+.company-list-ai-real .ai-top3-section-top .mHookSection_header,
+.company-list-ai-real .ai-rest-section .mHookSection_header {
+    display: block !important;
+}
+.company-list-ai-real .ai-top3-section-top .mHookSection_titleRow,
+.company-list-ai-real .ai-rest-section .mHookSection_titleRow {
+    display: block;
+    margin-top: 10px;
+}
+.company-list-ai-real .ai-top3-section-top .mHookSection_title,
+.company-list-ai-real .ai-rest-section .mHookSection_title {
+    display: block;
+    margin: 0;
+}
+.company-list-ai-real .ai-top3-section-top .mHookSection_subtitle,
+.company-list-ai-real .ai-rest-section .mHookSection_subtitle {
+    display: block;
+    margin-top: 8px;
+}
+/* 카드/헤더 간격 정합: 테마 공통(main.css) 덮어쓰기 차단 */
+.company-list-ai-real .ai-top3-section-top .mHookSection_label,
+.company-list-ai-real .ai-rest-section .mHookSection_label {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    padding: 5px 12px !important;
+    margin-bottom: 12px !important;
+    line-height: 1 !important;
+}
+.company-list-ai-real .ai-top3-section-top .mHookSection_title,
+.company-list-ai-real .ai-rest-section .mHookSection_title {
+    margin: 0 !important;
+    line-height: 1.3 !important;
+    letter-spacing: -0.02em !important;
+    font-weight: 600 !important;
+}
+.company-list-ai-real .ai-top3-section-top .mHookSection_subtitle,
+.company-list-ai-real .ai-rest-section .mHookSection_subtitle {
+    margin-top: 8px !important;
+    margin-bottom: 0 !important;
+    line-height: 1.5 !important;
+}
+.company-list-ai-real .ai-top3-section-top .mCompanyCard,
+.company-list-ai-real .ai-rest-section .mCompanyCard {
+    box-shadow: none !important;
+    border: 1px solid #e5e7eb !important;
+    border-radius: 12px !important;
+    overflow: hidden !important;
+}
+.company-list-ai-real .ai-top3-section-top .mCompanyCard_content,
+.company-list-ai-real .ai-rest-section .mCompanyCard_content {
+    padding: 16px 20px 16px !important;
+    gap: 1px !important;
+}
+.company-list-ai-real .ai-top3-section-top .mCompanyCard_badges,
+.company-list-ai-real .ai-rest-section .mCompanyCard_badges {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 5px !important;
+    margin-bottom: 6px !important;
+    align-self: flex-start !important;
+    min-height: 22px !important;
+}
+.company-list-ai-real .ai-top3-section-top .mCompanyCard_badge,
+.company-list-ai-real .ai-rest-section .mCompanyCard_badge {
+    padding: 3px 8px !important;
+    line-height: 1.2 !important;
+    margin-bottom: 0 !important;
+    font-size: var(--fs-badge, 11px) !important;
+}
+.company-list-ai-real .ai-top3-section-top .mCompanyCard_title,
+.company-list-ai-real .ai-rest-section .mCompanyCard_title {
+    margin-top: 6px !important;
+    margin-bottom: 6px !important;
+    line-height: 1.3 !important;
+    letter-spacing: -0.01em !important;
+    font-size: var(--fs-card-company, 17px) !important;
+    font-weight: 700 !important;
+}
+.company-list-ai-real .ai-top3-section-top .mCompanyCard_desc,
+.company-list-ai-real .ai-rest-section .mCompanyCard_desc {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 5px !important;
+    margin-top: 6px !important;
+    margin-bottom: 10px !important;
+    align-items: center !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+    max-height: 28px !important;
+}
+.company-list-ai-real .ai-top3-section-top .mCompanyCard_desc_tag,
+.company-list-ai-real .ai-top3-section-top .mCompanyCard_desc_more,
+.company-list-ai-real .ai-rest-section .mCompanyCard_desc_tag,
+.company-list-ai-real .ai-rest-section .mCompanyCard_desc_more {
+    padding: 4px 10px !important;
+    line-height: 1.3 !important;
+    border-radius: 8px !important;
+    font-size: var(--fs-tag, 12px) !important;
+    background: #F3F5FA !important;
+    border: 1px solid #E8EBF0 !important;
+    font-weight: 500 !important;
+}
+.company-list-ai-real .ai-top3-section-top .mCompanyCard_desc_tag,
+.company-list-ai-real .ai-rest-section .mCompanyCard_desc_tag {
+    color: #5A5F72 !important;
+}
+.company-list-ai-real .ai-top3-section-top .mCompanyCard_desc_more,
+.company-list-ai-real .ai-rest-section .mCompanyCard_desc_more {
+    color: #9199B0 !important;
+}
+/* TOP3 카드: 일반 카드와 동일, 배지 공간만 확보 */
+/* → css/section-header.css 로 분리 */
+.ai-rest_header { margin-top: 72px; }
+
+/* 추천 거래처 전체 목록 — 데스크탑: 그리드 / 모바일: 스와이프 */
+.ai-rest-swiper { overflow: visible; position: relative; }
+.ai-rest-swiper .swiper-wrapper { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; align-items: start; }
+.ai-rest-swiper .swiper-slide { width: auto !important; }
+.ai-rest-swiper .swiper-slide .mCompanyCard { display: flex; flex-direction: column; height: auto; }
+.ai-empty-state {
+    grid-column: 1 / -1;
+    width: 100%;
+    padding: 36px 18px;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    background: #fff;
+    text-align: center;
+}
+.ai-empty-state_text {
+    margin: 0;
+    font-size: 14px;
+    color: #6b7280;
+    line-height: 1.6;
+}
+.ai-rest-swiper .swiper-pagination { margin-top: 16px; text-align: center; display: none; }
+.ai-rest-swiper .swiper-pagination-bullet { width: 8px; height: 8px; background: #ccc; opacity: 1; border-radius: 50%; margin: 0 4px; display: inline-block; cursor: pointer; }
+.ai-rest-swiper .swiper-pagination-bullet-active { background: var(--purple); }
+.ai-rest-nav { display: none; gap: 8px; margin-top: 16px; justify-content: center; }
+.ai-rest-nav button { width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--border); background: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all .15s; }
+.ai-rest-nav button:hover { border-color: var(--purple); color: var(--purple); }
+.ai-rest-nav button.swiper-button-disabled { opacity: .3; cursor: default; }
+
+@media (max-width: 1024px) {
+    .ai-top3 .list-grid { grid-template-columns: 1fr !important; }
+    .ai-rest-swiper { overflow-x: auto; overflow-y: visible; -webkit-overflow-scrolling: touch; scroll-snap-type: x mandatory; }
+    .ai-rest-swiper .swiper-wrapper { display: flex !important; gap: 16px; flex-wrap: nowrap; }
+    .ai-rest-swiper .swiper-slide { min-width: 280px; width: 75% !important; flex-shrink: 0; scroll-snap-align: start; }
+    .ai-empty-state { min-width: 280px; width: 75%; flex-shrink: 0; scroll-snap-align: start; }
+    .ai-rest-swiper .swiper-pagination { display: block; }
+    .ai-rest-nav { display: none; }
+    .ai-rest-swiper .swiper-slide .mCompanyCard { overflow: hidden; }
+    .ai-rest-swiper { --swiper-pagination-bullet-width: 6px; --swiper-pagination-bullet-height: 6px; --swiper-pagination-bullet-horizontal-gap: 3px; }
+    .ai-rest-swiper .swiper-pagination-bullet { width: 6px !important; height: 6px !important; min-width: 0 !important; min-height: 0 !important; margin: 0 3px !important; }
+    .ai-rest-swiper .swiper-pagination-bullet-active { width: 6px !important; height: 6px !important; }
+}
+@media (max-width: 768px) {
+    .ai-banner { padding: 16px 16px 0; }
+    .ai-banner_card { padding: 24px 20px; border-radius: 16px; }
+    .ai-banner_title { font-size: 20px; }
+    .ai-banner_stats { gap: 16px; }
+    .ai-banner_stat_value { font-size: 18px; }
+}
+@media (max-width: 640px) {
+    .ai-rest-swiper .swiper-slide { min-width: 260px; width: 85% !important; }
+    .ai-empty-state { min-width: 260px; width: 85%; }
+}
+
+/* TOP3 & ALL 공통: 스와이프 시 카드 잘림 방지 */
+@media (max-width: 1024px) {
+    .company-list-ai-real { overflow-x: visible; }
+    .company-list-ai-real .list-main { overflow: visible; }
+    .company-list-ai-real .list-body .inner { overflow: visible; }
+    .company-list-ai-real #cardArea { overflow: visible; }
+    .company-list-ai-real .ai-top3-swiper.swiper-initialized .swiper-wrapper,
+    .company-list-ai-real .ai-rest-swiper.swiper-initialized .swiper-wrapper {
+        gap: 0 !important;
+    }
+    .ai-top3 { overflow: visible; }
+    /* 스크롤바 숨기기 (스와이프는 유지) */
+    .ai-top3-swiper::-webkit-scrollbar { display: none; }
+    .ai-top3-swiper { -ms-overflow-style: none; scrollbar-width: none; }
+    .ai-rest-swiper::-webkit-scrollbar { display: none; }
+    .ai-rest-swiper { -ms-overflow-style: none; scrollbar-width: none; }
+}
+
+/* 레이더 차트·카드 → css/company-card.css 로 분리 */
+
+/* 더보기 버튼 */
+.list-grid_more_wrap {
+    display: flex;
+    justify-content: center;
+    padding: 32px 0 16px;
+}
+.list-grid_more_btn {
+    padding: 14px 64px;
+    font-size: 15px;
+    font-weight: 600;
+    color: #3B5BDB;
+    background: #fff;
+    border: 1px solid #c7d2fe;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 1px 4px rgba(59,91,219,0.08);
+}
+.list-grid_more_btn:hover {
+    background: #f5f7ff;
+    border-color: #a5b4fc;
+    color: #2a47c2;
+    box-shadow: 0 2px 8px rgba(59,91,219,0.12);
+}
+/* 기업카드 그리드 (메인과 동일 스타일) */
+.list-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+}
+@media (max-width: 1024px) {
+    .list-grid { grid-template-columns: repeat(2, 1fr); gap: 16px; }
+    .list-grid > *:last-child:nth-child(2n+1) { grid-column: 1 / -1; }
+}
+@media (max-width: 640px) {
+    .list-grid { grid-template-columns: 1fr; }
+}
+/* mCompanyCard · radar · 별점 → css/company-card.css 로 분리 */
+
+/* ===== company_list_ai.php (정적 시안 이식) 보정 ===== */
+.company-list-ai-real .list-body .inner {
+    display: block !important;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 24px;
+    box-sizing: border-box;
+}
+.company-list-ai-real .list-main {
+    flex: 1;
+    width: 100%;
+    min-width: 0;
+    overflow: visible;
+}
+.company-list-ai-real .list-type-slider {
+    width: 76px;
+    left: 3px;
+}
+.company-list-ai-real .ai-list-panel {
+    display: none;
+}
+.company-list-ai-real .ai-list-panel.is-active {
+    display: block;
+}
+.company-list-ai-real .list-grid_more_wrap {
+    display: flex;
+}
+.company-list-ai-real .mCompanyCard {
+    box-shadow: none;
+}
+
+@media (max-width: 900px) {
+    .company-list-ai-real .list-body .inner {
+        display: block !important;
+        padding: 0 16px 24px;
+    }
+}
+
+/* ===== company_list_ai 모바일 반응형 (PC 비영향) ===== */
+@media (max-width: 768px) {
+    .page-company-list-ai #container {
+        max-width: none !important;
+        padding: 0 0 20px !important;
+    }
+    .page-company-list-ai #wrapper {
+        padding-top: 60px !important;
+    }
+
+    .company-list-ai-real .ai-banner {
+        padding: 16px 16px 0;
+    }
+    .company-list-ai-real .ai-banner_card {
+        padding: 24px 20px;
+        border-radius: 16px;
+    }
+    .company-list-ai-real .ai-banner_title {
+        font-size: 20px;
+    }
+    .company-list-ai-real .ai-banner_stats {
+        gap: 16px;
+    }
+    .company-list-ai-real .ai-banner_stat_value {
+        font-size: 18px;
+    }
+
+    .company-list-ai-real .list-main { padding: 0 !important; }
+    .company-list-ai-real .list-body .inner { padding: 0 16px 24px !important; }
+    .company-list-ai-real .list-top {
+        margin-bottom: 16px;
+        padding-top: 16px;
+    }
+
+    .company-list-ai-real .mHookSection_title {
+        font-size: 20px;
+    }
+    .company-list-ai-real .mHookSection_subtitle {
+        font-size: 13px;
+    }
+    .company-list-ai-real .ai-top3 {
+        margin-top: 32px;
+    }
+    .company-list-ai-real .ai-rest_header {
+        margin-top: 44px;
+    }
+
+    /* 모바일에서 Swiper가 slide에 margin-right(spaceBetween)를 넣으므로 gap은 0으로 유지 */
+    .company-list-ai-real .ai-top3-swiper .swiper-wrapper,
+    .company-list-ai-real .ai-rest-swiper .swiper-wrapper {
+        gap: 0 !important;
+    }
+    .company-list-ai-real .ai-top3-swiper,
+    .company-list-ai-real .ai-rest-swiper {
+        overflow-x: auto !important;
+        overflow-y: visible !important;
+        -webkit-overflow-scrolling: touch;
+        scroll-snap-type: x mandatory;
+        touch-action: pan-x;
+    }
+    .company-list-ai-real .ai-top3-swiper .swiper-wrapper,
+    .company-list-ai-real .ai-rest-swiper .swiper-wrapper {
+        display: flex !important;
+        flex-wrap: nowrap !important;
+    }
+    .company-list-ai-real .ai-top3-swiper .swiper-slide {
+        min-width: 240px;
+        width: 82% !important;
+        flex-shrink: 0;
+        scroll-snap-align: start;
+    }
+    .company-list-ai-real .ai-rest-swiper .swiper-slide,
+    .company-list-ai-real .ai-empty-state {
+        min-width: 240px;
+        width: 82% !important;
+        flex-shrink: 0;
+        scroll-snap-align: start;
+    }
+
+    .company-list-ai-real .mCompanyCard_ai_match {
+        margin: -16px -20px 12px;
+        padding: 9px 16px;
+    }
+    .company-list-ai-real .mCompanyCard_ai_match_label,
+    .company-list-ai-real .mCompanyCard_ai_match_unit {
+        font-size: 12px;
+    }
+    .company-list-ai-real .mCompanyCard_ai_match_value {
+        font-size: 21px;
+    }
+    .company-list-ai-real .mCompanyCard_title {
+        font-size: 16px !important;
+    }
+
+    .company-list-ai-real .list-grid_more_wrap {
+        padding: 22px 0 10px;
+    }
+    .company-list-ai-real .list-grid_more_btn {
+        width: 100%;
+        padding: 13px 16px;
+        font-size: 14px;
+        border-radius: 10px;
+    }
+}
+
+@media (max-width: 640px) {
+    .page-company-list-ai #container {
+        padding: 0 0 18px !important;
+    }
+    .company-list-ai-real .list-body .inner {
+        padding: 0 16px 22px !important;
+    }
+
+    .company-list-ai-real .ai-top3-swiper .swiper-slide,
+    .company-list-ai-real .ai-rest-swiper .swiper-slide,
+    .company-list-ai-real .ai-empty-state {
+        min-width: 240px;
+        width: 82% !important;
+    }
+
+    .company-list-ai-real .mHookSection_title {
+        font-size: 18px;
+    }
+    .company-list-ai-real .mHookSection_subtitle {
+        font-size: 12px;
+    }
+    .company-list-ai-real .radar-card--hex .radar-svg {
+        max-width: 208px;
+    }
+}

@@ -1,6 +1,13 @@
 <?php
-$brand_borad=sql_fetch("select * from {$g5['board_table']} where bo_table='menu_adm'");
-$brand_category=explode("|",$brand_borad['bo_category_list']);
+$brand_borad = sql_fetch("select * from {$g5['board_table']} where bo_table='menu_adm'");
+if (!is_array($brand_borad)) {
+	$brand_borad = array();
+}
+$brand_category = array();
+if (isset($brand_borad['bo_category_list']) && $brand_borad['bo_category_list'] !== '') {
+	$brand_category = explode("|", $brand_borad['bo_category_list']);
+}
+$menu_cnt = count($brand_category);
 
 $link_0000 = "/"; // 홈
 
@@ -15,8 +22,8 @@ $link_0301 = "/ko/matching.php"; // 기업매칭 index
 $link_0302 = "/ko/matching_list.php"; // 기업매칭 List
 $link_0303 = "/ko/matching_view.php"; // 기업매칭 View
 
-// 멤버쉽 요금제
-$link_0401 = "/ko/plan.php"; // 멤버쉽 요금제
+// 크레딧 요금제
+$link_0401 = "/ko/plan.php"; // 크레딧 요금제
 
 // 이용자 지원
 $link_0501 = "/bbs/board.php?bo_table=Notice"; // 공지사항
@@ -37,8 +44,8 @@ if($member[mb_11]=='dev'){
 }
 */
 $link_0601 = "/ko/my_company.php"; // 내 회사 정보
-$link_0602 = "/ko/my_matching_r.php"; // 매칭 히스토리
-$link_0603 = "/ko/my_interested.php"; // 관심기업
+$link_0602 = "/ko/my_matching.php"; // 매칭 히스토리
+$link_0603 = "/ko/my_matching.php#interested"; // 관심기업
 $link_0604 = G5_BBS_URL."/member_confirm.php?url=".G5_BBS_URL."/register_form.php";
 //else $link_0604 = "/ko/my_info.php"; // 회원 정보 수정
 $link_0605 = "/ko/my_plan.php"; // 결제정보
@@ -64,8 +71,8 @@ $link_9701 = "/bbs/new.php";						/* 새글 */
 		 ["01","매커멕스란", "<?=$link_0101?>", "", "", "one"]
 			,["0101","매커멕스란", "<?=$link_0101?>", "매커멕스란", "", ""]
 		
-		,["04","멤버쉽 요금제", "<?=$link_0401?>", "", "", "one"]
-			,["0401","멤버쉽 요금제", "<?=$link_0401?>", "멤버쉽 요금제", "", ""]
+		,["04","크레딧 요금제", "<?=$link_0401?>", "", "", "one"]
+			,["0401","크레딧 요금제", "<?=$link_0401?>", "크레딧 요금제", "", ""]
 		
 		,["05","이용자 지원", "<?=$link_0501?>", "", "", ""]
 			,["0501","공지사항", "<?=$link_0501?>", "이용자 지원", "매커멕스 이용자들에게 알려드리는 공지사항입니다. ", ""]

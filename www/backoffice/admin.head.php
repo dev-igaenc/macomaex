@@ -30,16 +30,15 @@ if ($is_member) {
 		$is_auth = true;
 }
 
-$sql = " select count(*) as cnt from {$g5['memo_table']} where me_{$kind}_mb_id = '{$member['mb_id']}' and me_type = '$kind' ";
-$row = sql_fetch($sql);
-$total_count = $row['cnt'];
-
-
 $kind = 'recv';
 $unkind = 'send';
 $kind_title = '받은';
 $recv_img = 'on';
 $send_img = 'off';
+
+$sql = " select count(*) as cnt from {$g5['memo_table']} where me_{$kind}_mb_id = '{$member['mb_id']}' and me_type = '$kind' ";
+$row = sql_fetch($sql);
+$total_count = isset($row['cnt']) ? (int)$row['cnt'] : 0;
 
 $list = array();
 
@@ -114,9 +113,30 @@ function print_menu2($key, $no = '')
     global $menu, $auth_menu, $is_admin, $auth, $g5, $sub_menu;
 
     $str = "";
+    if (!isset($menu[$key]) || !is_array($menu[$key])) {
+        return $str;
+    }
+    $hidden_trade_submenus = array('500200', '500300', '500400');
+    $hidden_payment_menu_links = array(
+        '/payment.list.php',
+        '/payment.membership.list.php'
+    );
     for ($i = 1; $i < count($menu[$key]); $i++) {
         if (!isset($menu[$key][$i])) {
             continue;
+        }
+
+        // 거래(menu500)에서는 거래현황(500100)만 노출하고 제조사/유통사/기타는 숨김
+        if ($key === 'menu500' && in_array((string)$menu[$key][$i][0], $hidden_trade_submenus, true)) {
+            continue;
+        }
+
+        // 결제 메뉴 개편 중 고객 결제 관리/맴버쉽 결제 히스토리만 URL 기준으로 숨김
+        $menu_link = isset($menu[$key][$i][2]) ? (string)$menu[$key][$i][2] : '';
+        foreach ($hidden_payment_menu_links as $hidden_link) {
+            if ($menu_link !== '' && strpos($menu_link, $hidden_link) !== false) {
+                continue 2;
+            }
         }
 
         if ($is_admin != 'super' && (!array_key_exists($menu[$key][$i][0], $auth) || !strstr($auth[$menu[$key][$i][0]], 'r'))) {
@@ -239,7 +259,7 @@ if (!empty($_COOKIE['g5_admin_btn_gnb'])) {
 			$idx_v["SMS 관리"]="fa-edit";
 			$idx_v["기업 DB"]="fa-database";
 			$idx_v["맴버쉽관리"]="fa-user-o";
-			$idx_v["매칭"]="fa-building-o";
+			$idx_v["거래"]="fa-building-o";
 			$idx_v["결제"]="fa-credit-card";
 			$idx_v["배너관리"]="fa-picture-o";
 			$idx_v["공지사항"]="fa-exclamation-circle";
@@ -267,23 +287,48 @@ if (!empty($_COOKIE['g5_admin_btn_gnb'])) {
                     $current_class = " on";
                 }
 
-                $button_title = $menu['menu' . $key][0][1];
-				$button_link = $menu['menu' . $key][0][2];
-				$button_one = $menu['menu' . $key][0][8];
-				if($button_one==1) $linkz='href="'.$button_link.'"';
-				else $linkz='';
+	                $button_title = $menu['menu' . $key][0][1];
+					$button_link = $menu['menu' . $key][0][2];
+					$button_one = $menu['menu' . $key][0][8];
+					$button_icon = isset($idx_v[$button_title]) ? $idx_v[$button_title] : 'fa-circle-o';
+					if($button_one==1) $linkz='href="'.$button_link.'"';
+					else $linkz='';
 				//$mb_auth=explode("|",$member['mb_auth']);
 				//$chk = array_search($menu['menu' . $key][0][0], $mb_auth);
 
             ?>
-                  <li><a <?=$linkz?>><i class="fa <?=$idx_v[ $button_title]?>"></i> <?php echo $button_title; ?> <?if($button_one!=1){?><span class="fa fa-chevron-down"></span><?}?></a>
+	                  <li><a <?=$linkz?>><i class="fa <?=$button_icon?>"></i> <?php echo $button_title; ?> <?if($button_one!=1){?><span class="fa fa-chevron-down"></span><?}?></a>
                     <ul class="nav child_menu">
                       <?php echo print_menu1('menu' . $key, 1); ?>
                     </ul>
                   </li>
+	            <?php
+	                $jj++;
+	            }     //end foreach
+					$mail_log_can_view = ($is_admin == 'super' || isset($auth['500100']));
+					if ($mail_log_can_view) {
+						$mail_log_current_class = '';
+						if (isset($_SERVER['SCRIPT_NAME']) && basename((string)$_SERVER['SCRIPT_NAME']) === 'mail_log_list.php') {
+							$mail_log_current_class = ' current-page';
+						}
+	            ?>
+	                  <li class="<?=$mail_log_current_class?>"><a href="<?=G5_ADMIN_URL?>/mail_log_list.php"><i class="fa fa-envelope-o"></i> 메일 발송 이력</a></li>
+	            <?php
+					}
+					if ($is_admin == 'super') {
+						$audit_current_class = '';
+						if (isset($_SERVER['SCRIPT_NAME']) && basename((string)$_SERVER['SCRIPT_NAME']) === 'audit_log_list.php') {
+						$audit_current_class = ' current-page';
+					}
+					$error_current_class = '';
+					if (isset($_SERVER['SCRIPT_NAME']) && basename((string)$_SERVER['SCRIPT_NAME']) === 'system_error_list.php') {
+						$error_current_class = ' current-page';
+					}
+            ?>
+                  <li class="<?=$audit_current_class?>"><a href="<?=G5_ADMIN_URL?>/audit_log_list.php"><i class="fa fa-list-alt"></i> 감사로그</a></li>
+                  <li class="<?=$error_current_class?>"><a href="<?=G5_ADMIN_URL?>/system_error_list.php"><i class="fa fa-bug"></i> 시스템에러</a></li>
             <?php
-                $jj++;
-            }     //end foreach
+				}
             ?>
                 </ul>
               </div>
@@ -296,9 +341,15 @@ if (!empty($_COOKIE['g5_admin_btn_gnb'])) {
               <a data-toggle="tooltip" data-placement="top" title="홈페이지 바로가기" href="/" target="_blank">
 				<span class="glyphicon glyphicon-home" aria-hidden="true"></span>
               </a>
+              <?php if ((int)$member['mb_level'] === 20) { ?>
+              <a data-toggle="tooltip" data-placement="top" title="감사로그" href="<?php echo G5_ADMIN_URL ?>/audit_log_list.php">
+                <span class="glyphicon glyphicon-list-alt" aria-hidden="true"></span>
+              </a>
+              <?php } else { ?>
               <a data-toggle="tooltip" data-placement="top">
                 &ensp;
               </a>
+              <?php } ?>
               <a data-toggle="tooltip" data-placement="top" title="Settings" href="<?php echo G5_ADMIN_URL ?>/admin_form.php?w=u&amp;mb_id=<?php echo $member['mb_id'] ?>">
                 <span class="glyphicon glyphicon-cog" aria-hidden="true"></span>
               </a>

@@ -4,7 +4,7 @@ include_once('./_common.php');
 if( function_exists('social_check_login_before') ){
     $social_login_html = social_check_login_before();
 }
-$refer = $_SERVER['HTTP_REFERER'];
+$refer = isset($_SERVER['HTTP_REFERER']) ? (string)$_SERVER['HTTP_REFERER'] : '';
 $board['bo_10']="10";
 $board['bo_9']="1";
 $board['bo_5'] = "멤버쉽";

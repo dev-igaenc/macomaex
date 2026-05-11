@@ -185,18 +185,18 @@ else if ($w == 'u')
 }
 else if ($w == 'd')
 {
-	if(!$_REQUEST[mb_id]) alert('제대로 된 값이 넘어오지 않았습니다.');
-	$mb_info=sql_query("seletct * from {$g5['member_table']} where mb_id='{$_REQUEST[mb_id]}'");
+	if(!$_REQUEST['mb_id']) alert('제대로 된 값이 넘어오지 않았습니다.');
+	$mb_info=sql_query("seletct * from {$g5['member_table']} where mb_id='{$_REQUEST['mb_id']}'");
 	//회원삭제
-	sql_query("delete from {$g5['member_table']} where mb_id='{$_REQUEST[mb_id]}'");
+	sql_query("delete from {$g5['member_table']} where mb_id='{$_REQUEST['mb_id']}'");
 	//매칭정보 삭제??
 	//sql_query("delete from {$g5['member_table']} where mb_id='{$_REQUEST[mb_id]}'");
 	//수동 입력데이터라면 
-	if(strpos($mb_info[mb_company],"M")>-1) {
+	if(strpos($mb_info['mb_company'],"M")>-1) {
 		//회사정보 삭제 처리 
-		sql_query("delete from company where KEDCD='{$mb_info[mb_company]}'");
+		sql_query("delete from company where KEDCD='{$mb_info['mb_company']}'");
 		//회사신용정보 삭제 처리 
-		sql_query("delete from company_credit where KEDCD='{$mb_info[mb_company]}'");
+		sql_query("delete from company_credit where KEDCD='{$mb_info['mb_company']}'");
 	}
 }
 else
@@ -317,7 +317,7 @@ if( $w == '' || $w == 'u' ){
 $pre_sql="SELECT A.*, B.mb_id from g5_matching A LEFT JOIN g5_member B ON A.KEDCD = B.mb_company WHERE A.receive_id ='' AND B.mb_id != ''";
 $pre_result = sql_query($pre_sql);
 for ($i=0; $pre_row=sql_fetch_array($pre_result); $i++) {
-	sql_query("update g5_matching set receive_id='{$pre_row[mb_id]}' where no='{$pre_row[no]}'");
+	sql_query("update g5_matching set receive_id='{$pre_row['mb_id']}' where no='{$pre_row['no']}'");
 }
 
 run_event('admin_member_form_update', $w, $mb_id);

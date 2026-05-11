@@ -22,6 +22,68 @@ function simple_crypt( $string, $action = 'e' ) {
     return $output;
 }
 
+if (!function_exists('macomaex_kodata_log')) {
+	function macomaex_kodata_log($stage, $context = array()) {
+		$payload = array(
+			'stage' => (string) $stage,
+			'context' => is_array($context) ? $context : array('value' => $context),
+		);
+
+		error_log('[macomaex_kodata] ' . json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+	}
+}
+
+if (!function_exists('macomaex_parse_kodata_xml')) {
+	function macomaex_parse_kodata_xml($rawXml, $context = array()) {
+		$rawXml = (string) $rawXml;
+		$trimmedXml = trim($rawXml);
+
+		if ($trimmedXml === '') {
+			macomaex_kodata_log('empty_response', array_merge($context, array(
+				'raw_preview' => '',
+			)));
+
+			return array(
+				'success' => false,
+				'error_code' => 'EMPTY_RESPONSE',
+				'error_message' => '기업 정보 응답이 비어 있습니다.',
+			);
+		}
+
+		$useErrorsBackup = libxml_use_internal_errors(true);
+		$xml = simplexml_load_string($trimmedXml, null, LIBXML_NOCDATA);
+		$libxmlErrors = libxml_get_errors();
+		libxml_clear_errors();
+		libxml_use_internal_errors($useErrorsBackup);
+
+		if ($xml === false) {
+			$errorMessages = array();
+
+			foreach ($libxmlErrors as $error) {
+				$message = trim((string) $error->message);
+				if ($message !== '') $errorMessages[] = $message;
+			}
+
+			macomaex_kodata_log('xml_parse_failed', array_merge($context, array(
+				'raw_preview' => substr($trimmedXml, 0, 500),
+				'libxml_errors' => $errorMessages,
+			)));
+
+			return array(
+				'success' => false,
+				'error_code' => 'XML_PARSE_ERROR',
+				'error_message' => '기업 정보 응답을 해석하지 못했습니다.',
+			);
+		}
+
+		return array(
+			'success' => true,
+			'xml' => $xml,
+			'json' => json_encode($xml, JSON_UNESCAPED_UNICODE),
+		);
+	}
+}
+
 //사업자등록증 하이픈
 function licenseNum($str=""){
 	$tmp="";
@@ -79,7 +141,8 @@ function getFinanceInfo($no,$year=''){
 
 //맴버쉽 정보 가져오기
 function get_membership(){
-	$sql="select * from g5_membership_manage";
+	$membership_list = array();
+	$sql="select * from g5_membership_manage order by no asc";
 	$result=sql_query($sql);
 	 for ($i=0; $row=sql_fetch_array($result); $i++) {
 		 $membership_list[]=$row;
@@ -90,7 +153,65 @@ function get_membership(){
 //로그인 체크
 function login_chk(){
 	global $member;
-	if(!$member['mb_id']) ALERT("로그인 후 이용하세요.","/bbs/login.php?url=".$_SERVER["REQUEST_URI"]);
+	if(!$member['mb_id']) {
+		login_required_modal("로그인 후 이용하세요.", "/bbs/login.php?url=" . urlencode($_SERVER["REQUEST_URI"]));
+	}
+}
+
+function login_required_modal($msg = "로그인 후 이용하세요.", $loginUrl = "/bbs/login.php")
+{
+	$msg = '서비스를 이용하시려면 로그인이 필요합니다.';
+
+	$loginUrl = trim((string)$loginUrl);
+	if ($loginUrl === '') $loginUrl = "/bbs/login.php";
+	$signupUrl = "/bbs/register.php";
+
+	header('Content-Type: text/html; charset=utf-8');
+	echo '<!doctype html>';
+	echo '<html lang="ko">';
+	echo '<head>';
+	echo '<meta charset="utf-8">';
+	echo '<meta name="viewport" content="width=device-width, initial-scale=1">';
+	echo '<title>로그인 안내</title>';
+	echo '<style>';
+	echo ':root{color-scheme:light;--bg:#f5f7fb;--card:#fff;--text:#1f2937;--muted:#6b7280;--line:#e5e7eb;--primary:#2f5fe3;--primary-dark:#1d4ed8;--shadow:0 24px 60px rgba(15,23,42,.16);}';
+	echo '*{box-sizing:border-box}html,body{height:100%}body{margin:0;font-family:Pretendard,Apple SD Gothic Neo,Noto Sans KR,sans-serif;background:linear-gradient(180deg,#f8fbff 0%,#f3f6fb 100%);color:var(--text);}';
+	echo '.login-guard{min-height:100%;display:flex;align-items:center;justify-content:center;padding:24px;}';
+	echo '.login-guard__overlay{position:fixed;inset:0;background:rgba(15,23,42,.18);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);}';
+	echo '.login-guard__modal{position:relative;max-width:380px;width:90%;background:var(--card);border-radius:20px;padding:40px 36px 32px;box-shadow:var(--shadow);text-align:center;animation:loginGuardFade .18s ease-out;}';
+	echo '@keyframes loginGuardFade{from{opacity:0;transform:translateY(10px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}';
+	echo '.login-guard__close{position:absolute;top:12px;right:12px;width:28px;height:28px;border:none;border-radius:50%;background:transparent;color:#9ca3af;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;}';
+	echo '.login-guard__close svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2.2;stroke-linecap:round}';
+	echo '.login-guard__icon{width:56px;height:56px;margin:0 auto 18px;border-radius:999px;background:var(--primary);display:flex;align-items:center;justify-content:center;color:#fff;}';
+	echo '.login-guard__icon svg{width:24px;height:24px;fill:#fff}';
+	echo '.login-guard__title{margin:0 0 10px;font-size:18px;font-weight:700;letter-spacing:-.02em;}';
+	echo '.login-guard__desc{margin:0 0 26px;font-size:14px;line-height:1.5;color:var(--muted);}';
+	echo '.login-guard__actions{display:flex;gap:10px;}';
+	echo '.login-guard__btn{flex:1;display:inline-flex;align-items:center;justify-content:center;height:48px;border-radius:14px;border:1px solid transparent;font-size:15px;font-weight:600;text-decoration:none;cursor:pointer;transition:.18s ease;}';
+	echo '.login-guard__btn--ghost{background:#f3f4f6;color:#4b5563;border-color:#e5e7eb;}';
+	echo '.login-guard__btn--ghost:hover{background:#e5e7eb;}';
+	echo '.login-guard__btn--primary{background:var(--primary);color:#fff;}';
+	echo '.login-guard__btn--primary:hover{background:var(--primary-dark);}';
+	echo '@media (max-width:480px){.login-guard{padding:18px}.login-guard__modal{border-radius:20px;padding:30px 20px 22px}.login-guard__title{font-size:19px}.login-guard__desc{font-size:14px}.login-guard__actions{flex-direction:row;}}';
+	echo '</style>';
+	echo '</head>';
+	echo '<body>';
+	echo '<div class="login-guard">';
+	echo '<div class="login-guard__overlay" aria-hidden="true"></div>';
+	echo '<div class="login-guard__modal" role="dialog" aria-modal="true" aria-labelledby="loginGuardTitle">';
+	echo '<button type="button" class="login-guard__close" aria-label="닫기" onclick="history.back();"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>';
+	echo '<div class="login-guard__icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1s3.1 1.39 3.1 3.1v2z"/></svg></div>';
+	echo '<h1 class="login-guard__title" id="loginGuardTitle">로그인이 필요합니다</h1>';
+	echo '<p class="login-guard__desc">' . $msg . '</p>';
+	echo '<div class="login-guard__actions">';
+	echo '<a class="login-guard__btn login-guard__btn--ghost" href="' . htmlspecialchars($signupUrl, ENT_QUOTES, 'UTF-8') . '">회원가입</a>';
+	echo '<a class="login-guard__btn login-guard__btn--primary" href="' . htmlspecialchars($loginUrl, ENT_QUOTES, 'UTF-8') . '">로그인</a>';
+	echo '</div>';
+	echo '</div>';
+	echo '</div>';
+	echo '</body>';
+	echo '</html>';
+	exit;
 }
 
 //맴버쉽 정보가져오기
@@ -132,7 +253,7 @@ function getFavorite($user){
 	$result=sql_query($sql);
 	$r = array(); 
 	while($row = sql_fetch_array($result)) { 
-		$r[] = $row[KEDCD];
+		$r[] = $row['KEDCD'];
 	}
 	 return $r;
 }
@@ -152,7 +273,7 @@ function getUserMembership($id=""){
 	//마스터의 경우 최고 맴버쉽
 	if($member['mb_level']==20) {
 		$membership_info = sql_fetch("select * from g5_membership_manage order by no desc limit 1");
-		$msinfo['membership_parent_no'] = $membership_info[no];
+		$msinfo['membership_parent_no'] = $membership_info['no'];
 	}
 	$result[]=$msinfo;
 	$result[]=$membership_info;
@@ -227,10 +348,32 @@ function getKODATA($comnum){ // 한국평가데이터 정보 가져오기 API
 
 			//----------curl 실행----------
 			 $html_ori = curl_exec($ch);  //cURL 함수 실행 후 XML을 String으로 리턴
-			 //print_r($html_ori);
-			 //echo $html_ori;
-			  $xml=simplexml_load_string($html_ori, null, LIBXML_NOCDATA) or die("Error: Cannot create object");
-			  $json = json_encode($xml, JSON_UNESCAPED_UNICODE);
+			 $curl_error = curl_error($ch);
+			 $curl_errno = curl_errno($ch);
+			 curl_close($ch);
+
+			 if ($html_ori === false) {
+			 	macomaex_kodata_log('curl_failed', array(
+			 		'context' => 'getKODATA',
+			 		'comnum' => $comnum,
+			 		'curl_errno' => $curl_errno,
+			 		'curl_error' => $curl_error,
+			 	));
+
+			 	return "500|CURL_ERROR|기업 정보 조회 중 통신 오류가 발생했습니다.";
+			 }
+
+			 $parsed = macomaex_parse_kodata_xml($html_ori, array(
+			 	'context' => 'getKODATA',
+			 	'comnum' => $comnum,
+			 ));
+
+			 if (!$parsed['success']) {
+			 	return "500|".$parsed['error_code']."|".$parsed['error_message'];
+			 }
+
+			  $xml = $parsed['xml'];
+			  $json = $parsed['json'];
 			  $header = $xml -> HEADER;
 			  if($header->errcd!="00") {
 				  $error=$header->errctt;
@@ -259,7 +402,7 @@ function updateKODATA($comnum){ // 한국평가데이터 정보 업데이트 API
 			$comnum=str_replace("-","",$comnum);
 						//API 로그기록에 정보가 남아있는지 체크 있으면 해당 기록에서 그냥 가져오기
 						$log_chk=sql_fetch("select * from company_api_log where c_bizno='{$comnum}' and DATE(c_datetime)='".date("Y-m-d")."'");
-						if(!$log_chk[c_content]){
+						if(!$log_chk['c_content']){
 							$com_d=getKODATA($comnum);
 							$com_data=explode("|",$com_d);
 							if($com_data[0]==1000){
@@ -270,7 +413,7 @@ function updateKODATA($comnum){ // 한국평가데이터 정보 업데이트 API
 							}
 						}else{
 							//API기록에서 정보가져옴
-							$com_info=json_decode($log_chk[c_content]);
+							$com_info=json_decode($log_chk['c_content']);
 						}
 
 								$KEDCD=$com_info->CONTENTS->ENPintr0000->kedcd;
@@ -527,8 +670,8 @@ function updateKODATA($comnum){ // 한국평가데이터 정보 업데이트 API
 //쿠폰 정보가져오기
 function getCouponInfo($id){
 	if(strlen($id)<6) {
-		$result[chk]="false";
-		$result[err]="쿠폰번호를 확인해주세요.";
+		$result['chk']="false";
+		$result['err']="쿠폰번호를 확인해주세요.";
 		return $result;
 		return false;
 	}
@@ -538,10 +681,10 @@ function getCouponInfo($id){
 	$result=sql_fetch($sql);
 
 		if($result)  {
-			$result[chk]="true";
+			$result['chk']="true";
 		}else{ 
-			$result[chk]="false";
-			$result[err]="없는 쿠폰입니다. 다시 확인해주세요.";
+			$result['chk']="false";
+			$result['err']="없는 쿠폰입니다. 다시 확인해주세요.";
 		}
 	 return $result;
 }
@@ -551,34 +694,34 @@ function useCoupon($id, $mb_id=""){
 	if($id && $mb_id){
 		$coupon=getCouponInfo($id);
 		$user_info=getUserInfo($mb_id);
-		if($coupon[chk]=="true"){
+		if($coupon['chk']=="true"){
 			//쿠폰 사용처리
 
-			$minfo=sql_fetch("select * from g5_membership_manage where no='{$coupon[cp_type]}'"); // 맴버쉽 정보
+			$minfo=sql_fetch("select * from g5_membership_manage where no='{$coupon['cp_type']}'"); // 맴버쉽 정보
 			$date_begin = date("Y-m-d");
 			
-			$timestamp = strtotime("+{$coupon[cp_trunc]} months");
+			$timestamp = strtotime("+{$coupon['cp_trunc']} months");
 			$date_end=date("Y-m-d H:i:s", $timestamp);
 
 			$e_month=date("m", $timestamp );
 
 			$tmpmonth=date("Y-m")."-01";
 			$tmpmonth_stamp=strtotime($tmpmonth);
-			$nextstamp = strtotime("+{$coupon[cp_trunc]} months",$tmpmonth_stamp);
+			$nextstamp = strtotime("+{$coupon['cp_trunc']} months",$tmpmonth_stamp);
 			$nextmonth = date("m",$nextstamp);
 
 			//다음달 같은 일자가 없는 경우 마지막일자로
 			if($nextmonth!=$e_month) {
 				$tmpmonth=date("Y-m")."-01";
 				$tmpmonth_stamp=strtotime($tmpmonth);
-				$nextstamp = strtotime("+{$coupon[cp_trunc]} months",$tmpmonth_stamp);
+				$nextstamp = strtotime("+{$coupon['cp_trunc']} months",$tmpmonth_stamp);
 				$nextmonth = date("Y-m",$nextstamp);
 				$lastDay = DATE('t', strtotime($nextmonth )); //마지말일 구하기
 				$date_end=$nextmonth."-".$lastDay;
 				//$timestamp = strtotime($date_end);
 			}
 
-			$selected_cnt_limit=$minfo[selected_cnt]*$coupon[cp_trunc];
+			$selected_cnt_limit=$minfo['selected_cnt']*$coupon['cp_trunc'];
 			
 			$orderid="C_".time().round((float)microtime(false) * 1000);
 			
@@ -601,9 +744,9 @@ function useCoupon($id, $mb_id=""){
 			$sql.="selected_able_cnt='{$minfo['selected_cnt']}',";
 			$sql.="selected_cnt='{$selected_cnt_limit}',";
 			$sql.="regdate=now(),";
-			$sql.="coupon='{$coupon[cp_id]}',";
+			$sql.="coupon='{$coupon['cp_id']}',";
 			$sql.="status='T',";
-			$sql.="membership_parent_no='{$coupon[cp_type]}'";
+			$sql.="membership_parent_no='{$coupon['cp_type']}'";
 			sql_query($sql);
 			
 			//맵버쉽 스테이터스 히스토리
@@ -622,9 +765,9 @@ function useCoupon($id, $mb_id=""){
 			$sql.="selected_able_cnt='{$minfo['selected_cnt']}',";
 			$sql.="selected_cnt='{$selected_cnt_limit}',";
 			$sql.="regdate=now(),";
-			$sql.="coupon='{$coupon[cp_id]}',";
+			$sql.="coupon='{$coupon['cp_id']}',";
 			$sql.="status='T',";
-			$sql.="membership_parent_no='{$coupon[cp_type]}',";
+			$sql.="membership_parent_no='{$coupon['cp_type']}',";
 			$sql.="memo='쿠폰 사용\\n',";
 			$sql.="ext_1='".G5_TIME_YMDHIS."\\n'";
 			sql_query($sql);
@@ -633,13 +776,13 @@ function useCoupon($id, $mb_id=""){
 			$sql="insert g5_membership_payment set ";
 			$sql.="	uid='{$mb_id}',";
 			$sql.="	order_no='{$orderid}',";
-			$sql.="	order_goods='{$minfo[title]}',";
-			$sql.="	price='{$minfo[price_sale]}',";
+			$sql.="	order_goods='{$minfo['title']}',";
+			$sql.="	price='{$minfo['price_sale']}',";
 			$sql.="	complete_yn='Y',";
 			$sql.="	complete_date=now(),";
 			$sql.="	regdate=now(),";
-			$sql.="	name='{$user_info[mb_name]}',";
-			$sql.="	phone='{$user_info[mb_8]}',";
+			$sql.="	name='{$user_info['mb_name']}',";
+			$sql.="	phone='{$user_info['mb_8']}',";
 			$sql.="	email='{$mb_id}',";
 			$sql.="	tid='{$id}',";
 			$sql.="	mid='COUPON',";
@@ -669,24 +812,24 @@ function useCoupon($id, $mb_id=""){
 			$sql.="	vact_date='',";
 			$sql.="	vact_time='',";
 			$sql.="	hpp_num='',";
-			$sql.="	membership_parent_no='{$coupon[cp_type]}'	";
+			$sql.="	membership_parent_no='{$coupon['cp_type']}'	";
 			sql_query($sql);
 
 			//쿠폰사용 히스토리 저장
 			$sql="insert g5_shop_coupon_log set ";
 			$sql.="cp_id='{$id}',";
 			$sql.="mb_id='{$mb_id}',";
-			$sql.="cp_subject='{$coupon[cp_subject]}',";
-			$sql.="cp_start='{$coupon[cp_start]}',";
-			$sql.="cp_end='{$coupon[cp_end]}',";
-			$sql.="cp_type='{$coupon[cp_type]}',";
-			$sql.="cp_trunc='{$coupon[cp_trunc]}',";
-			$sql.="cp_price='{$coupon[cp_price]}',";
+			$sql.="cp_subject='{$coupon['cp_subject']}',";
+			$sql.="cp_start='{$coupon['cp_start']}',";
+			$sql.="cp_end='{$coupon['cp_end']}',";
+			$sql.="cp_type='{$coupon['cp_type']}',";
+			$sql.="cp_trunc='{$coupon['cp_trunc']}',";
+			$sql.="cp_price='{$coupon['cp_price']}',";
 			$sql.="cl_datetime=now()";
 			sql_query($sql);
 
 			//셀렉티드 추가 처리
-			if($minfo[selected_cnt]>0){
+			if($minfo['selected_cnt']>0){
 				
 				/*
 				$timestamp = strtotime("+1 months");
@@ -711,9 +854,9 @@ function useCoupon($id, $mb_id=""){
 				*/
 				
 				$sql="insert g5_selected set ";
-				$sql.="s_subject='{$user_info[mb_name]}',";
-				$sql.="KEDCD='{$user_info[mb_company]}',";
-				$sql.="s_membership='{$minfo[no]}',";
+				$sql.="s_subject='{$user_info['mb_name']}',";
+				$sql.="KEDCD='{$user_info['mb_company']}',";
+				$sql.="s_membership='{$minfo['no']}',";
 				$sql.="mb_id='{$mb_id}',";
 				$sql.="s_start='{$date_begin}',";
 				$sql.="s_end='{$date_end}',";
@@ -728,7 +871,7 @@ function useCoupon($id, $mb_id=""){
 
 			return true;
 		}else{
-			alert($coupon[err]);
+			alert($coupon['err']);
 			return false;
 		}
 	}else{
@@ -745,22 +888,22 @@ function SelectedRange($id=""){
 	//셀렉티드 정보
     $sql = " select * from g5_selected where s_no = '$id' ";
     $cp = sql_fetch($sql);
-	$msm_info=sql_fetch("select * from g5_membership_manage where no={$cp[s_membership]}"); //맴버쉽 정보
+	$msm_info=sql_fetch("select * from g5_membership_manage where no={$cp['s_membership']}"); //맴버쉽 정보
 	$now=time();
 	//한달 이상일 경우
-	if($msm_info[selected_cnt]!=$cp[s_cnt_limit]){
+	if($msm_info['selected_cnt']!=$cp['s_cnt_limit']){
 
 		$timestamp = strtotime("+1 months");
 		$date_end=date("Y-m-d H:i:s", $timestamp);
 
-		$month=$cp[s_cnt_limit]/$msm_info[selected_cnt]; //달 수 구하기
+		$month=$cp['s_cnt_limit']/$msm_info['selected_cnt']; //달 수 구하기
 		for($tmp=0;$tmp<$month;$tmp++){
 
 				if(!$date_end){
-				$stimestamp = strtotime("+{$tmp} months",strtotime($cp[s_start]));
+				$stimestamp = strtotime("+{$tmp} months",strtotime($cp['s_start']));
 				$date_begin = date("Y-m-d", $stimestamp);
 					$chk_lastDay = DATE('t', strtotime(substr($date_begin ,0,-3)));
-					if(substr($cp[s_start],-2)==$chk_lastDay) $chk_lastDay="true";
+					if(substr($cp['s_start'],-2)==$chk_lastDay) $chk_lastDay="true";
 				}
 
 				if($date_end){
@@ -771,8 +914,8 @@ function SelectedRange($id=""){
 					$nextstamp = strtotime("+1 months",$tmpmonth_stamp);
 					$nextstamp_m=date("Y-m", $nextstamp);
 					$next_lastDay = DATE('t', strtotime($nextstamp_m)); //마지말일 구하기
-					if(substr($cp[s_start],-2)==$next_lastDay) $date_end=$nextstamp_m."-".$next_lastDay;
-					elseif(substr($cp[s_start],-2)<$next_lastDay) $date_end=$nextstamp_m."-".substr($cp[s_start],-2);
+					if(substr($cp['s_start'],-2)==$next_lastDay) $date_end=$nextstamp_m."-".$next_lastDay;
+					elseif(substr($cp['s_start'],-2)<$next_lastDay) $date_end=$nextstamp_m."-".substr($cp['s_start'],-2);
 					else $date_end=$nextstamp_m."-".$next_lastDay;
 
 				}else{
@@ -798,28 +941,28 @@ function SelectedRange($id=""){
 						//$timestamp = strtotime($date_end);
 					}
 				}
-				$Range[$tmp][S]=$date_begin;
-				$Range[$tmp][E]=date("Y-m-d", strtotime("-1 day",strtotime($date_end)));
+				$Range[$tmp]['S']=$date_begin;
+				$Range[$tmp]['E']=date("Y-m-d", strtotime("-1 day",strtotime($date_end)));
 				//echo $date_begin." - ".date("Y-m-d", strtotime("-1 day",strtotime($date_end)))."<br>";
-				$tmp_s=strtotime($Range[$tmp][S]." 00:00:00");
-				$tmp_e=strtotime($Range[$tmp][E]. "23:59:59");
+				$tmp_s=strtotime($Range[$tmp]['S']." 00:00:00");
+				$tmp_e=strtotime($Range[$tmp]['E']. "23:59:59");
 				if($tmp_s <= $now and $tmp_e >= $now) {
-					$Range[NOW_S]=$Range[$tmp][S];
-					$Range[NOW_E]=$Range[$tmp][E];
+					$Range['NOW_S']=$Range[$tmp]['S'];
+					$Range['NOW_E']=$Range[$tmp]['E'];
 				}
 		}
 	}else{
-		$Range[0][S]=$cp[s_start];
-		$Range[0][E]=date("Y-m-d", strtotime("-1 day",strtotime($cp[s_end])));
-		$tmp_s=strtotime($Range[0][S]." 00:00:00");
-		$tmp_e=strtotime($Range[0][E]. "23:59:59");
+		$Range[0]['S']=$cp['s_start'];
+		$Range[0]['E']=date("Y-m-d", strtotime("-1 day",strtotime($cp['s_end'])));
+		$tmp_s=strtotime($Range[0]['S']." 00:00:00");
+		$tmp_e=strtotime($Range[0]['E']. "23:59:59");
 		if($tmp_s <= $now and $tmp_e >= $now) {
-			$Range[NOW_S]=$Range[0][S];
-			$Range[NOW_E]=$Range[0][E];
+			$Range['NOW_S']=$Range[0]['S'];
+			$Range['NOW_E']=$Range[0]['E'];
 		}
 	}
-	$Range[LIMIT]=$msm_info[selected_cnt];
-	$Range[MEMBERSHIP]=$msm_info;
+	$Range['LIMIT']=$msm_info['selected_cnt'];
+	$Range['MEMBERSHIP']=$msm_info;
 	 return $Range;
 }
 

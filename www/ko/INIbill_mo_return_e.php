@@ -191,8 +191,8 @@ if($_REQUEST["resultcode"]=="00"){
 	if($msinfo_row[0]) { 
 		//기존 맴버쉽이 살아있는 경우 기존 남아있는 매칭, 전문가 컨설팅  이월시킴
 		$old_membership=$msinfo_row[0];
-		$old_matching_able_cnt=$old_membership[matching_able_cnt];
-		$expert_consulting_able_cnt=$old_membership[expert_consulting_able_cnt];
+		$old_matching_able_cnt=$old_membership['matching_able_cnt'];
+		$expert_consulting_able_cnt=$old_membership['expert_consulting_able_cnt'];
 		$minfo['matching_cnt'] = $minfo['matching_cnt'] + $old_matching_able_cnt;
 		$minfo['expert_consulting_cnt'] =  $minfo['expert_consulting_cnt'] + $expert_consulting_able_cnt;
 	}

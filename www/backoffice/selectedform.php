@@ -83,7 +83,7 @@ $.datepicker.setDefaults({
 <input type="hidden" name="sfl" value="<?php echo $sfl; ?>">
 <input type="hidden" name="stx" value="<?php echo $stx; ?>">
 <input type="hidden" name="page" value="<?php echo $page;?>">
-<input type="hidden" name="limit" value="<?php echo $Range[LIMIT];?>">
+<input type="hidden" name="limit" value="<?php echo $Range['LIMIT'];?>">
 
 <div class="tbl_frm01 tbl_wrap">
     <table>
@@ -113,10 +113,10 @@ $.datepicker.setDefaults({
         <td>
 		<?//print_r($Range[MEMBERSHIP]);?>
             <input type="hidden" name="s_membership" value="<?=$cp['s_membership']; ?>" id="s_membership" required class="required frm_input" size="50">
-			<a class="btn bg-info text-light"><?=$Range[MEMBERSHIP][title]?> </a>
+			<a class="btn bg-info text-light"><?=$Range['MEMBERSHIP']['title']?> </a>
 			<div class="btn-group">
 				<a class="btn bg-dark text-light">월간 셀렉티드 제공</a>
-				<a class="btn bg-secondary text-light"><?=$Range[MEMBERSHIP][selected_cnt]?></a>
+				<a class="btn bg-secondary text-light"><?=$Range['MEMBERSHIP']['selected_cnt']?></a>
 			</div>
 			<div class="btn-group">
 				<a class="btn bg-primary text-light">제공 셀렉티드</a>
@@ -129,7 +129,7 @@ $.datepicker.setDefaults({
         <td>
             <input type="hidden" name="s_start" value="<?php echo stripslashes($cp['s_start']); ?>" id="s_start" required class="frm_input required">
 			<input type="hidden" name="s_end" value="<?php echo stripslashes($cp['s_end']); ?>" id="s_end" required class="frm_input required">
-			<span class="bg-secondary text-light p-2 rounded"><?php echo stripslashes($Range[NOW_S]); ?> - <?php echo stripslashes($Range[NOW_E]); ?></span>
+			<span class="bg-secondary text-light p-2 rounded"><?php echo stripslashes($Range['NOW_S']); ?> - <?php echo stripslashes($Range['NOW_E']); ?></span>
         </td>
     </tr>
 
@@ -149,19 +149,19 @@ $.datepicker.setDefaults({
 $sql="select * from g5_selected_data where s_parent={$s_no} and s_status='S'";
 $result = sql_query($sql);
 for ($i=0; $row=sql_fetch_array($result); $i++) {
-	$cmp_info = sql_fetch(" select *, (select mb_id from g5_member where mb_company=KEDCD) as c_id from company where KEDCD='{$row[KEDCD]}' ");
+	$cmp_info = sql_fetch(" select *, (select mb_id from g5_member where mb_company=KEDCD) as c_id from company where KEDCD='{$row['KEDCD']}' ");
 ?>
-		<div class="card enable" style="width: 18rem;" KEDCD="<?=$row[KEDCD]?>">
-		  <div class="card-header bg-primary text-light"><span class="pull-left  badge bg-success p-1 mr-1 mt-0 "><?=$i+1?></span><b><?=$row[s_subject]?></b><?if(!$cmp_info[c_id]){?><a class="bg-dark text-light pull-right pl-2 pr-2 rounded">미등록</a><?}?></div>
+		<div class="card enable" style="width: 18rem;" KEDCD="<?=$row['KEDCD']?>">
+		  <div class="card-header bg-primary text-light"><span class="pull-left  badge bg-success p-1 mr-1 mt-0 "><?=$i+1?></span><b><?=$row['s_subject']?></b><?if(!$cmp_info['c_id']){?><a class="bg-dark text-light pull-right pl-2 pr-2 rounded">미등록</a><?}?></div>
 		  <div class="card-body">
 		    <h5 class="card-title">
-				<?=licenseNum($cmp_info[BZNO])?>
+				<?=licenseNum($cmp_info['BZNO'])?>
 			</h5>
 		    <p class="card-text">
-			<span class="display-6"><?=$row[s_start]?> ~ <?=$row[s_end]?></span><br>
-			<?=$cmp_info[LOC_ADDRA]?> <?=$cmp_info[LOC_ADDRB]?>
+			<span class="display-6"><?=$row['s_start']?> ~ <?=$row['s_end']?></span><br>
+			<?=$cmp_info['LOC_ADDRA']?> <?=$cmp_info['LOC_ADDRB']?>
 			</p>
-		    <button type="button" class="btn btn-danger btn-sm card_del" S_NO="<?=$row[s_no]?>">삭제</button>
+		    <button type="button" class="btn btn-danger btn-sm card_del" S_NO="<?=$row['s_no']?>">삭제</button>
 		  </div>
 		</div>
 <?}?>
@@ -170,19 +170,19 @@ for ($i=0; $row=sql_fetch_array($result); $i++) {
 $sql="select * from g5_selected_data where s_parent={$s_no} and s_status!='S'";
 $result = sql_query($sql);
 for ($i=0; $row=sql_fetch_array($result); $i++) {
-	$cmp_info = sql_fetch(" select *, (select mb_id from g5_member where mb_company=KEDCD) as c_id from company where KEDCD='{$row[KEDCD]}' ");
+	$cmp_info = sql_fetch(" select *, (select mb_id from g5_member where mb_company=KEDCD) as c_id from company where KEDCD='{$row['KEDCD']}' ");
 ?>
-		<div class="card" style="width: 18rem;" KEDCD="<?=$row[KEDCD]?>">
-		  <div class="card-header bg-secondary text-light"><span class="pull-left  badge bg-dark p-1 mr-1 mt-0 "><?=$i+1?></span><b><?=$row[s_subject]?></b><?if(!$cmp_info[c_id]){?><a class="bg-dark text-light pull-right pl-2 pr-2 rounded">미등록</a><?}?></div>
+		<div class="card" style="width: 18rem;" KEDCD="<?=$row['KEDCD']?>">
+		  <div class="card-header bg-secondary text-light"><span class="pull-left  badge bg-dark p-1 mr-1 mt-0 "><?=$i+1?></span><b><?=$row['s_subject']?></b><?if(!$cmp_info['c_id']){?><a class="bg-dark text-light pull-right pl-2 pr-2 rounded">미등록</a><?}?></div>
 		  <div class="card-body">
 		    <h5 class="card-title">
-				<?=licenseNum($cmp_info[BZNO])?>
+				<?=licenseNum($cmp_info['BZNO'])?>
 			</h5>
 		    <p class="card-text">
-			<span class="display-6"><?=$row[s_start]?> ~ <?=$row[s_end]?></span><br>
-			<?=$cmp_info[LOC_ADDRA]?> <?=$cmp_info[LOC_ADDRB]?>
+			<span class="display-6"><?=$row['s_start']?> ~ <?=$row['s_end']?></span><br>
+			<?=$cmp_info['LOC_ADDRA']?> <?=$cmp_info['LOC_ADDRB']?>
 			</p>
-		    <button type="button" class="btn btn-danger btn-sm card_del" S_NO="<?=$row[s_no]?>">삭제</button>
+		    <button type="button" class="btn btn-danger btn-sm card_del" S_NO="<?=$row['s_no']?>">삭제</button>
 		  </div>
 		</div>
 <?}?>
@@ -216,8 +216,8 @@ for ($i=0; $row=sql_fetch_array($result); $i++) {
 				<option value="S">이용중</option>
 				<option value="E">종료</option>
            </select>
-		   <?if($cp[s_status]){?>
-		   <script>$("#s_status option[value='<?=$cp[s_status]?>']").prop("selected",true);</script>
+		   <?if($cp['s_status']){?>
+		   <script>$("#s_status option[value='<?=$cp['s_status']?>']").prop("selected",true);</script>
 		   <?}?>
         </td>
     </tr>

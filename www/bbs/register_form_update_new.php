@@ -212,7 +212,7 @@ if ($config['cf_cert_use'] && $cert_type && $md5_cert_no) {
 if ($w == '') {
 	//기본 맴버쉽 open_cnt 가져오기
 	$msinfo=sql_fetch("select * from g5_membership_manage order by no asc limit 1");
-	if($msinfo[open_cnt]) $open_cnt=$msinfo[open_cnt]	;
+	if($msinfo['open_cnt']) $open_cnt=$msinfo['open_cnt']	;
 	else $open_cnt=4;
 	
     $sql = " insert into {$g5['member_table']}
@@ -296,7 +296,7 @@ if ($w == '') {
         }
 
         ob_start();
-        include_once ('./register_form_update_mail1.php');
+        include_once ('./mail/register_form_update_mail1.php');
         $content = ob_get_contents();
         ob_end_clean();
 
@@ -316,7 +316,7 @@ if ($w == '') {
         $subject = run_replace('register_form_update_mail_admin_subject', '['.$config['cf_title'].'] '.$mb_nick .' 님께서 회원으로 가입하셨습니다.', $mb_id, $mb_nick);
 
         ob_start();
-        include_once ('./register_form_update_mail2.php');
+        include_once ('./mail/register_form_update_mail2.php');
         $content = ob_get_contents();
         ob_end_clean();
 
@@ -538,7 +538,7 @@ if ($config['cf_use_email_certify'] && $old_email != $mb_email) {
     $certify_href = G5_BBS_URL.'/email_certify.php?mb_id='.$mb_id.'&amp;mb_md5='.$mb_md5;
 
     ob_start();
-    include_once ('./register_form_update_mail3.php');
+    include_once ('./mail/register_form_update_mail3.php');
     $content = ob_get_contents();
     ob_end_clean();
 
@@ -599,7 +599,7 @@ if($w == '' && $default['de_member_reg_coupon_use'] && $default['de_member_reg_c
 $pre_sql="SELECT A.*, B.mb_id from g5_matching A LEFT JOIN g5_member B ON A.KEDCD = B.mb_company WHERE A.receive_id ='' AND B.mb_id != ''";
 $pre_result = sql_query($pre_sql);
 for ($i=0; $pre_row=sql_fetch_array($pre_result); $i++) {
-	sql_query("update g5_matching set receive_id='{$pre_row[mb_id]}' where no='{$pre_row[no]}'");
+	sql_query("update g5_matching set receive_id='{$pre_row['mb_id']}' where no='{$pre_row['no']}'");
 }
 
 //가입이벤트 쿠폰사용 (쿠폰번호가 있을경우)

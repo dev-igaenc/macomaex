@@ -9,6 +9,129 @@ include_once(G5_LIB_PATH.'/visit.lib.php');
 include_once(G5_LIB_PATH.'/connect.lib.php');
 include_once(G5_LIB_PATH.'/popular.lib.php');
 ?>
+<style>
+#hd,
+#hd *,
+#gnb,
+#gnb *,
+#user_menu,
+#user_menu * {
+    font-family: "Pretendard Variable", "Pretendard", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+#hd {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    background: #fff;
+    border-bottom: 1px solid #ddd;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+    z-index: 1000;
+}
+
+#hd:after {
+    display: none;
+}
+
+#hd_wrapper {
+    height: 56px;
+    padding: 0 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+#logo {
+    padding: 0;
+    height: auto;
+    text-align: left;
+    display: flex;
+    align-items: center;
+    margin-right: auto;
+}
+
+#logo img {
+    margin-top: 0;
+    width: auto;
+    height: 22px;
+    display: block;
+}
+
+#gnb_open,
+#user_btn {
+    position: static;
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    border: 0;
+    border-radius: 9px;
+    background: #f4f6fb;
+    color: #344054;
+    font-size: 17px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#user_btn { order: 1; }
+#gnb_open { order: 2; }
+
+#wrapper {
+    padding-top: 56px;
+}
+
+#gnb_close,
+#user_close { color: #667085; }
+
+#hd_sch {
+    text-align: left;
+    background: #fff;
+    padding: 52px 12px 12px;
+    border-bottom: 1px solid #eef1f7;
+}
+
+#hd_sch form {
+    position: relative;
+    padding-right: 0;
+}
+
+#hd_sch #sch_stx {
+    width: 100%;
+    height: 40px;
+    margin-left: 0;
+    padding: 0 44px 0 12px;
+    border: 1px solid #dde3ee;
+    border-radius: 10px;
+    background: #fff;
+    color: #111;
+}
+
+#hd_sch #sch_submit {
+    position: absolute;
+    left: auto;
+    right: 4px;
+    top: 4px;
+    width: 32px;
+    height: 32px;
+    border: 0;
+    border-radius: 8px;
+    background: #eef2ff;
+    color: #3b4cca;
+    font-size: 14px;
+}
+
+#hd_nb {
+    margin-top: 0;
+    border-top: 1px solid #eef1f7;
+}
+
+#container_title {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+</style>
 
 <header id="hd">
     <h1 id="hd_h1"><?php echo $g5['title'] ?></h1>
@@ -23,7 +146,7 @@ include_once(G5_LIB_PATH.'/popular.lib.php');
     <div id="hd_wrapper">
 
         <div id="logo">
-            <a href="<?php echo G5_URL ?>"><img src="<?php echo G5_IMG_URL ?>/m_logo.png" alt="<?php echo $config['cf_title']; ?>"></a>
+            <a href="<?php echo G5_URL ?>"><img src="/img/logo.svg" onerror="this.onerror=null;this.src='/img/logo.png';" alt="<?php echo $config['cf_title']; ?>"></a>
         </div>
 
         <button type="button" id="gnb_open" class="hd_opener"><i class="fa fa-bars" aria-hidden="true"></i><span class="sound_only"> 메뉴열기</span></button>

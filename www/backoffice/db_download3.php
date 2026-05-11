@@ -63,7 +63,7 @@ $tablez=backup_tables("company");
 
 //압축파일 생성
 $dateString = date("Y-m-d", time());
-$passed=base64_decode($config[cf_10]); 
+$passed=base64_decode($config['cf_10']); 
 //$passed="4321";
 $zip = new ZipArchive();
 if( $zip->open(G5_DATA_PATH.'/db_down/DB'.$dateString.'.zip', ZipArchive::CREATE)) {

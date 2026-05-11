@@ -3,42 +3,42 @@
 	include_once "../../../../inc/lib/base.class.php";
 	include_once "../../../lib/admin.check.ajax.php";
 
-	$mode	= $_POST[mode];
+	$mode	= $_POST['mode'];
 
 	 
 	 if($mode == "matching.manufacturer.edit"){
 		
-		$no									= xss_clean($_POST[no]);
+		$no									= xss_clean($_POST['no']);
 
-		$sales_year1						= xss_clean($_POST[sales_year1]);
-		$sales_year2						= xss_clean($_POST[sales_year2]);
-		$sales_year3						= xss_clean($_POST[sales_year3]);
-		$sales_price1						= xss_clean($_POST[sales_price1]);
-		$sales_price2						= xss_clean($_POST[sales_price2]);
-		$sales_price3						= xss_clean($_POST[sales_price3]);
-		$business_profit_year1		= xss_clean($_POST[business_profit_year1]);
-		$business_profit_year2		= xss_clean($_POST[business_profit_year2]);
-		$business_profit_year3		= xss_clean($_POST[business_profit_year3]);
-		$business_profit_price1		= xss_clean($_POST[business_profit_price1]);
-		$business_profit_price2		= xss_clean($_POST[business_profit_price2]);
-		$business_profit_price3		= xss_clean($_POST[business_profit_price3]);
-		$net_income_year1			= xss_clean($_POST[net_income_year1]);
-		$net_income_year2			= xss_clean($_POST[net_income_year2]);
-		$net_income_year3			= xss_clean($_POST[net_income_year3]);
-		$net_income_price1			= xss_clean($_POST[net_income_price1]);
-		$net_income_price2			= xss_clean($_POST[net_income_price2]);
-		$net_income_price3			= xss_clean($_POST[net_income_price3]);
-		$capital_year1					= xss_clean($_POST[capital_year1]);
-		$capital_year2					= xss_clean($_POST[capital_year2]);
-		$capital_year3					= xss_clean($_POST[capital_year3]);
-		$capital_price1					= xss_clean($_POST[capital_price1]);
-		$capital_price2					= xss_clean($_POST[capital_price2]);
-		$capital_price3					= xss_clean($_POST[capital_price3]);
-		$view_yn							= xss_clean($_POST[view_yn]);
+		$sales_year1						= xss_clean($_POST['sales_year1']);
+		$sales_year2						= xss_clean($_POST['sales_year2']);
+		$sales_year3						= xss_clean($_POST['sales_year3']);
+		$sales_price1						= xss_clean($_POST['sales_price1']);
+		$sales_price2						= xss_clean($_POST['sales_price2']);
+		$sales_price3						= xss_clean($_POST['sales_price3']);
+		$business_profit_year1		= xss_clean($_POST['business_profit_year1']);
+		$business_profit_year2		= xss_clean($_POST['business_profit_year2']);
+		$business_profit_year3		= xss_clean($_POST['business_profit_year3']);
+		$business_profit_price1		= xss_clean($_POST['business_profit_price1']);
+		$business_profit_price2		= xss_clean($_POST['business_profit_price2']);
+		$business_profit_price3		= xss_clean($_POST['business_profit_price3']);
+		$net_income_year1			= xss_clean($_POST['net_income_year1']);
+		$net_income_year2			= xss_clean($_POST['net_income_year2']);
+		$net_income_year3			= xss_clean($_POST['net_income_year3']);
+		$net_income_price1			= xss_clean($_POST['net_income_price1']);
+		$net_income_price2			= xss_clean($_POST['net_income_price2']);
+		$net_income_price3			= xss_clean($_POST['net_income_price3']);
+		$capital_year1					= xss_clean($_POST['capital_year1']);
+		$capital_year2					= xss_clean($_POST['capital_year2']);
+		$capital_year3					= xss_clean($_POST['capital_year3']);
+		$capital_price1					= xss_clean($_POST['capital_price1']);
+		$capital_price2					= xss_clean($_POST['capital_price2']);
+		$capital_price3					= xss_clean($_POST['capital_price3']);
+		$view_yn							= xss_clean($_POST['view_yn']);
 	
-		$credit_rating_finance_standard		= xss_clean($_POST[credit_rating_finance_standard]);
-		$credit_rating_level_standard			= xss_clean($_POST[credit_rating_level_standard]);
-		$credit_rating									= xss_clean($_POST[credit_rating]);
+		$credit_rating_finance_standard		= xss_clean($_POST['credit_rating_finance_standard']);
+		$credit_rating_level_standard			= xss_clean($_POST['credit_rating_level_standard']);
+		$credit_rating									= xss_clean($_POST['credit_rating']);
 
 
 
@@ -149,37 +149,37 @@
 
 	 }else if($mode == "matching.distributor.edit"){
 		
-		$no									= xss_clean($_POST[no]);
+		$no									= xss_clean($_POST['no']);
 
-		$sales_year1						= xss_clean($_POST[sales_year1]);
-		$sales_year2						= xss_clean($_POST[sales_year2]);
-		$sales_year3						= xss_clean($_POST[sales_year3]);
-		$sales_price1						= xss_clean($_POST[sales_price1]);
-		$sales_price2						= xss_clean($_POST[sales_price2]);
-		$sales_price3						= xss_clean($_POST[sales_price3]);
-		$business_profit_year1		= xss_clean($_POST[business_profit_year1]);
-		$business_profit_year2		= xss_clean($_POST[business_profit_year2]);
-		$business_profit_year3		= xss_clean($_POST[business_profit_year3]);
-		$business_profit_price1		= xss_clean($_POST[business_profit_price1]);
-		$business_profit_price2		= xss_clean($_POST[business_profit_price2]);
-		$business_profit_price3		= xss_clean($_POST[business_profit_price3]);
-		$net_income_year1			= xss_clean($_POST[net_income_year1]);
-		$net_income_year2			= xss_clean($_POST[net_income_year2]);
-		$net_income_year3			= xss_clean($_POST[net_income_year3]);
-		$net_income_price1			= xss_clean($_POST[net_income_price1]);
-		$net_income_price2			= xss_clean($_POST[net_income_price2]);
-		$net_income_price3			= xss_clean($_POST[net_income_price3]);
-		$capital_year1					= xss_clean($_POST[capital_year1]);
-		$capital_year2					= xss_clean($_POST[capital_year2]);
-		$capital_year3					= xss_clean($_POST[capital_year3]);
-		$capital_price1					= xss_clean($_POST[capital_price1]);
-		$capital_price2					= xss_clean($_POST[capital_price2]);
-		$capital_price3					= xss_clean($_POST[capital_price3]);
-		$view_yn							= xss_clean($_POST[view_yn]);
+		$sales_year1						= xss_clean($_POST['sales_year1']);
+		$sales_year2						= xss_clean($_POST['sales_year2']);
+		$sales_year3						= xss_clean($_POST['sales_year3']);
+		$sales_price1						= xss_clean($_POST['sales_price1']);
+		$sales_price2						= xss_clean($_POST['sales_price2']);
+		$sales_price3						= xss_clean($_POST['sales_price3']);
+		$business_profit_year1		= xss_clean($_POST['business_profit_year1']);
+		$business_profit_year2		= xss_clean($_POST['business_profit_year2']);
+		$business_profit_year3		= xss_clean($_POST['business_profit_year3']);
+		$business_profit_price1		= xss_clean($_POST['business_profit_price1']);
+		$business_profit_price2		= xss_clean($_POST['business_profit_price2']);
+		$business_profit_price3		= xss_clean($_POST['business_profit_price3']);
+		$net_income_year1			= xss_clean($_POST['net_income_year1']);
+		$net_income_year2			= xss_clean($_POST['net_income_year2']);
+		$net_income_year3			= xss_clean($_POST['net_income_year3']);
+		$net_income_price1			= xss_clean($_POST['net_income_price1']);
+		$net_income_price2			= xss_clean($_POST['net_income_price2']);
+		$net_income_price3			= xss_clean($_POST['net_income_price3']);
+		$capital_year1					= xss_clean($_POST['capital_year1']);
+		$capital_year2					= xss_clean($_POST['capital_year2']);
+		$capital_year3					= xss_clean($_POST['capital_year3']);
+		$capital_price1					= xss_clean($_POST['capital_price1']);
+		$capital_price2					= xss_clean($_POST['capital_price2']);
+		$capital_price3					= xss_clean($_POST['capital_price3']);
+		$view_yn							= xss_clean($_POST['view_yn']);
 		
-		$credit_rating_finance_standard		= xss_clean($_POST[credit_rating_finance_standard]);
-		$credit_rating_level_standard			= xss_clean($_POST[credit_rating_level_standard]);
-		$credit_rating									= xss_clean($_POST[credit_rating]);
+		$credit_rating_finance_standard		= xss_clean($_POST['credit_rating_finance_standard']);
+		$credit_rating_level_standard			= xss_clean($_POST['credit_rating_level_standard']);
+		$credit_rating									= xss_clean($_POST['credit_rating']);
 
 		/* FILE ATTACH */
 	 
@@ -425,59 +425,59 @@
 	 }else if($mode == "matching.closemall.save") {
 		
 
-		$corporate_name									= xss_clean($_POST[corporate_name]);
+		$corporate_name									= xss_clean($_POST['corporate_name']);
 		/* corporate_logo */
-		$corporate_ssn										= xss_clean($_POST[corporate_ssn]);
-		$corporate_location									= xss_clean($_POST[corporate_location]);
-		$category_big											= xss_clean($_POST[category_big]);
-		$category_mid										= xss_clean($_POST[category_mid]);
-		$category_sml										= xss_clean($_POST[category_sml]);
+		$corporate_ssn										= xss_clean($_POST['corporate_ssn']);
+		$corporate_location									= xss_clean($_POST['corporate_location']);
+		$category_big											= xss_clean($_POST['category_big']);
+		$category_mid										= xss_clean($_POST['category_mid']);
+		$category_sml										= xss_clean($_POST['category_sml']);
 		/* company_introduction */
-		$company_site_url									= xss_clean($_POST[company_site_url]);
-		$career1_category_sml								= xss_clean($_POST[career1_category_sml]);
-		$career1_category_itm								= xss_clean($_POST[career1_category_itm]);
-		$career1_period										= xss_clean($_POST[career1_period]);
-		$career2_category_sml								= xss_clean($_POST[career2_category_sml]);
-		$career2_category_itm								= xss_clean($_POST[career2_category_itm]);
-		$career2_period										= xss_clean($_POST[career2_period]);
-		$career3_category_sml								= xss_clean($_POST[career3_category_sml]);
-		$career3_category_itm								= xss_clean($_POST[career3_category_itm]);
-		$career3_period										= xss_clean($_POST[career3_period]);
-		$charger_name										= xss_clean($_POST[charger_name]);
-		$charger_duty											= xss_clean($_POST[charger_duty]);
-		$charger_phone										= xss_clean($_POST[charger_phone]);
-		$charger_email										= xss_clean($_POST[charger_email]);
-		$new_deal_detp_phone								= xss_clean($_POST[new_deal_detp_phone]);
-		$sales_detp_phone									= xss_clean($_POST[sales_detp_phone]);
-		$partnership_detp_phone							= xss_clean($_POST[partnership_detp_phone]);
-		$mou_detp_phone									= xss_clean($_POST[mou_detp_phone]);
-		$register_id											= xss_clean($_POST[register_id]);						
+		$company_site_url									= xss_clean($_POST['company_site_url']);
+		$career1_category_sml								= xss_clean($_POST['career1_category_sml']);
+		$career1_category_itm								= xss_clean($_POST['career1_category_itm']);
+		$career1_period										= xss_clean($_POST['career1_period']);
+		$career2_category_sml								= xss_clean($_POST['career2_category_sml']);
+		$career2_category_itm								= xss_clean($_POST['career2_category_itm']);
+		$career2_period										= xss_clean($_POST['career2_period']);
+		$career3_category_sml								= xss_clean($_POST['career3_category_sml']);
+		$career3_category_itm								= xss_clean($_POST['career3_category_itm']);
+		$career3_period										= xss_clean($_POST['career3_period']);
+		$charger_name										= xss_clean($_POST['charger_name']);
+		$charger_duty											= xss_clean($_POST['charger_duty']);
+		$charger_phone										= xss_clean($_POST['charger_phone']);
+		$charger_email										= xss_clean($_POST['charger_email']);
+		$new_deal_detp_phone								= xss_clean($_POST['new_deal_detp_phone']);
+		$sales_detp_phone									= xss_clean($_POST['sales_detp_phone']);
+		$partnership_detp_phone							= xss_clean($_POST['partnership_detp_phone']);
+		$mou_detp_phone									= xss_clean($_POST['mou_detp_phone']);
+		$register_id											= xss_clean($_POST['register_id']);						
 
 
-		$sales_year1											= xss_clean($_POST[sales_year1]);
-		$sales_year2											= xss_clean($_POST[sales_year2]);
-		$sales_year3											= xss_clean($_POST[sales_year3]);
-		$sales_price1											= xss_clean($_POST[sales_price1]);
-		$sales_price2											= xss_clean($_POST[sales_price2]);
-		$sales_price3											= xss_clean($_POST[sales_price3]);
-		$business_profit_year1							= xss_clean($_POST[business_profit_year1]);
-		$business_profit_year2							= xss_clean($_POST[business_profit_year2]);
-		$business_profit_year3							= xss_clean($_POST[business_profit_year3]);
-		$business_profit_price1							= xss_clean($_POST[business_profit_price1]);
-		$business_profit_price2							= xss_clean($_POST[business_profit_price2]);
-		$business_profit_price3							= xss_clean($_POST[business_profit_price3]);
-		$net_income_year1								= xss_clean($_POST[net_income_year1]);
-		$net_income_year2								= xss_clean($_POST[net_income_year2]);
-		$net_income_year3								= xss_clean($_POST[net_income_year3]);
-		$net_income_price1								= xss_clean($_POST[net_income_price1]);
-		$net_income_price2								= xss_clean($_POST[net_income_price2]);
-		$net_income_price3								= xss_clean($_POST[net_income_price3]);
-		$capital_year1										= xss_clean($_POST[capital_year1]);
-		$capital_year2										= xss_clean($_POST[capital_year2]);
-		$capital_year3										= xss_clean($_POST[capital_year3]);
-		$capital_price1										= xss_clean($_POST[capital_price1]);
-		$capital_price2										= xss_clean($_POST[capital_price2]);
-		$capital_price3										= xss_clean($_POST[capital_price3]);
+		$sales_year1											= xss_clean($_POST['sales_year1']);
+		$sales_year2											= xss_clean($_POST['sales_year2']);
+		$sales_year3											= xss_clean($_POST['sales_year3']);
+		$sales_price1											= xss_clean($_POST['sales_price1']);
+		$sales_price2											= xss_clean($_POST['sales_price2']);
+		$sales_price3											= xss_clean($_POST['sales_price3']);
+		$business_profit_year1							= xss_clean($_POST['business_profit_year1']);
+		$business_profit_year2							= xss_clean($_POST['business_profit_year2']);
+		$business_profit_year3							= xss_clean($_POST['business_profit_year3']);
+		$business_profit_price1							= xss_clean($_POST['business_profit_price1']);
+		$business_profit_price2							= xss_clean($_POST['business_profit_price2']);
+		$business_profit_price3							= xss_clean($_POST['business_profit_price3']);
+		$net_income_year1								= xss_clean($_POST['net_income_year1']);
+		$net_income_year2								= xss_clean($_POST['net_income_year2']);
+		$net_income_year3								= xss_clean($_POST['net_income_year3']);
+		$net_income_price1								= xss_clean($_POST['net_income_price1']);
+		$net_income_price2								= xss_clean($_POST['net_income_price2']);
+		$net_income_price3								= xss_clean($_POST['net_income_price3']);
+		$capital_year1										= xss_clean($_POST['capital_year1']);
+		$capital_year2										= xss_clean($_POST['capital_year2']);
+		$capital_year3										= xss_clean($_POST['capital_year3']);
+		$capital_price1										= xss_clean($_POST['capital_price1']);
+		$capital_price2										= xss_clean($_POST['capital_price2']);
+		$capital_price3										= xss_clean($_POST['capital_price3']);
 		
 
 		if($category_big){
@@ -807,8 +807,8 @@
 	 
 	 }else if($mode == "delete") {
 	 
-	 	$no				= xss_clean($_POST[no]);
-		$kind				= xss_clean($_POST[kind]);
+	 	$no				= xss_clean($_POST['no']);
+		$kind				= xss_clean($_POST['kind']);
 
 
 		$tbl = "";
@@ -840,7 +840,7 @@
 	 
 	 }else if($mode == "matching.delete") {
 			
-		$no				= xss_clean($_POST[no]);
+		$no				= xss_clean($_POST['no']);
 		
 		$query = " delete from nb_matching where no= $no ";
 		//echo $query;

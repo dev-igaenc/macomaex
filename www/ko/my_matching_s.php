@@ -1,5 +1,6 @@
 <?
 include_once("./_common.php");
+goto_url('/ko/my_matching.php#sent');
 
 $board['bo_10']="6"; // 1뎁스
 $board['bo_9']="2"; // 2뎁스
@@ -92,7 +93,7 @@ $sql = " select *, (select k_code_name from kssc where k_code=B.BZC_CD) as BZC_N
             limit {$from_record}, {$rows} ";
 $result = sql_query($sql);
 
-$favorite=getFavorite($member[mb_id]);
+$favorite=getFavorite($member['mb_id']);
 ?>
 <style>
 	#pageTop,
@@ -105,7 +106,7 @@ $favorite=getFavorite($member[mb_id]);
 </div></div>
 
 <div class="matching-tab">
-	<a href="my_interested.php">관심기업</a>
+	<a href="my_matching.php#interested">관심기업</a>
 	<a href="my_matching_r.php">받은매칭</a><!-- 활성화 -->
 	<a href="my_matching_s.php"class="active">보낸매칭</a>
 	<a href="my_selected.php">셀렉티드</a>
@@ -119,12 +120,12 @@ $favorite=getFavorite($member[mb_id]);
 
 <div class="matching-list">
 <?for ($i=0; $row=sql_fetch_array($result); $i++) {
-	$s_info=sql_fetch("select * from   g5_member where mb_id='{$row[receive_id]}'");
-	$f_chk=in_array($row[KEDCD],$favorite);
+	$s_info=sql_fetch("select * from   g5_member where mb_id='{$row['receive_id']}'");
+	$f_chk=in_array($row['KEDCD'],$favorite);
 ?>
-	<div class="matching-item" kedcd="<?=$row[KEDCD]?>"><!-- 전체 -->
+	<div class="matching-item" kedcd="<?=$row['KEDCD']?>"><!-- 전체 -->
 		<p class="name"><strong><?=$row['ENP_NM']?></strong>
-			<button type="button" star class="<?if($f_chk){?>active<?}?> star_btn" kedcd="<?=$row[KEDCD]?>"><img src="/images/icon_star.svg" alt=""></button>
+			<button type="button" star class="<?if($f_chk){?>active<?}?> star_btn" kedcd="<?=$row['KEDCD']?>"><img src="/images/icon_star.svg" alt=""></button>
 		</p>
 		<div class="info-area">
 			<dl>
@@ -155,7 +156,7 @@ $favorite=getFavorite($member[mb_id]);
 			</dl>
 		</div>
 		<div class="btn-option">
-			<a href="javascript:void(0);" class="detail_view" kedcd="<?=$row[KEDCD]?>">상세보기</a>
+			<a href="javascript:void(0);" class="detail_view" kedcd="<?=$row['KEDCD']?>">상세보기</a>
 			<?if($row['receive_approval']=="N"){?>
 			<a id="mdelete" idx="<?=$row['no']?>" href="javascript:void(0);">매칭 취소</a>
 			<?}?>

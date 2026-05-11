@@ -9,7 +9,7 @@ global $link1,$link2,$link3,$en_link1,$en_link2,$en_link3;
 	<div class="visualRoll">
 		<?php for ($i=0; $i<count($list); $i++) {  ?>
 		<?php
-			$sql = " select bf_file from $g5[board_file_table] where bo_table = '". $bo_table. "' and wr_id = '". $list[$i][wr_id] ."' order by bf_no ";
+			$sql = " select bf_file from {$g5['board_file_table']} where bo_table = '". $bo_table. "' and wr_id = '". $list[$i]['wr_id'] ."' order by bf_no ";
 			$result = sql_query($sql);
 			$imgSrc = array();
 			for($k=0; $k<$data=sql_fetch_array($result); $k++)  {

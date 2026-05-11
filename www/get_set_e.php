@@ -20,7 +20,7 @@ switch ($type) {
 
 			//오늘 검색 로그에서 있으면 API말고 로그에서 가져오기
 			$log_chk=sql_fetch("select * from company_api_log where c_bizno='{$comnum}' and DATE(c_datetime)='".date("Y-m-d")."'");
-			if(!$log_chk[c_content]){
+			if(!$log_chk['c_content']){
 				//사용자 토큰 받기
 				$TOKEN_URL = "https://218.55.37.214:6059/enpinfo?userid=igaenconl&process=S&bzno={$comnum}&pidagryn=Y&jmno=ig001&format=XML&Length=10000";
 				//----------curl 변수 세팅----------
@@ -64,8 +64,8 @@ switch ($type) {
 				echo "1000|".$json;
 			}else{
 				//DB에 있으면 DB값 가져옴
-				$json=$log_chk[c_content];
-				echo "1000|".$json;
+				$json=$log_chk['c_content'];
+				echo "1000|".$json;  
 			}
 			 exit;
 
@@ -78,18 +78,18 @@ switch ($type) {
 		if($comnum) {
 			if($r_mb_id) $mem_chk=sql_fetch("select count(*) as cnt from g5_member where mb_leave_date='' and mb_4='$comnum' and mb_id!='{$r_mb_id}'");
 			else $mem_chk=sql_fetch("select count(*) as cnt from g5_member where mb_leave_date='' and mb_4='$comnum'");
-			if($mem_chk[cnt]>0) {echo "502|이미 등록된 회원 있습니다."; exit;}
+			if($mem_chk['cnt']>0) {echo "502|이미 등록된 회원 있습니다."; exit;}
 			$comnum=str_replace("-","",$comnum);
 					$chk=sql_fetch("select * from company where BZNO='$comnum'");
 
-					if($chk[KEDCD]) { 
-						if(!$chk[ENP_NM_TRD]) $chk[ENP_NM_TRD]=$chk[ENP_NM];
-						echo "1000|".$chk[ENP_NM_TRD]."|".$chk[KEDCD];
+					if($chk['KEDCD']) { 
+						if(!$chk['ENP_NM_TRD']) $chk['ENP_NM_TRD']=$chk['ENP_NM'];
+						echo "1000|".$chk['ENP_NM_TRD']."|".$chk['KEDCD'];
 					}else{
 						//등록된 정보가 없으면 API로 가져와서 등록함
 						//API 로그기록에 정보가 남아있는지 체크 있으면 해당 기록에서 그냥 가져오기
 						$log_chk=sql_fetch("select * from company_api_log where c_bizno='{$comnum}' and DATE(c_datetime)='".date("Y-m-d")."'");
-						if(!$log_chk[c_content]){
+						if(!$log_chk['c_content']){
 							$com_d=getKODATA($comnum);
 							$com_data=explode("|",$com_d);
 							if($com_data[0]==1000){
@@ -164,7 +164,7 @@ switch ($type) {
 							}
 						}else{
 								//API기록에서 정보가져옴
-								$com_info=json_decode($log_chk[c_content]);
+								$com_info=json_decode($log_chk['c_content']);
 								//print_r($com_info); exit;
 								$KEDCD=$com_info->CONTENTS->ENPintr0000->kedcd;
 								$enp_nm=$com_info->CONTENTS->ENPintr0000->enp_nm;

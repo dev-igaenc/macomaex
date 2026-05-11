@@ -7,6 +7,7 @@ auth_check($auth[$sub_menu], 'r');
 
 $fr_date = isset($_REQUEST['fr_date']) ? preg_replace('/[^0-9 :\-]/i', '', $_REQUEST['fr_date']) : "";
 $to_date = isset($_REQUEST['to_date']) ? preg_replace('/[^0-9 :\-]/i', '', $_REQUEST['to_date']) : "";
+$event_type = isset($_REQUEST['event_type']) ? (int)$_REQUEST['event_type'] : 0;
 
 
 $sql_common = " from  ".G5_TABLE_PREFIX."seo ";
@@ -29,7 +30,7 @@ if ($stx) {
     $sql_search .= " ) ";
     $qstr.="&sfl={$sfl}&stx={$stx}";
 }
-if($event_type) {
+if($event_type > 0) {
     $sql_search.= " and event_type={$event_type}";
     $qstr.="&event_type={$event_type}";
 }
@@ -100,6 +101,7 @@ if ($config['cf_point_term'] > 0) {
             <tbody>
             <?php
             for ($i = 0; $row = sql_fetch_array($result); $i++) {
+                $bg = 'bg' . ($i % 2);
 
                 ?>
 
@@ -107,7 +109,7 @@ if ($config['cf_point_term'] > 0) {
                     <td class="td_chk">
                         <input type="hidden" name="id[<?php echo $i ?>]" value="<?php echo $row['id'] ?>"
                                id="id_<?php echo $i ?>">
-                        <label for="chk_<?php echo $i; ?>" class="sound_only"><?php echo $row['po_content'] ?>
+                        <label for="chk_<?php echo $i; ?>" class="sound_only"><?php echo isset($row['file_name']) ? get_text($row['file_name']) : '' ?>
                             내역</label>
                         <input type="checkbox" name="chk[]" value="<?php echo $i ?>" id="chk_<?php echo $i ?>">
                     </td>

@@ -13,16 +13,16 @@ if (!defined('_GNUBOARD_')) exit; // 개별 페이지 접근 불가
 
 <div id="join_step_02">
     <div class="member_sign_layout">
-			<form action="<?=$register_action_url?>" method="post" id="step_form" onsubmit="return fregisterform_submit();">
-				<input type="hidden" name="url" value="<?=$url?>">
+			<form action="<?= $register_action_url ?? '' ?>" method="post" id="step_form" onsubmit="return fregisterform_submit();">
+				<input type="hidden" name="url" value="<?= $url ?? '' ?>">
 				<input type="hidden" name="w" value="">
-				<input type="hidden" name="mb_id" id="reg_mb_id" value="<?=$id?>">
-				<input type="hidden" name="mb_password" value="<?=$password?>">
-				<input type="hidden" name="agree_chk" value="<?=$agree_chk?>">
-				<input type="hidden" name="provider" value="<?php echo $provider; ?>">
-				<input type="hidden" name="cert_type" value="<?php echo $cert_type; ?>">
-				<input type="hidden" name="cert_no" value="<?php echo $cert_no; ?>">
-				<input type="hidden" name="id" value="<?php echo $mb_id; ?>">
+				<input type="hidden" name="mb_id" id="reg_mb_id" value="<?= $id ?? '' ?>">
+				<input type="hidden" name="mb_password" value="<?= $password ?? '' ?>">
+				<input type="hidden" name="agree_chk" value="<?= $agree_chk ?? '' ?>">
+				<input type="hidden" name="provider" value="<?php echo $provider ?? ''; ?>">
+				<input type="hidden" name="cert_type" value="<?php echo $cert_type ?? ''; ?>">
+				<input type="hidden" name="cert_no" value="<?php echo $cert_no ?? ''; ?>">
+				<input type="hidden" name="id" value="<?php echo $mb_id ?? ''; ?>">
         <h4 class="member_sign_title">회원정보입력</h4>
 
         <ul class="join_step step3">
@@ -202,46 +202,48 @@ function AutoHypen(companyNum){
 	$(".srh").click(function(){
 	 comnum=$(this).prev().val();
 	 if(comnum.length<12) {
-		 $("#com_chk").val("false");
-		 jAlert("사업자등록번호를 확인하세요.","알림",function(){
-			 $("#mb_4").focus();
-		 });
-		 return false;
-	 }
+			 $("#com_chk").val("false");
+			 jAlert("사업자등록번호를 확인하세요.","알림",function(){
+				 $("#mb_4").focus();
+			 });
+			 return false;
+		 }
 	$.post( "../get_set.php", {
 		type: 'join_comp_chk',
-		comnum:comnum
-	})
-	.done(function(jqXHR) {
-			//alert(jqXHR);
-			//console.log(jqXHR);
-			jqXHR=jqXHR.split("|");
-			if(jqXHR[0]==1000){
-				//완료시
-				$("#com_chk").val("true");
-				$("#mb_name").val(jqXHR[1]).attr('readonly', true);
-				$("#mb_company").val(jqXHR[2]).attr('readonly', true);
-			}else if(jqXHR[0]==501){
-				//등록된 사업자가 없을 경우
-				$("#com_chk").val("false");
-				jAlert("해당 사업자 번호로는 등록할 수 없습니다.","알림",function(){
-					$("#mb_4").focus();
-				});
+			comnum:comnum
+		})
+		.done(function(jqXHR) {
+				jqXHR=jqXHR.split("|");
+				if(jqXHR[0]==1000){
+					//완료시
+					$("#com_chk").val("true");
+					$("#mb_name").val(jqXHR[1]).attr('readonly', true);
+					$("#mb_company").val(jqXHR[2]).attr('readonly', true);
+				}else if(jqXHR[0]==501){
+					//등록된 사업자가 없을 경우
+					$("#com_chk").val("false");
+					jAlert("해당 사업자 번호로는 등록할 수 없습니다.","알림",function(){
+						$("#mb_4").focus();
+					});
 				//$("#com_chk").val("true");
-				//$("#mb_name").val("").attr('readonly', false).focus();
-				//$("#mb_company").val("").attr('readonly', true);
-			}else if(jqXHR[0]==502){
-				//등록된 사업자가 있을 경우
-				$("#com_chk").val("false");
-				jAlert("해당 사업자 번호로 등록된 가입자가 있습니다.","알림",function(){
-					$("#mb_4").focus();
-				});
-			}else{
-				//오류시
-				$("#com_chk").val("false");
-				jAlert("처리에 오류가 있습니다.","알림");
-			}
-	});
+					//$("#mb_name").val("").attr('readonly', false).focus();
+					//$("#mb_company").val("").attr('readonly', true);
+				}else if(jqXHR[0]==502){
+					//등록된 사업자가 있을 경우
+					$("#com_chk").val("false");
+					jAlert("해당 사업자 번호로 등록된 가입자가 있습니다.","알림",function(){
+						$("#mb_4").focus();
+					});
+				}else{
+					//오류시
+					$("#com_chk").val("false");
+					jAlert("처리에 오류가 있습니다.","알림");
+				}
+		})
+		.fail(function() {
+			$("#com_chk").val("false");
+			jAlert("처리에 오류가 있습니다.","알림");
+		});
 
 
 

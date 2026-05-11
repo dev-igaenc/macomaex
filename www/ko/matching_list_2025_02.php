@@ -25,7 +25,7 @@ include_once(G5_THEME_PATH.'/head.php');
 
 <div class="matching-tab">
 	<a href="my_interested_test.php">관심기업</a>
-	<a href="my_matching_r.php" class="active">받은매칭</a><!-- 활성화 -->
+	<a href="my_matching.php#received" class="active">받은매칭</a><!-- 활성화 -->
 	<a href="matching_list_2025_03.php">보낸매칭</a>
 	<a href="matching_list_2025_04.php">셀렉티드</a>
 </div>

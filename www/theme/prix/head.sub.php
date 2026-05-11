@@ -12,6 +12,11 @@ if (!isset($g5['title'])) {
 	$g5_head_title = implode(' | ', array_filter(array($g5['title'], $config['cf_title'])));
 }
 
+$gr_subject = '';
+$gr_text = '';
+$bo_subject = '';
+$bo_text = '';
+
 if($board['bo_5'])$gr_subject = $board['bo_5']; // 그룹명
 if($board['bo_6'])$gr_text = $board['bo_6']; // 페이지 설명
 
@@ -142,6 +147,7 @@ history.scrollRestoration = "auto";
 <script type="text/javascript" src="<?php echo G5_THEME_JS_URL; ?>/jquery.fancybox.js"></script>
 
 <script type="text/javascript" src="<?php echo G5_THEME_JS_URL ?>/publisher.js?ver=<?php echo G5_JS_VER; ?>"></script>
+<script type="text/javascript" src="<?php echo G5_THEME_JS_URL ?>/company-detail-actions.js?ver=<?php echo G5_JS_VER; ?>"></script>
 
 <script type="text/javascript" src="/build/jquery.waypoints.min.js"></script>
 
@@ -154,7 +160,8 @@ add_javascript('<script src="'.G5_JS_URL.'/common.js?ver='.G5_JS_VER.'"></script
 add_javascript('<script src="'.G5_JS_URL.'/placeholders.min.js"></script>', 0);
 $font_awesome_css_url = G5_JS_URL.'/font-awesome/fonts/css/font-awesome.min.css';
 if (!is_file(G5_PATH.'/js/font-awesome/fonts/css/font-awesome.min.css')) {
-	$font_awesome_css_url = G5_JS_URL.'/font-awesome/css/font-awesome.min.css';
+    // Backward compatibility for deployments that still keep the old css path.
+    $font_awesome_css_url = G5_JS_URL.'/font-awesome/css/font-awesome.min.css';
 }
 add_stylesheet('<link rel="stylesheet" href="'.$font_awesome_css_url.'">', 0);
 

@@ -5,6 +5,20 @@ include_once(G5_LIB_PATH.'/register.lib.php');
 include_once(G5_LIB_PATH.'/mailer.lib.php');
 include_once(G5_LIB_PATH.'/thumbnail.lib.php');
 
+if (!function_exists('register_mail_log_failure')) {
+    function register_mail_log_failure($mail_type, $related_id, $recipient_email, $subject, $error_message)
+    {
+        if (!function_exists('mailer_log_write')) {
+            return false;
+        }
+
+        return mailer_log_write(array(
+            'mail_type' => (string) $mail_type,
+            'related_id' => (string) $related_id
+        ), $recipient_email, $subject, 'FAIL', $error_message);
+    }
+}
+
 // 리퍼러 체크
 referer_check();
 
@@ -56,15 +70,34 @@ $mb_1           = isset($_POST['mb_1'])             ? trim($_POST['mb_1'])      
 $mb_2           = isset($_POST['mb_2'])             ? trim($_POST['mb_2'])           : "";
 $mb_3           = isset($_POST['mb_3'])             ? trim($_POST['mb_3'])           : "";
 $mb_4           = isset($_POST['mb_4'])             ? trim($_POST['mb_4'])           : "";
+$mb_open        = isset($_POST['mb_open'])          ? trim($_POST['mb_open'])        : "";
+$mb_open_default = isset($_POST['mb_open_default']) ? trim($_POST['mb_open_default']) : "";
+$mb_nick_default = isset($_POST['mb_nick_default']) ? trim($_POST['mb_nick_default']) : "";
+$mb_company     = isset($_POST['mb_company'])       ? trim($_POST['mb_company'])     : "";
 $mb_5           = isset($_POST['mb_5'])             ? trim($_POST['mb_5'])           : "";
 $mb_6           = isset($_POST['mb_6'])             ? trim($_POST['mb_6'])           : "";
 $mb_7           = isset($_POST['mb_7'])             ? trim($_POST['mb_7'])           : "";
 $mb_8           = isset($_POST['mb_8'])             ? trim($_POST['mb_8'])           : "";
-$mb_9           = isset($_POST['mb_9'])             ? trim($_POST['mb_9'])           : "";
-$mb_10          = isset($_POST['mb_10'])            ? trim($_POST['mb_10'])          : "";
+$mb_9_list      = (isset($_POST['mb_9']) && is_array($_POST['mb_9'])) ? $_POST['mb_9'] : array();
+$mb_10_list     = (isset($_POST['mb_10']) && is_array($_POST['mb_10'])) ? $_POST['mb_10'] : array();
 
-$_POST['mb_9']=array_filter($_POST['mb_9']);
-$mb_9=implode(":|:",$_POST['mb_9']);
+$mb_9_list = array_map('trim', $mb_9_list);
+$mb_10_list = array_map('trim', $mb_10_list);
+
+$mb_9_list = array_values(array_filter($mb_9_list, static function ($value) {
+    return $value !== '';
+}));
+$mb_10_list = array_values(array_filter($mb_10_list, static function ($value) {
+    return $value !== '';
+}));
+
+$mb_9 = implode(":|:", $mb_9_list);
+$mb_10 = implode(":|:", $mb_10_list);
+$comnum = $mb_4;
+
+if (!isset($default) || !is_array($default)) {
+    $default = array();
+}
 
 $mb_name        = clean_xss_tags($mb_name);
 $mb_email       = get_email_address($mb_email);
@@ -212,7 +245,7 @@ if ($config['cf_cert_use'] && $cert_type && $md5_cert_no) {
 if ($w == '') {
 	//기본 맴버쉽 open_cnt 가져오기
 	$msinfo=sql_fetch("select * from g5_membership_manage order by no asc limit 1");
-	if($msinfo[open_cnt]) $open_cnt=$msinfo[open_cnt]	;
+	if($msinfo['open_cnt']) $open_cnt=$msinfo['open_cnt']	;
 	else $open_cnt=4;
 	
     $sql = " insert into {$g5['member_table']}
@@ -280,6 +313,50 @@ if ($w == '') {
     // 회원가입 포인트 부여
     insert_point($mb_id, $config['cf_register_point'], '회원가입 축하', '@member', $mb_id, '회원가입');
 
+    // 기본 가입 크레딧 지급
+    $signup_bonus = (defined('_new_member_signup_credit') && (int)_new_member_signup_credit > 0)
+        ? (int)_new_member_signup_credit
+        : 30;
+    if ($signup_bonus > 0) {
+        $membership_status = sql_fetch("select * from g5_membership_status where uid='{$mb_id}'");
+        if (is_array($membership_status) && !empty($membership_status['uid'])) {
+            sql_query("update g5_membership_status set
+                matching_able_cnt = matching_able_cnt + {$signup_bonus},
+                matching_cnt = matching_cnt + {$signup_bonus}
+                where uid='{$mb_id}'");
+            $signup_bonus_after = (int)$membership_status['matching_able_cnt'] + $signup_bonus;
+        } else {
+            $signup_bonus_after = $signup_bonus;
+            sql_query("insert into g5_membership_status set
+                uid='{$mb_id}',
+                order_no='',
+                date_begin=now(),
+                date_end='9999-12-31 23:59:59',
+                month='0',
+                open_able_cnt='0',
+                open_cnt='0',
+                matching_able_cnt='{$signup_bonus_after}',
+                matching_cnt='{$signup_bonus_after}',
+                expert_consulting_able_cnt='0',
+                expert_consulting_cnt='0',
+                selected_able_cnt='0',
+                selected_cnt='0',
+                regdate=now(),
+                status='S'");
+        }
+
+        $bonus_memo = addslashes('신규 가입 무료 크레딧 지급');
+        sql_query("insert into g5_matching_credit_history set
+            uid='{$mb_id}',
+            tx_type='BONUS',
+            credit_delta='{$signup_bonus}',
+            credit_after='{$signup_bonus_after}',
+            order_no='',
+            matching_no='',
+            memo='{$bonus_memo}',
+            created_at=now()");
+    }
+
     // 추천인에게 포인트 부여
     if ($config['cf_use_recommend'] && $mb_recommend)
         insert_point($mb_recommend, $config['cf_recommend_point'], $mb_id.'의 추천인', '@member', $mb_recommend, $mb_id.' 추천');
@@ -287,6 +364,10 @@ if ($w == '') {
     // 회원님께 메일 발송
     if ($config['cf_email_mb_member']) {
         $subject = '['.$config['cf_title'].'] 회원가입을 축하드립니다.';
+        $member_mail_log_context = array(
+            'mail_type' => 'signup_member',
+            'related_id' => $mb_id
+        );
 
         // 어떠한 회원정보도 포함되지 않은 일회용 난수를 생성하여 인증에 사용
         if ($config['cf_use_email_certify']) {
@@ -295,16 +376,40 @@ if ($w == '') {
             $certify_href = G5_BBS_URL.'/email_certify.php?mb_id='.$mb_id.'&amp;mb_md5='.$mb_md5;
         }
 
+        if (function_exists('mailer_prepare_tracking_context')) {
+            $member_mail_log_context = mailer_prepare_tracking_context(1, $member_mail_log_context);
+        }
+
+        $member_track_token = isset($member_mail_log_context['track_token']) ? trim((string) $member_mail_log_context['track_token']) : '';
+        $signup_home_url = G5_URL;
+        if ($member_track_token !== '' && function_exists('mailer_tracking_click_url')) {
+            $signup_home_url = mailer_tracking_click_url($member_track_token, G5_URL);
+        }
+
+        $signup_action_url = G5_URL;
+        if ($config['cf_use_email_certify']) {
+            $signup_action_target = str_replace('&amp;', '&', (string) $certify_href);
+            $signup_action_url = $member_track_token !== '' && function_exists('mailer_tracking_click_url')
+                ? mailer_tracking_click_url($member_track_token, $signup_action_target)
+                : $signup_action_target;
+        } else if ($member_track_token !== '' && function_exists('mailer_tracking_click_url')) {
+            $signup_action_url = mailer_tracking_click_url($member_track_token, G5_URL);
+        }
+
         ob_start();
-        include_once ('./register_form_update_mail1.php');
+        include_once ('./mail/register_form_update_mail1.php');
         $content = ob_get_contents();
         ob_end_clean();
 
         $content = run_replace('register_form_update_mail_mb_content', $content, $mb_id);
 
-        mailer($config['cf_admin_email_name'], $config['cf_admin_email'], $mb_email, $subject, $content, 1);
+        if ($mb_email && filter_var($mb_email, FILTER_VALIDATE_EMAIL)) {
+            mailer($config['cf_admin_email_name'], $config['cf_admin_email'], $mb_email, $subject, $content, 1, "", "", "", $member_mail_log_context);
 
-        run_event('register_form_update_send_mb_mail', $config['cf_admin_email_name'], $config['cf_admin_email'], $mb_email, $subject, $content);
+            run_event('register_form_update_send_mb_mail', $config['cf_admin_email_name'], $config['cf_admin_email'], $mb_email, $subject, $content);
+        } else {
+            register_mail_log_failure('signup_member', $mb_id, (string) $mb_email, $subject, '회원가입 로그인 이메일이 없습니다.');
+        }
 
         // 메일인증을 사용하는 경우 가입메일에 인증 url이 있으므로 인증메일을 다시 발송되지 않도록 함
         if($config['cf_use_email_certify'])
@@ -316,13 +421,16 @@ if ($w == '') {
         $subject = run_replace('register_form_update_mail_admin_subject', '['.$config['cf_title'].'] '.$mb_nick .' 님께서 회원으로 가입하셨습니다.', $mb_id, $mb_nick);
 
         ob_start();
-        include_once ('./register_form_update_mail2.php');
+        include_once ('./mail/register_form_update_mail2.php');
         $content = ob_get_contents();
         ob_end_clean();
 
         $content = run_replace('register_form_update_mail_admin_content', $content, $mb_id);
 
-        mailer($mb_nick, $mb_email, $config['cf_admin_email'], $subject, $content, 1);
+        mailer($mb_nick, $mb_email, $config['cf_admin_email'], $subject, $content, 1, "", "", "", array(
+            'mail_type' => 'signup_admin',
+            'related_id' => $mb_id
+        ));
 
         run_event('register_form_update_send_admin_mail', $mb_nick, $mb_email, $config['cf_admin_email'], $subject, $content);
     }
@@ -538,20 +646,28 @@ if ($config['cf_use_email_certify'] && $old_email != $mb_email) {
     $certify_href = G5_BBS_URL.'/email_certify.php?mb_id='.$mb_id.'&amp;mb_md5='.$mb_md5;
 
     ob_start();
-    include_once ('./register_form_update_mail3.php');
+    include_once ('./mail/register_form_update_mail3.php');
     $content = ob_get_contents();
     ob_end_clean();
 
     $content = run_replace('register_form_update_mail_certify_content', $content, $mb_id);
 
-    mailer($config['cf_admin_email_name'], $config['cf_admin_email'], $mb_email, $subject, $content, 1);
+    mailer($config['cf_admin_email_name'], $config['cf_admin_email'], $mb_email, $subject, $content, 1, "", "", "", array(
+        'mail_type' => 'signup_certify',
+        'related_id' => $mb_id
+    ));
 
     run_event('register_form_update_send_certify_mail', $config['cf_admin_email_name'], $config['cf_admin_email'], $mb_email, $subject, $content);
 }
 
 
 // 신규회원 쿠폰발생
-if($w == '' && $default['de_member_reg_coupon_use'] && $default['de_member_reg_coupon_term'] > 0 && $default['de_member_reg_coupon_price'] > 0) {
+if(
+    $w == '' &&
+    !empty($default['de_member_reg_coupon_use']) &&
+    !empty($default['de_member_reg_coupon_term']) &&
+    !empty($default['de_member_reg_coupon_price'])
+) {
     $j = 0;
     $create_coupon = false;
 
@@ -599,7 +715,7 @@ if($w == '' && $default['de_member_reg_coupon_use'] && $default['de_member_reg_c
 $pre_sql="SELECT A.*, B.mb_id from g5_matching A LEFT JOIN g5_member B ON A.KEDCD = B.mb_company WHERE A.receive_id ='' AND B.mb_id != ''";
 $pre_result = sql_query($pre_sql);
 for ($i=0; $pre_row=sql_fetch_array($pre_result); $i++) {
-	sql_query("update g5_matching set receive_id='{$pre_row[mb_id]}' where no='{$pre_row[no]}'");
+	sql_query("update g5_matching set receive_id='{$pre_row['mb_id']}' where no='{$pre_row['no']}'");
 }
 
 //가입이벤트 쿠폰사용 (쿠폰번호가 있을경우)

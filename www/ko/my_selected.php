@@ -40,7 +40,7 @@ if($member['mb_id']){
 }
 
 
-if($member['mb_id'] && $matcing['receive_approval']=="Y") $view_chk="true";
+$view_chk = "false";
 //맴버쉽 정보
 $today = date("Y-m-d");
 $msinfo=sql_fetch("select * from g5_membership_status where uid='{$member['mb_id']}' and date_begin <= '{$today }' and date_end >='{$today }'" );
@@ -49,7 +49,7 @@ if($msinfo['uid']) {
 	}
 }
 //즐겨찾기
-$favorite=getFavorite($member[mb_id]);
+$favorite=getFavorite($member['mb_id']);
 ?>
 <style>
 	#pageTop,
@@ -62,27 +62,29 @@ $favorite=getFavorite($member[mb_id]);
 </div></div>
 
 <div class="matching-tab">
-	<a href="my_interested.php">관심기업</a>
-	<a href="my_matching_r.php">받은매칭</a><!-- 활성화 -->
-	<a href="my_matching_s.php">보낸매칭</a>
+	<a href="my_matching.php#interested">관심기업</a>
+	<a href="my_matching.php#received">받은매칭</a><!-- 활성화 -->
+	<a href="my_matching.php#sent">보낸매칭</a>
 	<a href="my_selected.php" class="active">셀렉티드</a>
 </div>
 
 <p class="matching-length"><span class="point"><?=number_format($total_count);?>개</span>의 선별된 리스트</p>
 <div class="matching-list">
 <?for ($i=0; $row=sql_fetch_array($result); $i++) {
-		$match=sql_fetch("select * from g5_matching where del != 'D' and KEDCD='{$row[KEDCD]}' and request_id='{$member['mb_id']}'");
+		$match=sql_fetch("select * from g5_matching where del != 'D' and KEDCD='{$row['KEDCD']}' and request_id='{$member['mb_id']}'");
+		if(!is_array($match)) $match = array();
 		if($match['receive_approval']=="Y") $receve_info=getUserInfo($match['receive_id']);
 		if(!$match['receive_approval']) {
-			$match=sql_fetch("SELECT * from g5_matching where del != 'D' and  receive_id='{$member['mb_id']}' and KEDCD='{$kedcd}'");//받은매칭요청
-			if($match['receive_approval']=="Y") $receve_info=getUserInfo($matcing['request_id']);
+			$match=sql_fetch("SELECT * from g5_matching where del != 'D' and  receive_id='{$member['mb_id']}' and KEDCD='{$row['KEDCD']}'");//받은매칭요청
+			if(!is_array($match)) $match = array();
+			if($match['receive_approval']=="Y") $receve_info=getUserInfo($match['request_id']);
 		}
 
-		$f_chk=in_array($row[KEDCD],$favorite);
+		$f_chk=in_array($row['KEDCD'],$favorite);
 ?>
-	<div class="matching-item" kedcd="<?=$row[KEDCD]?>">
-		<p class="name"><strong><?=$row[ENP_NM]?></strong>
-			<button type="button" star class="<?if($f_chk){?>active<?}?> star_btn" kedcd="<?=$row[KEDCD]?>"><img src="/images/icon_star.svg" alt=""></button>
+	<div class="matching-item" kedcd="<?=$row['KEDCD']?>">
+		<p class="name"><strong><?=$row['ENP_NM']?></strong>
+			<button type="button" star class="<?if($f_chk){?>active<?}?> star_btn" kedcd="<?=$row['KEDCD']?>"><img src="/images/icon_star.svg" alt=""></button>
 		</p>
 		<div class="info-area">
 			<dl>
@@ -105,11 +107,11 @@ $favorite=getFavorite($member[mb_id]);
 		<div class="btn-option">
 			<a href="javascript:" class="detail_view">상세보기</a>
 			<?if(!$match['no']){?>
-				<a id="popup_open" kedcd="<?=$row[KEDCD]?>" class="submit">매칭요청</a>
+				<a id="popup_open" kedcd="<?=$row['KEDCD']?>" class="submit">매칭요청</a>
 			<?}else if($match['receive_approval']=="Y"){?>
 				<a class="accepted">매칭완료</a>
 			<?}else if($match['receive_approval']=="N"){?>
-				<a kedcd="<?=$row[KEDCD]?>" href="javascript:jAlert('매칭 수락 대기중입니다.','알림')" class="accepting" style="cursor:default">수락대기</a>
+				<a kedcd="<?=$row['KEDCD']?>" href="javascript:jAlert('매칭 수락 대기중입니다.','알림')" class="accepting" style="cursor:default">수락대기</a>
 			<?}else if($match['receive_approval']=="R"){?>
 				<a class="rejected" style="cursor:default">매칭거절</a>
 			<?}?>
@@ -145,7 +147,7 @@ $favorite=getFavorite($member[mb_id]);
                     </tr>
                     <tr>
                         <th>받는 사람</th>
-                        <td><?=$com['ENP_NM']?> 신규 거래처 담당자</td>
+	                        <td>신규 거래처 담당자</td>
                     </tr>
                 </tbody>
             </table>

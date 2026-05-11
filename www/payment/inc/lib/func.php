@@ -81,7 +81,7 @@ function cut_str($msg, $cut_size)
 {
 
 	if($cut_size<=0) return $msg;
-	if(ereg("\[re\]",$msg)) $cut_size=$cut_size+4;
+	if (preg_match('/\[re\]/', $msg)) $cut_size=$cut_size+4;
 	for($i=0;$i<$cut_size;$i++) if(ord($msg[$i])>127) $han++; else $eng++;
 	$cut_size=$cut_size+(int)$han*0.6;
 	$point=1;
@@ -216,7 +216,7 @@ function file_check($filename, $file_str = "php|htm|html|inc|htm|shtm|ztx|dot|cg
 	$file_str = strtolower($file_str);
 
 	//업로드 금지 확장자 체크
-	if(eregi($file_str, $fext)) {
+	if (preg_match('/(' . $file_str . ')/i', $fext)) {
 		error("해당 파일은 업로드할 수 없는 형식입니다.");
 		exit;
 	}
@@ -1311,7 +1311,7 @@ function get_mail_content($mailling_content, $data_siteinfo) {
 	
 	// 메일링 로고 추출
 	$mailing_url = $protocol.$NO_CURRENT_URL;
-	$mailling_logo = $protocol.$NO_CURRENT_URL.$UPLOAD_SITEINFO_WDIR_LOGO."/".$data_siteinfo[logo_top];
+	$mailling_logo = $protocol.$NO_CURRENT_URL.$UPLOAD_SITEINFO_WDIR_LOGO."/".$data_siteinfo['logo_top'];
 
 
 	$mail_body = '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">

@@ -1,11 +1,11 @@
 <?
 
-	include_once $_SERVER[DOCUMENT_ROOT]."/inc/lib/base.class.php";
+	include_once $_SERVER['DOCUMENT_ROOT']."/inc/lib/base.class.php";
 
 
 
-	$no		= $_REQUEST[no];
-	$fld		= $_REQUEST[fld];
+	$no		= $_REQUEST['no'];
+	$fld		= $_REQUEST['fld'];
 
 	$query = " select thumb_image, file_attach_1, file_attach_2, file_attach_3, file_attach_4, file_attach_5,
 					file_attach_origin_1, file_attach_origin_2, file_attach_origin_3, file_attach_origin_4, file_attach_origin_5
@@ -18,18 +18,18 @@
 		error("정보를 찾을 수 없습니다");
 	}
 
-	$thumb_image					= $data[thumb_image];
-	$file_attach_1					= $data[file_attach_1];
-	$file_attach_2					= $data[file_attach_2];
-	$file_attach_3					= $data[file_attach_3];
-	$file_attach_4					= $data[file_attach_4];
-	$file_attach_5					= $data[file_attach_5];
+	$thumb_image					= $data['thumb_image'];
+	$file_attach_1					= $data['file_attach_1'];
+	$file_attach_2					= $data['file_attach_2'];
+	$file_attach_3					= $data['file_attach_3'];
+	$file_attach_4					= $data['file_attach_4'];
+	$file_attach_5					= $data['file_attach_5'];
 
-	$file_attach_origin_1			= $data[file_attach_origin_1];
-	$file_attach_origin_2			= $data[file_attach_origin_2];
-	$file_attach_origin_3			= $data[file_attach_origin_3];
-	$file_attach_origin_4			= $data[file_attach_origin_4];
-	$file_attach_origin_5			= $data[file_attach_origin_5];
+	$file_attach_origin_1			= $data['file_attach_origin_1'];
+	$file_attach_origin_2			= $data['file_attach_origin_2'];
+	$file_attach_origin_3			= $data['file_attach_origin_3'];
+	$file_attach_origin_4			= $data['file_attach_origin_4'];
+	$file_attach_origin_5			= $data['file_attach_origin_5'];
 
 	$filename = "";
 	$filename_origin = "";

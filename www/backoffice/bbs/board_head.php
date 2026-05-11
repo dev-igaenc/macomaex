@@ -43,7 +43,7 @@ if (G5_IS_MOBILE) {
 }
 
 ?>
-<?if($Enter=="YES"){?>
+<?if(isset($Enter) && $Enter=="YES"){?>
 <script>
 $(function(){
 	loc=$(".local_ov01 p a:eq(0)").attr("href");

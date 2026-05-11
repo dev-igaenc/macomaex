@@ -101,7 +101,7 @@ $colspan = 10;
     <?php
     for ($i=0; $row=sql_fetch_array($result); $i++) {
         $bg = 'bg'.($i%2);
-		$mship=sql_fetch("select title from g5_membership_manage where no='{$row[cp_type]}'");
+		$mship=sql_fetch("select title from g5_membership_manage where no='{$row['cp_type']}'");
     ?>
 
     <tr class="<?php echo $bg; ?>">
@@ -115,7 +115,7 @@ $colspan = 10;
         <td class=""><?php echo $row['cp_id']; ?></td>
         <td class="td_datetime"><?php echo substr($row['cp_start'], 0, 10); ?></td>
         <td class="td_datetime"> <?php echo substr($row['cl_datetime'], 0, 10); ?></td>
-		<td class=""><?php echo $mship[title]; ?></td>
+		<td class=""><?php echo $mship['title']; ?></td>
         <td class=""><?php echo $row['cp_trunc']; ?>개월</td>
         <td class="td_mng td_mng_s">
             <a href="./couponlogform.php?w=u&amp;cl_id=<?php echo $row['cl_id']; ?>&amp;<?php echo $qstr; ?>" class="btn btn_03"><span class="sound_only"><?php echo $row['cp_id']; ?> </span>수정</a>
