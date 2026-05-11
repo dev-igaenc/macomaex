@@ -130,33 +130,38 @@ if (!defined('_GNUBOARD_')) exit; // 개별 페이지 접근 불가
 
 </div>
 <script>
-$("#mb_5").keyup(function(){
-	$this=$(this);
-	  var email = $(this).val();
-	  
-	  let pattern_email = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-	  	  pattern_email = new RegExp(pattern_email);
-	  if (pattern_email.test(email) == false) {
-		  if(email) $this.parents(".inputBox").find(".formBox_errorM").text("올바른 이메일 주소가 아닙니다.");
-		  else $this.parents(".inputBox").find(".formBox_errorM").text("이메일 주소를 입력해주세요.");
-		  $("#mb_5_chk").val("false");
-		return false;
-	  }else{
-		  $this.parents(".inputBox").find(".formBox_errorM").text("");
+function validateMb5EmailAndMark() {
+	var $input = $("#mb_5");
+	var email = $.trim($input.val());
+	var patternEmail = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 
-			$.post( "../get_set.php", {
-				type: 'member_check2',
-				id: email
-			}).done(function(jqXHR) {
-				if(jqXHR=="500") {
-					$this.parents(".inputBox").find(".formBox_errorM").text("가입한 이력이 있습니다.");
-					$("#mb_5_chk").val("false");
-				}else{
-					$("#mb_5_chk").val("true");
-				}
-			});
-	  }
-  })
+	if (!patternEmail.test(email)) {
+		if (email) $input.parents(".inputBox").find(".formBox_errorM").text("올바른 이메일 주소가 아닙니다.");
+		else $input.parents(".inputBox").find(".formBox_errorM").text("이메일 주소를 입력해주세요.");
+		$("#mb_5_chk").val("false");
+		return;
+	}
+
+	$input.parents(".inputBox").find(".formBox_errorM").text("");
+	$.post("../get_set.php", {
+		type: "member_check2",
+		id: email
+	}).done(function(jqXHR) {
+		if ($.trim(jqXHR) == "500") {
+			$input.parents(".inputBox").find(".formBox_errorM").text("가입한 이력이 있습니다.");
+			$("#mb_5_chk").val("false");
+		} else {
+			$("#mb_5_chk").val("true");
+		}
+	}).fail(function() {
+		// 네트워크 오류로 인한 오탐 방지: 서버 최종 검증에 맡긴다.
+		$("#mb_5_chk").val("true");
+	});
+}
+
+$("#mb_5").on("input blur change", function(){
+	validateMb5EmailAndMark();
+});
 //사업자번호
 	$('.comnum_chk').on('keyup', function(){
         var num = $(this).val();
@@ -313,7 +318,7 @@ function fregisterform_submit()
 
     // 회원아이디 검사
     if ($("input[name='w']").val() == "") {
-        var msg = reg_mb_id_check();
+        var msg = $.trim(reg_mb_id_check());
         if (msg) {
             alert(msg);
             return false;
@@ -357,18 +362,37 @@ function fregisterform_submit()
 		return false;
 	}
 
-	if(!$("#mb_5").val().trim()) {
+	var mb5Val = $.trim($("#mb_5").val());
+	if(!mb5Val) {
 		jAlert("담당자 이메일을 확인해 주세요.","알림",function(){$("#mb_5").focus();});
 		return false;
 	}else{
-		if($("#mb_5_chk").val()=="false") {
+		let checkEmail = RegExp(/^([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})$/);
+		if(!checkEmail.test(mb5Val)) { 
 			jAlert("이메일을 확인해 주세요.","알림",function(){$("#mb_5").focus();});
 			return false;
 		}
-		let checkEmail = RegExp(/^([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})$/);
-		if(!checkEmail.test($("#mb_5").val().trim())) { 
-			jAlert("이메일을 확인해 주세요.","알림",function(){$("#mb_5").focus();});
-			return false;
+
+		// keyup 미발생(자동완성/붙여넣기) 케이스 방지: 제출 시점에 마지막 1회 중복확인
+		if($("#mb_5_chk").val()!="true") {
+			var mb5Dup = false;
+			$.ajax({
+				url: "../get_set.php",
+				type: "POST",
+				data: { type: "member_check2", id: mb5Val },
+				async: false,
+				success: function(resp) {
+					mb5Dup = ($.trim(resp) == "500");
+				},
+				error: function() {
+					mb5Dup = false;
+				}
+			});
+			if(mb5Dup) {
+				jAlert("가입한 이력이 있습니다.","알림",function(){$("#mb_5").focus();});
+				return false;
+			}
+			$("#mb_5_chk").val("true");
 		}
 	}
 /*

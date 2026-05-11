@@ -168,8 +168,13 @@ add_stylesheet('<link rel="stylesheet" href="'.$font_awesome_css_url.'">', 0);
 if(G5_IS_MOBILE) {
 	add_javascript('<script src="'.G5_JS_URL.'/modernizr.custom.70111.js"></script>', 1); // overflow scroll 감지
 }
-if(!defined('G5_IS_ADMIN'))
-	echo $config['cf_add_script'];
+if(!defined('G5_IS_ADMIN')) {
+	$cf_add_script = isset($config['cf_add_script']) ? (string) $config['cf_add_script'] : '';
+	if (!is_file(G5_THEME_PATH.'/js/company-detail-actions.js')) {
+		$cf_add_script = preg_replace('#<script[^>]*company-detail-actions\.js[^>]*>\s*</script>#i', '', $cf_add_script);
+	}
+	echo $cf_add_script;
+}
 ?>
 <link rel="stylesheet" href="<?php echo G5_THEME_CSS_URL; ?>/jquery.alerts.css">
 <script type="text/javascript" src="<?php echo G5_THEME_JS_URL; ?>/jquery.alerts.js"></script>
