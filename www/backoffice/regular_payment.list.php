@@ -54,7 +54,7 @@ $total_page  = ceil($total_count / $rows);  // 전체 페이지 계산
 if ($page < 1) { $page = 1; } // 페이지가 없으면 첫 페이지 (1 페이지)
 $from_record = ($page - 1) * $rows; // 시작 열을 구함
 
-$sql = "select * $sql_common $sql_search order by date_end desc  limit $from_record, {$config['cf_page_rows']}  ";
+$sql = "select * $sql_common $sql_search order by date_begin desc  limit $from_record, {$config['cf_page_rows']}  ";
 $result = sql_query($sql);
 
 $rnumber=($total_count-($page-1)*$rows)+1;
@@ -154,10 +154,10 @@ $rnumber=($total_count-($page-1)*$rows)+1;
 				$status_btn_class = "btn-dark";
 			}
 			$duedate = '-';
-			if (!empty($row['date_end'])) {
-				$end_timestamp = strtotime($row['date_end']." 00:00:00");
-				if ($end_timestamp) {
-					$duedate = date("Y-m-d", strtotime("+1 days", $end_timestamp));
+			if (!empty($row['date_begin'])) {
+				$begin_timestamp = strtotime($row['date_begin']." 00:00:00");
+				if ($begin_timestamp) {
+					$duedate = date("Y-m-d", $begin_timestamp);
 				}
 			}
 			$price_value = isset($paymentInfo['price']) ? (int)$paymentInfo['price'] : 0;
