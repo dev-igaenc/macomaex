@@ -1010,13 +1010,11 @@ function initMyMatchingPage() {
 function initDetailPopup() {
     var overlay = document.getElementById('detailPopupOverlay');
     var iframe  = document.getElementById('detailPopupIframe');
-    var title   = document.getElementById('detailPopupTitle');
     var closeBtn = document.getElementById('detailPopupClose');
 
     window.openDetailPopup = function(detailId, companyName) {
         var bust = '_popup_ts=' + Date.now();
         iframe.src = detailId + (detailId.indexOf('?') === -1 ? '?' : '&') + bust;
-        title.textContent = companyName || '기업 상세보기';
         overlay.classList.add('is-open');
         document.body.style.overflow = 'hidden';
     };

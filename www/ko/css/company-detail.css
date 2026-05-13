@@ -28,6 +28,18 @@ body {
 html.in-iframe #header,
 html.in-iframe #sideMenuArea { display: none !important; }
 html.in-iframe body { padding-top: 0 !important; margin-top: 0 !important; }
+html.in-iframe,
+html.in-iframe body,
+html.in-iframe #wrapper,
+html.in-iframe #container_wr,
+html.in-iframe #detailWrap {
+	overflow-x: hidden !important;
+}
+html.in-iframe #wrapper,
+html.in-iframe #container_wr {
+	padding-top: 0 !important;
+	margin-top: 0 !important;
+}
 html.in-iframe #detailWrap {
 	padding-top: 0 !important;
 	margin-top: 0 !important;
