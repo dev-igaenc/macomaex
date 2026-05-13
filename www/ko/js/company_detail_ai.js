@@ -21,7 +21,52 @@ if (typeof window._isLoggedIn !== 'function') {
     };
 }
 if (typeof window._requireLogin !== 'function') {
-    window._requireLogin = function () {};
+    window._requireLogin = function (featureName) {
+        var overlayId = 'aiAnalysisLoginOverlay';
+        var existing = document.getElementById(overlayId);
+        if (existing) {
+            existing.classList.add('is-open');
+            return;
+        }
+
+        var loginUrl = (window.MATCH_REQUEST_CONTEXT && window.MATCH_REQUEST_CONTEXT.loginCheckUrl)
+            ? String(window.MATCH_REQUEST_CONTEXT.loginCheckUrl)
+            : detailLoginReturnUrl;
+        var title = '로그인이 필요합니다';
+        var desc = (featureName ? String(featureName) + ' 결과는' : '서비스 이용을 위해서는') + '<br>로그인 후 확인하실 수 있습니다.';
+
+        var overlay = document.createElement('div');
+        overlay.id = overlayId;
+        overlay.className = 'auth-login-modal_overlay is-open';
+        overlay.innerHTML = '' +
+            '<div class="auth-login-modal" role="dialog" aria-modal="true" aria-labelledby="aiAnalysisLoginTitle">' +
+                '<button class="auth-login-modal_close" type="button" aria-label="닫기">' +
+                    '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' +
+                '</button>' +
+                '<div class="auth-login-modal_icon">' +
+                    '<svg viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1s3.1 1.39 3.1 3.1v2z"/></svg>' +
+                '</div>' +
+                '<h3 class="auth-login-modal_title" id="aiAnalysisLoginTitle">' + title + '</h3>' +
+                '<p class="auth-login-modal_desc">' + desc + '</p>' +
+                '<div class="auth-login-modal_btns">' +
+                    '<a href="/bbs/register.php" class="auth-login-modal_btn auth-login-modal_btn--cancel">회원가입</a>' +
+                    '<a href="' + loginUrl + '" class="auth-login-modal_btn auth-login-modal_btn--login">로그인</a>' +
+                '</div>' +
+            '</div>';
+
+        function closeLoginOverlay() {
+            overlay.classList.remove('is-open');
+        }
+
+        overlay.addEventListener('click', function (e) {
+            if (e.target === overlay) closeLoginOverlay();
+        });
+
+        var closeBtn = overlay.querySelector('.auth-login-modal_close');
+        if (closeBtn) closeBtn.addEventListener('click', closeLoginOverlay);
+
+        document.body.appendChild(overlay);
+    };
 }
 var detailLoginReturnUrl = '/bbs/login.php?url=' + encodeURIComponent(window.location.pathname + window.location.search);
 
@@ -252,6 +297,8 @@ var co = COMPANIES[demoId];
 
 // 스냅샷이 없으면 상세 카드 복원
 (function hydrateCardFromRecommendWhenMissing() {
+    if (window._isLoggedIn && !window._isLoggedIn()) return;
+
     var targetKedcd = String(demoId || '').replace(/\D/g, '');
     if (targetKedcd.length !== 10) return;
 
@@ -853,16 +900,41 @@ radarAxes.forEach(function (ax, di) {
 });
 legendHtml += '</div>';
 
+var legendHtmlMasked = '<div class="detail-radar_legend">';
+radarAxes.forEach(function (ax, di) {
+    var title = RADAR_LABEL_MAP_D[ax] || ax;
+    var desc  = AXIS_DESC_MAP[ax] || '';
+    var regionTip = (ax === 'accessibility')
+        ? '<span class="region-tip-wrap"><i class="region-tip-icon">?</i><span class="region-tip-tooltip">IT·무역·금융 등 전국 거래 업종은 거리와 무관하게 100점이 부여됩니다.</span></span>'
+        : '';
+    legendHtmlMasked += '<div class="detail-radar_legend_item" data-axis="' + di + '">' +
+        '<div class="detail-radar_legend_text"><strong>' + title + regionTip + '</strong><span>' + desc + '</span></div>' +
+        '<span class="detail-radar_legend_score">-</span></div>';
+});
+legendHtmlMasked += '</div>';
+
+var svgHtmlMasked = '<svg viewBox="0 0 300 270" class="detail-radar-svg">';
+gridPolys.forEach(function (g) { svgHtmlMasked += '<polygon points="' + g + '" fill="none" stroke="#e5e7eb" stroke-width="0.8"/>'; });
+axLines.forEach(function (al) { svgHtmlMasked += '<line x1="' + al.x1 + '" y1="' + al.y1 + '" x2="' + al.x2 + '" y2="' + al.y2 + '" stroke="#e5e7eb" stroke-width="0.6"/>'; });
+lblPos.forEach(function (lp, li) {
+    var anchor = 'middle';
+    if (lp.x < cx - 20) anchor = 'end';
+    else if (lp.x > cx + 20) anchor = 'start';
+    svgHtmlMasked += '<text x="' + lp.x + '" y="' + (lp.y + 5) + '" text-anchor="' + anchor + '" font-size="13" font-weight="500" fill="#555" class="radar-label" data-axis="' + li + '">' + radarLabels[li] + '</text>';
+});
+svgHtmlMasked += '</svg>';
+
 var regionNotice = '';
 
 (function renderRightCard() {
-	var loggedIn = window._isLoggedIn && window._isLoggedIn();
-		function buildInner(isMock) {
-			var scoreNum = isMock ? '--' : fitScore;
-			var companyName = isMock ? '○○○○' : maskName(co.title);
-			var noticeHtml = detailHydrateNoticeText
-				? '<div class="detail-radar_notice"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="13"/><circle cx="12" cy="16.5" r="0.8" fill="currentColor" stroke="none"/></svg><span>' + esc(detailHydrateNoticeText) + '</span></div>'
-				: '';
+		var loggedIn = window._isLoggedIn && window._isLoggedIn();
+			function buildInner(isMock) {
+				var scoreNum = isMock ? '--' : fitScore;
+				var activeSvg = isMock ? svgHtmlMasked : svgHtml;
+				var activeLegend = isMock ? legendHtmlMasked : legendHtml;
+				var noticeHtml = detailHydrateNoticeText
+					? '<div class="detail-radar_notice"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="13"/><circle cx="12" cy="16.5" r="0.8" fill="currentColor" stroke="none"/></svg><span>' + esc(detailHydrateNoticeText) + '</span></div>'
+					: '';
 			return '<div class="match-box-inner">' +
 				'<div class="fit-header">' +
 				'<div class="fit-header-top">' +
@@ -870,23 +942,20 @@ var regionNotice = '';
 					'<div class="fit-header-score"><span class="fit-header-score-num">' + scoreNum + '</span><span class="fit-header-score-unit">%</span></div>' +
 				'</div>' +
 				'<div class="fit-header-label">AI 적합도 예측</div>' +
-			'</div>' +
-				'<div class="detail-radar">' +
-					'<div class="detail-radar_row">' +
-						'<div class="detail-radar_chart">' + svgHtml + '</div>' +
-						legendHtml +
-					'</div>' + noticeHtml +
-				'</div>' +
-			'</div>';
-		}
+					'</div>' +
+					'<div class="detail-radar">' +
+						'<div class="detail-radar_row">' +
+							'<div class="detail-radar_chart">' + activeSvg + '</div>' +
+							activeLegend +
+						'</div>' + noticeHtml +
+					'</div>' +
+				'</div>';
+			}
 	var overlayHtml = '<div class="match-box-login-overlay">' +
 		'<div class="auth-login-modal" style="position:relative;">' +
-			'<button class="auth-login-modal_close" onclick="document.getElementById(\'rightCard\').classList.remove(\'match-box-blur\')" aria-label="닫기">' +
-				'<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' +
-			'</button>' +
-			'<div class="auth-login-modal_icon">' +
-				'<svg viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1s3.1 1.39 3.1 3.1v2z"/></svg>' +
-			'</div>' +
+				'<div class="auth-login-modal_icon">' +
+					'<svg viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1s3.1 1.39 3.1 3.1v2z"/></svg>' +
+				'</div>' +
 				'<h3 class="auth-login-modal_title">로그인이 필요합니다</h3>' +
 				'<p class="auth-login-modal_desc">AI 적합도 예측 결과는<br>로그인 후 확인하실 수 있습니다.</p>' +
 				'<div class="auth-login-modal_btns">' +
@@ -899,14 +968,15 @@ var regionNotice = '';
 	if (!loggedIn) document.getElementById('rightCard').classList.add('match-box-blur');
 	else document.getElementById('rightCard').classList.remove('match-box-blur');
 })();
-window._renderRightCard = function() {
-	var loggedIn = window._isLoggedIn && window._isLoggedIn();
-	function buildInner(isMock) {
-		var scoreNum = isMock ? '--' : fitScore;
-		var companyName = isMock ? '○○○○' : maskName(co.title);
-		var noticeHtml = detailHydrateNoticeText
-			? '<div class="detail-radar_notice"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="13"/><circle cx="12" cy="16.5" r="0.8" fill="currentColor" stroke="none"/></svg><span>' + esc(detailHydrateNoticeText) + '</span></div>'
-			: '';
+	window._renderRightCard = function() {
+		var loggedIn = window._isLoggedIn && window._isLoggedIn();
+		function buildInner(isMock) {
+			var scoreNum = isMock ? '--' : fitScore;
+			var activeSvg = isMock ? svgHtmlMasked : svgHtml;
+			var activeLegend = isMock ? legendHtmlMasked : legendHtml;
+			var noticeHtml = detailHydrateNoticeText
+				? '<div class="detail-radar_notice"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="13"/><circle cx="12" cy="16.5" r="0.8" fill="currentColor" stroke="none"/></svg><span>' + esc(detailHydrateNoticeText) + '</span></div>'
+				: '';
 		return '<div class="match-box-inner">' +
 			'<div class="fit-header">' +
 				'<div class="fit-header-top">' +
@@ -914,23 +984,20 @@ window._renderRightCard = function() {
 					'<div class="fit-header-score"><span class="fit-header-score-num">' + scoreNum + '</span><span class="fit-header-score-unit">%</span></div>' +
 				'</div>' +
 				'<div class="fit-header-label">AI 적합도 예측</div>' +
-			'</div>' +
-			'<div class="detail-radar">' +
-				'<div class="detail-radar_row">' +
-					'<div class="detail-radar_chart">' + svgHtml + '</div>' +
-					legendHtml +
-				'</div>' + noticeHtml +
-			'</div>' +
-		'</div>';
-	}
-	var overlayHtml = '<div class="match-box-login-overlay">' +
-		'<div class="auth-login-modal" style="position:relative;">' +
-			'<button class="auth-login-modal_close" onclick="document.getElementById(\'rightCard\').classList.remove(\'match-box-blur\')" aria-label="닫기">' +
-				'<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' +
-			'</button>' +
-			'<div class="auth-login-modal_icon">' +
-				'<svg viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1s3.1 1.39 3.1 3.1v2z"/></svg>' +
-			'</div>' +
+				'</div>' +
+				'<div class="detail-radar">' +
+					'<div class="detail-radar_row">' +
+						'<div class="detail-radar_chart">' + activeSvg + '</div>' +
+						activeLegend +
+					'</div>' + noticeHtml +
+				'</div>' +
+			'</div>';
+		}
+		var overlayHtml = '<div class="match-box-login-overlay">' +
+			'<div class="auth-login-modal" style="position:relative;">' +
+				'<div class="auth-login-modal_icon">' +
+					'<svg viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1s3.1 1.39 3.1 3.1v2z"/></svg>' +
+				'</div>' +
 				'<h3 class="auth-login-modal_title">로그인이 필요합니다</h3>' +
 				'<p class="auth-login-modal_desc">AI 적합도 예측 결과는<br>로그인 후 확인하실 수 있습니다.</p>' +
 				'<div class="auth-login-modal_btns">' +

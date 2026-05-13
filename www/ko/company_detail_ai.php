@@ -248,6 +248,26 @@ $company_seed = array(
     'ai_analysis_html' => ''
 );
 
+// 비로그인 사용자는 우측 AI 적합도 예측에 실데이터가 노출되지 않도록 더미 payload만 내려준다.
+if (empty($member['mb_id'])) {
+    $company_seed['score'] = null;
+    $company_seed['grow'] = null;
+    $company_seed['profit'] = null;
+    $company_seed['stable'] = null;
+    $company_seed['badge_growth'] = '';
+    $company_seed['badge_stability'] = '';
+    $company_seed['badge_venture'] = 'N';
+    $company_seed['tags'] = array();
+    $company_seed['tag_total_count'] = 0;
+    $company_seed['product_line'] = '';
+    $company_seed['address'] = '';
+    $company_seed['address_display'] = '정보 준비중';
+    $company_seed['homepage'] = '';
+    $company_seed['homepage_display'] = '정보 준비중';
+    $company_seed['clients'] = array();
+    $company_seed['ai_analysis_html'] = '';
+}
+
 $trade_request_login_params = $_GET;
 $trade_request_login_params['trade_request_login'] = '1';
 $trade_request_login_url = '/ko/company_detail_ai.php?' . http_build_query($trade_request_login_params);
