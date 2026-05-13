@@ -116,7 +116,7 @@ $rnumber=($total_count-($page-1)*$rows)+1;
     <tbody>
 	    <?php for ($i=0; $row=sql_fetch_array($result); $i++) {
 				$membershipInfo	= getMembership($row['membership_parent_no']);
-				$paymentInfo			= getPaymentInfo($row['order_no']);
+				$paymentInfo	= getPaymentInfo($row['order_no']);
 				$biz_no_raw = isset($row['mb_4']) ? trim((string)$row['mb_4']) : '';
 				$biz_no_digits = preg_replace('/[^0-9]/', '', $biz_no_raw);
 				$biz_no_display = $biz_no_raw;
