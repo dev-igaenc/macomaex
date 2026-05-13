@@ -155,6 +155,7 @@ function my_matching_build_item($row, $starred = false) {
 		'requestBzno' => trim((string)($row['request_bzno'] ?? '')),
 		'targetBzno' => trim((string)($row['target_bzno'] ?? '')),
 		'approvalStatus' => (int)($row['approval_status'] ?? 0),
+		'creditUsed' => (int)($row['credit_used'] ?? 0),
 		'chatRoomId' => (int)($row['chat_room_id'] ?? 0),
 		'chatEnabled' => ((int)($row['approval_status'] ?? 0) === 1 && (int)($row['chat_room_id'] ?? 0) > 0 && ($row['chat_room_status'] ?? '') === 'active'),
 		'chatRoomStatus' => trim((string)($row['chat_room_status'] ?? '')),
@@ -203,6 +204,7 @@ $receivedSql = "
 		TR.desired_item,
 		TR.message_content,
 		TR.trade_type,
+		TR.credit_used,
 		TR.approval_status,
 		TR.chat_room_id,
 		TCR.room_status AS chat_room_status,
@@ -243,6 +245,7 @@ $sentSql = "
 		TR.desired_item,
 		TR.message_content,
 		TR.trade_type,
+		TR.credit_used,
 		TR.approval_status,
 		TR.chat_room_id,
 		TCR.room_status AS chat_room_status,
@@ -282,6 +285,7 @@ for ($i = 0; $i < count($receivedRows); $i++) {
 		'chatRoomId' => (int)($receivedRows[$i]['chatRoomId'] ?? 0),
 		'chatEnabled' => !empty($receivedRows[$i]['chatEnabled']),
 		'chatRoomStatus' => trim((string)($receivedRows[$i]['chatRoomStatus'] ?? '')),
+		'creditUsed' => (int)($receivedRows[$i]['creditUsed'] ?? 0),
 	);
 }
 
@@ -295,6 +299,7 @@ for ($i = 0; $i < count($sentRows); $i++) {
 		'chatRoomId' => (int)($sentRows[$i]['chatRoomId'] ?? 0),
 		'chatEnabled' => !empty($sentRows[$i]['chatEnabled']),
 		'chatRoomStatus' => trim((string)($sentRows[$i]['chatRoomStatus'] ?? '')),
+		'creditUsed' => (int)($sentRows[$i]['creditUsed'] ?? 0),
 	);
 }
 
@@ -338,6 +343,7 @@ if ($interestedResult) {
 			'chatRoomId' => (int)($chatMeta['chatRoomId'] ?? 0),
 			'chatEnabled' => !empty($chatMeta['chatEnabled']),
 			'chatRoomStatus' => trim((string)($chatMeta['chatRoomStatus'] ?? '')),
+			'creditUsed' => (int)($chatMeta['creditUsed'] ?? 0),
 			'starred' => true,
 			'kedcd' => $kedcd,
 			'detailUrl' => my_matching_company_detail_url($row['company_kedcd'] ?? ''),

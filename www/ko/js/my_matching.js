@@ -38,6 +38,12 @@ function maskName(s) {
     return prefix + visible + '****';
 }
 
+function maskAddress(s) {
+    var address = String(s || '').trim();
+    if (!address) return '주소 비공개';
+    return '****';
+}
+
 function favBtnHtml(active, kedcd) {
     var kedcdAttr = kedcd ? ' data-kedcd="' + kedcd + '"' : '';
     return '<button type="button" class="btn-favorite' + (active ? ' is-active' : '') + '" data-favorite' + kedcdAttr + ' title="관심기업" aria-label="관심기업"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg></button>';
@@ -228,7 +234,7 @@ function renderSentItem(item) {
 }
 
 function renderInterestedItem(item) {
-    var isMatched = !!item.matchStatus;
+    var isCreditUsed = Number(item.creditUsed || 0) === 1;
     var btnHtml = '';
     if (!item.matchStatus) {
         btnHtml = '<button class="btn-match-request" onclick="handleMatchRequest(\'' + item.company.replace(/'/g,'\\\'') + '\', \'' + (item.kedcd || '') + '\')">거래요청하기</button>';
@@ -260,10 +266,10 @@ function renderInterestedItem(item) {
         }
     }
     return renderBaseCard(item, {
-        name:      isMatched ? item.company : maskName(item.company),
-        masked:    !isMatched,
+        name:      isCreditUsed ? item.company : maskName(item.company),
+        masked:    !isCreditUsed,
         alwaysFav: true,
-        rows:      infoRow(DT.industry, item.industry) + addrRow(item.address),
+        rows:      infoRow(DT.industry, item.industry) + addrRow(isCreditUsed ? item.address : maskAddress(item.address)),
         btnHtml:   btnHtml
     });
 }
@@ -401,6 +407,7 @@ function buildInterestedItemFromSource(source, item) {
         company: item.company,
         address: item.address,
         industry: item.industry,
+        creditUsed: Number(item.creditUsed || 0),
         matchStatus: matchStatus,
         starred: true,
         kedcd: item.kedcd,
