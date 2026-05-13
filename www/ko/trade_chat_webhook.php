@@ -236,6 +236,29 @@ function trade_chat_webhook_request_meta_payload() {
 	);
 }
 
+function trade_chat_webhook_contains_sql_like_text($text) {
+	$text = trim((string)$text);
+	if ($text === '') return false;
+
+	$patterns = array(
+		// 대표적인 DDL/DML 시그니처를 폭넓게 탐지한다.
+		'/\b(select\s+.+\s+from|insert\s+into|update\s+.+\s+set|delete\s+from|replace\s+into)\b/i',
+		'/\b(create|alter|drop|truncate|rename)\s+(table|database|schema|index|view)\b/i',
+		'/\b(union\s+all\s+select|union\s+select)\b/i',
+		'/\b(where\s+.+\s*=\s*.+)\b/i',
+		'/\b(and|or)\s+\d+\s*=\s*\d+\b/i',
+		'/--|\/\*|\*\/|;[\s\r\n]*(select|insert|update|delete|drop|create|alter)\b/i',
+	);
+
+	foreach ($patterns as $pattern) {
+		if (@preg_match($pattern, $text)) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
 if (strtoupper((string)($_SERVER['REQUEST_METHOD'] ?? 'GET')) !== 'POST') {
 	trade_chat_webhook_response(false, '허용되지 않은 요청 방식입니다.', 405);
 }
@@ -304,6 +327,100 @@ $channelType = trade_chat_webhook_event_channel_type($eventData);
 $channelId = trade_chat_webhook_event_channel_id($eventData);
 $roomId = trade_chat_webhook_find_room_id($channelType, $channelId);
 $messageId = trim((string)($message['id'] ?? $eventData['message_id'] ?? ''));
+$messageType = trim((string)($message['type'] ?? ''));
+$messageText = trim((string)($message['text'] ?? ''));
+
+if ($messageType !== 'system' && trade_chat_webhook_contains_sql_like_text($messageText)) {
+	$actorUserId = trade_chat_webhook_actor_user_id($eventData, $message);
+	$streamClient = trade_chat_stream_client();
+	$deleteOk = false;
+	$deleteStatus = 'not_started';
+	$noticeStatus = 'not_started';
+	$actionErrorCode = '';
+	$actionMessage = '';
+
+	$policyPayload = array_merge($eventMeta, array(
+		'reason' => 'sql_like_message_detected',
+		'room_id' => $roomId,
+		'message_id' => $messageId,
+		'stream_channel_id' => $channelId,
+		'stream_channel_cid' => trim((string)($eventData['cid'] ?? '')),
+		'actor_user_id' => $actorUserId,
+		'message_text_length' => (int)(function_exists('mb_strlen') ? mb_strlen($messageText, 'UTF-8') : strlen($messageText)),
+		'action_status' => 'detect_only',
+		'delete_status' => 'not_started',
+		'notice_status' => 'not_started',
+	));
+
+	trade_chat_write_event_log('message_policy_action', 'success', $policyPayload, 'SQL 유사 채팅 패턴이 감지되었습니다.');
+
+	if ($streamClient && $messageId !== '' && $channelId !== '') {
+		try {
+			$deleteResponse = $streamClient->deleteMessage($messageId, false, $actorUserId, false);
+			$deleteOk = $deleteResponse->isSuccessful();
+			$deleteStatus = $deleteOk ? 'success' : 'api_failed';
+			if (!$deleteOk) {
+				$actionErrorCode = 'delete_api_failed';
+				$actionMessage = '차단 메시지 삭제 응답이 성공이 아닙니다.';
+			}
+		} catch (\Throwable $e) {
+			$deleteStatus = 'exception';
+			$actionErrorCode = 'delete_exception';
+			$actionMessage = $e->getMessage();
+		}
+
+		if ($deleteOk) {
+			try {
+				$noticeText = '부적절한 채팅 내용이 감지되어 메시지가 차단되었습니다.';
+				$streamClient->sendMessage(
+					$channelType,
+					$channelId,
+					new \GetStream\GeneratedModels\SendMessageRequest(
+						message: new \GetStream\GeneratedModels\MessageRequest(
+							text: $noticeText,
+							type: 'system',
+							silent: true,
+							userID: $actorUserId,
+						),
+					),
+				);
+				$noticeStatus = 'success';
+			} catch (\Throwable $e) {
+				$noticeStatus = 'failed';
+				$actionErrorCode = 'notice_send_failed';
+				$actionMessage = $e->getMessage();
+			}
+		} else {
+			$noticeStatus = 'skipped';
+		}
+	} elseif (!$streamClient) {
+		$deleteStatus = 'client_init_failed';
+		$noticeStatus = 'skipped';
+		$actionErrorCode = 'stream_client_init_failed';
+		$actionMessage = 'Stream client 초기화 실패';
+	} else {
+		$deleteStatus = 'target_missing';
+		$noticeStatus = 'skipped';
+		$actionErrorCode = 'action_target_missing';
+		$actionMessage = 'message_id 또는 channel_id가 없어 차단 후속 조치를 수행하지 못했습니다.';
+	}
+
+	trade_chat_write_event_log('message_policy_action', $deleteOk ? 'success' : 'fail', array_merge($eventMeta, array(
+		'reason' => $deleteOk ? 'sql_like_message_blocked' : 'sql_like_message_block_failed',
+		'room_id' => $roomId,
+		'message_id' => $messageId,
+		'stream_channel_id' => $channelId,
+		'stream_channel_cid' => trim((string)($eventData['cid'] ?? '')),
+		'actor_user_id' => $actorUserId,
+		'action_status' => $deleteOk ? 'message_deleted' : 'delete_failed',
+		'delete_status' => $deleteStatus,
+		'notice_status' => $noticeStatus,
+		'action_error_code' => $actionErrorCode,
+	)), $deleteOk ? '정책 위반 메시지를 차단했습니다.' : ('정책 위반 메시지 차단 실패: ' . $actionMessage));
+
+	trade_chat_webhook_response(true, '정책 위반 메시지 차단 처리 완료', 200);
+}
+
 if ($attachmentCount < 1) {
 	trade_chat_write_event_log('file_scan_webhook', 'skip', array_merge($eventMeta, array(
 		'reason' => 'no_attachments',
