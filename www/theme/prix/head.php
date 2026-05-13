@@ -464,6 +464,29 @@ function openAiGuideModal(opts) {
 	overlay.setAttribute("aria-hidden", "false");
 }
 
+function openGuide(title, text, text2) {
+	openAiGuideModal({
+		title: title || "AI 추천 안내",
+		text: text || "사업자 번호를 입력하고 AI 추천받기를 눌러주세요.",
+		text2: text2 || "AI 분석을 통해 업종/거래 데이터를 기반으로 적합한 거래처 판매처를 추천해드립니다."
+	});
+}
+
+// 구버전/중복 스크립트가 alert를 호출해도 안내 모달로 통일한다.
+(function() {
+	var nativeAlert = window.alert;
+	window.alert = function(message) {
+		var text = (message == null) ? "" : String(message);
+		if (text.indexOf("기업 정보를 분석하는 중 오류가 발생했습니다.") !== -1 ||
+			text.indexOf("기업 정보 조회 중 통신 오류가 발생했습니다.") !== -1) {
+			var lines = text.split("\n");
+			openGuide("조회 오류 안내", (lines[0] || "사업자번호 조회 중 일시적인 오류가 발생했습니다.").trim(), (lines[1] || "잠시 후 다시 시도해 주세요.").trim());
+			return;
+		}
+		return nativeAlert.apply(window, arguments);
+	};
+})();
+
 function closeAiGuideModal() {
 	var overlay = document.getElementById("modal_ai_guide_overlay");
 	if (!overlay) return;
@@ -562,19 +585,26 @@ function requestMainCompCheck(comnum, $form, opts) {
 						moveToAiRecommendByBizno(comnum);
 					}
 				}
-			} else {
-				alert("기업 정보를 분석하는 중 오류가 발생했습니다.\n" + (parts[2] || parts[1] || "다시 시도해 주세요."));
+				} else {
+					if (parts[1] === "02") {
+						openGuide("사업자번호 재확인", "입력하신 사업자번호로 기업 정보를 찾지 못했습니다.", "사업자번호를 다시 확인해 주세요.");
+					} else if (parts[1] === "CURL_ERROR") {
+						openGuide("조회 오류", "사업자번호 조회 중 일시적인 오류가 발생했습니다.", "잠시 후 다시 시도해 주세요.");
+					} else {
+						openGuide("조회 오류", "기업 정보를 분석하는 중 오류가 발생했습니다.", (parts[2] || parts[1] || "다시 시도해 주세요."));
+					}
+					restoreButton();
+				}
+			} catch (e) {
+				console.error("main_comp_chk parse error:", e);
+				openGuide("조회 오류 안내", "응답 처리 중 오류가 발생했습니다.", "잠시 후 다시 시도해 주세요.");
 				restoreButton();
 			}
-		} catch (e) {
-			console.error("main_comp_chk parse error:", e);
+		}).fail(function() {
+			openGuide("조회 오류 안내", "서버 통신 중 일시적인 오류가 발생했습니다.", "잠시 후 다시 시도해 주세요.");
 			restoreButton();
+		});
 		}
-	}).fail(function() {
-		alert("서버 통신 중 오류가 발생했습니다.");
-		restoreButton();
-	});
-	}
 
 	// Enter 제출 시에도 클릭 검색 로직과 동일하게 처리
 	$(document).on("submit", "#match_hd, #match_index, #match", function(e){
@@ -713,10 +743,10 @@ $(document).on("click", "#modal_verify_btn_ai", function() {
 				originalHtml: originalHtml,
 				useLoading: true
 			});
-		} else {
-			alert("사업자 번호를 다시 확인해 주세요.");
-		}
-	});
+			} else {
+				openGuide("사업자번호 재확인", "입력하신 사업자번호 형식이 올바르지 않습니다.", "사업자번호를 다시 확인해 주세요.");
+			}
+		});
 
 // 모달 닫기 이벤트들
 $(document).on("click", "#modal_verify_overlay", function(e) {
