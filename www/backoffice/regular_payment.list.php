@@ -141,7 +141,7 @@ $rnumber=($total_count-($page-1)*$rows)+1;
 					$product_title_display = '-';
 				}
 				$is_credit_goods = (isset($membershipInfo['title_en']) && strpos($membershipInfo['title_en'], 'CREDIT_') === 0) ? 1 : 0;
-				$refundInfo = sql_fetch("select id from g5_matching_credit_history where order_no='{$row['order_no']}' and tx_type='REFUND' order by id desc limit 1");
+				$refundInfo = sql_fetch("select id from credit_history where order_no='{$row['order_no']}' and tx_type='REFUND' order by id desc limit 1");
 				$is_refunded = (is_array($refundInfo) && !empty($refundInfo['id'])) ? 1 : 0;
 				$status_text = isset($ms_status_text[$row['status']]) ? $ms_status_text[$row['status']] : (string)$row['status'];
 			$status_btn_class = "btn-primary";

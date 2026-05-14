@@ -87,7 +87,7 @@ $rows = array();
 for ($i = 0; $row = sql_fetch_array($result); $i++) {
     $membershipInfo = getMembership($row['membership_parent_no']);
     $paymentInfo = getPaymentInfo($row['order_no']);
-    $refundInfo = sql_fetch("select id from g5_matching_credit_history where order_no='{$row['order_no']}' and tx_type='REFUND' order by id desc limit 1");
+    $refundInfo = sql_fetch("select id from credit_history where order_no='{$row['order_no']}' and tx_type='REFUND' order by id desc limit 1");
     $is_refunded = (is_array($refundInfo) && !empty($refundInfo['id'])) ? 1 : 0;
 
     if(!is_array($membershipInfo)) $membershipInfo = array('title'=>'-', 'title_en'=>'');

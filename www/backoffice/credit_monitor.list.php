@@ -21,7 +21,7 @@ $tx_type = isset($_GET['tx_type']) ? strtoupper(trim((string)$_GET['tx_type'])) 
 $fr_date = isset($_GET['fr_date']) ? trim((string)$_GET['fr_date']) : '';
 $to_date = isset($_GET['to_date']) ? trim((string)$_GET['to_date']) : '';
 
-$sql_common = " from g5_matching_credit_history H left join g5_member M on H.uid = M.mb_id ";
+$sql_common = " from credit_history H left join g5_member M on H.uid = M.mb_id ";
 $sql_search = " where (1) ";
 
 if ($stx !== '' && isset($allowed_sfl[$sfl])) {
