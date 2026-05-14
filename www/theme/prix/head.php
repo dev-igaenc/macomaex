@@ -502,49 +502,6 @@ function closeVerifyModal() {
 	}
 }
 
-function runAiLoading(onComplete) {
-	var overlay = document.getElementById("aiLoadingOverlay");
-	if (!overlay) {
-		if (typeof onComplete === "function") onComplete();
-		return;
-	}
-
-	var steps = overlay.querySelectorAll(".ai-loading_step");
-	var bar = document.getElementById("aiLoadingBarFill");
-
-	if (bar) bar.style.width = "0%";
-	steps.forEach(function(step) {
-		step.classList.remove("done");
-		var textEl = step.querySelector(".ai-loading_step_text");
-		if (textEl && textEl.dataset.pending) textEl.textContent = textEl.dataset.pending;
-	});
-
-	overlay.classList.add("is_open");
-
-	var idx = 0;
-	var stepDelay = 280;
-
-	function progress() {
-		if (idx >= steps.length) {
-			window.setTimeout(function() {
-				overlay.classList.remove("is_open");
-				if (typeof onComplete === "function") onComplete();
-			}, 180);
-			return;
-		}
-
-		var step = steps[idx];
-		step.classList.add("done");
-		var textEl = step.querySelector(".ai-loading_step_text");
-		if (textEl && textEl.dataset.done) textEl.textContent = textEl.dataset.done;
-		if (bar) bar.style.width = (((idx + 1) / steps.length) * 100) + "%";
-		idx += 1;
-		window.setTimeout(progress, stepDelay);
-	}
-
-	window.setTimeout(progress, 220);
-}
-
 function moveToAiRecommendByBizno(comnum) {
 	// 검색창 사업자번호 흐름은 AI 목록 페이지로 직접 이동
 	var digits = (comnum || "").replace(/[^0-9]/g, "");
@@ -577,11 +534,7 @@ function requestMainCompCheck(comnum, $form, opts) {
 				}
 				if ($form && $form.length) {
 					$form.find("input[name='cominfo']").val(parts[1] || "");
-					if (opts.useLoading) {
-						moveToAiRecommendByBizno(comnum);
-					} else {
-						moveToAiRecommendByBizno(comnum);
-					}
+					moveToAiRecommendByBizno(comnum);
 				}
 				} else {
 					if (parts[1] === "02") {
@@ -736,8 +689,7 @@ $(document).on("click", "#modal_verify_btn_ai", function() {
 			requestMainCompCheck(comnum, $form, {
 				overlay: overlay,
 				button: btn,
-				originalHtml: originalHtml,
-				useLoading: true
+				originalHtml: originalHtml
 			});
 			} else {
 				openGuide("사업자번호 재확인", "입력하신 사업자번호 형식이 올바르지 않습니다.", "사업자번호를 다시 확인해 주세요.");
