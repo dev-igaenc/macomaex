@@ -14,6 +14,22 @@ include_once(G5_LIB_PATH.'/visit.lib.php');
 include_once(G5_LIB_PATH.'/connect.lib.php');
 include_once(G5_LIB_PATH.'/popular.lib.php');
 //header (){Authorization: '[ ACCES TOKEN KEY ]'}
+
+$header_display_name = '';
+$header_credit = 0;
+
+if ($is_member) {
+    $header_display_name = isset($member['mb_5']) ? trim((string)$member['mb_6']) : '';
+    if ($header_display_name === '') {
+        $header_display_name = isset($member['mb_nick']) ? $member['mb_nick'] : '';
+    }
+
+    $uid_sql = sql_real_escape_string((string)$member['mb_id']);
+    $credit_row = sql_fetch("select credit_after from g5_matching_credit_history where uid='{$uid_sql}' order by id desc limit 1");
+    if (isset($credit_row['credit_after']) && $credit_row['credit_after'] !== null && $credit_row['credit_after'] !== '') {
+        $header_credit = (int)$credit_row['credit_after'];
+    }
+}
 ?>
 
 <link rel="stylesheet" href="<?php echo G5_URL; ?>/ko/css/ai-loading.css">
@@ -166,17 +182,23 @@ include_once(G5_LIB_PATH.'/popular.lib.php');
                 </button>
             </div>
 
-            <div class="all_user">
-                <?php if (!$is_member) {  ?>
-                    <a href="<?php echo G5_BBS_URL ?>/login.php?url=<?=$_SERVER['REQUEST_URI']?>" class="side-auth side-login">로그인</a>
-                    <a href="<?php echo G5_BBS_URL ?>/register.php" class="side-auth side-signup">회원가입</a>
-                <?php } else { ?>
-                    <a href="<?php echo G5_BBS_URL ?>/logout.php" class="side-auth side-login">로그아웃</a>
-                    <?php if($member['mb_level']>9) { ?>
-                        <a href="/backoffice/" class="side-auth side-signup">관리자</a>
-                    <?php } ?>
-                <?php } ?>
+            <?php if ($is_member): ?>
+            <div class="sideMenu_user_wrap">
+                <p class="sideMenu_user_greeting"><?php echo htmlspecialchars($header_display_name); ?> 님</p>
+                <div class="sideMenu_plan_card">
+                    <a href="/ko/plan.php" class="sideMenu_plan_card_title">
+                        <span>크레딧 충전하기</span>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><polyline points="9 18 15 12 9 6"/></svg>
+                    </a>
+                    <div class="sideMenu_plan_card_body">
+                        <div class="sideMenu_plan_row">
+                            <span class="sideMenu_plan_label">보유 크레딧</span>
+                            <span class="sideMenu_plan_value"><?php echo number_format($header_credit); ?> <em class="sideMenu_plan_unit">cr</em></span>
+                        </div>
+                    </div>
+                </div>
             </div>
+            <?php endif; ?>
 
 			<ul class="all_menu all_layout">
                 <li class="one">

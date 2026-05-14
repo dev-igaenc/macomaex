@@ -463,7 +463,7 @@ $stable_list = get_processed_companies('stability_score_5', 3, $unlocked_bzno_ma
                         <div class="swiper-slide">
                             <aside class="mVisual_banner mVisual_banner_card">
                                 <div class="mVisual_banner_inner">
-                                    <span class="mVisual_banner_status">테스트 운영 중 · 4월 말 런칭</span>
+                                    <span class="mVisual_banner_status">정식 서비스 운영 중</span>
                                     <p class="mVisual_banner_main">거래 빈도가 높은<br>핵심 산업 집중</p>
                                     <p class="mVisual_banner_sub">제조·유통 기반 추천 모델 고도화</p>
                                 </div>
@@ -472,9 +472,9 @@ $stable_list = get_processed_companies('stability_score_5', 3, $unlocked_bzno_ma
                         <div class="swiper-slide">
                             <aside class="mVisual_banner mVisual_banner_card">
                                 <div class="mVisual_banner_inner">
-                                    <span class="mVisual_banner_status">오픈 기념 · 크레딧 즉시 지급</span>
-                                    <p class="mVisual_banner_main">가입만 해도<br>무료 크레딧 제공</p>
-                                    <p class="mVisual_banner_sub">지금 가입하고 거래를 시작하세요</p>
+                                    <span class="mVisual_banner_status">OPEN EVENT · 5월 한정</span>
+                                    <p class="mVisual_banner_main">크레딧 충전 시<br>x2 두 배로 적립</p>
+                                    <p class="mVisual_banner_sub">정식 오픈 기념 한정 혜택</p>
                                 </div>
                             </aside>
                         </div>
