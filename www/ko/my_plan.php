@@ -48,7 +48,7 @@ if((!empty($membership_info['title_en']) && strpos((string)$membership_info['tit
 }
 $membership_cancel_token = uniqid('', true);
 set_session('ss_membership_cancel_token', $membership_cancel_token);
-$remain_credit = (int)$msinfo['matching_able_cnt'];
+$remain_credit = credit_ledger_get_balance($member['mb_id']);
 $show_credit_cancel_btn = ($is_credit_membership && $remain_credit > 0);
 
 if (!function_exists('my_plan_display_title_en')) {
@@ -104,7 +104,7 @@ $sql = "select
 			IFNULL(C2.ENP_NM, TR.target_company_name) as company_name,
 			-- AI 사용내역 표기용 대상 기업명
 			IFNULL(C3.ENP_NM, '') as ai_company_name
-		from g5_matching_credit_history H
+		from credit_history H
 		left join g5_membership_paybill B on H.order_no=B.order_no
 		left join g5_membership_payment P on H.order_no=P.order_no
 		left join g5_membership_manage MM on P.membership_parent_no=MM.no
@@ -144,7 +144,7 @@ if(!$result){
 				IFNULL(C2.ENP_NM, TR.target_company_name) as company_name,
 				-- AI 사용내역 표기용 대상 기업명
 				IFNULL(C3.ENP_NM, '') as ai_company_name
-			from g5_matching_credit_history H
+			from credit_history H
 			left join g5_membership_payment P on H.order_no=P.order_no
 			left join g5_membership_manage MM on P.membership_parent_no=MM.no
 			left join trade_request TR on H.service_code='TRADE_REQUEST' and H.matching_no=TR.tr_no
@@ -173,6 +173,17 @@ for($i=0; $i<count($history_rows); $i++){
 	$tx_type = strtoupper(trim((string)$row['tx_type']));
 	if($tx_type=="USE") $use_rows[] = $row;
 	else $payment_rows[] = $row;
+}
+
+// 주문번호 기준 환불 완료 여부 맵
+$refund_order_map = array();
+for($i=0; $i<count($payment_rows); $i++){
+	$r = $payment_rows[$i];
+	$r_tx_type = strtoupper(trim((string)$r['tx_type']));
+	$r_order_no = trim((string)$r['order_no']);
+	if($r_tx_type === "REFUND" && $r_order_no !== ''){
+		$refund_order_map[$r_order_no] = 1;
+	}
 }
 
 ?>
@@ -225,22 +236,29 @@ for($i=0; $i<count($history_rows); $i++){
                     <div class="filter-row" id="chargeFilter">
                         <button class="filter-btn active" data-filter="all" type="button">전체</button>
                         <button class="filter-btn" data-filter="charge" type="button">유료 충전</button>
+                        <button class="filter-btn" data-filter="refund" type="button">환불</button>
                         <button class="filter-btn" data-filter="free" type="button">무상 지급</button>
                     </div>
 
                     <div id="chargeList" class="card-list">
-                        <?php for($i=0; $i<count($payment_rows); $i++){
-                            $row = $payment_rows[$i];
-                            $tx_type = strtoupper(trim((string)$row['tx_type']));
+	                        <?php for($i=0; $i<count($payment_rows); $i++){
+	                            $row = $payment_rows[$i];
+	                            $tx_type = strtoupper(trim((string)$row['tx_type']));
                             $amount = (float)$row['credit_delta'];
                             $amount_abs = abs($amount);
                             $delta = number_format($amount_abs, 1);
                             if(substr($delta, -2)=='.0') $delta = number_format($amount_abs, 0);
 
+                            $is_refund = ($tx_type=="REFUND");
                             $is_free = ($tx_type=="BONUS" || $tx_type=="FREE" || $tx_type=="EVENT");
-                            if(!$is_free && !$row['order_no'] && $amount > 0) $is_free = true;
-                            $filter_type = $is_free ? "free" : "charge";
-                            $icon_class = $is_free ? "free" : "charge";
+                            if(!$is_refund && !$is_free && !$row['order_no'] && $amount > 0) $is_free = true;
+                            if($is_refund){
+                                $filter_type = "refund";
+                                $icon_class = "refund";
+                            }else{
+                                $filter_type = $is_free ? "free" : "charge";
+                                $icon_class = $is_free ? "free" : "charge";
+                            }
                             $is_signup_free = ($is_free && strpos((string)$row['memo'], "신규 가입 무료 크레딧 지급") !== false);
                             $plan_title = my_plan_display_title_en($row['plan_title_en']);
                             $bonus_rate = (int)$row['plan_bonus_rate'];
@@ -261,7 +279,11 @@ for($i=0; $i<count($history_rows); $i++){
 
                             $meta_credit_text = number_format($amount_abs)." 크레딧";
                             if($tx_type=="REFUND"){
-                                $meta_credit_text = number_format($amount_abs)." 크레딧 환불";
+                                if($bonus_rate > 0){
+                                    $meta_credit_text = number_format($amount_abs)." 크레딧 (보너스 +".$bonus_rate."% 포함) 환불";
+                                }else{
+                                    $meta_credit_text = number_format($amount_abs)." 크레딧 환불";
+                                }
                             } else if($tx_type=="ADJUST"){
                                 $meta_credit_text = number_format($amount_abs)." 크레딧 조정";
                             } else if($tx_type=="CHARGE" && $bonus_rate > 0){
@@ -282,18 +304,34 @@ for($i=0; $i<count($history_rows); $i++){
                                 $price_text_display = ($paid_amount > 0) ? "-₩".number_format($paid_amount) : "환불";
                             }
 
-                            $status_text = "완료";
-                            $status_class = "done";
-                            if($is_free){
-                                $status_text = "무상지급";
-                                $status_class = "free";
-                            }else if($tx_type=="REFUND"){
-                                $status_text = "결제취소";
-                                $status_class = "used";
-                            }else if($tx_type=="ADJUST"){
-                                $status_text = "관리자조정";
-                                $status_class = "used";
-                            }
+	                            $status_text = "완료";
+	                            $status_class = "done";
+	                            if($is_free){
+	                                $status_text = "무상지급";
+	                                $status_class = "free";
+	                            }else if($tx_type=="REFUND"){
+	                                $status_text = "결제취소";
+	                                $status_class = "used";
+	                            }else if($tx_type=="ADJUST"){
+	                                $status_text = "관리자조정";
+	                                $status_class = "used";
+	                            }
+	                            $charge_refund_btn = false;
+	                            $charge_order_no = trim((string)$row['order_no']);
+	                            $charge_event_ts = strtotime((string)$row['event_date']);
+	                            if($tx_type=="CHARGE" && !$is_free && $charge_order_no !== '' && $charge_event_ts){
+	                                $is_refunded_order = !empty($refund_order_map[$charge_order_no]);
+	                                $is_within_7days = (time() <= strtotime("+7 days", $charge_event_ts));
+	                                if($is_refunded_order){
+	                                    $status_text = "환불완료";
+	                                    $status_class = "used";
+	                                } else if($is_within_7days){
+	                                    $charge_refund_btn = true;
+	                                } else {
+	                                    $status_text = "환불불가";
+	                                    $status_class = "blocked";
+	                                }
+	                            }
 
                             $delta_sign = ($amount >= 0 ? "+" : "-");
                             $delta_class = ($amount >= 0 ? "plus" : "minus");
@@ -326,13 +364,17 @@ for($i=0; $i<count($history_rows); $i++){
                                     <?php }?>
                                 </div>
                             </div>
-                            <div class="pay-card-right">
-                                <span class="credit-delta <?=$delta_class?>"><?=$delta_sign?><?=$delta?></span>
-                                <span class="price-text"><?=htmlspecialchars($price_text_display, ENT_QUOTES)?></span>
-                                <span class="status-badge <?=$status_class?>"><?=$status_text?></span>
-                            </div>
-                        </div>
-                        <?php }?>
+	                            <div class="pay-card-right">
+	                                <span class="credit-delta <?=$delta_class?>"><?=$delta_sign?><?=$delta?></span>
+	                                <span class="price-text"><?=htmlspecialchars($price_text_display, ENT_QUOTES)?></span>
+	                                <?php if($charge_refund_btn){?>
+	                                <button class="status-badge refund-action js-charge-refund-btn" type="button" data-order-no="<?=htmlspecialchars($charge_order_no, ENT_QUOTES)?>">환불신청</button>
+	                                <?php }else{?>
+	                                <span class="status-badge <?=$status_class?>"><?=$status_text?></span>
+	                                <?php }?>
+	                            </div>
+	                        </div>
+	                        <?php }?>
                         <?php if(!count($payment_rows)){?>
                         <div class="pay-card">
                             <div class="pay-card-info">

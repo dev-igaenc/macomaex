@@ -171,4 +171,47 @@ $(function () {
             jAlert("구독취소는 맴버쉽 이용자만 가능합니다.");
         }
     });
+
+    // 충전건 개별 환불 신청
+    $(document).on("click", ".js-charge-refund-btn", function () {
+        var orderNo = ($(this).data("order-no") || "").toString().trim();
+        if (!orderNo) {
+            jAlert("주문 정보를 확인할 수 없습니다.", "알림");
+            return;
+        }
+
+        var doRefund = function () {
+            $.post("../get_set.php", {
+                type: "credit_charge_refund",
+                order_no: orderNo,
+                cancel_token: $("#membership_cancel_token").val()
+            }).done(function (raw) {
+                var text = String(raw || "").replace(/^\uFEFF/, "").trim();
+                var codeIdx = text.search(/(?:1000|500|429|501)\|/);
+                if (codeIdx > 0) text = text.substring(codeIdx);
+                text = text.replace(/<[^>]*>/g, "").trim();
+                var parts = text.split("|");
+                if (parts[0] === "1000") {
+                    jAlert(parts[1] ? parts[1] : "환불 처리되었습니다.", "알림", function () {
+                        location.reload();
+                    });
+                } else {
+                    jAlert(parts[1] ? parts[1] : "환불 처리 중 오류가 발생했습니다.", "알림");
+                }
+            });
+        };
+
+        var confirmText = "해당 충전건 환불을 신청하시겠습니까?\n결제 후 7일 이내, 해당 충전건 미사용인 경우에만 환불됩니다.";
+        if (typeof jCustomConfirm === "function") {
+            jCustomConfirm(confirmText, "알림", "취소", "확인", function (e) {
+                if (!e) doRefund();
+            });
+        } else if (typeof jConfirm === "function") {
+            jConfirm(confirmText, "알림", function (ok) {
+                if (ok) doRefund();
+            });
+        } else {
+            if (confirm(confirmText)) doRefund();
+        }
+    });
 });
