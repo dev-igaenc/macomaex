@@ -171,6 +171,29 @@ function format_badge_percent($value) {
     return rtrim(rtrim(number_format($num, 2, '.', ''), '0'), '.');
 }
 
+function matching_list_render_badges($company_row) {
+    $badge_growth = format_badge_percent($company_row['badge_growth'] ?? null);
+    $badge_stability = format_badge_percent($company_row['badge_stability'] ?? null);
+    $badge_venture = strtoupper(trim((string)($company_row['badge_venture'] ?? '')));
+
+    $parts = array();
+    if ($badge_growth !== '') {
+        $parts[] = '<span class="mCompanyCard_badge mCompanyCard_badge_top_growth">성장TOP' . htmlspecialchars($badge_growth, ENT_QUOTES, 'UTF-8') . '%</span>';
+    }
+    if ($badge_stability !== '') {
+        $parts[] = '<span class="mCompanyCard_badge mCompanyCard_badge_top_stability">재무안정TOP' . htmlspecialchars($badge_stability, ENT_QUOTES, 'UTF-8') . '%</span>';
+    }
+    if ($badge_venture === 'Y') {
+        $parts[] = '<span class="mCompanyCard_badge mCompanyCard_badge_venture">벤처인증</span>';
+    }
+
+    if (!$parts) {
+        return '<span class="mCompanyCard_badge mCompanyCard_badge_placeholder">뱃지 준비중</span>';
+    }
+
+    return implode('', $parts);
+}
+
 // 시안대로 회사명 마스킹
 function mask_company_name_like_mock($name) {
     $source = (string)$name;
@@ -989,21 +1012,7 @@ $sidebar_icon_map = [
 
                         <div class="mCompanyCard_content">
                             <div class="mCompanyCard_badges">
-                                <?php
-                                $badge_growth = format_badge_percent($c['badge_growth'] ?? null);
-                                $badge_stability = format_badge_percent($c['badge_stability'] ?? null);
-                                $badge_venture = strtoupper(trim((string)($c['badge_venture'] ?? '')));
-
-                                if ($badge_growth !== '') {
-                                    echo '<span class="mCompanyCard_badge mCompanyCard_badge_top_growth">성장TOP' . htmlspecialchars($badge_growth) . '%</span>';
-                                }
-                                if ($badge_stability !== '') {
-                                    echo '<span class="mCompanyCard_badge mCompanyCard_badge_top_stability">재무안정TOP' . htmlspecialchars($badge_stability) . '%</span>';
-                                }
-                                if ($badge_venture === 'Y') {
-                                    echo '<span class="mCompanyCard_badge mCompanyCard_badge_venture">벤처인증</span>';
-                                }
-                                ?>
+                                <?php echo matching_list_render_badges($c); ?>
                             </div>
                             <h3 class="mCompanyCard_title"><?php echo htmlspecialchars($c['title'] ?? ''); ?></h3>
 
@@ -1015,6 +1024,8 @@ $sidebar_icon_map = [
                                     <?php if ($restCount > 0): ?>
                                         <span class="mCompanyCard_desc_tag">+<?php echo $restCount; ?></span>
                                     <?php endif; ?>
+                                <?php else: ?>
+                                    <span class="mCompanyCard_desc_tag">정보 준비중</span>
                                 <?php endif; ?>
                             </p>
 

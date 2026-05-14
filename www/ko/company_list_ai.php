@@ -338,7 +338,9 @@ function company_list_ai_ml_item_to_card($item)
 
 function company_list_ai_render_badges($badges)
 {
-    if (!is_array($badges) || !$badges) return '';
+    if (!is_array($badges) || !$badges) {
+        return '<span class="mCompanyCard_badge mCompanyCard_badge_placeholder">뱃지 준비중</span>';
+    }
 
     $html = '';
     foreach ($badges as $badge) {
@@ -696,6 +698,9 @@ function company_list_ai_render_card($card, $trade_type, $rank = 0, $src_kedcd =
         : count($all_tags);
     foreach ($tags as $tag) {
         $tags_html .= '<span class="mCompanyCard_desc_tag">' . htmlspecialchars($tag, ENT_QUOTES, 'UTF-8') . '</span>';
+    }
+    if ($tags_html === '') {
+        $tags_html = '<span class="mCompanyCard_desc_tag">정보 준비중</span>';
     }
     $hidden_count = max(0, $total_tag_count - count($tags));
     if ($hidden_count > 0) {

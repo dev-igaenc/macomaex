@@ -53,6 +53,9 @@ function renderDetailLeftCard(co, scoreHtml) {
     (Array.isArray(co.tags) ? co.tags : []).forEach(function(t) {
         tagsHtml += '<span class="tag-pill">' + _esc(t) + '</span>';
     });
+    if (!tagsHtml) {
+        tagsHtml = '<span class="tag-pill">정보 준비중</span>';
+    }
 
     var creditTooltip =
         '재무상태 등급은 내부 기준으로 산정됩니다.' +
