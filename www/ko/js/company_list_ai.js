@@ -42,8 +42,205 @@
     var typeBtns = document.querySelectorAll('.list-type-btn');
     var typeSlider = document.querySelector('.list-type-slider');
     var bannerStatEls = document.querySelectorAll('.ai-banner_stat_value');
+    var loadingOverlay = document.getElementById('companyAiLoadingOverlay');
+    var loadingDesc = document.getElementById('companyAiLoadingDesc');
+    var loadingHelp = document.getElementById('companyAiLoadingHelp');
+    var loadingProgressFill = document.getElementById('companyAiLoadingProgressFill');
+    var loadingActions = document.getElementById('companyAiLoadingActions');
+    var loadingRetryBtn = document.getElementById('companyAiLoadingRetryBtn');
+    var loadingBackBtn = document.getElementById('companyAiLoadingBackBtn');
+    var loadingSteps = document.querySelectorAll('#companyAiLoadingOverlay .ai-loading_step');
+    var loadingTimer = null;
+    var loadingHardTimeout = null;
+    var loadingProgressTimer = null;
+    var loadingStepTimer = null;
+    var loadingDone = false;
+    var loadingOpenedAt = 0;
+    var loadingMinVisibleMs = 2200;
+    var loadingTimeoutMs = 8000;
+    var loadingStepSegments = 6;
+    var loadingStepDoneCount = 0;
+    var loadingFinishRequested = false;
+    var forceTimeoutMode = false;
+    try {
+        forceTimeoutMode = (new URLSearchParams(window.location.search).get('qa_timeout') === '1');
+    } catch (e) {
+        forceTimeoutMode = false;
+    }
 
-    if (!topWrap || !restWrap || !loadMoreBtn) return;
+    function clearLoadingTimers() {
+        if (loadingTimer) {
+            clearTimeout(loadingTimer);
+            loadingTimer = null;
+        }
+        if (loadingHardTimeout) {
+            clearTimeout(loadingHardTimeout);
+            loadingHardTimeout = null;
+        }
+        if (loadingProgressTimer) {
+            clearInterval(loadingProgressTimer);
+            loadingProgressTimer = null;
+        }
+        if (loadingStepTimer) {
+            clearInterval(loadingStepTimer);
+            loadingStepTimer = null;
+        }
+    }
+
+    function setLoadingActionsVisible(visible) {
+        if (!loadingActions) return;
+        if (visible) loadingActions.removeAttribute('hidden');
+        else loadingActions.setAttribute('hidden', 'hidden');
+    }
+
+    function setLoadingNoticeVisible(visible) {
+        if (loadingDesc) {
+            if (visible) loadingDesc.removeAttribute('hidden');
+            else loadingDesc.setAttribute('hidden', 'hidden');
+        }
+        if (loadingHelp) {
+            if (visible) loadingHelp.removeAttribute('hidden');
+            else loadingHelp.setAttribute('hidden', 'hidden');
+        }
+    }
+
+    function handleLoadingTimeout() {
+        if (!loadingOverlay || loadingDone) return;
+        clearLoadingTimers();
+        loadingDone = false;
+        loadingOverlay.classList.add('is_open');
+        loadingOverlay.setAttribute('aria-busy', 'false');
+        if (loadingProgressFill) loadingProgressFill.style.width = '100%';
+        if (loadingDesc) loadingDesc.textContent = '응답 시간이 길어지고 있습니다.';
+        if (loadingHelp) loadingHelp.textContent = '네트워크 상태를 확인한 뒤 다시 시도해 주세요.';
+        setLoadingNoticeVisible(true);
+        loadingSteps.forEach(function(step) { step.classList.add('done'); });
+        setLoadingActionsVisible(true);
+    }
+
+    function resetLoadingSteps() {
+        loadingStepDoneCount = 0;
+        loadingFinishRequested = false;
+        loadingSteps.forEach(function(step) {
+            step.classList.remove('done');
+            var textEl = step.querySelector('.ai-loading_step_text');
+            if (!textEl) return;
+            var pending = textEl.getAttribute('data-pending');
+            if (pending) textEl.textContent = pending;
+        });
+    }
+
+    function markLoadingStepDone(index) {
+        if (!loadingSteps[index]) return;
+        var step = loadingSteps[index];
+        if (step.classList.contains('done')) return;
+        step.classList.add('done');
+        loadingStepDoneCount += 1;
+        var textEl = step.querySelector('.ai-loading_step_text');
+        if (!textEl) return;
+        var done = textEl.getAttribute('data-done');
+        if (done) textEl.textContent = done;
+        if (loadingFinishRequested && loadingStepDoneCount >= Math.min(loadingStepSegments, loadingSteps.length)) {
+            finishLoadingOverlay();
+        }
+    }
+
+    function startLoadingOverlay() {
+        if (!loadingOverlay) return;
+        loadingOverlay.classList.add('is_open');
+        loadingOverlay.setAttribute('aria-busy', 'true');
+        loadingDone = false;
+        loadingOpenedAt = Date.now();
+        resetLoadingSteps();
+        if (loadingDesc) loadingDesc.textContent = '거래 데이터를 분석해 맞춤 추천을 불러오는 중입니다.';
+        if (loadingHelp) loadingHelp.textContent = '응답이 지연되면 잠시 후 자동으로 안내 메시지가 표시됩니다.';
+        setLoadingNoticeVisible(false);
+        if (loadingProgressFill) loadingProgressFill.style.width = '8%';
+        setLoadingActionsVisible(false);
+        clearLoadingTimers();
+        var progress = 8;
+        loadingProgressTimer = setInterval(function() {
+            if (loadingDone) return;
+            progress = Math.min(progress + 3, 92);
+            if (loadingProgressFill) loadingProgressFill.style.width = progress + '%';
+        }, 220);
+        var stepIndex = 0;
+        loadingTimer = setTimeout(function() {
+            if (loadingDone) return;
+            if (loadingDesc) loadingDesc.textContent = '응답이 지연되고 있습니다.';
+            if (loadingHelp) loadingHelp.textContent = '잠시 후에도 동일하면 새로고침 후 다시 시도해 주세요.';
+            setLoadingNoticeVisible(true);
+        }, 5000);
+        var stepIntervalMs = Math.max(1, Math.floor(loadingMinVisibleMs / Math.max(loadingStepSegments, 1)));
+        clearInterval(loadingStepTimer);
+        loadingStepTimer = setInterval(function() {
+            if (loadingDone) return;
+            markLoadingStepDone(stepIndex);
+            stepIndex += 1;
+            if (stepIndex >= Math.min(loadingStepSegments, loadingSteps.length)) {
+                clearInterval(loadingStepTimer);
+                loadingStepTimer = null;
+            }
+        }, stepIntervalMs);
+        loadingHardTimeout = setTimeout(handleLoadingTimeout, loadingTimeoutMs);
+    }
+
+    function finishLoadingOverlay() {
+        if (!loadingOverlay || loadingDone) return;
+        if (forceTimeoutMode) return;
+        if (loadingStepDoneCount < Math.min(loadingStepSegments, loadingSteps.length)) {
+            loadingFinishRequested = true;
+            return;
+        }
+        loadingDone = true;
+        clearLoadingTimers();
+        if (loadingProgressFill) loadingProgressFill.style.width = '100%';
+        loadingOverlay.setAttribute('aria-busy', 'false');
+        setLoadingNoticeVisible(false);
+        setLoadingActionsVisible(false);
+        var elapsed = loadingOpenedAt > 0 ? (Date.now() - loadingOpenedAt) : loadingMinVisibleMs;
+        var waitMs = Math.max(0, loadingMinVisibleMs - elapsed);
+        setTimeout(function() {
+            loadingOverlay.classList.remove('is_open');
+        }, waitMs + 180);
+    }
+
+    function failLoadingOverlay(message) {
+        if (!loadingOverlay) return;
+        clearLoadingTimers();
+        loadingDone = false;
+        loadingOverlay.classList.add('is_open');
+        loadingOverlay.setAttribute('aria-busy', 'false');
+        if (loadingProgressFill) loadingProgressFill.style.width = '100%';
+        if (loadingDesc) loadingDesc.textContent = message || '추천 데이터를 불러오지 못했습니다.';
+        if (loadingHelp) loadingHelp.textContent = '새로고침 후 다시 시도해 주세요.';
+        setLoadingNoticeVisible(true);
+        loadingSteps.forEach(function(step) { step.classList.add('done'); });
+        setLoadingActionsVisible(true);
+    }
+
+    if (loadingRetryBtn) {
+        loadingRetryBtn.addEventListener('click', function() {
+            window.location.reload();
+        });
+    }
+
+    if (loadingBackBtn) {
+        loadingBackBtn.addEventListener('click', function() {
+            if (window.history.length > 1) {
+                window.history.back();
+                return;
+            }
+            window.location.href = '/ko/company.php';
+        });
+    }
+
+    startLoadingOverlay();
+
+    if (!topWrap || !restWrap || !loadMoreBtn) {
+        failLoadingOverlay('목록 화면을 준비하지 못했습니다.');
+        return;
+    }
 
     var currentType = 'buyer';
     var restPageSize = 9;
@@ -323,6 +520,9 @@
         if (shouldScrollToRest && restHeader) {
             restHeader.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
+
+        // 첫 렌더 완료 시 실제 로딩 오버레이를 닫는다.
+        finishLoadingOverlay();
     }
 
     function syncTypeUrl(type) {

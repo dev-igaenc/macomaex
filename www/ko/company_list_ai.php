@@ -954,6 +954,48 @@ $banner_sell_stat = 12;
 ?>
 
 <div id="listWrap" class="company-list-ai-real">
+    <div class="ai-loading_overlay is_open company-ai-loading-overlay" id="companyAiLoadingOverlay" aria-live="polite" aria-busy="true">
+        <div class="ai-loading_card company-ai-loading-card" role="status">
+            <div class="ai-loading_spinner" aria-hidden="true"></div>
+            <h3 class="ai-loading_title">AI가 거래처를 분석하고 있습니다</h3>
+            <div class="ai-loading_steps" id="companyAiLoadingSteps">
+                <div class="ai-loading_step" data-step="0">
+                    <span class="ai-loading_step_icon"><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"></path></svg></span>
+                    <span class="ai-loading_step_text" data-pending="공급망 근접도 분석 중..." data-done="공급망 근접도 분석 완료 ✓">공급망 근접도 분석 중...</span>
+                </div>
+                <div class="ai-loading_step" data-step="1">
+                    <span class="ai-loading_step_icon"><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"></path></svg></span>
+                    <span class="ai-loading_step_text" data-pending="거래처 유사성 분석 중..." data-done="거래처 유사성 분석 완료 ✓">거래처 유사성 분석 중...</span>
+                </div>
+                <div class="ai-loading_step" data-step="2">
+                    <span class="ai-loading_step_icon"><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"></path></svg></span>
+                    <span class="ai-loading_step_text" data-pending="거래 활성도 분석 중..." data-done="거래 활성도 분석 완료 ✓">거래 활성도 분석 중...</span>
+                </div>
+                <div class="ai-loading_step" data-step="3">
+                    <span class="ai-loading_step_icon"><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"></path></svg></span>
+                    <span class="ai-loading_step_text" data-pending="재무 안정성 분석 중..." data-done="재무 안정성 분석 완료 ✓">재무 안정성 분석 중...</span>
+                </div>
+                <div class="ai-loading_step" data-step="4">
+                    <span class="ai-loading_step_icon"><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"></path></svg></span>
+                    <span class="ai-loading_step_text" data-pending="지역 접근성 분석 중..." data-done="지역 접근성 분석 완료 ✓">지역 접근성 분석 중...</span>
+                </div>
+                <div class="ai-loading_step" data-step="5">
+                    <span class="ai-loading_step_icon"><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"></path></svg></span>
+                    <span class="ai-loading_step_text" data-pending="규모 적합도 분석 중..." data-done="규모 적합도 분석 완료 ✓">규모 적합도 분석 중...</span>
+                </div>
+            </div>
+            <div class="ai-loading_bar" aria-hidden="true">
+                <div class="ai-loading_bar_fill company-ai-loading-progress-fill" id="companyAiLoadingProgressFill"></div>
+            </div>
+            <p class="company-ai-loading-desc" id="companyAiLoadingDesc" hidden>거래 데이터를 분석해 맞춤 추천을 불러오는 중입니다.</p>
+            <p class="company-ai-loading-help" id="companyAiLoadingHelp" hidden>응답이 지연되면 잠시 후 자동으로 안내 메시지가 표시됩니다.</p>
+            <div class="company-ai-loading-actions" id="companyAiLoadingActions" hidden>
+                <button type="button" class="company-ai-loading-btn company-ai-loading-btn-primary" id="companyAiLoadingRetryBtn">다시 시도</button>
+                <button type="button" class="company-ai-loading-btn company-ai-loading-btn-ghost" id="companyAiLoadingBackBtn">이전으로</button>
+            </div>
+        </div>
+    </div>
+
     <div class="ai-banner" id="aiBanner">
         <div class="ai-banner_card">
             <div class="ai-banner_top">

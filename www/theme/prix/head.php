@@ -578,9 +578,7 @@ function requestMainCompCheck(comnum, $form, opts) {
 				if ($form && $form.length) {
 					$form.find("input[name='cominfo']").val(parts[1] || "");
 					if (opts.useLoading) {
-						runAiLoading(function() {
-							moveToAiRecommendByBizno(comnum);
-						});
+						moveToAiRecommendByBizno(comnum);
 					} else {
 						moveToAiRecommendByBizno(comnum);
 					}
@@ -727,9 +725,7 @@ $(document).on("click", "#modal_verify_btn_ai", function() {
 				overlay.classList.remove("is_open");
 				overlay.setAttribute("aria-hidden", "true");
 			}
-			runAiLoading(function() {
-				moveToAiRecommendByBizno(comnum);
-			});
+			moveToAiRecommendByBizno(comnum);
 			return;
 		}
 
