@@ -620,6 +620,11 @@ html, body { margin: 0; overflow-x: hidden; font-family: var(--font-base); backg
     .ai-top3-swiper { overflow-x: auto; overflow-y: visible; -webkit-overflow-scrolling: touch; padding-bottom: 12px; scroll-snap-type: x mandatory; }
     .ai-top3-swiper .swiper-wrapper { display: flex !important; gap: 16px; flex-wrap: nowrap; }
     .ai-top3-swiper .swiper-slide { min-width: 280px; width: 75% !important; flex-shrink: 0; scroll-snap-align: start; }
+    .ai-top3-swiper,
+    .ai-top3-swiper .swiper-wrapper,
+    .ai-top3-swiper .swiper-slide {
+        touch-action: pan-y;
+    }
 }
 @media (max-width: 640px) {
     .ai-top3-swiper .swiper-slide { min-width: 260px; width: 85% !important; }
@@ -829,6 +834,11 @@ html, body { margin: 0; overflow-x: hidden; font-family: var(--font-base); backg
     .ai-rest-swiper { overflow-x: auto; overflow-y: visible; -webkit-overflow-scrolling: touch; scroll-snap-type: x mandatory; }
     .ai-rest-swiper .swiper-wrapper { display: flex !important; gap: 16px; flex-wrap: nowrap; }
     .ai-rest-swiper .swiper-slide { min-width: 280px; width: 75% !important; flex-shrink: 0; scroll-snap-align: start; }
+    .ai-rest-swiper,
+    .ai-rest-swiper .swiper-wrapper,
+    .ai-rest-swiper .swiper-slide {
+        touch-action: pan-y;
+    }
     .ai-empty-state { min-width: 280px; width: 75%; flex-shrink: 0; scroll-snap-align: start; }
     .ai-rest-swiper .swiper-pagination { display: block; }
     .ai-rest-nav { display: none; }

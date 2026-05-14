@@ -70,25 +70,37 @@
         if (typeof Swiper === 'undefined' || window.innerWidth > 1024) return;
         if (isDemoMode) return;
 
+        // 모바일에서 세로 스크롤을 우선 보장하면서 가로 스와이프만 반응하도록 옵션을 맞춘다.
+        var mobileTouchOptions = {
+            touchStartPreventDefault: false,
+            touchStartForcePreventDefault: false,
+            touchMoveStopPropagation: false,
+            touchReleaseOnEdges: true,
+            threshold: 10,
+            passiveListeners: true,
+            nested: true
+        };
+
         var topEl = document.querySelector('.ai-top3-swiper');
         if (topEl) {
-            top3Swiper = new Swiper(topEl, {
+            var topOptions = Object.assign({
                 slidesPerView: 'auto',
                 spaceBetween: 25,
                 grabCursor: true,
                 resistanceRatio: 0.65
-            });
+            }, mobileTouchOptions);
+            top3Swiper = new Swiper(topEl, topOptions);
         }
 
         var restEl = document.querySelector('.ai-rest-swiper');
         if (restEl) {
             var paginationEl = restEl.querySelector('.swiper-pagination');
-            var options = {
+            var options = Object.assign({
                 slidesPerView: 'auto',
                 spaceBetween: 25,
                 grabCursor: true,
                 resistanceRatio: 0.65
-            };
+            }, mobileTouchOptions);
             if (paginationEl) {
                 options.pagination = {
                     el: paginationEl,
