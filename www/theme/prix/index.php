@@ -517,7 +517,7 @@ $stable_list = get_processed_companies('stability_score_5', 3, $unlocked_bzno_ma
                         ? (int)$com['keyword_count']
                         : count($allTags);
                     $restCount = max($totalCount - count($displayTags), 0);
-                    $growthTop = (int)round($com['growth_score_5'] * 20);
+                    $growthTop = (int)round($com['growth_score_5']);
                     $detailUrl = '/ko/company_detail.php?cd=' . urlencode(simple_crypt($com['KEDCD']));
                 ?>
                 <div class="mCompanyCard detail_view" kedcd="<?= $com['KEDCD'] ?>" data-kedcd="<?= $com['KEDCD'] ?>" data-detail-url="<?= htmlspecialchars($detailUrl, ENT_QUOTES) ?>">
@@ -594,7 +594,7 @@ $stable_list = get_processed_companies('stability_score_5', 3, $unlocked_bzno_ma
                         ? (int)$com['keyword_count']
                         : count($allTags);
                     $restCount = max($totalCount - count($displayTags), 0);
-                    $stableTop = (int)round($com['stability_score_5'] * 20);
+                    $stableTop = (int)round($com['stability_score_5']);
                     $detailUrl = '/ko/company_detail.php?cd=' . urlencode(simple_crypt($com['KEDCD']));
                 ?>
                 <div class="mCompanyCard detail_view" kedcd="<?= $com['KEDCD'] ?>" data-kedcd="<?= $com['KEDCD'] ?>" data-detail-url="<?= htmlspecialchars($detailUrl, ENT_QUOTES) ?>">
