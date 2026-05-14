@@ -826,7 +826,6 @@ if (!$open_group_slug && $current_cat === 'all') {
 $sort_labels = [
     'rank' => '랭킹순',
     'grow' => '성장성순',
-    'profit' => '수익성순',
     'stable' => '안정성순',
 ];
 $current_sort_label = isset($sort_labels[$current_sort]) ? $sort_labels[$current_sort] : $sort_labels['rank'];
@@ -949,7 +948,6 @@ $sidebar_icon_map = [
                     <select id="sortSelect" aria-label="정렬 기준">
                         <option value="rank" <?php echo $current_sort === 'rank' ? 'selected' : ''; ?>>랭킹순</option>
                         <option value="grow" <?php echo $current_sort === 'grow' ? 'selected' : ''; ?>>성장성순</option>
-                        <option value="profit" <?php echo $current_sort === 'profit' ? 'selected' : ''; ?>>수익성순</option>
                         <option value="stable" <?php echo $current_sort === 'stable' ? 'selected' : ''; ?>>안정성순</option>
                     </select>
                     <div class="sort-dropdown" id="sortDropdown">
@@ -966,7 +964,6 @@ $sidebar_icon_map = [
                         <ul class="sort-dropdown-menu" id="sortDropdownMenu" role="listbox">
                             <li class="sort-dropdown-item<?php echo $current_sort === 'rank' ? ' selected' : ''; ?>" role="option" data-val="rank">랭킹순</li>
                             <li class="sort-dropdown-item<?php echo $current_sort === 'grow' ? ' selected' : ''; ?>" role="option" data-val="grow">성장성순</li>
-                            <li class="sort-dropdown-item<?php echo $current_sort === 'profit' ? ' selected' : ''; ?>" role="option" data-val="profit">수익성순</li>
                             <li class="sort-dropdown-item<?php echo $current_sort === 'stable' ? ' selected' : ''; ?>" role="option" data-val="stable">안정성순</li>
                         </ul>
                     </div>

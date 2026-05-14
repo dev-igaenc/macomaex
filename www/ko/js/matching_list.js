@@ -16,7 +16,6 @@
     var sortLabelMap = {
         rank: '랭킹순',
         grow: '성장성순',
-        profit: '수익성순',
         stable: '안정성순'
     };
 
