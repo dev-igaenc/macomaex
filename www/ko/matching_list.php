@@ -4,6 +4,7 @@
 // ============================================================
 
 include_once("./_common.php");
+$is_matching_list_api = defined('MATCHING_LIST_API_MODE') || (isset($_GET['ajax']) && (string)$_GET['ajax'] === '1');
 
 // ----------------------------------------------------------
 // 1. 게시판 설정
@@ -33,7 +34,9 @@ add_stylesheet('<link rel="stylesheet" href="'.G5_URL.'/ko/css/section-header.cs
 add_stylesheet('<link rel="stylesheet" href="'.G5_URL.'/ko/css/list-sidebar.css?ver='.G5_CSS_VER.'">', 214);
 add_stylesheet('<link rel="stylesheet" href="'.G5_URL.'/ko/css/trade_chat_modal.css?ver='.G5_CSS_VER.'">', 215);
 add_stylesheet('<link rel="stylesheet" href="'.G5_URL.'/ko/css/matching_list.css?ver='.$matching_list_css_ver.'">', 220);
-include_once(G5_THEME_PATH.'/head.php');
+if (!$is_matching_list_api) {
+    include_once(G5_THEME_PATH.'/head.php');
+}
 
 // ----------------------------------------------------------
 // 3. 카테고리 정의
@@ -143,9 +146,15 @@ if ($member['mb_id']) {
 }
 
 $free_limit   = 9;
+// 기본 렌더/더보기 단위 크기
+$default_page_size = 9;
+$max_page_size = 100;
 // 더보기 권한: 비회원은 기존 제한 유지, 로그인 회원은 멤버십/결제 여부와 무관하게 허용
 $can_load_more = !empty($member['mb_id']);
-$page_size = $free_limit;
+$page_size_req = isset($_GET['page_size']) ? (int)$_GET['page_size'] : $default_page_size;
+if ($page_size_req < $default_page_size) $page_size_req = $default_page_size;
+if ($page_size_req > $max_page_size) $page_size_req = $max_page_size;
+$page_size = $page_size_req;
 $offset_req = isset($_GET['offset']) ? (int)$_GET['offset'] : 0;
 if ($offset_req < 0) $offset_req = 0;
 $show_count_req = $page_size;
@@ -402,6 +411,28 @@ function build_company_where_clause($target_codes, $restrict_cg_prefix = false) 
     return $where_clause;
 }
 
+// 판매하기처럼 코드 후보가 많은 경우, 상세 코드 정확매칭(IN)으로 필터링
+function build_company_where_clause_in_codes($target_codes, $restrict_cg_prefix = false) {
+    $where_clause = "WHERE A.KEDCD != '' AND A.ENP_NM != ''";
+    if ($restrict_cg_prefix) {
+        $where_clause .= " AND (A.BZC_CD LIKE 'C%' OR A.BZC_CD LIKE 'G%')";
+    }
+    if (empty($target_codes)) return $where_clause;
+
+    $safe_codes = [];
+    foreach ($target_codes as $tc) {
+        $code = trim((string)$tc);
+        if ($code === '') continue;
+        $safe_codes[] = "'" . sql_real_escape_string($code) . "'";
+    }
+    $safe_codes = array_values(array_unique($safe_codes));
+    if (!$safe_codes) return $where_clause;
+
+    $where_clause .= " AND A.BZC_CD IN (" . implode(',', $safe_codes) . ")";
+
+    return $where_clause;
+}
+
 // 정렬 기준에 맞는 ORDER BY 만들기
 function build_company_order_clause($sort_key) {
     switch ($sort_key) {
@@ -409,14 +440,6 @@ function build_company_order_clause($sort_key) {
             return "
                 CASE WHEN S.growth_score_5 IS NULL OR S.growth_score_5 = '' THEN 1 ELSE 0 END ASC,
                 CAST(S.growth_score_5 AS DECIMAL(10,4)) DESC,
-                CASE WHEN S.final_total_score_5 IS NULL OR S.final_total_score_5 = '' THEN 1 ELSE 0 END ASC,
-                CAST(S.final_total_score_5 AS DECIMAL(10,4)) DESC,
-                A.ENP_NM ASC
-            ";
-        case 'profit':
-            return "
-                CASE WHEN S.profit_score_5 IS NULL OR S.profit_score_5 = '' THEN 1 ELSE 0 END ASC,
-                CAST(S.profit_score_5 AS DECIMAL(10,4)) DESC,
                 CASE WHEN S.final_total_score_5 IS NULL OR S.final_total_score_5 = '' THEN 1 ELSE 0 END ASC,
                 CAST(S.final_total_score_5 AS DECIMAL(10,4)) DESC,
                 A.ENP_NM ASC
@@ -477,27 +500,61 @@ function resolve_where_clause_for_general_list($query_type, $current_cat, $list_
     if ($query_type === 'seller') {
         $seller_codes = get_seller_codes_by_category($list_categories, $current_cat, $seller_category_code_map);
         if (empty($seller_codes)) return "WHERE 1=0";
-        return build_company_where_clause($seller_codes, false);
+        return build_company_where_clause_in_codes($seller_codes, false);
     }
 
     $buyer_codes = get_target_codes_by_category($list_categories, $current_cat);
     return build_company_where_clause($buyer_codes, false);
 }
 
+function matching_list_count_cache_get($cache_key, $ttl_sec = 45) {
+    $cache_dir = G5_DATA_PATH . '/cache/matching_list';
+    if (!is_dir($cache_dir)) {
+        @mkdir($cache_dir, 0777, true);
+    }
+    $cache_file = $cache_dir . '/count_' . md5($cache_key) . '.php';
+    if (!is_file($cache_file)) return null;
+    if ((time() - @filemtime($cache_file)) > (int)$ttl_sec) return null;
+
+    $raw = @file_get_contents($cache_file);
+    if ($raw === false) return null;
+    $payload = @json_decode($raw, true);
+    if (!is_array($payload) || !isset($payload['cnt'])) return null;
+    return (int)$payload['cnt'];
+}
+
+function matching_list_count_cache_set($cache_key, $count) {
+    $cache_dir = G5_DATA_PATH . '/cache/matching_list';
+    if (!is_dir($cache_dir)) {
+        @mkdir($cache_dir, 0777, true);
+    }
+    $cache_file = $cache_dir . '/count_' . md5($cache_key) . '.php';
+    $payload = json_encode(['cnt' => (int)$count], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    @file_put_contents($cache_file, $payload, LOCK_EX);
+}
+
 // 일반 리스트 카드와 총 개수 조회
 function fetch_general_cards_by_where($where_clause, $query_type, $show_count_req, $sort_key = 'rank', $offset = 0, $unlocked_bzno_map = []) {
     $cards = [];
+    $display_cap = 10000;
+    $requested_limit = max(1, (int)$show_count_req);
+    $requested_offset = max(0, (int)$offset);
 
-    $count_row = sql_fetch("
-        SELECT COUNT(*) AS cnt
-        FROM company A
-        {$where_clause}
-    ");
-    $cards_total_count = (int)($count_row['cnt'] ?? 0);
+    $count_cache_key = $query_type . '|' . $where_clause;
+    $cards_total_count = matching_list_count_cache_get($count_cache_key, 45);
+    if ($cards_total_count === null) {
+        $count_row = sql_fetch("
+            SELECT COUNT(*) AS cnt
+            FROM company A
+            {$where_clause}
+        ");
+        $cards_total_count = (int)($count_row['cnt'] ?? 0);
+        matching_list_count_cache_set($count_cache_key, $cards_total_count);
+    }
 
     $order_clause = build_company_order_clause($sort_key);
 
-    $sql_list = "
+    $sql_list_base = "
         SELECT A.KEDCD, A.BZNO, A.ENP_NM, A.LOC_ADDRA, A.BZC_CD, A.keywords_json AS keywords_json, A.keyword_count AS keyword_count, A.VENP_YN, B.k_code_name,
             S.growth_score_5, S.profit_score_5, S.stability_score_5, S.age_score_5, S.emp_score_5, S.final_total_score_5,
             S.badge_growth, S.badge_stability, S.badge_venture
@@ -506,37 +563,130 @@ function fetch_general_cards_by_where($where_clause, $query_type, $show_count_re
         LEFT JOIN company_score_final_dedup S ON A.KEDCD = S.KEDCD
         {$where_clause}
         ORDER BY {$order_clause}
-        LIMIT " . (int)$offset . ", " . (int)$show_count_req . "
     ";
 
-    $res_list = sql_query($sql_list);
-    while ($row = sql_fetch_array($res_list)) {
-        $title = build_company_title_for_list($row['ENP_NM'] ?? '', $row['BZNO'] ?? '', $unlocked_bzno_map);
-        $tags = parse_keywords_json_tags($row['keywords_json'] ?? '');
-        $cards[] = [
-            'type'    => $query_type,
-            'title'   => $title,
-            'tags'    => $tags,
-            'tag_total_count' => resolve_keyword_tag_total_count($row['keyword_count'] ?? 0, $tags),
-            'score'   => calc_score_avg($row['final_total_score_5']),
-            'grow'    => $row['growth_score_5'],
-            'profit'  => $row['profit_score_5'],
-            'stable'  => $row['stability_score_5'],
-            'age_score' => $row['age_score_5'],
-            'emp_score' => $row['emp_score_5'],
-            'company' => $title,
-            'kedcd'   => $row['KEDCD'],
-            'venp_yn' => $row['VENP_YN'],
-            'badge_growth' => $row['badge_growth'],
-            'badge_stability' => $row['badge_stability'],
-            'badge_venture' => $row['badge_venture'],
-        ];
+    $append_rows = function ($sql) use (&$cards, $query_type, $unlocked_bzno_map) {
+        $res_list = sql_query($sql);
+        while ($row = sql_fetch_array($res_list)) {
+            $title = build_company_title_for_list($row['ENP_NM'] ?? '', $row['BZNO'] ?? '', $unlocked_bzno_map);
+            $tags = parse_keywords_json_tags($row['keywords_json'] ?? '');
+            $cards[] = [
+                'type'    => $query_type,
+                'title'   => $title,
+                'tags'    => $tags,
+                'tag_total_count' => resolve_keyword_tag_total_count($row['keyword_count'] ?? 0, $tags),
+                'score'   => calc_score_avg($row['final_total_score_5']),
+                'grow'    => $row['growth_score_5'],
+                'profit'  => $row['profit_score_5'],
+                'stable'  => $row['stability_score_5'],
+                'age_score' => $row['age_score_5'],
+                'emp_score' => $row['emp_score_5'],
+                'company' => $title,
+                'kedcd'   => $row['KEDCD'],
+                'venp_yn' => $row['VENP_YN'],
+                'badge_growth' => $row['badge_growth'],
+                'badge_stability' => $row['badge_stability'],
+                'badge_venture' => $row['badge_venture'],
+            ];
+        }
+    };
+
+    // 1차: 성능 우선 구간(상위 10,000건)에서 먼저 로드
+    if ($requested_offset < $display_cap) {
+        $first_limit = min($requested_limit, $display_cap - $requested_offset);
+        if ($first_limit > 0) {
+            $append_rows($sql_list_base . " LIMIT {$requested_offset}, {$first_limit}");
+        }
+
+        // 2차: 10,000건 구간이 소진되면 잔여분을 이후 구간에서 이어서 로드
+        $remain = $requested_limit - count($cards);
+        if ($remain > 0 && $cards_total_count > $display_cap) {
+            $next_offset = max($display_cap, $requested_offset + count($cards));
+            $append_rows($sql_list_base . " LIMIT {$next_offset}, {$remain}");
+        }
+    } else {
+        // 10,000건 이후 구간 직접 조회
+        $append_rows($sql_list_base . " LIMIT {$requested_offset}, {$requested_limit}");
     }
 
     return [
         'cards' => $cards,
         'total_count' => $cards_total_count,
     ];
+}
+
+function matching_list_render_cards_grid_html($cards) {
+    if (empty($cards) || !is_array($cards)) {
+        return '<div style="grid-column: 1/-1; padding: 100px 0; text-align: center; color: #888;">해당 카테고리에 등록된 기업이 없습니다.</div>';
+    }
+
+    ob_start();
+    foreach ($cards as $idx => $c):
+        $scoreValue = isset($c['score']) && is_numeric($c['score']) ? (float)$c['score'] : 0.0;
+        $growScore = isset($c['grow']) && is_numeric($c['grow']) ? (float)$c['grow'] : 0.0;
+        $profitScore = isset($c['profit']) && is_numeric($c['profit']) ? (float)$c['profit'] : 0.0;
+        $stableScore = isset($c['stable']) && is_numeric($c['stable']) ? (float)$c['stable'] : 0.0;
+
+        $careerScore = isset($c['age_score']) && is_numeric($c['age_score']) ? (float)$c['age_score'] : 0.0;
+        $employScore = isset($c['emp_score']) && is_numeric($c['emp_score']) ? (float)$c['emp_score'] : 0.0;
+        $radarScores = [$growScore, $profitScore, $stableScore, $careerScore, $employScore];
+        $radarSvg = build_radar_svg_5($radarScores);
+        $starsHtml = render_stars_html($scoreValue);
+
+        $allTags = is_array($c['tags'] ?? null) ? $c['tags'] : [];
+        $showNum = 3;
+        $displayTags = array_slice($allTags, 0, $showNum);
+        $totalCount = isset($c['tag_total_count']) && is_numeric($c['tag_total_count'])
+            ? max(0, (int)$c['tag_total_count'])
+            : count($allTags);
+        $restCount = max($totalCount - count($displayTags), 0);
+        ?>
+        <a href="/ko/company_detail.php?cd=<?php echo urlencode(simple_crypt($c['kedcd'] ?? '')); ?>"
+        class="mCompanyCard detail_view"
+        data-type="<?php echo htmlspecialchars($c['type'] ?? 'buyer'); ?>"
+        data-rank="<?php echo (int)$idx; ?>"
+        data-total="<?php echo $scoreValue; ?>"
+        data-grow="<?php echo ($c['grow'] !== null && $c['grow'] !== '') ? (float)$c['grow'] : ''; ?>"
+        data-profit="<?php echo ($c['profit'] !== null && $c['profit'] !== '') ? (float)$c['profit'] : ''; ?>"
+        data-stable="<?php echo ($c['stable'] !== null && $c['stable'] !== '') ? (float)$c['stable'] : ''; ?>"
+        kedcd="<?php echo htmlspecialchars($c['kedcd'] ?? ''); ?>"
+        style="text-decoration:none;color:inherit;">
+            <div class="mCompanyCard_content">
+                <div class="mCompanyCard_badges">
+                    <?php echo matching_list_render_badges($c); ?>
+                </div>
+                <h3 class="mCompanyCard_title"><?php echo htmlspecialchars($c['title'] ?? ''); ?></h3>
+
+                <p class="mCompanyCard_desc">
+                    <?php if ($totalCount > 0): ?>
+                        <?php foreach ($displayTags as $t): ?>
+                            <span class="mCompanyCard_desc_tag"><?php echo htmlspecialchars($t); ?></span>
+                        <?php endforeach; ?>
+                        <?php if ($restCount > 0): ?>
+                            <span class="mCompanyCard_desc_tag">+<?php echo $restCount; ?></span>
+                        <?php endif; ?>
+                    <?php else: ?>
+                        <span class="mCompanyCard_desc_tag">정보 준비중</span>
+                    <?php endif; ?>
+                </p>
+
+                <div class="radar-card">
+                    <div class="radar-card_chart">
+                        <svg viewBox="0 0 210 200" class="radar-svg"><?php echo $radarSvg; ?></svg>
+                    </div>
+                </div>
+
+                <div class="mCompanyCard_footer_stars">
+                    <span class="mCompanyCard_footer_stars_wrap"><?php echo $starsHtml; ?></span>
+                    <span class="mCompanyCard_footer_score"><?php echo number_format($scoreValue, 1); ?></span>
+                    <span class="mCompanyCard_footer_max">/ 5.0</span>
+                </div>
+            </div>
+        </a>
+        <?php
+    endforeach;
+
+    return ob_get_clean();
 }
 
 $seller_category_code_map = include __DIR__ . "/matching_seller_category_codes.php";
@@ -798,6 +948,23 @@ if (!$has_comnum) {
     }
 }
 
+if ($is_matching_list_api) {
+    $grid_html = matching_list_render_cards_grid_html($cards);
+    header('Content-Type: application/json; charset=UTF-8');
+    echo json_encode([
+        'ok' => true,
+        'gridHtml' => $grid_html,
+        'totalByType' => [
+            'buyer' => (int)$buyer_total_count,
+            'seller' => (int)$seller_total_count,
+        ],
+        'currentType' => ($current_type === 'seller') ? 'seller' : 'buyer',
+        'currentSort' => $current_sort,
+        'pageSize' => (int)$page_size,
+    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    return;
+}
+
 // ----------------------------------------------------------
 // 8. 사이드바: 현재 열린 그룹 탐색
 // ----------------------------------------------------------
@@ -971,76 +1138,7 @@ $sidebar_icon_map = [
             </div>
 
             <div class="list-grid">
-                <?php if (empty($cards)): ?>
-                    <div style="grid-column: 1/-1; padding: 100px 0; text-align: center; color: #888;">
-                        해당 카테고리에 등록된 기업이 없습니다.
-                    </div>
-                <?php else: ?>
-                    <?php foreach ($cards as $idx => $c):
-                        $scoreValue = isset($c['score']) && is_numeric($c['score']) ? (float)$c['score'] : 0.0;
-                        $growScore = isset($c['grow']) && is_numeric($c['grow']) ? (float)$c['grow'] : 0.0;
-                        $profitScore = isset($c['profit']) && is_numeric($c['profit']) ? (float)$c['profit'] : 0.0;
-                        $stableScore = isset($c['stable']) && is_numeric($c['stable']) ? (float)$c['stable'] : 0.0;
-
-                        $careerScore = isset($c['age_score']) && is_numeric($c['age_score']) ? (float)$c['age_score'] : 0.0;
-                        $employScore = isset($c['emp_score']) && is_numeric($c['emp_score']) ? (float)$c['emp_score'] : 0.0;
-                        $radarScores = [$growScore, $profitScore, $stableScore, $careerScore, $employScore];
-                        $radarSvg = build_radar_svg_5($radarScores);
-                        $starsHtml = render_stars_html($scoreValue);
-
-                        $allTags = is_array($c['tags'] ?? null) ? $c['tags'] : [];
-                        $showNum = 3;
-                        $displayTags = array_slice($allTags, 0, $showNum);
-                        $totalCount = isset($c['tag_total_count']) && is_numeric($c['tag_total_count'])
-                            ? max(0, (int)$c['tag_total_count'])
-                            : count($allTags);
-                        $restCount = max($totalCount - count($displayTags), 0);
-                    ?>
-                    <a href="/ko/company_detail.php?cd=<?php echo urlencode(simple_crypt($c['kedcd'] ?? '')); ?>"
-                    class="mCompanyCard detail_view"
-                    data-type="<?php echo htmlspecialchars($c['type'] ?? 'buyer'); ?>"
-                    data-rank="<?php echo (int)$idx; ?>"
-                    data-total="<?php echo $scoreValue; ?>"
-                    data-grow="<?php echo ($c['grow'] !== null && $c['grow'] !== '') ? (float)$c['grow'] : ''; ?>"
-                    data-profit="<?php echo ($c['profit'] !== null && $c['profit'] !== '') ? (float)$c['profit'] : ''; ?>"
-                    data-stable="<?php echo ($c['stable'] !== null && $c['stable'] !== '') ? (float)$c['stable'] : ''; ?>"
-                    kedcd="<?php echo htmlspecialchars($c['kedcd'] ?? ''); ?>"
-                    style="text-decoration:none;color:inherit;">
-
-                        <div class="mCompanyCard_content">
-                            <div class="mCompanyCard_badges">
-                                <?php echo matching_list_render_badges($c); ?>
-                            </div>
-                            <h3 class="mCompanyCard_title"><?php echo htmlspecialchars($c['title'] ?? ''); ?></h3>
-
-                            <p class="mCompanyCard_desc">
-                                <?php if ($totalCount > 0): ?>
-                                    <?php foreach ($displayTags as $t): ?>
-                                        <span class="mCompanyCard_desc_tag"><?php echo htmlspecialchars($t); ?></span>
-                                    <?php endforeach; ?>
-                                    <?php if ($restCount > 0): ?>
-                                        <span class="mCompanyCard_desc_tag">+<?php echo $restCount; ?></span>
-                                    <?php endif; ?>
-                                <?php else: ?>
-                                    <span class="mCompanyCard_desc_tag">정보 준비중</span>
-                                <?php endif; ?>
-                            </p>
-
-                            <div class="radar-card">
-                                <div class="radar-card_chart">
-                                    <svg viewBox="0 0 210 200" class="radar-svg"><?php echo $radarSvg; ?></svg>
-                                </div>
-                            </div>
-
-                            <div class="mCompanyCard_footer_stars">
-                                <span class="mCompanyCard_footer_stars_wrap"><?php echo $starsHtml; ?></span>
-                                <span class="mCompanyCard_footer_score"><?php echo number_format($scoreValue, 1); ?></span>
-                                <span class="mCompanyCard_footer_max">/ 5.0</span>
-                            </div>
-                        </div>
-                    </a>
-                    <?php endforeach; ?>
-                <?php endif; ?>
+                <?php echo matching_list_render_cards_grid_html($cards); ?>
             </div>
 
             <div class="list-grid_more_wrap">
@@ -1087,6 +1185,7 @@ foreach ($list_categories as $lg) {
 
 $matching_list_js_config = [
     'freeLimit' => (int)$free_limit,
+    'pageSize' => (int)$page_size,
     'canLoadMore' => (bool)$can_load_more,
     'isServerPaged' => !$has_comnum,
     'totalByType' => [
