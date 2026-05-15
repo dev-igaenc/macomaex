@@ -27,16 +27,23 @@
     align-items: center;
     gap: 8px;
     padding: 9px 16px;
+    box-sizing: border-box;
     background: var(--card);
     border: 1px solid var(--border);
     color: var(--text);
     border-radius: 8px;
     font-size: 13px;
     font-weight: 600;
+    line-height: 20.797px;
     cursor: pointer;
     text-decoration: none;
 }
 .top-nav .btn-back:hover { border-color: var(--purple); color: var(--purple); background: var(--purple-soft); }
+
+/* 전역 #wrap * letter-spacing 덮어쓰기 */
+#wrap .top-nav .btn-back {
+    letter-spacing: 0.02em;
+}
 
 /* 거래 요청하기 버튼 — 구조 공통, 색상은 각 페이지에서 오버라이드 */
 .btn-match-cta-top {
@@ -44,8 +51,10 @@
     align-items: center;
     gap: 6px;
     padding: 10px 24px;
+    box-sizing: border-box;
     font-size: 15px;
     font-weight: 700;
+    line-height: 19px;
     color: #fff;
     border: none;
     border-radius: 10px;
@@ -54,6 +63,11 @@
     white-space: nowrap;
 }
 .btn-match-cta-top:hover { transform: scale(1.03); }
+
+/* 전역 #wrap * letter-spacing 덮어쓰기 */
+#wrap .top-nav .btn-match-cta-top {
+    letter-spacing: 0.022em;
+}
 
 /* 아이콘 버튼 (관심기업, 공유하기) */
 .btn-topnav-icon {
