@@ -1008,6 +1008,12 @@ html, body { margin: 0; overflow-x: hidden; font-family: var(--font-base); backg
 .company-list-ai-real .mCompanyCard {
     box-shadow: none;
 }
+.company-list-ai-real .mCompanyCard:hover,
+.company-list-ai-real .company-ai-link .mCompanyCard:hover,
+.company-list-ai-real .mCompanyCard.company-ai-card:hover {
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08) !important;
+    border-color: #d0d5dd !important;
+}
 
 @media (max-width: 900px) {
     .company-list-ai-real .list-body .inner {
