@@ -6,6 +6,10 @@
 
 $g5['title'] = '결제 관리';
 
+echo '<div class="local_ov01 local_ov">membership_status 레거시 기능 비활성화(로컬 주석 처리)</div>';
+include_once (G5_ADMIN_PATH.'/admin.tail.php');
+return;
+
 
 /*
 select
