@@ -406,6 +406,7 @@ for($i=0; $i<count($payment_rows); $i++){
                             <button class="filter-btn active" data-filter="all" type="button">전체</button>
                             <button class="filter-btn" data-filter="match" type="button">거래 요청</button>
                             <button class="filter-btn" data-filter="analyze" type="button">AI 분석</button>
+                            <button class="filter-btn" data-filter="unlisted" type="button">비상장 가치조회</button>
                         </div>
 
                         <div id="useList" class="card-list">
@@ -422,28 +423,37 @@ for($i=0; $i<count($payment_rows); $i++){
                                 $service_code = strtoupper(trim((string)$row['service_code']));
                                 $use_type = "match";
                                 // service_code 기반으로 AI/매칭 사용내역 타입 분리
-                                if($service_code === "AI_COMPANY_REPORT" || stripos((string)$title, "AI")!==false || stripos((string)$title, "분석")!==false) {
-                                    $use_type = "analyze";
-                                }
+	                                if($service_code === "UNLISTED_VALUE"){
+	                                    $use_type = "unlisted";
+	                                } else if($service_code === "AI_COMPANY_REPORT" || stripos((string)$title, "AI")!==false || stripos((string)$title, "분석")!==false) {
+	                                    $use_type = "analyze";
+	                                }
+	                                $is_trade_request = ($service_code === "TRADE_REQUEST");
 
-                                $is_tm_request = (strpos((string)$title, "TM") !== false);
-                                $request_type_local = strtoupper(trim((string)$row['request_type']));
-                                if(!$request_type_local){
-                                    $request_type_local = $is_tm_request ? "TM" : "BASIC";
-                                }
-                                $service_label = ($request_type_local === "TM") ? "TM 서포트" : "일반 거래";
-                                $direction_raw = strtoupper(trim((string)$row['trade_request_direction']));
-                                $direction_label = "구매";
-                                if($direction_raw === "P") $direction_label = "구매";
-                                else if($direction_raw === "S") $direction_label = "판매";
-                                else if($direction_raw === "C") $direction_label = "협업";
-                                $is_match_request_memo = (
-                                    strpos((string)$title, "일반 거래 요청") !== false ||
-                                    strpos((string)$title, "TM 서포트 거래 요청") !== false
-                                );
-                                if($company_name && $is_match_request_memo){
-                                    $title = $is_tm_request ? "TM 서포트 거래 요청 — ".$company_name : "일반 거래 요청 — ".$company_name;
-                                }
+	                                $is_tm_request = false;
+	                                $request_type_local = '';
+	                                $service_label = '';
+	                                $direction_label = '';
+	                                if($is_trade_request){
+	                                    $is_tm_request = (strpos((string)$title, "TM") !== false);
+	                                    $request_type_local = strtoupper(trim((string)$row['request_type']));
+	                                    if(!$request_type_local){
+	                                        $request_type_local = $is_tm_request ? "TM" : "BASIC";
+	                                    }
+	                                    $service_label = ($request_type_local === "TM") ? "TM 서포트" : "일반 거래";
+	                                    $direction_raw = strtoupper(trim((string)$row['trade_request_direction']));
+	                                    $direction_label = "구매";
+	                                    if($direction_raw === "P") $direction_label = "구매";
+	                                    else if($direction_raw === "S") $direction_label = "판매";
+	                                    else if($direction_raw === "C") $direction_label = "협업";
+	                                }
+	                                $is_match_request_memo = (
+	                                    strpos((string)$title, "일반 거래 요청") !== false ||
+	                                    strpos((string)$title, "TM 서포트 거래 요청") !== false
+	                                );
+	                                if($is_trade_request && $company_name && $is_match_request_memo){
+	                                    $title = $is_tm_request ? "TM 서포트 거래 요청 — ".$company_name : "일반 거래 요청 — ".$company_name;
+	                                }
                                 // memo는 고정값 유지하고, 화면에서만 AI 대상 기업명 suffix 처리
                                 if($use_type=="analyze" && $ai_company_name && strpos((string)$title, "—") === false){
                                     $title .= " — ".$ai_company_name;
@@ -453,6 +463,8 @@ for($i=0; $i<count($payment_rows); $i++){
                                 <div class="pay-card-icon <?=$use_type?>">
                                     <?php if($use_type=="analyze"){?>
                                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z"/></svg>
+                                    <?php }else if($use_type=="unlisted"){?>
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20h18"/><path d="M6 20V12"/><path d="M12 20V8"/><path d="M18 20V5"/></svg>
                                     <?php }else{?>
                                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
                                     <?php }?>
@@ -460,10 +472,10 @@ for($i=0; $i<count($payment_rows); $i++){
                                 <div class="pay-card-info">
                                     <div class="title"><?=htmlspecialchars($title, ENT_QUOTES)?></div>
                                     <div class="meta">
-                                        <?php if($use_type=="match"){?>
-                                        <span><?=substr((string)$row['event_date'],0,10)?></span>
-                                        <span class="dot"></span>
-                                        <span>거래 방향 : <?=htmlspecialchars($direction_label, ENT_QUOTES)?></span>
+	                                        <?php if($use_type=="match" && $is_trade_request){?>
+	                                        <span><?=substr((string)$row['event_date'],0,10)?></span>
+	                                        <span class="dot"></span>
+	                                        <span>거래 방향 : <?=htmlspecialchars($direction_label, ENT_QUOTES)?></span>
                                         <span class="dot"></span>
                                         <span><?=htmlspecialchars($service_label, ENT_QUOTES)?></span>
                                         <?php }else{?>

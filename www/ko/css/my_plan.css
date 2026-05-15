@@ -278,6 +278,11 @@
     color: #7c3aed;
 }
 
+#my_plan .payment_history_cards .pay-card-icon.unlisted {
+    background: #fff7ed;
+    color: #c2410c;
+}
+
 #my_plan .payment_history_cards .pay-card[data-type="charge"] {
     border-left: 3px solid #93c5fd;
 }
@@ -306,6 +311,14 @@
 
 #my_plan .payment_history_cards .pay-card[data-type="analyze"] {
     border-left: 3px solid #c4b5fd;
+}
+
+#my_plan .payment_history_cards .pay-card[data-type="unlisted"] {
+    border-left: 3px solid #fb923c;
+}
+
+#my_plan .payment_history_cards .pay-card[data-type="unlisted"] .credit-delta.minus {
+    color: #fb923c;
 }
 
 #my_plan .payment_history_cards .pay-card-info {

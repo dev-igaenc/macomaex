@@ -1178,7 +1178,7 @@ switch ($type) {
 					$response = "500|가치 조회 크레딧이 부족합니다.|PLAN";
 				} else {
 					$credit_after = $current_credit - $credit_cost;
-					$memo = addslashes("비상장 주식가치 최초 조회({$credit_cost} 차감)");
+						$memo = addslashes("비상장 주식가치 조회");
 					$history_sql = "insert into credit_history set
 						uid='{$uid}',
 						tx_type='USE',
