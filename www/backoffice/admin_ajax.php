@@ -395,7 +395,7 @@ switch ($type) {
 								exit;
 							}
 							if($target_consumed_credit > 0){
-								echo "500|취소 오류: 해당 결제 충전분의 사용 이력이 있어 환불이 불가합니다.";
+								echo "500|해당 충전건은 이미 일부 사용되어 환불이 불가합니다.";
 								exit;
 							}
 						} else if(empty($lot_refund['ok'])) {
@@ -403,7 +403,7 @@ switch ($type) {
 							if($lot_msg === 'refund deadline passed'){
 								echo "500|취소 오류: 결제 후 7일이 지나 환불이 불가합니다.";
 							} else if($lot_msg === 'lot already used' || $lot_msg === 'lot is not active'){
-								echo "500|취소 오류: 해당 결제 충전분의 사용 이력이 있어 환불이 불가합니다.";
+								echo "500|해당 충전건은 이미 일부 사용되어 환불이 불가합니다.";
 							} else if($lot_msg === 'already refunded'){
 								echo "500|이미 환불 처리된 결제입니다.";
 							} else if($lot_msg === 'charge lot not found'){

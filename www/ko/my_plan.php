@@ -324,7 +324,7 @@ for($i=0; $i<count($payment_rows); $i++){
 	                                $is_within_7days = (time() <= strtotime("+7 days", $charge_event_ts));
 	                                if($is_refunded_order){
 	                                    $status_text = "환불완료";
-	                                    $status_class = "used";
+	                                    $status_class = "done";
 	                                } else if($is_within_7days){
 	                                    $charge_refund_btn = true;
 	                                } else {
@@ -341,13 +341,15 @@ for($i=0; $i<count($payment_rows); $i++){
                             }
                         ?>
                         <div class="pay-card" data-type="<?=$filter_type?>">
-                            <div class="pay-card-icon <?=$icon_class?>">
-                                <?php if($icon_class=="free"){?>
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5" rx="1"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 010-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 000-5C13 2 12 7 12 7z"/></svg>
-                                <?php }else{?>
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
-                                <?php }?>
-                            </div>
+	                            <div class="pay-card-icon <?=$icon_class?>">
+	                                <?php if($icon_class=="free"){?>
+	                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5" rx="1"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 010-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 000-5C13 2 12 7 12 7z"/></svg>
+	                                <?php }else if($icon_class=="refund"){?>
+	                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h9l3 3v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M15 3v3h3"/><line x1="8.5" y1="10.5" x2="13.5" y2="15.5"/><line x1="13.5" y1="10.5" x2="8.5" y2="15.5"/></svg>
+	                                <?php }else{?>
+	                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+	                                <?php }?>
+	                            </div>
                             <div class="pay-card-info">
                                 <div class="title"><?=htmlspecialchars($title, ENT_QUOTES)?></div>
                                 <div class="meta">
