@@ -381,6 +381,10 @@
     color: #7c3aed;
 }
 
+#my_plan .payment_history_cards #useList .pay-card[data-type="match"] .credit-delta.minus {
+    color: #2563eb;
+}
+
 #my_plan .payment_history_cards .credit-delta.green {
     color: #16a34a;
 }
