@@ -941,7 +941,7 @@ var regionNotice = '';
 					'<div class="fit-header-companies">우리회사 <strong>A기업</strong> <span class="fit-header-arrow">⇄</span> 추천 <strong>B기업</strong></div>' +
 					'<div class="fit-header-score"><span class="fit-header-score-num">' + scoreNum + '</span><span class="fit-header-score-unit">%</span></div>' +
 				'</div>' +
-				'<div class="fit-header-label">AI 적합도 예측</div>' +
+				'<div class="fit-header-label">AI 추천점수 예측</div>' +
 					'</div>' +
 					'<div class="detail-radar">' +
 						'<div class="detail-radar_row">' +
@@ -957,7 +957,7 @@ var regionNotice = '';
 					'<svg viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1s3.1 1.39 3.1 3.1v2z"/></svg>' +
 				'</div>' +
 				'<h3 class="auth-login-modal_title">로그인이 필요합니다</h3>' +
-				'<p class="auth-login-modal_desc">AI 적합도 예측 결과는<br>로그인 후 확인하실 수 있습니다.</p>' +
+				'<p class="auth-login-modal_desc">AI 추천점수 예측 결과는<br>로그인 후 확인하실 수 있습니다.</p>' +
 				'<div class="auth-login-modal_btns">' +
 					'<a href="/bbs/register.php" class="auth-login-modal_btn auth-login-modal_btn--cancel">회원가입</a>' +
 					'<a href="' + detailLoginReturnUrl + '" class="auth-login-modal_btn auth-login-modal_btn--login">로그인</a>' +
@@ -983,7 +983,7 @@ var regionNotice = '';
 					'<div class="fit-header-companies">우리회사 <strong>A기업</strong> <span class="fit-header-arrow">⇄</span> 추천 <strong>B기업</strong></div>' +
 					'<div class="fit-header-score"><span class="fit-header-score-num">' + scoreNum + '</span><span class="fit-header-score-unit">%</span></div>' +
 				'</div>' +
-				'<div class="fit-header-label">AI 적합도 예측</div>' +
+				'<div class="fit-header-label">AI 추천점수 예측</div>' +
 				'</div>' +
 				'<div class="detail-radar">' +
 					'<div class="detail-radar_row">' +
@@ -999,7 +999,7 @@ var regionNotice = '';
 					'<svg viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1s3.1 1.39 3.1 3.1v2z"/></svg>' +
 				'</div>' +
 				'<h3 class="auth-login-modal_title">로그인이 필요합니다</h3>' +
-				'<p class="auth-login-modal_desc">AI 적합도 예측 결과는<br>로그인 후 확인하실 수 있습니다.</p>' +
+				'<p class="auth-login-modal_desc">AI 추천점수 예측 결과는<br>로그인 후 확인하실 수 있습니다.</p>' +
 				'<div class="auth-login-modal_btns">' +
 					'<a href="/bbs/register.php" class="auth-login-modal_btn auth-login-modal_btn--cancel">회원가입</a>' +
 					'<a href="' + detailLoginReturnUrl + '" class="auth-login-modal_btn auth-login-modal_btn--login">로그인</a>' +

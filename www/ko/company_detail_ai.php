@@ -248,7 +248,7 @@ $company_seed = array(
     'ai_analysis_html' => ''
 );
 
-// 비로그인 사용자는 우측 AI 적합도 예측에 실데이터가 노출되지 않도록 더미 payload만 내려준다.
+// 비로그인 사용자는 우측 AI 추천점수 예측에 실데이터가 노출되지 않도록 더미 payload만 내려준다.
 if (empty($member['mb_id'])) {
     $company_seed['score'] = null;
     $company_seed['grow'] = null;

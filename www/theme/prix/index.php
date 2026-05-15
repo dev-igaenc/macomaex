@@ -339,7 +339,7 @@ $stable_list = get_processed_companies('stability_score_5', 3, $unlocked_bzno_ma
                     <div class="mVisual_preview_slide active">
                         <div class="mVisual_preview_card">
                             <div class="mSlide_header">
-                                <span class="mSlide_label">AI 적합도 예측</span>
+                                <span class="mSlide_label">AI 추천점수 예측</span>
                                 <span class="mSlide_sub">A기업 ⇄ B기업</span>
                                 <span class="mSlide_score">87<span class="mSlide_score_unit">%</span></span>
                             </div>
