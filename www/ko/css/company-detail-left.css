@@ -52,7 +52,13 @@
     gap: 12px;
     margin-bottom: 12px;
 }
-.profile-head h1   { font-size: 18px; font-weight: 700; letter-spacing: -0.02em; margin: 0; }
+#detailWrap .profile-head h1 {
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin: 0;
+    color: var(--company-detail-heading-color, #111);
+}
 .profile-head .sub { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
 
 /* 업종 태그 */

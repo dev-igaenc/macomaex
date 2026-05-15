@@ -563,7 +563,7 @@ body.ai-mode .mCompanyCard_content .radar-card { margin-top: 8px; }
 /* AI 섹션 타이틀 폰트 두께 */
 body.ai-mode .mHookSection_title { font-weight: 600; }
 
-/* AI 적합도 배너 */
+/* AI 추천점수 배너 */
 .mCompanyCard_ai_match {
     display: flex;
     align-items: center;

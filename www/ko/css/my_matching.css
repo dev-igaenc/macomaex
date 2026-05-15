@@ -670,11 +670,6 @@ img { max-width: 100%; display: block; }
     flex-shrink: 0;
     background: #fff;
 }
-.detail-popup-title {
-    font-size: 15px;
-    font-weight: 700;
-    color: #111;
-}
 .detail-popup-close {
     width: 36px;
     height: 36px;
