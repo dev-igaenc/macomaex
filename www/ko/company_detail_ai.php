@@ -93,6 +93,18 @@ if (empty($company['KEDCD'])) {
     alert('기업 정보를 찾을 수 없습니다.', '/ko/company_list_ai.php');
 }
 
+$is_favorite_company = false;
+if (!empty($member['mb_id'])) {
+    $favorite_row = sql_fetch("
+        SELECT ms_id
+        FROM g5_favorite
+        WHERE mb_id = '" . sql_escape_string((string)$member['mb_id']) . "'
+          AND KEDCD = '" . sql_escape_string($kedcd) . "'
+        LIMIT 1
+    ");
+    $is_favorite_company = !empty($favorite_row['ms_id']);
+}
+
 $company_name = trim((string)($company['ENP_NM'] ?? ''));
 $g5['title'] = ($company_name !== '' ? $company_name . ' AI 기업 상세' : 'AI 추천 기업 상세');
 
@@ -343,7 +355,7 @@ include_once(G5_THEME_PATH . '/head.php');
 		<a class="btn-back" href="javascript:history.back();"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg> 돌아가기</a>
 		<div class="top-nav-actions">
 			<button type="button" class="btn-match-cta-top" id="openTypeModal2">거래 요청하기</button>
-			<button type="button" class="btn-favorite" data-favorite data-kedcd="<?php echo htmlspecialchars($kedcd, ENT_QUOTES, 'UTF-8'); ?>" title="관심기업 등록" aria-label="관심기업 등록">
+			<button type="button" class="btn-favorite<?php echo $is_favorite_company ? ' is-active' : ''; ?>" data-favorite data-kedcd="<?php echo htmlspecialchars($kedcd, ENT_QUOTES, 'UTF-8'); ?>" title="관심기업 등록" aria-label="관심기업 등록">
 				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
 			</button>
 			<button type="button" class="btn-topnav-icon" data-share title="공유하기" aria-label="공유하기">
