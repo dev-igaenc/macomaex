@@ -797,6 +797,8 @@ body.ai-mode .mHookSection_title { font-weight: 600; }
 #listWrap .mCompanyCard_badge_placeholder {
     background: #f3f4f6 !important;
     color: #9ca3af !important;
+    visibility: visible !important;
+    pointer-events: auto !important;
 }
 
 /* Card tag chips override: keep mock design against theme defaults */
