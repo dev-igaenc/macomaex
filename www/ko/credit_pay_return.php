@@ -300,7 +300,7 @@ try {
 		credit_delta='{$charge_credit}',
 		credit_after='{$credit_after}',
 		order_no='{$order_no}',
-		matching_no='',
+		tr_no='',
 		memo='{$memo}',
 		created_at=now()";
 	$history_ok = sql_query($history_sql, false);

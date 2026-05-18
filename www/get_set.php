@@ -1186,7 +1186,7 @@ switch ($type) {
 						credit_delta='-{$credit_cost}',
 						credit_after='{$credit_after}',
 						order_no=NULL,
-						matching_no='',
+						tr_no='',
 						target_kedcd='{$target_kedcd}',
 						once_key='{$once_key_sql}',
 						memo='{$memo}',
@@ -1279,7 +1279,7 @@ switch ($type) {
 						echo "500";
 						exit;
 					}
-					$matching_no = sql_insert_id();
+					$tr_no = sql_insert_id();
 
 					// 원장 최신 행 잠금으로 동시 차감을 직렬화한다.
 					$ledger_last = credit_ledger_get_latest_row($member['mb_id'], true);
@@ -1293,7 +1293,7 @@ switch ($type) {
 
 						// 크레딧 원장 기록 (사용)
 						$memo = addslashes($request_type === "TM" ? "TM 서포트 거래 요청" : "일반 거래 요청");
-						$history_use_ok = sql_query("insert into credit_history set uid='{$member['mb_id']}', tx_type='USE', service_code='TRADE_REQUEST', credit_delta='-{$matching_credit_cost}', credit_after='{$credit_after}', order_no=NULL, matching_no='{$matching_no}', request_type='{$request_type}', memo='{$memo}', created_at=now()", false);
+						$history_use_ok = sql_query("insert into credit_history set uid='{$member['mb_id']}', tx_type='USE', service_code='TRADE_REQUEST', credit_delta='-{$matching_credit_cost}', credit_after='{$credit_after}', order_no=NULL, tr_no='{$tr_no}', request_type='{$request_type}', memo='{$memo}', created_at=now()", false);
 						if(!$history_use_ok){
 							sql_query("ROLLBACK");
 							echo "500|크레딧 이력 저장에 실패했습니다.";
@@ -2029,7 +2029,7 @@ switch ($type) {
 							credit_delta='-{$refund_credit}',
 							credit_after='{$credit_after}',
 							order_no='{$chk['order_no']}',
-							matching_no='',
+							tr_no='',
 							memo='{$memo_refund}',
 							created_at=now()";
 							$refund_history = sql_query($refund_history_sql, false);
@@ -2335,7 +2335,7 @@ switch ($type) {
 			credit_delta='-{$refund_credit}',
 			credit_after='{$credit_after}',
 			order_no='{$order_no_sql}',
-			matching_no='',
+			tr_no='',
 			memo='{$memo_refund}',
 			created_at=now()";
 		$refund_history = sql_query($refund_history_sql, false);

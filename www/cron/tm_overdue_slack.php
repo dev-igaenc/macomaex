@@ -88,7 +88,7 @@ $count_sql = "select count(*) as cnt
     from g5_matching A
     left join credit_history H on H.id = (
         select max(id) from credit_history
-        where matching_no = A.no and tx_type='USE'
+        where tr_no = A.no and tx_type='USE'
     )
     where {$where}";
 $count_row = sql_fetch($count_sql);
@@ -114,7 +114,7 @@ $detail_sql = "select
     left join g5_member C on A.receive_id = C.mb_id
     left join credit_history H on H.id = (
         select max(id) from credit_history
-        where matching_no = A.no and tx_type='USE'
+        where tr_no = A.no and tx_type='USE'
     )
     where {$where}
     order by COALESCE(H.created_at, A.regdate) asc

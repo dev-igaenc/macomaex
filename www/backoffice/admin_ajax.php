@@ -569,7 +569,7 @@ switch ($type) {
 							credit_delta='-{$refund_credit}',
 							credit_after='{$credit_after}',
 							order_no='{$oid}',
-							matching_no='',
+							tr_no='',
 							memo='{$memo_refund}',
 							created_at=now()";
 							$refund_history = sql_query($refund_history_sql, false);

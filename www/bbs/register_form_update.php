@@ -331,7 +331,7 @@ if ($w == '') {
 	        credit_delta='{$signup_bonus}',
 	        credit_after='{$signup_bonus_after}',
 	        order_no='',
-	        matching_no='',
+	        tr_no='',
 	        memo='{$bonus_memo}',
 	        created_at=now()", false);
 

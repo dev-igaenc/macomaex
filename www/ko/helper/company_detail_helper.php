@@ -75,7 +75,7 @@ function company_detail_trade_request_consume_credit($memberId, $trNo, $targetKe
 		credit_delta='-{$creditAmount}',
 		credit_after='{$creditAfter}',
 		order_no=NULL,
-		matching_no='{$trNo}',
+		tr_no='{$trNo}',
 		target_kedcd='" . sql_escape_string($targetKedcd) . "',
 		once_key=NULL,
 		memo='{$memo}',

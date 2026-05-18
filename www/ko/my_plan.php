@@ -87,7 +87,7 @@ $sql = "select
 			H.credit_delta,
 			H.credit_after,
 			H.order_no,
-			H.matching_no,
+			H.tr_no,
 			H.memo,
 			H.created_at as event_date,
 			B.tid as bill_tid,
@@ -108,7 +108,7 @@ $sql = "select
 		left join g5_membership_paybill B on H.order_no=B.order_no
 		left join g5_membership_payment P on H.order_no=P.order_no
 		left join g5_membership_manage MM on P.membership_parent_no=MM.no
-		left join trade_request TR on H.service_code='TRADE_REQUEST' and H.matching_no=TR.tr_no
+		left join trade_request TR on H.service_code='TRADE_REQUEST' and H.tr_no=TR.tr_no
 		left join company C2 on C2.KEDCD=TR.target_kedcd
 		left join company C3 on C3.KEDCD=H.target_kedcd
 		where
@@ -127,7 +127,7 @@ if(!$result){
 				H.credit_delta,
 				H.credit_after,
 				H.order_no,
-				H.matching_no,
+				H.tr_no,
 				H.memo,
 				H.created_at as event_date,
 				'' as bill_tid,
@@ -147,7 +147,7 @@ if(!$result){
 			from credit_history H
 			left join g5_membership_payment P on H.order_no=P.order_no
 			left join g5_membership_manage MM on P.membership_parent_no=MM.no
-			left join trade_request TR on H.service_code='TRADE_REQUEST' and H.matching_no=TR.tr_no
+			left join trade_request TR on H.service_code='TRADE_REQUEST' and H.tr_no=TR.tr_no
 			left join company C2 on C2.KEDCD=TR.target_kedcd
 			left join company C3 on C3.KEDCD=H.target_kedcd
 			where
@@ -480,9 +480,9 @@ for($i=0; $i<count($payment_rows); $i++){
                                         <span><?=htmlspecialchars($service_label, ENT_QUOTES)?></span>
                                         <?php }else{?>
                                         <span><?=substr((string)$row['event_date'],0,10)?></span>
-                                        <?php if($row['matching_no']){?>
+                                        <?php if($row['tr_no']){?>
                                         <span class="dot"></span>
-                                        <span>매칭번호 <?=htmlspecialchars($row['matching_no'], ENT_QUOTES)?></span>
+                                        <span>매칭번호 <?=htmlspecialchars($row['tr_no'], ENT_QUOTES)?></span>
                                         <?php }?>
                                         <?php }?>
                                     </div>

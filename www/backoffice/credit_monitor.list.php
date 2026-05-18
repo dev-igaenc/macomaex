@@ -8,7 +8,7 @@ $g5['title'] = '크레딧 모니터링';
 $allowed_sfl = array(
     'uid' => 'H.uid',
     'order_no' => 'H.order_no',
-    'matching_no' => 'H.matching_no',
+    'tr_no' => 'H.tr_no',
     'memo' => 'H.memo',
     'mb_name' => 'M.mb_name',
     'mb_email' => 'M.mb_email'
@@ -122,7 +122,7 @@ if ($to_date !== '') {
     <select name="sfl" id="sfl">
         <option value="uid"<?php echo get_selected($sfl, 'uid'); ?>>아이디</option>
         <option value="order_no"<?php echo get_selected($sfl, 'order_no'); ?>>주문번호</option>
-        <option value="matching_no"<?php echo get_selected($sfl, 'matching_no'); ?>>매칭번호</option>
+        <option value="tr_no"<?php echo get_selected($sfl, 'tr_no'); ?>>매칭번호</option>
         <option value="memo"<?php echo get_selected($sfl, 'memo'); ?>>메모</option>
         <option value="mb_name"<?php echo get_selected($sfl, 'mb_name'); ?>>회사명</option>
         <option value="mb_email"<?php echo get_selected($sfl, 'mb_email'); ?>>이메일</option>
@@ -208,7 +208,7 @@ if ($to_date !== '') {
                 <?php } ?>
             </td>
             <td class="td_center"><?php echo $pay_price > 0 ? number_format($pay_price) . '원' : '-'; ?></td>
-            <td class="td_center"><?php echo $row['matching_no'] ? get_text($row['matching_no']) : '-'; ?></td>
+            <td class="td_center"><?php echo $row['tr_no'] ? get_text($row['tr_no']) : '-'; ?></td>
             <td class="td_left"><?php echo $row['memo'] ? get_text($row['memo']) : '-'; ?></td>
         </tr>
         <?php
