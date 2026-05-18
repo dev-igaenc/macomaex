@@ -190,6 +190,81 @@ function company_list_ai_fetch_company_keyword_map($kedcd_list)
     return $map;
 }
 
+function company_list_ai_format_badge_percent($value)
+{
+    if ($value === null || $value === '') return '';
+    $str = trim((string)$value);
+    if ($str === '') return '';
+    if (!is_numeric($str)) return $str;
+
+    $num = (float)$str;
+    if ($num == (int)$num) return (string)((int)$num);
+    return rtrim(rtrim(number_format($num, 2, '.', ''), '0'), '.');
+}
+
+function company_list_ai_build_badges_from_fields($badge_growth_raw, $badge_stability_raw, $venture_raw)
+{
+    $badges = array();
+
+    $badge_growth = company_list_ai_format_badge_percent($badge_growth_raw);
+    $badge_stability = company_list_ai_format_badge_percent($badge_stability_raw);
+    $venture = strtoupper(trim((string)$venture_raw));
+
+    if ($badge_growth !== '') $badges[] = '성장TOP' . $badge_growth . '%';
+    if ($badge_stability !== '') $badges[] = '재무안정TOP' . $badge_stability . '%';
+    if ($venture === 'Y') $badges[] = '벤처인증';
+
+    return array(
+        'badges' => $badges,
+        'badge_growth' => $badge_growth,
+        'badge_stability' => $badge_stability,
+        'badge_venture' => ($venture === 'Y') ? 'Y' : 'N',
+    );
+}
+
+function company_list_ai_fetch_company_badge_map($kedcd_list)
+{
+    if (!is_array($kedcd_list) || empty($kedcd_list)) return array();
+
+    $clean = array();
+    foreach ($kedcd_list as $kedcd) {
+        $k = str_pad(preg_replace('/\D/', '', (string)$kedcd), 10, '0', STR_PAD_LEFT);
+        if (strlen($k) !== 10 || preg_match('/^0+$/', $k)) continue;
+        $clean[$k] = true;
+    }
+    $keys = array_keys($clean);
+    if (empty($keys)) return array();
+
+    $map = array();
+    foreach (array_chunk($keys, 200) as $chunk) {
+        $quoted = array();
+        foreach ($chunk as $k) {
+            $quoted[] = "'" . sql_real_escape_string($k) . "'";
+        }
+        if (empty($quoted)) continue;
+
+        $sql = "
+            SELECT KEDCD, badge_growth, badge_stability, badge_venture
+            FROM company_score_final_dedup
+            WHERE KEDCD IN (" . implode(',', $quoted) . ")
+        ";
+        $res = sql_query($sql, false);
+        if (!$res) continue;
+
+        while ($row = sql_fetch_array($res)) {
+            $k = str_pad(preg_replace('/\D/', '', (string)($row['KEDCD'] ?? '')), 10, '0', STR_PAD_LEFT);
+            if (strlen($k) !== 10) continue;
+            $map[$k] = array(
+                'badge_growth' => $row['badge_growth'] ?? '',
+                'badge_stability' => $row['badge_stability'] ?? '',
+                'badge_venture' => strtoupper(trim((string)($row['badge_venture'] ?? 'N'))),
+            );
+        }
+    }
+
+    return $map;
+}
+
 function company_list_ai_get_item_tags_by_industry($bzc_nm, $bzc_cd, $kedcd = '')
 {
     $industry_item_map = array(
@@ -251,25 +326,13 @@ function company_list_ai_ml_item_to_card($item)
     $bzc_cd = trim((string)($item['bzc_cd'] ?? ''));
     $bzc_nm = trim((string)($item['bzc_nm'] ?? ''));
     $radar_raw = (isset($item['radar']) && is_array($item['radar'])) ? $item['radar'] : array();
-    $financial_score = 0.0;
-    if (isset($radar_raw['financial_health'])) $financial_score = (float)$radar_raw['financial_health'];
-    else if (isset($radar_raw['financial'])) $financial_score = (float)$radar_raw['financial'];
-    else if (isset($radar_raw['finance'])) $financial_score = (float)$radar_raw['finance'];
 
-    $venture_raw = strtoupper(trim((string)(
-        $item['badge_venture']
-        ?? $item['venp_yn']
-        ?? $item['venture_yn']
-        ?? ''
-    )));
-    $is_venture = in_array($venture_raw, array('Y', '1', 'T', 'TRUE'), true);
-
-    $badges = array();
-    if ($score >= 90) $badges[] = '성장TOP5%';
-    else if ($score >= 75) $badges[] = '성장TOP20%';
-    if ($financial_score >= 80) $badges[] = '재무안정TOP5%';
-    else if ($financial_score >= 60) $badges[] = '재무안정TOP20%';
-    if ($is_venture) $badges[] = '벤처인증';
+    $badge_fields = company_list_ai_build_badges_from_fields(
+        $item['badge_growth'] ?? null,
+        $item['badge_stability'] ?? null,
+        ($item['badge_venture'] ?? ($item['venp_yn'] ?? ($item['venture_yn'] ?? 'N')))
+    );
+    $badges = $badge_fields['badges'];
 
     $tags = array();
     if (isset($item['keywords_json'])) {
@@ -330,6 +393,9 @@ function company_list_ai_ml_item_to_card($item)
         'one_line' => trim((string)($item['one_line'] ?? '')),
         'score' => $score,
         'badges' => $badges,
+        'badge_growth' => $badge_fields['badge_growth'],
+        'badge_stability' => $badge_fields['badge_stability'],
+        'badge_venture' => $badge_fields['badge_venture'],
         'tags' => $tags,
         'tag_total_count' => $tag_total_count,
         'radar' => company_list_ai_translate_radar(isset($item['radar']) ? $item['radar'] : array()),
@@ -860,6 +926,7 @@ if (!empty($resolved_base_payload['kedcd'])) {
         $buy_bucket = company_list_ai_build_bucket($buy_call['data']['results'], 45);
         $buy_items = array_merge($buy_bucket['top3'], $buy_bucket['list']);
         $buy_keyword_map = company_list_ai_fetch_company_keyword_map(array_column($buy_items, 'kedcd'));
+        $buy_badge_map = company_list_ai_fetch_company_badge_map(array_column($buy_items, 'kedcd'));
         $mapped_buy = array();
         foreach ($buy_items as $bi) {
             $item_kedcd = str_pad(preg_replace('/\D/', '', (string)($bi['kedcd'] ?? '')), 10, '0', STR_PAD_LEFT);
@@ -868,6 +935,12 @@ if (!empty($resolved_base_payload['kedcd'])) {
                 if (!empty($kw_meta['keywords_json'])) $bi['keywords_json'] = $kw_meta['keywords_json'];
                 if (!empty($kw_meta['tags']) && is_array($kw_meta['tags'])) $bi['tags'] = $kw_meta['tags'];
                 if (isset($kw_meta['keyword_count'])) $bi['keyword_count'] = (int)$kw_meta['keyword_count'];
+            }
+            if (isset($buy_badge_map[$item_kedcd]) && is_array($buy_badge_map[$item_kedcd])) {
+                $bg_meta = $buy_badge_map[$item_kedcd];
+                $bi['badge_growth'] = $bg_meta['badge_growth'] ?? '';
+                $bi['badge_stability'] = $bg_meta['badge_stability'] ?? '';
+                $bi['badge_venture'] = $bg_meta['badge_venture'] ?? 'N';
             }
             $card = company_list_ai_ml_item_to_card($bi);
             if (is_array($card)) $mapped_buy[] = $card;
@@ -886,6 +959,7 @@ if (!empty($resolved_base_payload['kedcd'])) {
         $sell_bucket = company_list_ai_build_bucket($sell_call['data']['results'], 45);
         $sell_items = array_merge($sell_bucket['top3'], $sell_bucket['list']);
         $sell_keyword_map = company_list_ai_fetch_company_keyword_map(array_column($sell_items, 'kedcd'));
+        $sell_badge_map = company_list_ai_fetch_company_badge_map(array_column($sell_items, 'kedcd'));
         $mapped_sell = array();
         foreach ($sell_items as $si) {
             $item_kedcd = str_pad(preg_replace('/\D/', '', (string)($si['kedcd'] ?? '')), 10, '0', STR_PAD_LEFT);
@@ -894,6 +968,12 @@ if (!empty($resolved_base_payload['kedcd'])) {
                 if (!empty($kw_meta['keywords_json'])) $si['keywords_json'] = $kw_meta['keywords_json'];
                 if (!empty($kw_meta['tags']) && is_array($kw_meta['tags'])) $si['tags'] = $kw_meta['tags'];
                 if (isset($kw_meta['keyword_count'])) $si['keyword_count'] = (int)$kw_meta['keyword_count'];
+            }
+            if (isset($sell_badge_map[$item_kedcd]) && is_array($sell_badge_map[$item_kedcd])) {
+                $bg_meta = $sell_badge_map[$item_kedcd];
+                $si['badge_growth'] = $bg_meta['badge_growth'] ?? '';
+                $si['badge_stability'] = $bg_meta['badge_stability'] ?? '';
+                $si['badge_venture'] = $bg_meta['badge_venture'] ?? 'N';
             }
             $card = company_list_ai_ml_item_to_card($si);
             if (is_array($card)) $mapped_sell[] = $card;

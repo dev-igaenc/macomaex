@@ -512,6 +512,12 @@ html, body { margin: 0; overflow-x: hidden; font-family: var(--font-base); backg
     background: #10b981 !important;
     color: #fff !important;
 }
+.company-list-ai-real .mCompanyCard_badge_placeholder {
+    background: #f3f4f6 !important;
+    color: #9ca3af !important;
+    visibility: visible !important;
+    pointer-events: auto !important;
+}
 /* AI 카드: 높이 콘텐츠 기준, 하단 여백 통일 */
 .company-list-ai-real .mCompanyCard_content { padding-bottom: 16px; display: flex; flex-direction: column; }
 .company-list-ai-real .mCompanyCard_content .radar-card { margin-top: 8px; }
