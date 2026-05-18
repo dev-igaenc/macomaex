@@ -267,9 +267,15 @@ if (/^\d{10}$/.test(demoId)) {
                 grow: _growScore !== null ? _growScore : (Number.isFinite(Number(_base.grow)) ? Number(_base.grow) : null),
                 profit: _profitScore !== null ? _profitScore : (Number.isFinite(Number(_base.profit)) ? Number(_base.profit) : null),
                 stable: _stableScore !== null ? _stableScore : (Number.isFinite(Number(_base.stable)) ? Number(_base.stable) : null),
-                badge_growth: _badgeMeta.badge_growth != null ? _badgeMeta.badge_growth : _base.badge_growth,
-                badge_stability: _badgeMeta.badge_stability != null ? _badgeMeta.badge_stability : _base.badge_stability,
-                badge_venture: _badgeMeta.badge_venture || _base.badge_venture || 'N',
+                badge_growth: (_base.badge_growth != null && String(_base.badge_growth).trim() !== '')
+                    ? _base.badge_growth
+                    : _badgeMeta.badge_growth,
+                badge_stability: (_base.badge_stability != null && String(_base.badge_stability).trim() !== '')
+                    ? _base.badge_stability
+                    : _badgeMeta.badge_stability,
+                badge_venture: (String(_base.badge_venture || '').toUpperCase() === 'Y')
+                    ? 'Y'
+                    : (_badgeMeta.badge_venture || 'N'),
                 rep: '',
                 founded: _base.founded || '',
                 employees: _base.employees || '',
