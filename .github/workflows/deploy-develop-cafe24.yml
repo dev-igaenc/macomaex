@@ -164,3 +164,25 @@ jobs:
       - name: Skip deploy (no www changes)
         if: ${{ steps.changed.outputs.any_changed != 'true' && !(github.event_name == 'workflow_dispatch' && github.event.inputs.full_sync == 'true') }}
         run: echo "No changes under www/. Deploy skipped."
+
+      - name: Update remote asset version stamp
+        if: ${{ (github.event_name == 'workflow_dispatch' && github.event.inputs.full_sync == 'true') || steps.changed.outputs.any_changed == 'true' }}
+        env:
+          DEPLOY_HOST: ${{ secrets.CAFE24_SFTP_HOST }}
+          DEPLOY_PORT: ${{ secrets.CAFE24_SFTP_PORT }}
+          DEPLOY_USER: ${{ secrets.CAFE24_SFTP_USER }}
+          DEPLOY_PASSWORD: ${{ secrets.CAFE24_SFTP_PASSWORD }}
+          REMOTE_PATH: ${{ secrets.CAFE24_REMOTE_PATH }}
+        run: |
+          stamp_file="$RUNNER_TEMP/asset.version"
+          date -u +"%Y%m%d%H%M%S" > "$stamp_file"
+
+          lftp "sftp://$DEPLOY_HOST:$DEPLOY_PORT" <<EOF
+          set sftp:connect-program "ssh -a -x -o PreferredAuthentications=password -o PubkeyAuthentication=no -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
+          set cmd:fail-exit yes
+          set sftp:auto-confirm yes
+          user "$DEPLOY_USER" "$DEPLOY_PASSWORD"
+          mkdir -p "$REMOTE_PATH/data"
+          put -O "$REMOTE_PATH/data" "$stamp_file"
+          bye
+          EOF

@@ -289,11 +289,20 @@
 
 	.all_layout li.one .gnbSub.d2{display: none;}
 	.all_layout > li:not(.one){position: relative; cursor: pointer;}
-	.all_layout > li:not(.one)::after{position: absolute; content: ''; top: 1.7rem; right: 0; width: 2.4rem; aspect-ratio: 12/7;
-		background-image: url('/img/icon/icon_accordion_up.svg'); background-repeat: no-repeat; background-position: center; background-size: cover;
-		transform: rotate(180deg); transition: all ease 0.3s;
+	.all_layout > li:not(.one)::after{
+		position: absolute;
+		content: '';
+		top: 2.05rem;
+		right: 0.35rem;
+		width: 0.9rem;
+		height: 0.9rem;
+		border-right: 2px solid #666;
+		border-bottom: 2px solid #666;
+		transform: rotate(45deg);
+		transform-origin: center;
+		transition: transform .3s ease, border-color .3s ease;
 	}
-	.all_layout > li:not(.one).active::after{transform: rotate(0);}
+	.all_layout > li:not(.one).active::after{transform: rotate(-135deg);}
 	/*.all_layout > li:not(.one) a{pointer-events: none;}*/
 	.all_layout > li:not(.one)>a{display:block;}
 
@@ -703,4 +712,3 @@ box-sizing:border-box;
 word-break:keep-all; word-wrap:break-word;
 border-radius:2px;
 */
-
