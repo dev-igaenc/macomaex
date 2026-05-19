@@ -35,7 +35,6 @@ $membership_info = sql_fetch("select * from g5_membership_manage where no='{$msi
 <div id="my_plan">
 
     <div class="fullBox my_plan mgb10">
-	<input type="hidden" name="ms_id"  id="ms_id" value="<?=$msinfo['no']?>">
 
 
 		<?if($membership_info['title_en']!="FREE" && $msinfo){?>
@@ -72,11 +71,6 @@ $membership_info = sql_fetch("select * from g5_membership_manage where no='{$msi
                     </li>
 				<?}?>
                 </ul>
-				<?if($msinfo['status']=="T"){?>
-				 <a href="javascript:jAlert('<?=$msinfo['date_end']?>일 이후 구독 취소 됩니다.','알림');" id="" class="unSubscribe"><span>만료일 후 취소</span></a>
-				<?}else{?>
-                <a href="javascript:;" id="membership_cancel" class="unSubscribe"><span>구독 취소</span></a>
-				<?}?>
             </div>
             <div class="thumbArea"><img src="/theme/prix/img/sub/my_plan_pc.png" alt=""></div>
         </div>
@@ -211,45 +205,6 @@ $result = sql_query($sql);
     </div>
 
 </div>
-<script>
-
-$("#membership_cancel").click(function(){
-	ms_id=$("#ms_id").val();
-	if(ms_id){
-		jCustomConfirm("구독취소는 결제 후 7일 이내\n매칭 요청 서비스를 이용하지 않은 경우, 전액 환불처리 되며 \n7일 이후 혹은 사용 이력이 있으시면\n만료일까지 유지후 구독 취소됩니다. \n구독을 취소하시겠습니까?","알림","취소","확인",function(e){
-			if(!e){
-
-				$.post( "../get_set_e.php", {
-					type: 'membership_cancel'
-				})
-				.done(function(jqXHR) {
-						jqXHR=jqXHR.split("|");
-						if(jqXHR[0]==1000){
-							//완료시
-							if(jqXHR[1]){
-								jAlert(jqXHR[1],"알림",function(){
-									location.reload();
-								});
-							}else{
-								jAlert("구독 취소 처리되었습니다.","알림",function(){
-									location.reload();
-								});
-							}
-						}else{
-							//오류시
-							if(jqXHR[1]=="02") jAlert("검색 결과가 없습니다.","알림");
-							else jAlert(jqXHR[1],"알림");
-						}
-				});
-
-			}
-		}) ;
-			//= function(message, title, okButton, cancelButton, callback) {	
-	}else{
-		jAlert("구독취소는 맴버쉽 이용자만 가능합니다.");
-	}
-})
-</script>
 
 <?
 include_once(G5_THEME_PATH.'/tail.php');

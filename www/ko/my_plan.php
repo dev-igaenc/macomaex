@@ -42,14 +42,9 @@ $membership_parent_no = (int)$msinfo['membership_parent_no'];
 if($membership_parent_no > 0) $membership_info = sql_fetch("select * from g5_membership_manage where no='{$membership_parent_no}'" );
 else $membership_info = array();
 if(!is_array($membership_info)) $membership_info = array();
-$is_credit_membership = 0;
-if((!empty($membership_info['title_en']) && strpos((string)$membership_info['title_en'], 'CREDIT_') === 0) || ((int)$membership_info['matching_cnt'] > 0 && (int)$membership_info['month'] === 0)){
-	$is_credit_membership = 1;
-}
 $membership_cancel_token = uniqid('', true);
 set_session('ss_membership_cancel_token', $membership_cancel_token);
 $remain_credit = credit_ledger_get_balance($member['mb_id']);
-$show_credit_cancel_btn = ($is_credit_membership && $remain_credit > 0);
 
 if (!function_exists('my_plan_display_title_en')) {
 	function my_plan_display_title_en($rawTitleEn)
@@ -191,8 +186,6 @@ for($i=0; $i<count($payment_rows); $i++){
 
 <div id="my_plan">
 
-    <input type="hidden" name="ms_id" id="ms_id" value="<?=$msinfo['no']?>">
-    <input type="hidden" name="is_credit_membership" id="is_credit_membership" value="<?=$is_credit_membership?>">
     <input type="hidden" name="membership_cancel_token" id="membership_cancel_token" value="<?=$membership_cancel_token?>">
     <div class="payment_history_cards">
         <div class="pay-page">

@@ -1421,6 +1421,9 @@ switch ($type) {
 	break;
 
 	case "membership_chk": //맴버쉽 정보
+		// legacy membership_status 기능 비활성화
+		break;
+	/*
 		if($member['mb_id']) {
 				$today = date("Y-m-d");
 				$chk=sql_fetch("select * from g5_membership_status where (status='S' or status='T') and uid='{$member['mb_id']}' and date_begin >= '{$today}'");
@@ -1463,6 +1466,8 @@ switch ($type) {
 			echo "500|로그인후 이용하세요.";
 		}
 	break;
+
+	*/
 
 	case "membership_chk2": //맴버쉽 체크
 		if($member['mb_id']) {
@@ -1736,6 +1741,9 @@ switch ($type) {
 
 
 	case "membership_cancel": //맴버쉽 정기결제 취소
+		// legacy membership_status 기능 비활성화
+		break;
+	/*
 	//상태(S:유지, C:취소(환불), E:종료(기간만료), T 기간만료후정지)
 			if($_SERVER['REQUEST_METHOD'] !== 'POST'){
 				echo "500|잘못된 요청 방식입니다.";
@@ -2133,6 +2141,8 @@ switch ($type) {
 				echo "500|로그인후 이용하세요.";
 			}
 	break;
+
+	*/
 
 	case "credit_charge_refund": //충전건 개별 환불
 		if($_SERVER['REQUEST_METHOD'] !== 'POST'){
