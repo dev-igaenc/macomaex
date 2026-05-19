@@ -265,14 +265,37 @@ switch ($type) {
 					echo "500|결제 내역이 없습니다.";
 					exit;
 				}
-				$chk=sql_fetch("select * from g5_membership_status where order_no='{$oid}'");
-				$porder=sql_fetch("select uid, membership_parent_no from g5_membership_payment where order_no='{$oid}'");
-				if(!$pinfo['uid'] && $porder['uid']) $pinfo['uid'] = $porder['uid'];
-				if(!$pinfo['uid'] && $chk['uid']) $pinfo['uid'] = $chk['uid'];
-				if(!$pinfo['membership_parent_no'] && $porder['membership_parent_no']) $pinfo['membership_parent_no'] = $porder['membership_parent_no'];
-				if(!$pinfo['membership_parent_no'] && $chk['membership_parent_no']) $pinfo['membership_parent_no'] = $chk['membership_parent_no'];
+					$chk=sql_fetch("select * from g5_membership_status where order_no='{$oid}'");
+					$porder=sql_fetch("select uid, membership_parent_no from g5_membership_payment where order_no='{$oid}'");
+					if(!$pinfo['uid'] && $porder['uid']) $pinfo['uid'] = $porder['uid'];
+					if(!$pinfo['uid'] && $chk['uid']) $pinfo['uid'] = $chk['uid'];
+					if(!$pinfo['membership_parent_no'] && $porder['membership_parent_no']) $pinfo['membership_parent_no'] = $porder['membership_parent_no'];
+					if(!$pinfo['membership_parent_no'] && $chk['membership_parent_no']) $pinfo['membership_parent_no'] = $chk['membership_parent_no'];
+					// 관리자 실제 환불 실행은 2단계(환불요청접수)에서만 허용
+					$current_refund_step = trim((string)$pinfo['status']);
+					if($current_refund_step === '') $current_refund_step = '1';
+					if($current_refund_step === '1'){
+						echo "500|사용자 환불요청 접수 건이 아닙니다.";
+						exit;
+					}
+					if($current_refund_step === '3'){
+						echo "500|이미 환불 처리 중인 결제입니다.";
+						exit;
+					}
+					if($current_refund_step === '4'){
+						echo "500|이미 환불 완료된 결제입니다.";
+						exit;
+					}
+					if($current_refund_step === '5'){
+						echo "500|환불반려/실패 상태입니다. 상태 확인 후 다시 진행해 주세요.";
+						exit;
+					}
+					if($current_refund_step !== '2'){
+						echo "500|환불요청접수 상태에서만 처리할 수 있습니다.";
+						exit;
+					}
 
-				$minfo=sql_fetch("select * from g5_membership_manage where no='{$pinfo['membership_parent_no']}'");
+					$minfo=sql_fetch("select * from g5_membership_manage where no='{$pinfo['membership_parent_no']}'");
 				$is_credit_payment = false;
 				if(($minfo['title_en'] && strpos($minfo['title_en'], 'CREDIT_') === 0) || ((int)$minfo['matching_cnt'] > 0 && (int)$minfo['month'] === 0)){
 					$is_credit_payment = true;
@@ -432,19 +455,33 @@ switch ($type) {
 				$clientIp = _clientIp;
 
 				$refund_lock_name = '';
-				if($is_credit_payment){
-					$refund_lock_name = membership_refund_lock_acquire($oid, 0);
-					if(!$refund_lock_name){
-						echo "500|동일 주문의 환불이 처리 중입니다. 잠시 후 다시 시도해 주세요.";
-						exit;
+					if($is_credit_payment){
+						$refund_lock_name = membership_refund_lock_acquire($oid, 0);
+						if(!$refund_lock_name){
+							echo "500|동일 주문의 환불이 처리 중입니다. 잠시 후 다시 시도해 주세요.";
+							exit;
+						}
+						$step_row = sql_fetch("select status from g5_membership_paybill where order_no='{$oid}'");
+						$step_now = trim((string)$step_row['status']);
+						if($step_now === '') $step_now = '1';
+						if($step_now !== '2'){
+							membership_refund_lock_release($refund_lock_name);
+							echo "500|환불요청접수 상태에서만 처리할 수 있습니다.";
+							exit;
+						}
+						$already_refund = sql_fetch("select id from credit_history where order_no='{$oid}' and tx_type='REFUND' limit 1");
+						if(is_array($already_refund) && !empty($already_refund['id'])){
+							sql_query("update g5_membership_paybill set status='4' where order_no='{$oid}'");
+							membership_refund_lock_release($refund_lock_name);
+							echo "500|이미 환불 처리된 결제입니다.";
+							exit;
+						}
+						// PG 호출 직전에 2->3(환불처리중)으로 선반영
+						sql_query("update g5_membership_paybill set status='3' where order_no='{$oid}' and status='2'");
+					}else{
+						// 비크레딧 결제도 동일하게 2->3 단계 전이
+						sql_query("update g5_membership_paybill set status='3' where order_no='{$oid}' and status='2'");
 					}
-					$already_refund = sql_fetch("select id from credit_history where order_no='{$oid}' and tx_type='REFUND' limit 1");
-					if(is_array($already_refund) && !empty($already_refund['id'])){
-						membership_refund_lock_release($refund_lock_name);
-						echo "500|이미 환불 처리된 결제입니다.";
-						exit;
-					}
-				}
 				
 				$postdata = array();
 				$postdata["mid"] = $mid;
@@ -532,32 +569,36 @@ switch ($type) {
 					regdate=now()";
 				sql_query($sql);
 
-				if($is_credit_payment && $pg_error_msg){
-					membership_refund_lock_release($refund_lock_name);
-					echo "500|".$pg_error_msg;
-					exit;
-				}
+						// PG 실패 시 5단계(환불반려/실패)
+						if($is_credit_payment && $pg_error_msg){
+						sql_query("update g5_membership_paybill set status='5' where order_no='{$oid}'");
+						membership_refund_lock_release($refund_lock_name);
+						echo "500|".$pg_error_msg;
+						exit;
+					}
 
 				if(is_object($pay_result) && isset($pay_result->resultCode) && $pay_result->resultCode=="00"){
 					//결제취소 성공
 					if($is_credit_payment){
 						sql_query("START TRANSACTION");
-						$already_refund = sql_fetch("select id from credit_history where order_no='{$oid}' and tx_type='REFUND' limit 1");
-						if($already_refund['id']){
-							sql_query("ROLLBACK");
-							membership_refund_lock_release($refund_lock_name);
-							echo "500|이미 환불 처리된 결제입니다.";
-							exit;
-						}
+							$already_refund = sql_fetch("select id from credit_history where order_no='{$oid}' and tx_type='REFUND' limit 1");
+							if($already_refund['id']){
+								sql_query("ROLLBACK");
+								sql_query("update g5_membership_paybill set status='4' where order_no='{$oid}'");
+								membership_refund_lock_release($refund_lock_name);
+								echo "500|이미 환불 처리된 결제입니다.";
+								exit;
+							}
 
 						$ledger_last = credit_ledger_get_latest_row($pinfo['uid'], true);
 						$current_credit = isset($ledger_last['credit_after']) ? (int)$ledger_last['credit_after'] : 0;
-						if($current_credit < $refund_credit){
-							sql_query("ROLLBACK");
-							membership_refund_lock_release($refund_lock_name);
-							echo "500|취소 오류: 잔액 부족으로 환불할 수 없습니다.";
-							exit;
-						}
+							if($current_credit < $refund_credit){
+								sql_query("ROLLBACK");
+								sql_query("update g5_membership_paybill set status='5' where order_no='{$oid}'");
+								membership_refund_lock_release($refund_lock_name);
+								echo "500|취소 오류: 잔액 부족으로 환불할 수 없습니다.";
+								exit;
+							}
 
 						$credit_after = $current_credit - $refund_credit;
 						$plan_name_for_refund = (string)$minfo['title_en'];
@@ -572,37 +613,45 @@ switch ($type) {
 							tr_no='',
 							memo='{$memo_refund}',
 							created_at=now()";
-							$refund_history = sql_query($refund_history_sql, false);
-							if(!$refund_history){
-								sql_query("ROLLBACK");
-								membership_refund_lock_release($refund_lock_name);
-								echo "500|취소 오류: 환불 원장 기록 실패";
-								exit;
-							}
-							if($target_lot_id > 0){
-								// 환불 확정 시 해당 LOT를 REFUNDED로 마감한다.
-								$lot_refund_update = credit_lot_mark_refunded($target_lot_id);
-								if(empty($lot_refund_update['ok'])){
+								$refund_history = sql_query($refund_history_sql, false);
+								if(!$refund_history){
 									sql_query("ROLLBACK");
+									sql_query("update g5_membership_paybill set status='5' where order_no='{$oid}'");
 									membership_refund_lock_release($refund_lock_name);
-									echo "500|취소 오류: 환불 LOT 반영 실패";
+									echo "500|취소 오류: 환불 원장 기록 실패";
 									exit;
 								}
-							}
+							if($target_lot_id > 0){
+								// 환불 확정 시 해당 LOT를 REFUNDED로 마감한다.
+									$lot_refund_update = credit_lot_mark_refunded($target_lot_id);
+									if(empty($lot_refund_update['ok'])){
+										sql_query("ROLLBACK");
+										sql_query("update g5_membership_paybill set status='5' where order_no='{$oid}'");
+										membership_refund_lock_release($refund_lock_name);
+										echo "500|취소 오류: 환불 LOT 반영 실패";
+										exit;
+									}
+								}
 
-						sql_query("COMMIT");
-						membership_refund_lock_release($refund_lock_name);
-						echo "1000|결제 취소 되었습니다.";
+							sql_query("COMMIT");
+							// 환불 성공 확정 시 4단계(환불완료)
+							sql_query("update g5_membership_paybill set status='4' where order_no='{$oid}'");
+							membership_refund_lock_release($refund_lock_name);
+							echo "1000|결제 취소 되었습니다.";
+						}else{
+							// 환불 성공 확정 시 4단계(환불완료)
+							sql_query("update g5_membership_paybill set status='4' where order_no='{$oid}'");
+							membership_refund_lock_release($refund_lock_name);
+							echo "1000|결제 취소 되었습니다.";
+						}
 					}else{
+						//결제취소 오류시
+						$result_msg = (is_object($pay_result) && isset($pay_result->resultMsg) && $pay_result->resultMsg) ? $pay_result->resultMsg : 'PG 응답 오류';
+						// 환불 실패 응답 시 5단계(환불반려/실패)
+						sql_query("update g5_membership_paybill set status='5' where order_no='{$oid}'");
 						membership_refund_lock_release($refund_lock_name);
-						echo "1000|결제 취소 되었습니다.";
+						echo "500|취소 오류:".$result_msg;
 					}
-				}else{
-					//결제취소 오류시
-					$result_msg = (is_object($pay_result) && isset($pay_result->resultMsg) && $pay_result->resultMsg) ? $pay_result->resultMsg : 'PG 응답 오류';
-					membership_refund_lock_release($refund_lock_name);
-					echo "500|취소 오류:".$result_msg;
-				}
 
 		}else{
 			echo "500";

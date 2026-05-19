@@ -150,11 +150,11 @@ $(function () {
                 text = text.replace(/<[^>]*>/g, "").trim();
                 var parts = text.split("|");
                 if (parts[0] === "1000") {
-                    jAlert(parts[1] ? parts[1] : "환불 처리되었습니다.", "알림", function () {
+                    jAlert(parts[1] ? parts[1] : "환불요청이 접수되었습니다.", "알림", function () {
                         location.reload();
                     });
                 } else {
-                    jAlert(parts[1] ? parts[1] : "환불 처리 중 오류가 발생했습니다.", "알림");
+                    jAlert(parts[1] ? parts[1] : "환불요청 처리 중 오류가 발생했습니다.", "알림");
                 }
             });
         };

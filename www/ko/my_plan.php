@@ -42,8 +42,16 @@ $membership_parent_no = (int)$msinfo['membership_parent_no'];
 if($membership_parent_no > 0) $membership_info = sql_fetch("select * from g5_membership_manage where no='{$membership_parent_no}'" );
 else $membership_info = array();
 if(!is_array($membership_info)) $membership_info = array();
-$membership_cancel_token = uniqid('', true);
-set_session('ss_membership_cancel_token', $membership_cancel_token);
+// 환불 요청 토큰은 세션 재사용(탭 전환/새로고침 시 불일치 방지)
+$membership_cancel_token = trim((string)get_session('ss_membership_cancel_token'));
+if($membership_cancel_token === ''){
+	if(function_exists('random_bytes')){
+		$membership_cancel_token = bin2hex(random_bytes(16));
+	}else{
+		$membership_cancel_token = sha1(uniqid('', true));
+	}
+	set_session('ss_membership_cancel_token', $membership_cancel_token);
+}
 $remain_credit = credit_ledger_get_balance($member['mb_id']);
 
 if (!function_exists('my_plan_display_title_en')) {
@@ -84,13 +92,14 @@ $sql = "select
 			H.order_no,
 			H.tr_no,
 			H.memo,
-			H.created_at as event_date,
-			B.tid as bill_tid,
-			B.card_appl_price as bill_paid_amount,
-			B.pay_method as bill_pay_method,
-			P.membership_parent_no,
-			P.order_goods,
-			P.price as payment_price,
+				H.created_at as event_date,
+				B.tid as bill_tid,
+				B.card_appl_price as bill_paid_amount,
+				B.pay_method as bill_pay_method,
+				B.status as bill_refund_status,
+				P.membership_parent_no,
+				P.order_goods,
+				P.price as payment_price,
 			P.pay_method as payment_method,
 			MM.title_en as plan_title_en,
 			MM.sale as plan_bonus_rate,
@@ -124,13 +133,14 @@ if(!$result){
 				H.order_no,
 				H.tr_no,
 				H.memo,
-				H.created_at as event_date,
-				'' as bill_tid,
-				0 as bill_paid_amount,
-				'' as bill_pay_method,
-				P.membership_parent_no,
-				P.order_goods,
-				P.price as payment_price,
+					H.created_at as event_date,
+					'' as bill_tid,
+					0 as bill_paid_amount,
+					'' as bill_pay_method,
+					'' as bill_refund_status,
+					P.membership_parent_no,
+					P.order_goods,
+					P.price as payment_price,
 				P.pay_method as payment_method,
 				MM.title_en as plan_title_en,
 				MM.sale as plan_bonus_rate,
@@ -315,14 +325,28 @@ for($i=0; $i<count($payment_rows); $i++){
 	                            if($tx_type=="CHARGE" && !$is_free && $charge_order_no !== '' && $charge_event_ts){
 	                                $is_refunded_order = !empty($refund_order_map[$charge_order_no]);
 	                                $is_within_7days = (time() <= strtotime("+7 days", $charge_event_ts));
-	                                if($is_refunded_order){
+	                                // 사용자 화면은 paybill.status(1~5) 기준으로 환불 진행상태를 표시
+	                                $refund_step = trim((string)$row['bill_refund_status']);
+	                                if($refund_step === '') $refund_step = '1';
+	                                if($is_refunded_order) $refund_step = '4';
+
+	                                if($refund_step === '2'){
+	                                    $status_text = "환불요청됨";
+	                                    $status_class = "used";
+	                                } else if($refund_step === '3'){
+	                                    $status_text = "환불처리중";
+	                                    $status_class = "used";
+	                                } else if($refund_step === '4'){
 	                                    $status_text = "환불완료";
 	                                    $status_class = "done";
+	                                } else if($refund_step === '5'){
+	                                    $status_text = "환불반려/실패";
+	                                    $status_class = "blocked";
 	                                } else if($is_within_7days){
 	                                    $charge_refund_btn = true;
 	                                } else {
-	                                    $status_text = "환불불가";
-	                                    $status_class = "blocked";
+	                                    $status_text = "결제완료";
+	                                    $status_class = "done";
 	                                }
 	                            }
 

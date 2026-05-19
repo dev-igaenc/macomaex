@@ -37,9 +37,15 @@
 	// 상태 탭(환불완료/환불전) 필터
 	$refund_filter = isset($_GET['is_refund']) ? trim((string)$_GET['is_refund']) : '';
 	if ($refund_filter === '1') {
-		$sql_search .= " and exists (select 1 from credit_history H where H.order_no = PB.order_no and H.tx_type='REFUND') ";
+		$sql_search .= " and (
+			(case when trim(ifnull(PB.status, ''))='' then '1' else trim(PB.status) end)='4'
+			or exists (select 1 from credit_history H where H.order_no = PB.order_no and H.tx_type='REFUND')
+		) ";
 	} else if ($refund_filter === '0') {
-		$sql_search .= " and not exists (select 1 from credit_history H where H.order_no = PB.order_no and H.tx_type='REFUND') ";
+		$sql_search .= " and not (
+			(case when trim(ifnull(PB.status, ''))='' then '1' else trim(PB.status) end)='4'
+			or exists (select 1 from credit_history H where H.order_no = PB.order_no and H.tx_type='REFUND')
+		) ";
 	}
 
 	$sql = " select count(*) as cnt " . $sql_common . $sql_search;
@@ -83,6 +89,9 @@
 .payment-status-text.is-complete {
 	color: #1f4e9d;
 }
+.payment-status-text.is-fail {
+	color: #b91c1c;
+}
 </style>
 
 <div class="local_ov01 local_ov">
@@ -122,12 +131,11 @@
 			<th scope="col">이메일주소</th>
 			<th scope="col">결제시간</th>
 			<th scope="col">주문번호</th>
-			<th scope="col">결제수단</th>
-			<th scope="col">금액</th>
-			<th scope="col">이용상품</th>
-			<th scope="col">상태</th>
-			<th scope="col">관리</th>
-		</tr>
+				<th scope="col">결제수단</th>
+				<th scope="col">금액</th>
+				<th scope="col">이용상품</th>
+				<th scope="col">상태</th>
+			</tr>
 		</thead>
 		<tbody>
 		<?php for ($i=0; $row=sql_fetch_array($result); $i++) {
@@ -158,14 +166,29 @@
 			if ($product_title_display === '') $product_title_display = trim((string)$row['order_goods']);
 			if ($product_title_display === '') $product_title_display = '-';
 
-			// REFUND 이력 존재 여부로 상태를 표시
+			// 상태는 paybill.status를 우선 사용하고, 기존 데이터는 REFUND 이력으로 보정
 			$refundInfo = sql_fetch("select id from credit_history where order_no='{$row['order_no']}' and tx_type='REFUND' order by id desc limit 1");
 			$is_refunded = (is_array($refundInfo) && !empty($refundInfo['id'])) ? 1 : 0;
 			$is_credit_goods = (isset($row['membership_title_en']) && strpos((string)$row['membership_title_en'], 'CREDIT_') === 0) ? 1 : 0;
 
+			$refund_step = trim((string)$row['status']);
+			if ($refund_step === '') $refund_step = '1';
+			if ($is_refunded) $refund_step = '4';
+
 			$status_text = '결제완료';
-			if ($is_refunded) {
+			$status_css = 'is-complete';
+			if ($refund_step === '2') {
+				$status_text = '환불요청접수';
+				$status_css = 'is-refund';
+			} else if ($refund_step === '3') {
+				$status_text = '환불처리중';
+				$status_css = 'is-refund';
+			} else if ($refund_step === '4') {
 				$status_text = '환불완료';
+				$status_css = 'is-refund';
+			} else if ($refund_step === '5') {
+				$status_text = '환불반려/실패';
+				$status_css = 'is-fail';
 			}
 			?>
 		<tr>
@@ -179,20 +202,18 @@
 				<td class="td_center"><?php echo $price_display; ?></td>
 				<td class="td_center"><?php echo $product_title_display; ?></td>
 				<td class="td_center">
-					<span class="payment-status-text <?php echo $is_refunded ? 'is-refund' : 'is-complete'; ?>"><?php echo $status_text; ?></span>
-				</td>
-				<td class="td_mng td_mng_l">
-					<?php if (!$is_refunded) { ?>
-					<a class="btn btn-danger text-light pay_cancel" oid="<?php echo $row['order_no']; ?>" is_credit="<?php echo $is_credit_goods; ?>">결제취소</a><br>
-					<?php } else if ($is_refunded) { ?>
-					<span class="btn btn-sm btn-secondary">환불완료</span><br>
+					<?php // 2단계(환불요청접수)만 관리자 실행 버튼 노출 ?>
+					<?php if ($refund_step === '2') { ?>
+					<a class="btn btn-sm btn-danger text-light pay_cancel" oid="<?php echo $row['order_no']; ?>" is_credit="<?php echo $is_credit_goods; ?>">환불요청접수</a>
+					<?php } else { ?>
+					<span class="payment-status-text <?php echo $status_css; ?>"><?php echo $status_text; ?></span>
 					<?php } ?>
 				</td>
 			</tr>
 			<?php
 			}
 			if ($i == 0) {
-				echo '<tr><td colspan="11" class="empty_table">자료가 한건도 없습니다.</td></tr>';
+				echo '<tr><td colspan="10" class="empty_table">자료가 한건도 없습니다.</td></tr>';
 			}
 			?>
 		</tbody>
@@ -208,8 +229,8 @@ $(".pay_cancel").click(function(){
 	if(!oid) return;
 
 	var msg = (isCredit == "1")
-		? "결제 취소(환불) 시 충전 크레딧이 회수됩니다.\n정말 결제 취소하시겠습니까?"
-		: "결제 취소를 진행하시겠습니까?";
+		? "환불 요청 건을 처리하시겠습니까?\n처리 시 실제 PG 환불이 요청됩니다."
+		: "환불 요청 건을 처리하시겠습니까?";
 	if(!confirm(msg)) return;
 
 	// 관리자 환불(결제취소) 처리 후 목록 새로고침
@@ -219,7 +240,7 @@ $(".pay_cancel").click(function(){
 	}).done(function(jqXHR) {
 		jqXHR = String(jqXHR || "").split("|");
 		if (jqXHR[0] == "1000") {
-			alert(jqXHR[1] ? jqXHR[1] : "결제 취소 처리 되었습니다.");
+			alert(jqXHR[1] ? jqXHR[1] : "환불 처리 되었습니다.");
 			location.reload();
 		} else {
 			alert(jqXHR[1] ? jqXHR[1] : "요청 처리 중 오류가 발생했습니다.");

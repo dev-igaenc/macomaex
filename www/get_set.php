@@ -2149,14 +2149,14 @@ switch ($type) {
 			echo "500|잘못된 요청 방식입니다.";
 			exit;
 		}
+		if(!$member['mb_id']){
+			echo "501|로그인 후 이용하세요.";
+			exit;
+		}
 		$cancel_token = isset($_POST['cancel_token']) ? preg_replace('/[^0-9a-z_\.-]/i', '', (string)$_POST['cancel_token']) : '';
 		$session_cancel_token = get_session('ss_membership_cancel_token');
 		if(!$cancel_token || !$session_cancel_token || $cancel_token !== $session_cancel_token){
 			echo "500|유효하지 않은 요청입니다.";
-			exit;
-		}
-		if(!$member['mb_id']){
-			echo "501|로그인 후 이용하세요.";
 			exit;
 		}
 		$order_no_refund = isset($_POST['order_no']) ? preg_replace('/[^0-9A-Za-z_\-]/', '', (string)$_POST['order_no']) : '';
@@ -2173,30 +2173,17 @@ switch ($type) {
 			exit;
 		}
 
-		$pinfo=sql_fetch("select * from g5_membership_paybill where order_no='{$order_no_sql}'");
-		$porder=sql_fetch("select uid, membership_parent_no, mid, price from g5_membership_payment where order_no='{$order_no_sql}'");
-		if(!$pinfo['uid'] && $porder['uid']) $pinfo['uid'] = $porder['uid'];
-		if(!$pinfo['membership_parent_no'] && $porder['membership_parent_no']) $pinfo['membership_parent_no'] = $porder['membership_parent_no'];
-		if(!$pinfo['mid'] && $porder['mid']) $pinfo['mid'] = $porder['mid'];
-		if(!$pinfo['tid']){
-			echo "500|취소 오류: 결제 TID가 없습니다.";
+		$pinfo=sql_fetch("select order_no, uid, status from g5_membership_paybill where order_no='{$order_no_sql}'");
+		if(!$pinfo['order_no']){
+			echo "500|결제 내역을 찾을 수 없습니다.";
+			exit;
+		}
+		if(strtolower(trim((string)$pinfo['uid'])) !== strtolower(trim((string)$member['mb_id']))){
+			echo "500|본인 결제 건만 환불요청할 수 있습니다.";
 			exit;
 		}
 
-		$is_test_pay = defined('_test_pay') && strtoupper((string)_test_pay) === 'Y';
-		$stdpay_mid = (defined('_stdpay_mid') && trim((string)_stdpay_mid) !== '') ? trim((string)_stdpay_mid) : ((defined('_mid') && trim((string)_mid) !== '') ? trim((string)_mid) : '');
-		$stdpay_mid_test = (defined('_stdpay_mid_test') && trim((string)_stdpay_mid_test) !== '') ? trim((string)_stdpay_mid_test) : ($is_test_pay ? $stdpay_mid : '');
-		$stdpay_api_key_test = (defined('_stdpay_api_key_test') && trim((string)_stdpay_api_key_test) !== '') ? trim((string)_stdpay_api_key_test) : (($is_test_pay && defined('_key') && trim((string)_key) !== '') ? trim((string)_key) : '');
-		$stdpay_api_key_real = (defined('_stdpay_api_key_real') && trim((string)_stdpay_api_key_real) !== '') ? trim((string)_stdpay_api_key_real) : ((defined('_key') && trim((string)_key) !== '') ? trim((string)_key) : '');
-		$tid_mid = ($stdpay_mid_test && strpos((string)$pinfo['tid'], 'INIpayTest') !== false) ? $stdpay_mid_test : '';
-		$mid = $tid_mid ? $tid_mid : (trim((string)$pinfo['mid']) ? trim((string)$pinfo['mid']) : $stdpay_mid);
-		$key = ($stdpay_mid_test && $mid == $stdpay_mid_test) ? $stdpay_api_key_test : $stdpay_api_key_real;
-		if(!$key){
-			echo "500|취소 오류: 일반결제 환불 API KEY 미설정";
-			exit;
-		}
-
-		$target_lot_id = 0;
+		// 요청 접수 전에도 기존 환불 가능 조건(7일 이내 / 미사용)을 동일하게 검증
 		$lot_refund = credit_lot_find_refundable_by_order($member['mb_id'], $order_no_refund);
 		if(!empty($lot_refund['skip'])){
 			echo "500|취소 오류: 환불 데이터가 준비되지 않았습니다.";
@@ -2217,20 +2204,6 @@ switch ($type) {
 			}
 			exit;
 		}
-		$refund_credit = (int)$lot_refund['refund_credit'];
-		$target_lot_id = (int)$lot_refund['lot']['lot_id'];
-		if($refund_credit < 1){
-			echo "500|취소 오류: 환불 크레딧 정보가 없습니다.";
-			exit;
-		}
-
-		$refund_amount = (int)$pinfo['card_appl_price'];
-		if($refund_amount < 1) $refund_amount = (int)$pinfo['price'];
-		if($refund_amount < 1) $refund_amount = (int)$porder['price'];
-		if($refund_amount < 1){
-			echo "500|취소 오류: 환불 금액 정보가 없습니다.";
-			exit;
-		}
 
 		$refund_lock_name = membership_refund_lock_acquire($order_no_refund, 0);
 		if(!$refund_lock_name){
@@ -2244,130 +2217,47 @@ switch ($type) {
 			exit;
 		}
 
-		$type = "refund";
-		$timestamp = date("YmdHis");
-		$clientIp = _clientIp;
-		$detail = array();
-		$detail["tid"] = $pinfo['tid'];
-		$detail["msg"] = "사용자 취소";
-		$detail["price"] = (string)$refund_amount;
-		$postdata = array();
-		$postdata["mid"] = $mid;
-		$postdata["type"] = $type;
-		$postdata["timestamp"] = $timestamp;
-		$postdata["clientIp"] = $clientIp;
-		$postdata["data"] = $detail;
-		$details = str_replace('\\/', '/', json_encode($detail, JSON_UNESCAPED_UNICODE));
-		$postdata["hashData"] = hash("sha512", $key.$mid.$type.$timestamp.$details);
-		$post_data = json_encode($postdata, JSON_UNESCAPED_UNICODE);
-
-		$url = "https://iniapi.inicis.com/v2/pg/refund";
-		$ch = curl_init();
-		curl_setopt($ch, CURLOPT_URL, $url);
-		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-		curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
-		curl_setopt($ch, CURLOPT_TIMEOUT, 30);
-		curl_setopt($ch, CURLOPT_POSTFIELDS, $post_data);
-		curl_setopt($ch, CURLOPT_POST, 1);
-		curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type: application/json;charset=utf-8'));
-		curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
-		curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
-		$response = curl_exec($ch);
-		$curl_errno = curl_errno($ch);
-		$curl_error = curl_error($ch);
-		$http_code = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
-		curl_close($ch);
-
-		$pay_result = null;
-		$pg_error_msg = '';
-		if($response === false){
-			$pg_error_msg = "PG 통신 실패";
-		}else if($http_code < 200 || $http_code >= 300){
-			$pg_error_msg = "PG 응답 오류(HTTP {$http_code})";
-		}else{
-			$pay_result = json_decode($response);
-			if(!is_object($pay_result)) $pg_error_msg = "PG 응답 파싱 실패";
-			else if(!isset($pay_result->resultCode)) $pg_error_msg = "PG 응답 형식 오류";
-			else if($pay_result->resultCode!="00"){
-				$result_msg = isset($pay_result->resultMsg) ? $pay_result->resultMsg : 'PG 응답 오류';
-				$pg_error_msg = "취소 오류:".$result_msg;
-			}
-		}
-		$log_response = ($response === false || $response === null) ? '' : (string)$response;
-		if($log_response === ''){
-			$log_response = json_encode(array('http_code' => $http_code, 'curl_errno' => $curl_errno, 'curl_error' => $curl_error), JSON_UNESCAPED_UNICODE);
-		}
-		sql_query("insert g5_membership_payment_log set
-			uid='{$member['mb_id']}',
-			order_no='{$order_no_sql}',
-			order_goods='".addslashes((string)$pinfo['order_goods'])."',
-			price='{$refund_amount}',
-			send='".addslashes($post_data)."',
-			recive='".addslashes($log_response)."',
-			regdate=now()");
-
-		if($pg_error_msg){
+		// 사용자 환불은 PG 호출 없이 상태값 1->2(요청접수)만 수행
+		$current_step = trim((string)$pinfo['status']);
+		if($current_step === '') $current_step = '1';
+		if($current_step === '2'){
 			membership_refund_lock_release($refund_lock_name);
-			echo "500|".$pg_error_msg;
+			echo "1000|이미 환불요청이 접수된 결제입니다.";
+			exit;
+		}
+		if($current_step === '3'){
+			membership_refund_lock_release($refund_lock_name);
+			echo "500|이미 환불 처리 중인 결제입니다.";
+			exit;
+		}
+		if($current_step === '4'){
+			membership_refund_lock_release($refund_lock_name);
+			echo "500|이미 환불 완료된 결제입니다.";
+			exit;
+		}
+		if($current_step === '5'){
+			membership_refund_lock_release($refund_lock_name);
+			echo "500|환불이 반려/실패 처리된 결제입니다. 관리자에게 문의해 주세요.";
+			exit;
+		}
+		if($current_step !== '1'){
+			membership_refund_lock_release($refund_lock_name);
+			echo "500|환불요청 가능한 상태가 아닙니다.";
 			exit;
 		}
 
-		sql_query("START TRANSACTION");
-		$already_refund = sql_fetch("select id from credit_history where order_no='{$order_no_sql}' and tx_type='REFUND' limit 1");
-		if($already_refund['id']){
-			sql_query("ROLLBACK");
+		// 동시 요청 방지를 위해 1단계에서만 2단계로 전이
+		sql_query("update g5_membership_paybill set status='2' where order_no='{$order_no_sql}' and (status is null or status='' or status='1')");
+		$updated_step = sql_fetch("select status from g5_membership_paybill where order_no='{$order_no_sql}'");
+		$updated_step_val = trim((string)$updated_step['status']);
+		if($updated_step_val !== '2'){
 			membership_refund_lock_release($refund_lock_name);
-			echo "500|이미 환불 처리된 결제입니다.";
+			echo "500|동시 처리로 인해 요청 접수에 실패했습니다. 잠시 후 다시 시도해 주세요.";
 			exit;
 		}
 
-		$ledger_last = credit_ledger_get_latest_row($member['mb_id'], true);
-		$current_credit = isset($ledger_last['credit_after']) ? (int)$ledger_last['credit_after'] : 0;
-		if($current_credit < $refund_credit){
-			sql_query("ROLLBACK");
-			membership_refund_lock_release($refund_lock_name);
-			echo "500|취소 오류: 잔액 부족으로 환불할 수 없습니다.";
-			exit;
-		}
-		$credit_after = $current_credit - $refund_credit;
-		$plan_name_for_refund = '';
-		$minfo_refund = array();
-		if((int)$pinfo['membership_parent_no'] > 0){
-			$minfo_refund = sql_fetch("select title_en from g5_membership_manage where no='".(int)$pinfo['membership_parent_no']."' limit 1");
-		}
-		if(!is_array($minfo_refund)) $minfo_refund = array();
-		$plan_name_for_refund = (string)$minfo_refund['title_en'];
-		$memo_refund = addslashes($plan_name_for_refund . " 플랜 환불");
-		$refund_history_sql = "insert into credit_history set
-			uid='{$member['mb_id']}',
-			tx_type='REFUND',
-			service_code='CREDIT_REFUND',
-			credit_delta='-{$refund_credit}',
-			credit_after='{$credit_after}',
-			order_no='{$order_no_sql}',
-			tr_no='',
-			memo='{$memo_refund}',
-			created_at=now()";
-		$refund_history = sql_query($refund_history_sql, false);
-		if(!$refund_history){
-			sql_query("ROLLBACK");
-			membership_refund_lock_release($refund_lock_name);
-			echo "500|취소 오류: 환불 원장 기록 실패";
-			exit;
-		}
-		if($target_lot_id > 0){
-			$lot_refund_update = credit_lot_mark_refunded($target_lot_id);
-			if(empty($lot_refund_update['ok'])){
-				sql_query("ROLLBACK");
-				membership_refund_lock_release($refund_lock_name);
-				echo "500|취소 오류: 환불 LOT 반영 실패";
-				exit;
-			}
-		}
-
-		sql_query("COMMIT");
 		membership_refund_lock_release($refund_lock_name);
-		echo "1000|환불 처리되었습니다.";
+		echo "1000|환불요청이 접수되었습니다.";
 		exit;
 	break;
 

@@ -93,9 +93,15 @@ if ($stx) {
 // 리스트 화면과 같은 상태 탭(환불완료/환불전) 필터 반영
 $refund_filter = isset($_GET['is_refund']) ? trim((string)$_GET['is_refund']) : '';
 if ($refund_filter === '1') {
-    $sql_search .= " and exists (select 1 from credit_history H where H.order_no = PB.order_no and H.tx_type='REFUND') ";
+    $sql_search .= " and (
+        (case when trim(ifnull(PB.status, ''))='' then '1' else trim(PB.status) end)='4'
+        or exists (select 1 from credit_history H where H.order_no = PB.order_no and H.tx_type='REFUND')
+    ) ";
 } else if ($refund_filter === '0') {
-    $sql_search .= " and not exists (select 1 from credit_history H where H.order_no = PB.order_no and H.tx_type='REFUND') ";
+    $sql_search .= " and not (
+        (case when trim(ifnull(PB.status, ''))='' then '1' else trim(PB.status) end)='4'
+        or exists (select 1 from credit_history H where H.order_no = PB.order_no and H.tx_type='REFUND')
+    ) ";
 }
 
 $sql = "select
@@ -124,7 +130,7 @@ $headers = array(
 $rows = array();
 
 for ($i = 0; $row = sql_fetch_array($result); $i++) {
-    // 상태는 paybill 컬럼이 아니라 credit_history REFUND 이력으로 계산
+    // 상태는 paybill.status를 우선 사용하고, 기존 데이터는 REFUND 이력으로 보정
     $refundInfo = sql_fetch("select id from credit_history where order_no='{$row['order_no']}' and tx_type='REFUND' order by id desc limit 1");
     $is_refunded = (is_array($refundInfo) && !empty($refundInfo['id'])) ? 1 : 0;
     $company_name_display = trim((string)$row['mb_name']);
@@ -154,10 +160,15 @@ for ($i = 0; $row = sql_fetch_array($result); $i++) {
     if ($product_title_display === '') $product_title_display = trim((string)$row['order_goods']);
     if ($product_title_display === '') $product_title_display = '-';
 
+    // 관리자 목록과 동일한 상태 문구 기준으로 엑셀 상태값을 맞춘다.
+    $refund_step = trim((string)$row['status']);
+    if ($refund_step === '') $refund_step = '1';
+    if ($is_refunded) $refund_step = '4';
     $status_text = '결제완료';
-    if ($is_refunded) {
-        $status_text = '환불완료';
-    }
+    if ($refund_step === '2') $status_text = '환불요청접수';
+    else if ($refund_step === '3') $status_text = '환불처리중';
+    else if ($refund_step === '4') $status_text = '환불완료';
+    else if ($refund_step === '5') $status_text = '환불반려/실패';
 
     $rows[] = array(
         $company_name_display,
