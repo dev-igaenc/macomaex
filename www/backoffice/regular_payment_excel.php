@@ -56,47 +56,82 @@ function array_to_excel($headers, $rows, $filename){
     $writer->save('php://output');
 }
 
-$sql_common = " from g5_membership_status A left join g5_member B on A.uid=B.mb_id ";
+$sql_common = " from g5_membership_paybill PB
+    left join g5_membership_payment A on PB.order_no = A.order_no
+    left join g5_member B on PB.uid = B.mb_id
+    left join g5_membership_manage M on PB.membership_parent_no = M.no ";
 $sql_search = " where (1) ";
+
+// 리스트 화면과 같은 검색 키만 허용
+$allowed_sfl = array('uid', 'order_no', 'mb_name', 'mb_email');
+if (!isset($sfl) || !in_array($sfl, $allowed_sfl, true)) {
+    $sfl = '';
+}
+
 if ($stx) {
     $sql_search .= " and ( ";
     switch ($sfl) {
-        default :
-            $sql_search .= " ({$sfl} like '%{$stx}%') ";
+        case 'uid':
+            $sql_search .= " (PB.uid like '%{$stx}%') ";
+            break;
+        case 'order_no':
+            $sql_search .= " (PB.order_no like '%{$stx}%') ";
+            break;
+        case 'mb_name':
+            $sql_search .= " (B.mb_name like '%{$stx}%') ";
+            break;
+        case 'mb_email':
+            $sql_search .= " (B.mb_email like '%{$stx}%') ";
+            break;
+        default:
+            $sql_search .= " (PB.order_no like '%{$stx}%' or PB.uid like '%{$stx}%') ";
             break;
     }
     $sql_search .= " ) ";
 }
 
-$order = " ORDER BY no desc";
-$sql = "select * $sql_common $sql_search $order";
+// 리스트 화면과 같은 상태 탭(환불완료/환불전) 필터 반영
+$refund_filter = isset($_GET['is_refund']) ? trim((string)$_GET['is_refund']) : '';
+if ($refund_filter === '1') {
+    $sql_search .= " and exists (select 1 from credit_history H where H.order_no = PB.order_no and H.tx_type='REFUND') ";
+} else if ($refund_filter === '0') {
+    $sql_search .= " and not exists (select 1 from credit_history H where H.order_no = PB.order_no and H.tx_type='REFUND') ";
+}
+
+$sql = "select
+        PB.*,
+        B.mb_name,
+        B.mb_email,
+        B.mb_4,
+        M.title as membership_title,
+        M.title_en as membership_title_en
+    {$sql_common}
+    {$sql_search}
+    order by PB.no desc";
 $result = sql_query($sql);
 
 $headers = array(
     '회사명',
     '사업자등록번호',
     '이메일주소',
-    '결제일',
+    '결제시간',
+    '주문번호',
+    '결제수단',
     '금액',
-    '전문가컨설팅',
     '이용상품',
     '상태'
 );
 $rows = array();
 
 for ($i = 0; $row = sql_fetch_array($result); $i++) {
-    $membershipInfo = getMembership($row['membership_parent_no']);
-    $paymentInfo = getPaymentInfo($row['order_no']);
+    // 상태는 paybill 컬럼이 아니라 credit_history REFUND 이력으로 계산
     $refundInfo = sql_fetch("select id from credit_history where order_no='{$row['order_no']}' and tx_type='REFUND' order by id desc limit 1");
     $is_refunded = (is_array($refundInfo) && !empty($refundInfo['id'])) ? 1 : 0;
-
-    if(!is_array($membershipInfo)) $membershipInfo = array('title'=>'-', 'title_en'=>'');
-    if(!is_array($paymentInfo)) $paymentInfo = array('price'=>0);
-
-    $company_name_display = isset($row['mb_name']) ? trim((string)$row['mb_name']) : '';
+    $company_name_display = trim((string)$row['mb_name']);
+    if ($company_name_display === '') $company_name_display = trim((string)$row['uid']);
     if ($company_name_display === '') $company_name_display = '-';
 
-    $biz_no_raw = isset($row['mb_4']) ? trim((string)$row['mb_4']) : '';
+    $biz_no_raw = trim((string)$row['mb_4']);
     $biz_no_digits = preg_replace('/[^0-9]/', '', $biz_no_raw);
     $biz_no_display = $biz_no_raw;
     if (preg_match('/^[0-9]{10}$/', $biz_no_digits)) {
@@ -104,48 +139,34 @@ for ($i = 0; $row = sql_fetch_array($result); $i++) {
     }
     if ($biz_no_display === '') $biz_no_display = '-';
 
-    $email_display = isset($row['mb_email']) ? trim((string)$row['mb_email']) : '';
+    $email_display = trim((string)$row['mb_email']);
     if ($email_display === '') $email_display = '-';
 
-    $duedate = '-';
-    if (!empty($row['date_end'])) {
-        $end_timestamp = strtotime($row['date_end']." 00:00:00");
-        if ($end_timestamp) {
-            $duedate = date("Y-m-d", strtotime("+1 days", $end_timestamp));
-        }
-    }
+    $pay_method = "신용카드";
+    if ($row['pay_method'] === "DirectBank") $pay_method = "실시간계좌이체";
+    else if ($row['pay_method'] === "VBank") $pay_method = "가상계좌";
+    else if ($row['pay_method'] === "None" || !$row['pay_method']) $pay_method = "무료";
 
-    $price_value = isset($paymentInfo['price']) ? (int)$paymentInfo['price'] : 0;
-    $price_display = $price_value > 0 ? number_format($price_value, 0).'원' : '-';
+    $price_value = (int)$row['price'];
+    $price_display = $price_value > 0 ? number_format($price_value, 0) . '원' : '-';
 
-    $consult_display = '-';
-    if ((int)$row['expert_consulting_cnt'] > 0 && ((string)$row['status'] === 'S' || (string)$row['status'] === 'T')) {
-        $consult_display = ((int)$row['expert_consulting_able_cnt'] > 0) ? '미사용' : '사용';
-    }
-
-    $product_title_display = isset($membershipInfo['title']) ? trim((string)$membershipInfo['title']) : '';
+    $product_title_display = trim((string)$row['membership_title']);
+    if ($product_title_display === '') $product_title_display = trim((string)$row['order_goods']);
     if ($product_title_display === '') $product_title_display = '-';
 
-    $status_text = isset($ms_status_text[$row['status']]) ? $ms_status_text[$row['status']] : trim((string)$row['status']);
-    if ($status_text === '') $status_text = '-';
-    $pay_cnt = sql_fetch("select count(*) as cnt from g5_membership_status_history where uid='{$row['uid']}'");
-    if (isset($pay_cnt['cnt']) && (int)$pay_cnt['cnt'] === 1 && $status_text === '결제완료') {
-        $status_text = '첫결제';
-    }
+    $status_text = '결제완료';
     if ($is_refunded) {
         $status_text = '환불완료';
-    }
-    if (!empty($row['coupon'])) {
-        $status_text .= ' / 쿠폰사용';
     }
 
     $rows[] = array(
         $company_name_display,
         $biz_no_display,
         $email_display,
-        $duedate,
+        (string)$row['regdate'],
+        (string)$row['order_no'],
+        $pay_method,
         $price_display,
-        $consult_display,
         $product_title_display,
         $status_text
     );
