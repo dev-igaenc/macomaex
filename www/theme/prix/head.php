@@ -665,6 +665,8 @@ function requestMainCompCheck(comnum, $form, opts) {
 				if (overlay) {
 					overlay.classList.add("is_open");
 					overlay.setAttribute("aria-hidden", "false");
+					var actionBtn = document.getElementById("modal_verify_btn_ai");
+					if (actionBtn) actionBtn.focus();
 				}
 				} else {
 					if ($form && $form.length) {
@@ -717,6 +719,13 @@ $(document).on("click", "#modal_verify_btn_ai", function() {
 				openGuide("사업자번호 재확인", "입력하신 사업자번호 형식이 올바르지 않습니다.", "사업자번호를 다시 확인해 주세요.");
 			}
 		});
+
+// 모달 CTA 버튼에 포커스된 상태에서 Enter 입력 시 클릭과 동일 동작
+$(document).on("keydown", "#modal_verify_btn_ai", function(e) {
+	if (e.key !== "Enter" && e.key !== "NumpadEnter") return;
+	e.preventDefault();
+	$(this).trigger("click");
+});
 
 // 모달 닫기 이벤트들
 $(document).on("click", "#modal_verify_overlay", function(e) {
