@@ -15,9 +15,22 @@ $requestCompanyProduct = isset($requestCompanyProduct) ? (string)$requestCompany
 $requestCompanyHomepage = isset($requestCompanyHomepage) ? (string)$requestCompanyHomepage : '';
 $hasRequestCompanyHomepage = trim($requestCompanyHomepage) !== '';
 $tradeDirectionLabel = isset($tradeDirectionLabel) ? (string)$tradeDirectionLabel : '';
-$tradePurposeLabels = (isset($tradePurposeLabels) && is_array($tradePurposeLabels)) ? $tradePurposeLabels : array();
-$messagePreviewLines = (isset($messagePreviewLines) && is_array($messagePreviewLines)) ? $messagePreviewLines : array();
-$mailDateLabel = isset($mailDateLabel) ? (string)$mailDateLabel : date('Y년 m월 d일 H:i');
+    $tradePurposeLabels = (isset($tradePurposeLabels) && is_array($tradePurposeLabels)) ? $tradePurposeLabels : array();
+    $messagePreviewLines = (isset($messagePreviewLines) && is_array($messagePreviewLines)) ? $messagePreviewLines : array();
+    $mailDateLabel = isset($mailDateLabel) ? (string)$mailDateLabel : date('Y년 m월 d일 H:i');
+
+    // Email clients require absolute image URLs. G5_URL can be relative ('') depending on deployment config.
+    $mailBaseUrl = '';
+    if (defined('G5_HTTPS_DOMAIN') && trim((string)G5_HTTPS_DOMAIN) !== '') {
+        $mailBaseUrl = trim((string)G5_HTTPS_DOMAIN);
+    } elseif (defined('G5_DOMAIN') && trim((string)G5_DOMAIN) !== '') {
+        $mailBaseUrl = trim((string)G5_DOMAIN);
+    } elseif (defined('G5_URL') && preg_match('#^https?://#i', (string)G5_URL)) {
+        $mailBaseUrl = trim((string)G5_URL);
+    } else {
+        $mailBaseUrl = 'https://macomaex.com';
+    }
+    $mailBaseUrl = rtrim($mailBaseUrl, '/');
 ?>
 <!DOCTYPE html>
 <html lang="ko">
@@ -59,7 +72,7 @@ $mailDateLabel = isset($mailDateLabel) ? (string)$mailDateLabel : date('Y년 m�
         <td style="width:47%;vertical-align:top;">
           <div style="background:#ffffff;border-radius:12px;padding:16px;border:1px solid #e5e7eb;">
             <div style="width:36px;height:36px;background:#eff6ff;border-radius:50%;margin-bottom:10px;text-align:center;line-height:36px;">
-                <img src="https://img.icons8.com/ios-filled/50/3b82f6/organization.png" width="16" height="16" alt="" style="display:inline-block;vertical-align:middle;border:0;outline:none;text-decoration:none;">
+                <img src="<?php echo $mailBaseUrl; ?>/bbs/mail/icon/organization-t.png" width="16" height="16" alt="" style="display:inline-block;vertical-align:middle;border:0;outline:none;text-decoration:none;">
             </div>
             <div style="font-size:13px;font-weight:800;color:#111827;margin-bottom:3px;"><?php echo $e($requestCompanyProfileName); ?></div>
             <div style="font-size:11px;color:#6b7280;">발신 기업</div>
@@ -67,13 +80,13 @@ $mailDateLabel = isset($mailDateLabel) ? (string)$mailDateLabel : date('Y년 m�
         </td>
 
         <td align="center" style="width:6%;padding:0 4px;vertical-align:middle;">
-            <img src="https://img.icons8.com/ios-glyphs/30/d1d5db/long-arrow-right.png" width="16" height="16" alt="" style="display:block;border:0;outline:none;text-decoration:none;">
+            <img src="<?php echo $mailBaseUrl; ?>/bbs/mail/icon/long-arrow-right.png" width="16" height="16" alt="" style="display:block;border:0;outline:none;text-decoration:none;">
         </td>
 
         <td style="width:47%;vertical-align:top;">
           <div style="background:#ffffff;border-radius:12px;padding:16px;border:1px solid #e5e7eb;">
             <div style="width:36px;height:36px;background:#ecfdf5;border-radius:50%;margin-bottom:10px;text-align:center;line-height:36px;">
-                <img src="https://img.icons8.com/ios-filled/50/10b981/organization.png" width="16" height="16" alt="" style="display:inline-block;vertical-align:middle;border:0;outline:none;text-decoration:none;">
+                <img src="<?php echo $mailBaseUrl; ?>/bbs/mail/icon/organization-r.png" width="16" height="16" alt="" style="display:inline-block;vertical-align:middle;border:0;outline:none;text-decoration:none;">
             </div>
             <div style="font-size:13px;font-weight:800;color:#111827;margin-bottom:3px;"><?php echo $e($targetCompanyName); ?></div>
             <div style="font-size:11px;color:#6b7280;">수신 기업</div>
@@ -85,42 +98,42 @@ $mailDateLabel = isset($mailDateLabel) ? (string)$mailDateLabel : date('Y년 m�
     <div style="background:#ffffff;border-radius:12px;padding:16px 18px;border:1px solid #e5e7eb;margin-bottom:10px;">
       <div style="font-size:12px;font-weight:700;color:#111827;margin-bottom:14px;">발신 기업 정보</div>
       <div style="display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid #f3f4f6;">
-        <img src="https://img.icons8.com/ios-glyphs/30/9ca3af/briefcase.png" width="13" height="13" alt="" style="display:inline-block;vertical-align:middle;margin-right:8px;border:0;outline:none;text-decoration:none;">
+        <img src="<?php echo $mailBaseUrl; ?>/bbs/mail/icon/briefcase.png" width="13" height="13" alt="" style="display:inline-block;vertical-align:middle;margin-right:8px;border:0;outline:none;text-decoration:none;">
         <span style="font-size:11px;color:#9ca3af;font-weight:600;width:80px;flex-shrink:0;">회사명</span>
         <span style="font-size:13px;color:#374151;font-weight:700;"><?php echo $e($requestCompanyProfileName); ?></span>
       </div>
       <div style="display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid #f3f4f6;">
-        <img src="https://img.icons8.com/ios-glyphs/30/9ca3af/identification-documents.png" width="13" height="13" alt="" style="display:inline-block;vertical-align:middle;margin-right:8px;border:0;outline:none;text-decoration:none;">
+        <img src="<?php echo $mailBaseUrl; ?>/bbs/mail/icon/identification-documents.png" width="13" height="13" alt="" style="display:inline-block;vertical-align:middle;margin-right:8px;border:0;outline:none;text-decoration:none;">
         <span style="font-size:11px;color:#9ca3af;font-weight:600;width:80px;flex-shrink:0;">사업자번호</span>
         <span style="font-size:13px;color:#374151;"><?php echo $e($requestCompanyBizNo !== '' ? $requestCompanyBizNo : '—'); ?></span>
       </div>
       <div style="display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid #f3f4f6;">
-        <img src="https://img.icons8.com/ios-glyphs/30/9ca3af/calendar--v1.png" width="13" height="13" alt="" style="display:inline-block;vertical-align:middle;margin-right:8px;border:0;outline:none;text-decoration:none;">
+        <img src="<?php echo $mailBaseUrl; ?>/bbs/mail/icon/calendar--v1.png" width="13" height="13" alt="" style="display:inline-block;vertical-align:middle;margin-right:8px;border:0;outline:none;text-decoration:none;">
         <span style="font-size:11px;color:#9ca3af;font-weight:600;width:80px;flex-shrink:0;">설립</span>
         <span style="font-size:13px;color:#374151;"><?php echo $e($requestCompanyFounded !== '' ? $requestCompanyFounded : '—'); ?></span>
       </div>
       <div style="display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid #f3f4f6;">
-        <img src="https://img.icons8.com/ios-glyphs/30/9ca3af/conference-call.png" width="13" height="13" alt="" style="display:inline-block;vertical-align:middle;margin-right:8px;border:0;outline:none;text-decoration:none;">
+        <img src="<?php echo $mailBaseUrl; ?>/bbs/mail/icon/conference-call.png" width="13" height="13" alt="" style="display:inline-block;vertical-align:middle;margin-right:8px;border:0;outline:none;text-decoration:none;">
         <span style="font-size:11px;color:#9ca3af;font-weight:600;width:80px;flex-shrink:0;">고용인원</span>
         <span style="font-size:13px;color:#374151;"><?php echo $e($requestCompanyEmployees !== '' ? $requestCompanyEmployees : '—'); ?></span>
       </div>
       <div style="display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid #f3f4f6;">
-        <img src="https://img.icons8.com/ios-glyphs/30/9ca3af/layers.png" width="13" height="13" alt="" style="display:inline-block;vertical-align:middle;margin-right:8px;border:0;outline:none;text-decoration:none;">
+        <img src="<?php echo $mailBaseUrl; ?>/bbs/mail/icon/layers.png" width="13" height="13" alt="" style="display:inline-block;vertical-align:middle;margin-right:8px;border:0;outline:none;text-decoration:none;">
         <span style="font-size:11px;color:#9ca3af;font-weight:600;width:80px;flex-shrink:0;">기업유형</span>
         <span style="font-size:13px;color:#374151;"><?php echo $e($requestCompanyCorpType !== '' ? $requestCompanyCorpType : '—'); ?></span>
       </div>
       <div style="display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid #f3f4f6;">
-        <img src="https://img.icons8.com/ios-glyphs/30/9ca3af/price-tag.png" width="13" height="13" alt="" style="display:inline-block;vertical-align:middle;margin-right:8px;border:0;outline:none;text-decoration:none;">
+        <img src="<?php echo $mailBaseUrl; ?>/bbs/mail/icon/price-tag.png" width="13" height="13" alt="" style="display:inline-block;vertical-align:middle;margin-right:8px;border:0;outline:none;text-decoration:none;">
         <span style="font-size:11px;color:#9ca3af;font-weight:600;width:80px;flex-shrink:0;">업종</span>
         <span style="font-size:13px;color:#374151;"><?php echo $e($requestCompanyIndustry !== '' ? $requestCompanyIndustry : '—'); ?></span>
       </div>
       <div style="display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid #f3f4f6;">
-        <img src="https://img.icons8.com/ios-glyphs/30/9ca3af/package.png" width="13" height="13" alt="" style="display:inline-block;vertical-align:middle;margin-right:8px;border:0;outline:none;text-decoration:none;">
+        <img src="<?php echo $mailBaseUrl; ?>/bbs/mail/icon/package.png" width="13" height="13" alt="" style="display:inline-block;vertical-align:middle;margin-right:8px;border:0;outline:none;text-decoration:none;">
         <span style="font-size:11px;color:#9ca3af;font-weight:600;width:80px;flex-shrink:0;">주요제품</span>
         <span style="font-size:13px;color:#374151;"><?php echo $e($requestCompanyProduct !== '' ? $requestCompanyProduct : '—'); ?></span>
       </div>
       <div style="display:flex;align-items:center;gap:8px;padding:9px 0;">
-        <img src="https://img.icons8.com/ios-glyphs/30/9ca3af/globe--v1.png" width="13" height="13" alt="" style="display:inline-block;vertical-align:middle;margin-right:8px;border:0;outline:none;text-decoration:none;">
+        <img src="<?php echo $mailBaseUrl; ?>/bbs/mail/icon/globe--v1.png" width="13" height="13" alt="" style="display:inline-block;vertical-align:middle;margin-right:8px;border:0;outline:none;text-decoration:none;">
         <span style="font-size:11px;color:#9ca3af;font-weight:600;width:80px;flex-shrink:0;">홈페이지</span>
         <?php if ($hasRequestCompanyHomepage) { ?>
         <a href="<?php echo $e($requestCompanyHomepage); ?>" style="font-size:13px;color:#3b82f6;text-decoration:none;"><?php echo $e(preg_replace('#^https?://#', '', $requestCompanyHomepage)); ?></a>
@@ -134,14 +147,14 @@ $mailDateLabel = isset($mailDateLabel) ? (string)$mailDateLabel : date('Y년 m�
       <div style="font-size:12px;font-weight:700;color:#111827;margin-bottom:14px;">거래 요청 내용</div>
 
       <div style="display:flex;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid #f3f4f6;">
-        <img src="https://img.icons8.com/ios-glyphs/30/9ca3af/long-arrow-right.png" width="13" height="13" alt="" style="display:inline-block;vertical-align:middle;margin-right:8px;border:0;outline:none;text-decoration:none;">
+        <img src="<?php echo $mailBaseUrl; ?>/bbs/mail/icon/long-arrow-right.png" width="13" height="13" alt="" style="display:inline-block;vertical-align:middle;margin-right:8px;border:0;outline:none;text-decoration:none;">
         <span style="font-size:11px;color:#9ca3af;font-weight:600;width:120px;flex-shrink:0;">거래 방향</span>
         <span style="font-size:13px;color:#374151;font-weight:700;"><?php echo $e($tradeDirectionLabel); ?></span>
       </div>
 
       <div style="padding:10px 0;border-bottom:1px solid #f3f4f6;">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
-          <img src="https://img.icons8.com/ios-glyphs/30/9ca3af/clock--v1.png" width="13" height="13" alt="" style="display:inline-block;vertical-align:middle;margin-right:8px;border:0;outline:none;text-decoration:none;">
+          <img src="<?php echo $mailBaseUrl; ?>/bbs/mail/icon/clock--v1.png" width="13" height="13" alt="" style="display:inline-block;vertical-align:middle;margin-right:8px;border:0;outline:none;text-decoration:none;">
           <span style="font-size:11px;color:#9ca3af;font-weight:600;">거래 목적 선택</span>
         </div>
         <div style="display:flex;flex-wrap:wrap;gap:6px;padding-left:21px;">
@@ -156,14 +169,14 @@ $mailDateLabel = isset($mailDateLabel) ? (string)$mailDateLabel : date('Y년 m�
       </div>
 
       <div style="display:flex;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid #f3f4f6;">
-        <img src="https://img.icons8.com/ios-glyphs/30/9ca3af/monitor--v1.png" width="13" height="13" alt="" style="display:inline-block;vertical-align:middle;margin-right:8px;border:0;outline:none;text-decoration:none;">
+        <img src="<?php echo $mailBaseUrl; ?>/bbs/mail/icon/monitor--v1.png" width="13" height="13" alt="" style="display:inline-block;vertical-align:middle;margin-right:8px;border:0;outline:none;text-decoration:none;">
         <span style="font-size:11px;color:#9ca3af;font-weight:600;width:120px;flex-shrink:0;">거래 희망 품목</span>
         <span style="font-size:13px;color:#374151;font-weight:700;"><?php echo $e($desiredItem); ?></span>
       </div>
 
       <div style="padding:10px 0 4px;">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
-          <img src="https://img.icons8.com/ios-glyphs/30/9ca3af/topic.png" width="13" height="13" alt="" style="display:inline-block;vertical-align:middle;margin-right:8px;border:0;outline:none;text-decoration:none;">
+          <img src="<?php echo $mailBaseUrl; ?>/bbs/mail/icon/topic.png" width="13" height="13" alt="" style="display:inline-block;vertical-align:middle;margin-right:8px;border:0;outline:none;text-decoration:none;">
           <span style="font-size:11px;color:#9ca3af;font-weight:600;">추가 문의 사항</span>
         </div>
         <div style="background:#f9fafb;border-radius:10px;border:1px solid #e5e7eb;padding:12px 14px;margin-bottom:16px;">
