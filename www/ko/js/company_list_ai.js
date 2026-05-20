@@ -62,10 +62,58 @@
     var loadingStepDoneCount = 0;
     var loadingFinishRequested = false;
     var forceTimeoutMode = false;
+    var loadingSessionKeyPrefix = 'companyAiLoadingShown:';
+    var loadingSourceKey = '';
+    var shouldShowLoadingOnce = true;
     try {
         forceTimeoutMode = (new URLSearchParams(window.location.search).get('qa_timeout') === '1');
     } catch (e) {
         forceTimeoutMode = false;
+    }
+
+    function normalizeDigits(value, length) {
+        var digits = String(value || '').replace(/[^0-9]/g, '');
+        if (length && digits.length !== length) return '';
+        return digits;
+    }
+
+    function resolveLoadingSourceKey() {
+        try {
+            var params = new URLSearchParams(window.location.search);
+            var bizno = normalizeDigits(params.get('bizno') || params.get('comnum'), 10);
+            if (bizno) return 'bizno:' + bizno;
+
+            var srcKedcd = normalizeDigits(params.get('src_kedcd'), 10);
+            if (srcKedcd) return 'src_kedcd:' + srcKedcd;
+
+            var kedcd = normalizeDigits(params.get('kedcd'), 10);
+            if (kedcd) return 'kedcd:' + kedcd;
+        } catch (e) {}
+        return '';
+    }
+
+    function shouldShowLoadingOverlay() {
+        loadingSourceKey = resolveLoadingSourceKey();
+        if (!loadingSourceKey) return true;
+
+        var storageKey = loadingSessionKeyPrefix + loadingSourceKey;
+        try {
+            if (sessionStorage.getItem(storageKey) === '1') {
+                return false;
+            }
+
+            sessionStorage.setItem(storageKey, '1');
+        } catch (e) {}
+        return true;
+    }
+
+    function hideLoadingOverlayImmediately() {
+        if (!loadingOverlay) return;
+        loadingOverlay.classList.remove('is_open');
+        loadingOverlay.setAttribute('aria-busy', 'false');
+        setLoadingNoticeVisible(false);
+        setLoadingActionsVisible(false);
+        if (loadingProgressFill) loadingProgressFill.style.width = '100%';
     }
 
     function clearLoadingTimers() {
@@ -235,7 +283,9 @@
         });
     }
 
-    startLoadingOverlay();
+    shouldShowLoadingOnce = shouldShowLoadingOverlay();
+    if (shouldShowLoadingOnce) startLoadingOverlay();
+    else hideLoadingOverlayImmediately();
 
     if (!topWrap || !restWrap || !loadMoreBtn) {
         failLoadingOverlay('목록 화면을 준비하지 못했습니다.');
