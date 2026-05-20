@@ -17,6 +17,7 @@ $hasRequestCompanyHomepage = trim($requestCompanyHomepage) !== '';
 $tradeDirectionLabel = isset($tradeDirectionLabel) ? (string)$tradeDirectionLabel : '';
     $tradePurposeLabels = (isset($tradePurposeLabels) && is_array($tradePurposeLabels)) ? $tradePurposeLabels : array();
     $messagePreviewLines = (isset($messagePreviewLines) && is_array($messagePreviewLines)) ? $messagePreviewLines : array();
+    $messagePreviewImageUrl = isset($messagePreviewImageUrl) ? trim((string)$messagePreviewImageUrl) : '';
     $mailDateLabel = isset($mailDateLabel) ? (string)$mailDateLabel : date('Y년 m월 d일 H:i');
 
     // Email clients require absolute image URLs. G5_URL can be relative ('') depending on deployment config.
@@ -180,11 +181,15 @@ $tradeDirectionLabel = isset($tradeDirectionLabel) ? (string)$tradeDirectionLabe
           <span style="font-size:11px;color:#9ca3af;font-weight:600;">추가 문의 사항</span>
         </div>
         <div style="background:#f9fafb;border-radius:10px;border:1px solid #e5e7eb;padding:12px 14px;margin-bottom:16px;">
+          <?php if ($messagePreviewImageUrl !== '') { ?>
+          <img src="<?php echo $e($messagePreviewImageUrl); ?>" width="460" alt="문의 내용 미리보기" style="display:block;width:100%;max-width:460px;height:auto;border:0;outline:none;text-decoration:none;">
+          <?php } else { ?>
           <div style="line-height:1.8;font-size:13px;color:#374151;">
             <div style="filter:blur(1px);opacity:0.85;user-select:none;"><?php echo $e(isset($messagePreviewLines[0]) ? $messagePreviewLines[0] : ''); ?></div>
             <div style="filter:blur(2.5px);opacity:0.6;user-select:none;"><?php echo $e(isset($messagePreviewLines[1]) ? $messagePreviewLines[1] : ''); ?></div>
             <div style="filter:blur(4px);opacity:0.35;user-select:none;"><?php echo $e(isset($messagePreviewLines[2]) ? $messagePreviewLines[2] : ''); ?></div>
           </div>
+          <?php } ?>
         </div>
       </div>
 

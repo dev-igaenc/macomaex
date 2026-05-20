@@ -120,6 +120,7 @@ function company_detail_trade_request_send_receiver_mail($tradeRequestNo, $reque
 	global $g5;
 
 	include_once(G5_LIB_PATH . '/mailer.lib.php');
+	include_once(G5_LIB_PATH . '/mail_preview_image.lib.php');
 
 	$tradeRequestNo = (int)$tradeRequestNo;
 	$requestMemberId = trim((string)$requestMemberId);
@@ -262,6 +263,18 @@ function company_detail_trade_request_send_receiver_mail($tradeRequestNo, $reque
 		$messagePreviewLines[] = $messagePreviewLines[count($messagePreviewLines) - 1];
 	}
 
+	$mailBaseUrl = function_exists('mail_preview_resolve_base_url')
+		? mail_preview_resolve_base_url('https://macomaex.com')
+		: 'https://macomaex.com';
+
+	$messagePreviewImageUrl = '';
+	if (function_exists('mail_preview_generate_trade_request_blur_image')) {
+		$generatedPreviewImage = mail_preview_generate_trade_request_blur_image($messagePreviewLines, $mailBaseUrl);
+		if (!empty($generatedPreviewImage['url'])) {
+			$messagePreviewImageUrl = (string)$generatedPreviewImage['url'];
+		}
+	}
+
 	$mailDateLabel = date('Y년 m월 d일 H:i', defined('G5_SERVER_TIME') ? (int)G5_SERVER_TIME : time());
 
 	$mailLogContext = $mailLogBaseContext;
@@ -276,7 +289,7 @@ function company_detail_trade_request_send_receiver_mail($tradeRequestNo, $reque
 		$tradeRequestActionUrl = mailer_tracking_click_url($trackToken, 'https://macomaex.com');
 	}
 	$unsubscribeEmail = $recipientEmail;
-	$unsubscribeUrl = G5_URL . '/email/unsubscribe?email=' . rawurlencode($unsubscribeEmail);
+	$unsubscribeUrl = $mailBaseUrl . '/email/unsubscribe?email=' . rawurlencode($unsubscribeEmail);
 
 	ob_start();
 	include G5_BBS_PATH . '/mail/trade_request_received_mail.php';
