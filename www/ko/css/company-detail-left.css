@@ -19,7 +19,7 @@
 #detailWrap .mCompanyCard_badge_top_growth    { background: #dbeafe; color: #1e40af; }
 #detailWrap .mCompanyCard_badge_top_stability { background: #ede9fe; color: #5b21b6; }
 #detailWrap .mCompanyCard_badge_venture       { background: #10b981; color: #fff; }
-#detailWrap .mCompanyCard_badge_placeholder   { background: #f3f4f6; color: #9ca3af; }
+#detailWrap .mCompanyCard_badge_placeholder   { background: #f3f4f6; color: #9ca3af; visibility: visible !important; pointer-events: auto !important; }
 
 /* 카드 제목 */
 .card-title-row {
@@ -52,7 +52,13 @@
     gap: 12px;
     margin-bottom: 12px;
 }
-.profile-head h1   { font-size: 18px; font-weight: 700; letter-spacing: -0.02em; margin: 0; }
+#detailWrap .profile-head h1 {
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin: 0;
+    color: var(--company-detail-heading-color, #111);
+}
 .profile-head .sub { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
 
 /* 업종 태그 */

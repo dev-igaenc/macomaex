@@ -1,6 +1,66 @@
 /* 리스트 페이지 레이아웃 */
 html { min-height: 100%; background: #FAFBFD; }
 html, body { margin: 0; overflow-x: hidden; font-family: var(--font-base); background: #FAFBFD; }
+
+/* 리스트 페이지 실제 로딩 오버레이 (head 첫 모달 디자인 재사용) */
+.company-ai-loading-overlay {
+    z-index: 99999;
+}
+.company-ai-loading-card {
+    text-align: center;
+}
+.company-ai-loading-desc {
+    margin: 14px 0 0;
+    font-size: 13px;
+    color: #666;
+    line-height: 1.55;
+}
+.company-ai-loading-progress-fill {
+    transition: width 0.4s ease;
+}
+.company-ai-loading-help {
+    margin: 8px 0 0;
+    font-size: 12px;
+    color: #9098ab;
+    line-height: 1.5;
+}
+.company-ai-loading-actions {
+    margin-top: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+.company-ai-loading-actions[hidden] { display: none !important; }
+.company-ai-loading-btn {
+    min-width: 106px;
+    height: 38px;
+    border-radius: 999px;
+    padding: 0 16px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+}
+.company-ai-loading-btn:hover {
+    transform: translateY(-1px);
+}
+.company-ai-loading-btn-primary {
+    border: none;
+    background: linear-gradient(135deg, #5f7dff 0%, #3b5bdb 100%);
+    color: #fff;
+    box-shadow: 0 6px 16px rgba(59, 91, 219, 0.24);
+}
+.company-ai-loading-btn-ghost {
+    border: 1px solid #d7deef;
+    background: #fff;
+    color: #4c5875;
+}
+
+@media (max-width: 640px) {
+    .company-ai-loading-desc { font-size: 12px; }
+}
+
 #listWrap { background: var(--bg, #FAFBFD); min-height: calc(100vh + 60px); }
 .page-company-list-ai #wrap,
 .page-company-list-ai #wrapper,
@@ -452,6 +512,12 @@ html, body { margin: 0; overflow-x: hidden; font-family: var(--font-base); backg
     background: #10b981 !important;
     color: #fff !important;
 }
+.company-list-ai-real .mCompanyCard_badge_placeholder {
+    background: #f3f4f6 !important;
+    color: #9ca3af !important;
+    visibility: visible !important;
+    pointer-events: auto !important;
+}
 /* AI 카드: 높이 콘텐츠 기준, 하단 여백 통일 */
 .company-list-ai-real .mCompanyCard_content { padding-bottom: 16px; display: flex; flex-direction: column; }
 .company-list-ai-real .mCompanyCard_content .radar-card { margin-top: 8px; }
@@ -583,7 +649,7 @@ html, body { margin: 0; overflow-x: hidden; font-family: var(--font-base); backg
 /* AI 섹션 타이틀 폰트 두께 */
 .company-list-ai-real .mHookSection_title { font-weight: 600; }
 
-/* AI 적합도 배너 */
+/* AI 추천점수 배너 */
 .mCompanyCard_ai_match {
     display: flex;
     align-items: center;
@@ -620,6 +686,11 @@ html, body { margin: 0; overflow-x: hidden; font-family: var(--font-base); backg
     .ai-top3-swiper { overflow-x: auto; overflow-y: visible; -webkit-overflow-scrolling: touch; padding-bottom: 12px; scroll-snap-type: x mandatory; }
     .ai-top3-swiper .swiper-wrapper { display: flex !important; gap: 16px; flex-wrap: nowrap; }
     .ai-top3-swiper .swiper-slide { min-width: 280px; width: 75% !important; flex-shrink: 0; scroll-snap-align: start; }
+    .ai-top3-swiper,
+    .ai-top3-swiper .swiper-wrapper,
+    .ai-top3-swiper .swiper-slide {
+        touch-action: pan-y;
+    }
 }
 @media (max-width: 640px) {
     .ai-top3-swiper .swiper-slide { min-width: 260px; width: 85% !important; }
@@ -829,6 +900,11 @@ html, body { margin: 0; overflow-x: hidden; font-family: var(--font-base); backg
     .ai-rest-swiper { overflow-x: auto; overflow-y: visible; -webkit-overflow-scrolling: touch; scroll-snap-type: x mandatory; }
     .ai-rest-swiper .swiper-wrapper { display: flex !important; gap: 16px; flex-wrap: nowrap; }
     .ai-rest-swiper .swiper-slide { min-width: 280px; width: 75% !important; flex-shrink: 0; scroll-snap-align: start; }
+    .ai-rest-swiper,
+    .ai-rest-swiper .swiper-wrapper,
+    .ai-rest-swiper .swiper-slide {
+        touch-action: pan-y;
+    }
     .ai-empty-state { min-width: 280px; width: 75%; flex-shrink: 0; scroll-snap-align: start; }
     .ai-rest-swiper .swiper-pagination { display: block; }
     .ai-rest-nav { display: none; }
@@ -937,6 +1013,12 @@ html, body { margin: 0; overflow-x: hidden; font-family: var(--font-base); backg
 }
 .company-list-ai-real .mCompanyCard {
     box-shadow: none;
+}
+.company-list-ai-real .mCompanyCard:hover,
+.company-list-ai-real .company-ai-link .mCompanyCard:hover,
+.company-list-ai-real .mCompanyCard.company-ai-card:hover {
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08) !important;
+    border-color: #d0d5dd !important;
 }
 
 @media (max-width: 900px) {

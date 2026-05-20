@@ -212,6 +212,7 @@ function trade_chat_log_context_label($eventType, $status, $payload = array()) {
 		'file_scan_webhook' => '첨부파일 스캔 웹훅 수신',
 		'file_scan_result' => '첨부파일 악성코드 스캔 결과',
 		'file_scan_action' => '악성 파일 메시지 후속 조치',
+		'message_policy_action' => '부적절 메시지 정책 차단',
 	);
 
 	$label = $map[$eventType] ?? '채팅 이벤트 처리';
@@ -247,6 +248,7 @@ function trade_chat_log_default_message($eventType, $status, $payload = array())
 			'file_scan_webhook' => '파일 스캔 웹훅 수신 처리 완료',
 			'file_scan_result' => '첨부파일 보안 스캔 완료',
 			'file_scan_action' => '보안 조치가 완료되었습니다.',
+			'message_policy_action' => '메시지 정책 차단 처리 완료',
 		);
 
 		return $map[$eventType] ?? '채팅 작업이 완료되었습니다.';
@@ -279,6 +281,9 @@ function trade_chat_log_default_message($eventType, $status, $payload = array())
 		}
 		if ($eventType === 'file_scan_action' && $reason === 'action_not_required') {
 			return '감염 파일이 없어 후속 조치를 건너뛰었습니다.';
+		}
+		if ($eventType === 'message_policy_action' && $reason === 'sql_like_message_detected') {
+			return 'SQL 유사 메시지를 감지했습니다.';
 		}
 
 		return '채팅 작업을 건너뛰었습니다.';

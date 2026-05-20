@@ -1,7 +1,6 @@
 <?php
 	$sub_menu = '700100';
 	include_once('./_common.php');
-
 	include_once(G5_ADMIN_PATH.'/admin.head.php');
 
 	$g5['title'] = '결제 관리';
@@ -33,6 +32,7 @@
 		}
 		$sql_search .= " ) ";
 	}
+
 
 	// 상태 탭(환불완료/환불전) 필터
 	$refund_filter = isset($_GET['is_refund']) ? trim((string)$_GET['is_refund']) : '';
@@ -121,6 +121,7 @@
 </form>
 
 <div class="tbl_head01 tbl_wrap">
+
 	<table>
 		<caption><?php echo $g5['title']; ?> 목록</caption>
 		<thead>
@@ -189,6 +190,7 @@
 			} else if ($refund_step === '5') {
 				$status_text = '환불반려/실패';
 				$status_css = 'is-fail';
+
 			}
 			?>
 		<tr>

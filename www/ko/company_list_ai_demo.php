@@ -421,7 +421,7 @@ function company_list_ai_render_card($card, $trade_type, $rank = 0)
     $html .= '<div class="company-ai-link" data-kedcd="' . $kedcd . '" data-trade-type="' . $trade_q . '" data-score="' . $score . '" style="color:inherit;">';
     $html .= '<div class="mCompanyCard company-ai-card" style="position:relative;">';
     $html .= '<div class="mCompanyCard_content">';
-    $html .= '<div class="mCompanyCard_ai_match"><span class="mCompanyCard_ai_match_label">AI 적합도</span><span><span class="mCompanyCard_ai_match_value">' . $score . '</span><span class="mCompanyCard_ai_match_unit">%</span></span></div>';
+    $html .= '<div class="mCompanyCard_ai_match"><span class="mCompanyCard_ai_match_label">AI 추천점수</span><span><span class="mCompanyCard_ai_match_value">' . $score . '</span><span class="mCompanyCard_ai_match_unit">%</span></span></div>';
     $html .= '<div class="mCompanyCard_badges">' . $badge_html . '</div>';
     $html .= '<h3 class="mCompanyCard_title">' . $title . '</h3>';
     $html .= '<p class="mCompanyCard_desc">' . $tags_html . '</p>';
@@ -551,7 +551,7 @@ $cards = company_list_ai_cards();
                                 <div class="fit-header-companies"><strong>A 기업</strong> <span class="fit-header-arrow">⇄</span> <strong>B 기업</strong></div>
                                 <div class="fit-header-score"><span class="fit-header-score-num">78</span><span class="fit-header-score-unit">%</span></div>
                             </div>
-                            <div class="fit-header-label">AI 적합도 예측</div>
+                            <div class="fit-header-label">AI 추천점수 예측</div>
                         </div>
 
                         <div class="detail-radar">

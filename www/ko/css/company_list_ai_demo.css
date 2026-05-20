@@ -337,7 +337,7 @@ html, body { margin: 0; overflow-x: hidden; background: #FAFBFD; }
 .ai-analyze-full { margin-top: 0; }
 .ai-analyze-card { position: relative; overflow: hidden; min-height: 480px; }
 
-/* ===== AI 적합도 예측 카드 (company_detail_ai.html 동일 디자인) ===== */
+/* ===== AI 추천점수 예측 카드 (company_detail_ai.html 동일 디자인) ===== */
 .fit-header {
     background: linear-gradient(135deg, #6d28d9 0%, #4c1d95 100%);
     border-radius: 12px; padding: 20px 24px; margin-bottom: 20px; color: #fff;

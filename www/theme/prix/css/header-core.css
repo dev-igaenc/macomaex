@@ -208,6 +208,41 @@
 }
 .sideMenu_close_btn:hover { background: #ebebeb; color: #222; }
 
+/* ── 사이드메뉴 유저 영역 ── */ 
+.sideMenu_user_wrap { padding: 14px 16px 6px; }
+.sideMenu_user_greeting {
+    font-size: 15px;
+    font-weight: 700;
+    color: #111;
+    line-height: 1.2;
+    margin: 0 0 10px;
+}
+.sideMenu_plan_card {
+    background: #fff;
+    border: 1px solid #eee;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.06);
+}
+.sideMenu_plan_card_title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #222;
+    text-decoration: none;
+    border-bottom: 1px solid #f0f0f0;
+}
+.sideMenu_plan_card_title:hover { background: #fafafa; }
+.sideMenu_plan_card_title svg { color: #aaa; flex-shrink: 0; }
+.sideMenu_plan_card_body { padding: 9px 14px; display: flex; flex-direction: column; gap: 6px; }
+.sideMenu_plan_row { display: flex; justify-content: space-between; align-items: center; }
+.sideMenu_plan_label { font-size: 12px; color: #888; }
+.sideMenu_plan_value { font-size: 12px; font-weight: 600; color: #222; }
+.sideMenu_plan_unit { font-style: normal; font-size: 11px; color: #888; font-weight: 400; margin-left: 2px; }
+
 /* ── 로그인 / 회원가입 */
 .all_user {
     display: flex;

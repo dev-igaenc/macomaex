@@ -691,7 +691,7 @@ $systemInstruction = <<<SYS
 기회와 시너지 중심, 부정적 내용은 Phase 4에만 집약합니다.
 한국어 전용, 전문 비즈니스 문체로 작성합니다.
 모든 문장은 반드시 '~입니다', '~습니다' 형식의 존댓말로 작성하세요.
-보고서 본문에 볼드 마크다운(**)을 절대 사용하지 마세요.
+보고서 본문에서 업종명을 언급할 때는 반드시 **업종명** 형식으로 볼드 처리하세요. 그 외 볼드 마크다운(**)은 사용하지 마세요.
 추천 기업의 실명은 보고서 어디서도 직접 기재하지 말고 반드시 '해당 기업'으로 표기하세요.
 SYS;
 
@@ -1034,7 +1034,7 @@ if (trim($reportText) === '') {
 if ($recNmReal !== '') {
     $reportText = str_replace($recNmReal, '해당 기업', $reportText);
 }
-$reportText = str_replace(array('**', '__'), '', $reportText);
+$reportText = str_replace('__', '', $reportText);
 $reportText = preg_replace('/\s*\(추론\)/', '', $reportText);
 // 최종 성공 결과를 company_llm_log에 남겨 상세 진입 시 즉시 재사용 가능하게 함
 llm_report_log_write($sourceKedcd, $targetKedcd, $tradeType, $analysisOnceKey, array(

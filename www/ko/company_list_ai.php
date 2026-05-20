@@ -190,6 +190,81 @@ function company_list_ai_fetch_company_keyword_map($kedcd_list)
     return $map;
 }
 
+function company_list_ai_format_badge_percent($value)
+{
+    if ($value === null || $value === '') return '';
+    $str = trim((string)$value);
+    if ($str === '') return '';
+    if (!is_numeric($str)) return $str;
+
+    $num = (float)$str;
+    if ($num == (int)$num) return (string)((int)$num);
+    return rtrim(rtrim(number_format($num, 2, '.', ''), '0'), '.');
+}
+
+function company_list_ai_build_badges_from_fields($badge_growth_raw, $badge_stability_raw, $venture_raw)
+{
+    $badges = array();
+
+    $badge_growth = company_list_ai_format_badge_percent($badge_growth_raw);
+    $badge_stability = company_list_ai_format_badge_percent($badge_stability_raw);
+    $venture = strtoupper(trim((string)$venture_raw));
+
+    if ($badge_growth !== '') $badges[] = '성장TOP' . $badge_growth . '%';
+    if ($badge_stability !== '') $badges[] = '재무안정TOP' . $badge_stability . '%';
+    if ($venture === 'Y') $badges[] = '벤처인증';
+
+    return array(
+        'badges' => $badges,
+        'badge_growth' => $badge_growth,
+        'badge_stability' => $badge_stability,
+        'badge_venture' => ($venture === 'Y') ? 'Y' : 'N',
+    );
+}
+
+function company_list_ai_fetch_company_badge_map($kedcd_list)
+{
+    if (!is_array($kedcd_list) || empty($kedcd_list)) return array();
+
+    $clean = array();
+    foreach ($kedcd_list as $kedcd) {
+        $k = str_pad(preg_replace('/\D/', '', (string)$kedcd), 10, '0', STR_PAD_LEFT);
+        if (strlen($k) !== 10 || preg_match('/^0+$/', $k)) continue;
+        $clean[$k] = true;
+    }
+    $keys = array_keys($clean);
+    if (empty($keys)) return array();
+
+    $map = array();
+    foreach (array_chunk($keys, 200) as $chunk) {
+        $quoted = array();
+        foreach ($chunk as $k) {
+            $quoted[] = "'" . sql_real_escape_string($k) . "'";
+        }
+        if (empty($quoted)) continue;
+
+        $sql = "
+            SELECT KEDCD, badge_growth, badge_stability, badge_venture
+            FROM company_score_final_dedup
+            WHERE KEDCD IN (" . implode(',', $quoted) . ")
+        ";
+        $res = sql_query($sql, false);
+        if (!$res) continue;
+
+        while ($row = sql_fetch_array($res)) {
+            $k = str_pad(preg_replace('/\D/', '', (string)($row['KEDCD'] ?? '')), 10, '0', STR_PAD_LEFT);
+            if (strlen($k) !== 10) continue;
+            $map[$k] = array(
+                'badge_growth' => $row['badge_growth'] ?? '',
+                'badge_stability' => $row['badge_stability'] ?? '',
+                'badge_venture' => strtoupper(trim((string)($row['badge_venture'] ?? 'N'))),
+            );
+        }
+    }
+
+    return $map;
+}
+
 function company_list_ai_get_item_tags_by_industry($bzc_nm, $bzc_cd, $kedcd = '')
 {
     $industry_item_map = array(
@@ -251,25 +326,13 @@ function company_list_ai_ml_item_to_card($item)
     $bzc_cd = trim((string)($item['bzc_cd'] ?? ''));
     $bzc_nm = trim((string)($item['bzc_nm'] ?? ''));
     $radar_raw = (isset($item['radar']) && is_array($item['radar'])) ? $item['radar'] : array();
-    $financial_score = 0.0;
-    if (isset($radar_raw['financial_health'])) $financial_score = (float)$radar_raw['financial_health'];
-    else if (isset($radar_raw['financial'])) $financial_score = (float)$radar_raw['financial'];
-    else if (isset($radar_raw['finance'])) $financial_score = (float)$radar_raw['finance'];
 
-    $venture_raw = strtoupper(trim((string)(
-        $item['badge_venture']
-        ?? $item['venp_yn']
-        ?? $item['venture_yn']
-        ?? ''
-    )));
-    $is_venture = in_array($venture_raw, array('Y', '1', 'T', 'TRUE'), true);
-
-    $badges = array();
-    if ($score >= 90) $badges[] = '성장TOP5%';
-    else if ($score >= 75) $badges[] = '성장TOP20%';
-    if ($financial_score >= 80) $badges[] = '재무안정TOP5%';
-    else if ($financial_score >= 60) $badges[] = '재무안정TOP20%';
-    if ($is_venture) $badges[] = '벤처인증';
+    $badge_fields = company_list_ai_build_badges_from_fields(
+        $item['badge_growth'] ?? null,
+        $item['badge_stability'] ?? null,
+        ($item['badge_venture'] ?? ($item['venp_yn'] ?? ($item['venture_yn'] ?? 'N')))
+    );
+    $badges = $badge_fields['badges'];
 
     $tags = array();
     if (isset($item['keywords_json'])) {
@@ -330,6 +393,9 @@ function company_list_ai_ml_item_to_card($item)
         'one_line' => trim((string)($item['one_line'] ?? '')),
         'score' => $score,
         'badges' => $badges,
+        'badge_growth' => $badge_fields['badge_growth'],
+        'badge_stability' => $badge_fields['badge_stability'],
+        'badge_venture' => $badge_fields['badge_venture'],
         'tags' => $tags,
         'tag_total_count' => $tag_total_count,
         'radar' => company_list_ai_translate_radar(isset($item['radar']) ? $item['radar'] : array()),
@@ -338,7 +404,9 @@ function company_list_ai_ml_item_to_card($item)
 
 function company_list_ai_render_badges($badges)
 {
-    if (!is_array($badges) || !$badges) return '';
+    if (!is_array($badges) || !$badges) {
+        return '<span class="mCompanyCard_badge mCompanyCard_badge_placeholder">뱃지 준비중</span>';
+    }
 
     $html = '';
     foreach ($badges as $badge) {
@@ -697,6 +765,9 @@ function company_list_ai_render_card($card, $trade_type, $rank = 0, $src_kedcd =
     foreach ($tags as $tag) {
         $tags_html .= '<span class="mCompanyCard_desc_tag">' . htmlspecialchars($tag, ENT_QUOTES, 'UTF-8') . '</span>';
     }
+    if ($tags_html === '') {
+        $tags_html = '<span class="mCompanyCard_desc_tag">정보 준비중</span>';
+    }
     $hidden_count = max(0, $total_tag_count - count($tags));
     if ($hidden_count > 0) {
         $tags_html .= '<span class="mCompanyCard_desc_more">+' . $hidden_count . '</span>';
@@ -711,7 +782,7 @@ function company_list_ai_render_card($card, $trade_type, $rank = 0, $src_kedcd =
     $html .= '<a href="' . $url . '" class="company-ai-link" data-kedcd="' . $kedcd . '" data-src-kedcd="' . $src_kedcd_attr . '" data-trade-type="' . $trade_q . '" data-score="' . $score . '" data-candidate-type="' . $candidate_type . '" data-bzc-cd="' . $industry . '" data-bzc-nm="' . $industry_nm . '" data-sido="' . $region . '" data-sze="' . $sze_attr . '" data-company-age="' . $company_age_attr . '" data-sales-growth-pct="' . htmlspecialchars($sales_growth_attr, ENT_QUOTES, 'UTF-8') . '" data-debt-ratio-pct="' . htmlspecialchars($debt_ratio_attr, ENT_QUOTES, 'UTF-8') . '" data-consec-profit-2y="' . $consec_profit_attr . '" data-capital-negative="' . $capital_negative_attr . '" data-one-line="' . $one_line_attr . '" style="text-decoration:none;color:inherit;">';
     $html .= '<div class="mCompanyCard company-ai-card" style="position:relative;">';
     $html .= '<div class="mCompanyCard_content">';
-    $html .= '<div class="mCompanyCard_ai_match"><span class="mCompanyCard_ai_match_label">AI 적합도</span><span><span class="mCompanyCard_ai_match_value">' . $score . '</span><span class="mCompanyCard_ai_match_unit">%</span></span></div>';
+    $html .= '<div class="mCompanyCard_ai_match"><span class="mCompanyCard_ai_match_label">AI 추천점수</span><span><span class="mCompanyCard_ai_match_value">' . $score . '</span><span class="mCompanyCard_ai_match_unit">%</span></span></div>';
     $html .= '<div class="mCompanyCard_badges">' . $badge_html . '</div>';
     $html .= '<h3 class="mCompanyCard_title">' . $title . '</h3>';
     $html .= '<p class="mCompanyCard_desc">' . $tags_html . '</p>';
@@ -855,6 +926,7 @@ if (!empty($resolved_base_payload['kedcd'])) {
         $buy_bucket = company_list_ai_build_bucket($buy_call['data']['results'], 45);
         $buy_items = array_merge($buy_bucket['top3'], $buy_bucket['list']);
         $buy_keyword_map = company_list_ai_fetch_company_keyword_map(array_column($buy_items, 'kedcd'));
+        $buy_badge_map = company_list_ai_fetch_company_badge_map(array_column($buy_items, 'kedcd'));
         $mapped_buy = array();
         foreach ($buy_items as $bi) {
             $item_kedcd = str_pad(preg_replace('/\D/', '', (string)($bi['kedcd'] ?? '')), 10, '0', STR_PAD_LEFT);
@@ -863,6 +935,12 @@ if (!empty($resolved_base_payload['kedcd'])) {
                 if (!empty($kw_meta['keywords_json'])) $bi['keywords_json'] = $kw_meta['keywords_json'];
                 if (!empty($kw_meta['tags']) && is_array($kw_meta['tags'])) $bi['tags'] = $kw_meta['tags'];
                 if (isset($kw_meta['keyword_count'])) $bi['keyword_count'] = (int)$kw_meta['keyword_count'];
+            }
+            if (isset($buy_badge_map[$item_kedcd]) && is_array($buy_badge_map[$item_kedcd])) {
+                $bg_meta = $buy_badge_map[$item_kedcd];
+                $bi['badge_growth'] = $bg_meta['badge_growth'] ?? '';
+                $bi['badge_stability'] = $bg_meta['badge_stability'] ?? '';
+                $bi['badge_venture'] = $bg_meta['badge_venture'] ?? 'N';
             }
             $card = company_list_ai_ml_item_to_card($bi);
             if (is_array($card)) $mapped_buy[] = $card;
@@ -881,6 +959,7 @@ if (!empty($resolved_base_payload['kedcd'])) {
         $sell_bucket = company_list_ai_build_bucket($sell_call['data']['results'], 45);
         $sell_items = array_merge($sell_bucket['top3'], $sell_bucket['list']);
         $sell_keyword_map = company_list_ai_fetch_company_keyword_map(array_column($sell_items, 'kedcd'));
+        $sell_badge_map = company_list_ai_fetch_company_badge_map(array_column($sell_items, 'kedcd'));
         $mapped_sell = array();
         foreach ($sell_items as $si) {
             $item_kedcd = str_pad(preg_replace('/\D/', '', (string)($si['kedcd'] ?? '')), 10, '0', STR_PAD_LEFT);
@@ -889,6 +968,12 @@ if (!empty($resolved_base_payload['kedcd'])) {
                 if (!empty($kw_meta['keywords_json'])) $si['keywords_json'] = $kw_meta['keywords_json'];
                 if (!empty($kw_meta['tags']) && is_array($kw_meta['tags'])) $si['tags'] = $kw_meta['tags'];
                 if (isset($kw_meta['keyword_count'])) $si['keyword_count'] = (int)$kw_meta['keyword_count'];
+            }
+            if (isset($sell_badge_map[$item_kedcd]) && is_array($sell_badge_map[$item_kedcd])) {
+                $bg_meta = $sell_badge_map[$item_kedcd];
+                $si['badge_growth'] = $bg_meta['badge_growth'] ?? '';
+                $si['badge_stability'] = $bg_meta['badge_stability'] ?? '';
+                $si['badge_venture'] = $bg_meta['badge_venture'] ?? 'N';
             }
             $card = company_list_ai_ml_item_to_card($si);
             if (is_array($card)) $mapped_sell[] = $card;
@@ -954,6 +1039,48 @@ $banner_sell_stat = 12;
 ?>
 
 <div id="listWrap" class="company-list-ai-real">
+    <div class="ai-loading_overlay is_open company-ai-loading-overlay" id="companyAiLoadingOverlay" aria-live="polite" aria-busy="true">
+        <div class="ai-loading_card company-ai-loading-card" role="status">
+            <div class="ai-loading_spinner" aria-hidden="true"></div>
+            <h3 class="ai-loading_title">AI가 거래처를 분석하고 있습니다</h3>
+            <div class="ai-loading_steps" id="companyAiLoadingSteps">
+                <div class="ai-loading_step" data-step="0">
+                    <span class="ai-loading_step_icon"><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"></path></svg></span>
+                    <span class="ai-loading_step_text" data-pending="공급망 근접도 분석 중..." data-done="공급망 근접도 분석 완료 ✓">공급망 근접도 분석 중...</span>
+                </div>
+                <div class="ai-loading_step" data-step="1">
+                    <span class="ai-loading_step_icon"><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"></path></svg></span>
+                    <span class="ai-loading_step_text" data-pending="거래처 유사성 분석 중..." data-done="거래처 유사성 분석 완료 ✓">거래처 유사성 분석 중...</span>
+                </div>
+                <div class="ai-loading_step" data-step="2">
+                    <span class="ai-loading_step_icon"><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"></path></svg></span>
+                    <span class="ai-loading_step_text" data-pending="거래 활성도 분석 중..." data-done="거래 활성도 분석 완료 ✓">거래 활성도 분석 중...</span>
+                </div>
+                <div class="ai-loading_step" data-step="3">
+                    <span class="ai-loading_step_icon"><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"></path></svg></span>
+                    <span class="ai-loading_step_text" data-pending="재무 안정성 분석 중..." data-done="재무 안정성 분석 완료 ✓">재무 안정성 분석 중...</span>
+                </div>
+                <div class="ai-loading_step" data-step="4">
+                    <span class="ai-loading_step_icon"><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"></path></svg></span>
+                    <span class="ai-loading_step_text" data-pending="지역 접근성 분석 중..." data-done="지역 접근성 분석 완료 ✓">지역 접근성 분석 중...</span>
+                </div>
+                <div class="ai-loading_step" data-step="5">
+                    <span class="ai-loading_step_icon"><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"></path></svg></span>
+                    <span class="ai-loading_step_text" data-pending="규모 적합도 분석 중..." data-done="규모 적합도 분석 완료 ✓">규모 적합도 분석 중...</span>
+                </div>
+            </div>
+            <div class="ai-loading_bar" aria-hidden="true">
+                <div class="ai-loading_bar_fill company-ai-loading-progress-fill" id="companyAiLoadingProgressFill"></div>
+            </div>
+            <p class="company-ai-loading-desc" id="companyAiLoadingDesc" hidden>거래 데이터를 분석해 맞춤 추천을 불러오는 중입니다.</p>
+            <p class="company-ai-loading-help" id="companyAiLoadingHelp" hidden>응답이 지연되면 잠시 후 자동으로 안내 메시지가 표시됩니다.</p>
+            <div class="company-ai-loading-actions" id="companyAiLoadingActions" hidden>
+                <button type="button" class="company-ai-loading-btn company-ai-loading-btn-primary" id="companyAiLoadingRetryBtn">다시 시도</button>
+                <button type="button" class="company-ai-loading-btn company-ai-loading-btn-ghost" id="companyAiLoadingBackBtn">이전으로</button>
+            </div>
+        </div>
+    </div>
+
     <div class="ai-banner" id="aiBanner">
         <div class="ai-banner_card">
             <div class="ai-banner_top">
