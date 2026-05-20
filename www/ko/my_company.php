@@ -1,4 +1,4 @@
-<?
+<?php 
 include_once("./_common.php");
 
 $board['bo_10']="6"; // 1뎁스
@@ -62,7 +62,7 @@ if($member['mb_id'] && $cd){
 	$service_code_sql = sql_real_escape_string($unlisted_service_code);
 	$unlisted_once_key = hash('sha256', $unlisted_service_code.':'.$member['mb_id'].':'.$cd);
 	$unlisted_once_key_sql = sql_real_escape_string($unlisted_once_key);
-	$unlock_row = sql_fetch("select id from g5_matching_credit_history where uid='{$uid_sql}' and tx_type='USE' and service_code='{$service_code_sql}' and once_key='{$unlisted_once_key_sql}' limit 1");
+	$unlock_row = sql_fetch("select id from credit_history where uid='{$uid_sql}' and tx_type='USE' and service_code='{$service_code_sql}' and once_key='{$unlisted_once_key_sql}' limit 1");
 	if(is_array($unlock_row) && !empty($unlock_row['id'])) $unlisted_unlocked = true;
 }
 
@@ -168,11 +168,11 @@ if($com['HPAGE_URL']) {
 				<dl>
 					<dt>기업명</dt>
 					<dd><span>
-					<?if($com['ENP_NM_TRD']){?>
+					<?php if($com['ENP_NM_TRD']){?>
 						<?=$com['ENP_NM_TRD']?>
-					<?}else{?>
+					<?php }else{?>
 						<?=$com['ENP_NM']?>
-					<?}?>
+					<?php }?>
 					</span></dd>
 				</dl>
 				<dl>
@@ -191,7 +191,7 @@ if($com['HPAGE_URL']) {
 
 				<dl>
 					<dt>고용인원</dt>
-					<dd><span><?if($com['LABORER_SUM']){?><?=$com['LABORER_SUM']?>명<?}?></span></dd>
+					<dd><span><?php if($com['LABORER_SUM']){?><?=$com['LABORER_SUM']?>명<?php }?></span></dd>
 				</dl>
 				<dl>
 					<dt>기업규모</dt>
@@ -205,8 +205,8 @@ if($com['HPAGE_URL']) {
 				<dl>
 					<dt>기업유형</dt>
 					<dd>
-						<?if($enp_typt[$com['ENP_TYP']]){?><?=$enp_typt[$com['ENP_TYP']]?><?}?>
-						<?if($enp_fcdt[$com['ENP_FCD']]){?> / <?=$enp_fcdt[$com['ENP_FCD']]?><?}?>
+						<?php if($enp_typt[$com['ENP_TYP']]){?><?=$enp_typt[$com['ENP_TYP']]?><?php }?>
+						<?php if($enp_fcdt[$com['ENP_FCD']]){?> / <?=$enp_fcdt[$com['ENP_FCD']]?><?php }?>
 					</dd>
 				</dl>
 				<dl>
@@ -217,22 +217,22 @@ if($com['HPAGE_URL']) {
 				<dl>
 					<dt>표준산업분류(9차)</dt>
 					<dd>
-						<?if($com['KSIC9_BZC_CD']){?>
+						<?php if($com['KSIC9_BZC_CD']){?>
 							(<?=$com['KSIC9_BZC_CD']?>) <?=isset($kssc_9['k_code_name']) ? $kssc_9['k_code_name'] : ''?>
-							<?}else{?>
+							<?php }else{?>
 							(<?=$com['BZC_CD']?>) <?=isset($kssc_9['k_code_name']) ? $kssc_9['k_code_name'] : ''?>
-							<?}?>
+							<?php }?>
 					</dd>
 				</dl>
 				<dl>
 					<dt>표준산업분류</dt>
-						<dd><?if($com['BZC_CD']){?>(<?=$com['BZC_CD']?>) <?=isset($kssc['k_code_name']) ? $kssc['k_code_name'] : ''?><?}?></dd>
+						<dd><?php if($com['BZC_CD']){?>(<?=$com['BZC_CD']?>) <?=isset($kssc['k_code_name']) ? $kssc['k_code_name'] : ''?><?php }?></dd>
 				</dl>
 
 				<dl>
 					<dt>직전연도 매출액 (천원)</dt>
 					<dd>
-<?
+<?php 
 $yearsm=date("Y")-1; //직전년도 매출액
 $latest_sales = 0;
 if(isset($SALESY[$yearsm]) && $SALESY[$yearsm] !== ''){
@@ -255,26 +255,26 @@ if(isset($SALESY[$yearsm]) && $SALESY[$yearsm] !== ''){
 				<dl>
 					<dt>전화번호</dt>
 					<dd>
-						<?if($view_chk=="true"){?>
-							<?if($com['TEL_NO']){?><a href="tel:<?=$com['TEL_NO']?>"><?=$com['TEL_NO']?></a><?}?>
-						<?}else{?>
+						<?php if($view_chk=="true"){?>
+							<?php if($com['TEL_NO']){?><a href="tel:<?=$com['TEL_NO']?>"><?=$com['TEL_NO']?></a><?php }?>
+						<?php }else{?>
 							<a><?=$tel[0]?>-<?=substr($tel[1],0,1)?>***-<?=substr($tel[2],0,1)?>***</a>
-						<?}?>
+						<?php }?>
 					</dd>
 				</dl>
 				<dl>
-				<?if($com['LOC_RDNM_ADDRA']){?>
+				<?php if($com['LOC_RDNM_ADDRA']){?>
 					<dt>주소(도로명)</dt>
 					<dd><a href="https://map.kakao.com/?q=<?=$com['LOC_RDNM_ADDRA']?> <?=$com['LOC_RDNM_ADDRB']?>" target="_blank"><?=$com['LOC_RDNM_ADDRA']?><br /><?=$com['LOC_RDNM_ADDRB']?></a>
 					</dd>
-				<?}?>
+				<?php }?>
 				</dl>
 				<dl>
-				<?if($com['LOC_ADDRA']){?>
+				<?php if($com['LOC_ADDRA']){?>
 					<dt>주소</dt>
 					<dd><a href="https://map.kakao.com/?q=<?=$com['LOC_ADDRA']?> <?=$com['LOC_ADDRB']?>" target="_blank"><?=$com['LOC_ADDRA']?><br /><?=$com['LOC_ADDRB']?></a>
 					</dd>
-				<?}?>
+				<?php }?>
 				</dl>
 			</div>
 		</div>
@@ -282,8 +282,8 @@ if(isset($SALESY[$yearsm]) && $SALESY[$yearsm] !== ''){
 
 	<!--[s] 비상장사일 때 -->
 	<div class="ca-info-my-be">
-<?if($unlisted_unlocked){?>
-		<div class="ca-info-my-re" front shadow chk="<?if($unlisted_unlocked){?>true<?}else{?>false<?}?>" data-unlocked="<?if($unlisted_unlocked){?>1<?}else{?>0<?}?>" data-kedcd="<?=$cd?>" data-credit-cost="<?=$unlisted_credit_cost?>" data-token="<?=$unlisted_unlock_token?>" data-warn="<?if($warn_text){?>1<?}else{?>0<?}?>">
+<?php if($unlisted_unlocked){?>
+		<div class="ca-info-my-re" front shadow chk="<?php if($unlisted_unlocked){?>true<?php }else{?>false<?php }?>" data-unlocked="<?php if($unlisted_unlocked){?>1<?php }else{?>0<?php }?>" data-kedcd="<?=$cd?>" data-credit-cost="<?=$unlisted_credit_cost?>" data-token="<?=$unlisted_unlock_token?>" data-warn="<?php if($warn_text){?>1<?php }else{?>0<?php }?>">
 			<p class="title">우리회사 비상장주식 가치</p>
 			<div class="ju">
 				<a href="javascript:void(0);" class="blurs" data-text="(클릭시공개)" shadow><strong>12,129원/주</strong></a>
@@ -291,7 +291,7 @@ if(isset($SALESY[$yearsm]) && $SALESY[$yearsm] !== ''){
 					<span><img src="/images/icon_search.png" alt="search"></span>
 					<span class="btn-copy">
 						<span class="main">평가 결과 보기</span>
-						<?if(!$unlisted_unlocked){?><em>(<?=$unlisted_credit_cost?> 크레딧)</em><?}?>
+						<?php if(!$unlisted_unlocked){?><em>(<?=$unlisted_credit_cost?> 크레딧)</em><?php }?>
 					</span>
 					<span><img src="/images/btn_arr2.png" alt="arr"></span>
 				</a>
@@ -305,19 +305,19 @@ if(isset($SALESY[$yearsm]) && $SALESY[$yearsm] !== ''){
 			<div class="ju">
 				<div class="blurs" shadow>
 					<strong>
-					<?if($warn_text){?>
-						<?echo $warn_text;?>
-					<?}else{?>
+					<?php if($warn_text){?>
+						<?php echo $warn_text;?>
+					<?php }else{?>
 						<?=number_format((int)$svps)?> / 주
-					<?}?>
+					<?php }?>
 					</strong>
-					<?/*<p>직전년도 매출액 <?=number_format($SALESY[$yearsm]*1000)?>원</p>*/?>
+					<?php /*<p>직전년도 매출액 <?=number_format($SALESY[$yearsm]*1000)?>원</p>*/?>
 				</div>
 					<a href="javascript:void(0);" class="btns">
 						<span><img src="/images/icon_search.png" alt="search"></span>
 						<span class="btn-copy">
 							<span class="main">평가 결과 보기</span>
-							<?if(!$unlisted_unlocked){?><em>(<?=$unlisted_credit_cost?> 크레딧)</em><?}?>
+							<?php if(!$unlisted_unlocked){?><em>(<?=$unlisted_credit_cost?> 크레딧)</em><?php }?>
 						</span>
 						<span><img src="/images/btn_arr2.png" alt="arr"></span>
 					</a>
@@ -327,7 +327,7 @@ if(isset($SALESY[$yearsm]) && $SALESY[$yearsm] !== ''){
 				메커멕스의 전문 컨설턴트와 상담해보세요. 재무 분석은 물론, 업종 특성, 시장 흐름, 유사 기업 비교까지. 귀사의 가치를 객관적으로 진단해드리고, 미래 방향성을 제안해드립니다.
 			</p>
 		</div>
-<?}else{?>
+<?php }else{?>
 		<div class="ca-info-my-re" front shadow chk="false" data-unlocked="0" data-kedcd="<?=$cd?>" data-credit-cost="<?=$unlisted_credit_cost?>" data-token="<?=$unlisted_unlock_token?>" data-warn="1">
 			<p class="title">우리회사 비상장주식 가치</p>
 			<div class="ju">
@@ -367,7 +367,7 @@ if(isset($SALESY[$yearsm]) && $SALESY[$yearsm] !== ''){
 				메커멕스의 전문 컨설턴트와 상담해보세요. 재무 분석은 물론, 업종 특성, 시장 흐름, 유사 기업 비교까지. 귀사의 가치를 객관적으로 진단해드리고, 미래 방향성을 제안해드립니다.
 			</p>
 		</div>
-<?}?>
+<?php }?>
 	</div>
 	<!--[e] 비상장사일 때 -->
 
@@ -503,9 +503,18 @@ function AutoHypen(companyNum){
 			return false;
 		}
 
-		var unlockAction = function(){
-			$.post("../get_set.php", {type:'unlisted_value_unlock', kedcd:kedcd, unlock_token:unlockToken}, function(data){
-				var jqXHR = (data || "").split("|");
+			var unlockAction = function(){
+				$.post("../get_set.php", {type:'unlisted_value_unlock', kedcd:kedcd, unlock_token:unlockToken}, function(data){
+					// PHP warning/notice가 앞에 섞여도 상태코드를 안정적으로 파싱한다.
+					var parsePipeResponse = function(raw){
+						var text = String(raw || "");
+						text = text.replace(/^\uFEFF/, "").trim();
+						var codeIdx = text.search(/(?:1000|500|429|501)\|/);
+						if(codeIdx > 0) text = text.substring(codeIdx);
+						text = text.replace(/<[^>]*>/g, "").trim();
+						return text.split("|");
+					};
+					var jqXHR = parsePipeResponse(data);
 				if(jqXHR[0] == "1000"){
 					applyUnlistedReveal($front, jqXHR[4], jqXHR[5]);
 					if(jqXHR[1] == "charged"){
@@ -526,8 +535,17 @@ function AutoHypen(companyNum){
 			});
 		};
 
-			$.post("../get_set.php", {type:'unlisted_value_unlock', kedcd:kedcd, check_only:1, unlock_token:unlockToken}, function(preData){
-				var pre = (preData || "").split("|");
+				$.post("../get_set.php", {type:'unlisted_value_unlock', kedcd:kedcd, check_only:1, unlock_token:unlockToken}, function(preData){
+					// check_only 응답도 동일 파서로 처리해서 "ready" 오탐을 막는다.
+					var parsePipeResponse = function(raw){
+						var text = String(raw || "");
+						text = text.replace(/^\uFEFF/, "").trim();
+						var codeIdx = text.search(/(?:1000|500|429|501)\|/);
+						if(codeIdx > 0) text = text.substring(codeIdx);
+						text = text.replace(/<[^>]*>/g, "").trim();
+						return text.split("|");
+					};
+					var pre = parsePipeResponse(preData);
 				if(pre[0] == "1000"){
 					if(pre[1] == "already"){
 						unlockAction();
@@ -561,6 +579,6 @@ function AutoHypen(companyNum){
 	});
 </script>
 
-<?
+<?php 
 include_once(G5_THEME_PATH.'/tail.php');
 ?>

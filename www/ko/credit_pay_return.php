@@ -219,7 +219,7 @@ try {
 
 	sql_query("START TRANSACTION");
 
-	$already_charge = sql_fetch("select id from g5_matching_credit_history where order_no='{$order_no}' and tx_type='CHARGE' limit 1");
+	$already_charge = sql_fetch("select id from credit_history where order_no='{$order_no}' and tx_type='CHARGE' limit 1");
 	if($already_charge['id']){
 		// 재진입/재호출 시 중복 지급을 막기 위해 원장 존재 여부로 idempotency를 보장한다.
 		sql_query("COMMIT");
@@ -278,34 +278,8 @@ try {
 		card_num='{$cardNum}'
 		where order_no='{$order_no}'", false);
 
-	$status = sql_fetch("select * from g5_membership_status where uid='{$pinfo['uid']}' for update");
-	if(!$status['uid']){
-		$init_sql = "insert into g5_membership_status set
-			uid='{$pinfo['uid']}',
-			order_no='{$order_no}',
-			date_begin='".date("Y-m-d")."',
-			date_end='9999-12-31 23:59:59',
-			month='0',
-			open_able_cnt='0',
-			open_cnt='0',
-			matching_able_cnt='0',
-			matching_cnt='0',
-			expert_consulting_able_cnt='0',
-			expert_consulting_cnt='0',
-			selected_able_cnt='0',
-			selected_cnt='0',
-			regdate=now(),
-			status='S',
-			membership_parent_no='{$pinfo['membership_parent_no']}'";
-		$init_ok = sql_query($init_sql, false);
-		if(!$init_ok){
-			sql_query("ROLLBACK");
-			credit_pay_fail("잔액 상태 초기화 실패", 'status_init_failed', array('db_tx' => 'rollback'));
-		}
-		$status = sql_fetch("select * from g5_membership_status where uid='{$pinfo['uid']}' for update");
-	}
-
-	$current_credit = (int)$status['matching_able_cnt'];
+	$ledger_last = credit_ledger_get_latest_row($pinfo['uid'], true);
+	$current_credit = isset($ledger_last['credit_after']) ? (int)$ledger_last['credit_after'] : 0;
 	$credit_after = $current_credit + $charge_credit;
 
 	$plan_title_en = trim((string)$minfo['title_en']);
@@ -319,13 +293,14 @@ try {
 	}
 	$charge_memo_text = $plan_title_for_memo . ' 플랜 충전';
 	$memo = addslashes($charge_memo_text);
-	$history_sql = "insert into g5_matching_credit_history set
+	$history_sql = "insert into credit_history set
 		uid='{$pinfo['uid']}',
 		tx_type='CHARGE',
+		service_code='CREDIT_CHARGE',
 		credit_delta='{$charge_credit}',
 		credit_after='{$credit_after}',
 		order_no='{$order_no}',
-		matching_no='',
+		tr_no='',
 		memo='{$memo}',
 		created_at=now()";
 	$history_ok = sql_query($history_sql, false);
@@ -333,44 +308,17 @@ try {
 		sql_query("ROLLBACK");
 		credit_pay_fail("원장 기록 실패", 'credit_history_insert_failed', array('db_tx' => 'rollback'));
 	}
-
-	$status_update_sql = "update g5_membership_status set
-		order_no='{$order_no}',
-		date_begin='".date("Y-m-d")."',
-		date_end='9999-12-31 23:59:59',
-		status='S',
-		membership_parent_no='{$pinfo['membership_parent_no']}',
-		matching_able_cnt='{$credit_after}',
-		matching_cnt=matching_cnt + {$charge_credit}
-		where uid='{$pinfo['uid']}'";
-	$status_ok = sql_query($status_update_sql, false);
-	if(!$status_ok){
-		sql_query("ROLLBACK");
-		credit_pay_fail("잔액 반영 실패", 'status_update_failed', array('db_tx' => 'rollback'));
+	// CHARGE 원장 id로 LOT 1건을 생성해 환불/사용 추적 기준을 만든다.
+	$charge_history_id = (int)sql_insert_id();
+	if($charge_history_id < 1){
+		$history_row = sql_fetch("select id from credit_history where order_no='{$order_no}' and tx_type='CHARGE' order by id desc limit 1");
+		$charge_history_id = (int)$history_row['id'];
 	}
-
-	$snapshot = sql_fetch("select * from g5_membership_status where uid='{$pinfo['uid']}'");
-	$memo_text = addslashes($charge_memo_text . "\n");
-	$history_status_sql = "insert g5_membership_status_history set
-		uid='{$pinfo['uid']}',
-		order_no='{$order_no}',
-		date_begin='{$snapshot['date_begin']}',
-		date_end='{$snapshot['date_end']}',
-		month='{$snapshot['month']}',
-		open_able_cnt='{$snapshot['open_able_cnt']}',
-		open_cnt='{$snapshot['open_cnt']}',
-		matching_able_cnt='{$snapshot['matching_able_cnt']}',
-		matching_cnt='{$snapshot['matching_cnt']}',
-		expert_consulting_able_cnt='{$snapshot['expert_consulting_able_cnt']}',
-		expert_consulting_cnt='{$snapshot['expert_consulting_cnt']}',
-		selected_able_cnt='{$snapshot['selected_able_cnt']}',
-		selected_cnt='{$snapshot['selected_cnt']}',
-		regdate=now(),
-		status='S',
-		membership_parent_no='{$snapshot['membership_parent_no']}',
-		memo='{$memo_text}',
-		ext_1='".G5_TIME_YMDHIS."\\n'";
-	sql_query($history_status_sql, false);
+	$lot_charge = credit_lot_register_charge($pinfo['uid'], $charge_history_id, $order_no, $charge_credit);
+	if(empty($lot_charge['ok'])){
+		sql_query("ROLLBACK");
+		credit_pay_fail("충전 LOT 기록 실패", 'credit_lot_charge_insert_failed', array('db_tx' => 'rollback'));
+	}
 
 	$log_send = addslashes(json_encode($authMapLog, JSON_UNESCAPED_UNICODE));
 	$log_recv = addslashes($authResultString);

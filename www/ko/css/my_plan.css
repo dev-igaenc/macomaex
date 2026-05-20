@@ -263,6 +263,11 @@
     color: #16a34a;
 }
 
+#my_plan .payment_history_cards .pay-card-icon.refund {
+    background: #fef2f2;
+    color: #dc2626;
+}
+
 #my_plan .payment_history_cards .pay-card-icon.match {
     background: #eff6ff;
     color: #2563eb;
@@ -273,6 +278,11 @@
     color: #7c3aed;
 }
 
+#my_plan .payment_history_cards .pay-card-icon.unlisted {
+    background: #fff7ed;
+    color: #c2410c;
+}
+
 #my_plan .payment_history_cards .pay-card[data-type="charge"] {
     border-left: 3px solid #93c5fd;
 }
@@ -281,12 +291,34 @@
     border-left: 3px solid #86efac;
 }
 
+#my_plan .payment_history_cards .pay-card[data-type="refund"] {
+    border-left: 3px solid #fca5a5;
+}
+
+#my_plan .payment_history_cards .pay-card[data-type="refund"] .credit-delta.minus {
+    color: #111111;
+}
+
+#my_plan .payment_history_cards .pay-card[data-type="refund"] .status-badge.used {
+    background: #fef2f2;
+    color: #b91c1c;
+    border: 1px solid #fecaca;
+}
+
 #my_plan .payment_history_cards .pay-card[data-type="match"] {
     border-left: 3px solid #93c5fd;
 }
 
 #my_plan .payment_history_cards .pay-card[data-type="analyze"] {
     border-left: 3px solid #c4b5fd;
+}
+
+#my_plan .payment_history_cards .pay-card[data-type="unlisted"] {
+    border-left: 3px solid #fb923c;
+}
+
+#my_plan .payment_history_cards .pay-card[data-type="unlisted"] .credit-delta.minus {
+    color: #111111;
 }
 
 #my_plan .payment_history_cards .pay-card-info {
@@ -321,6 +353,24 @@
     flex-shrink: 0;
 }
 
+#my_plan .payment_history_cards .pay-card-info .meta .meta-sep-pipe {
+    color: #d1d5db;
+    font-weight: 500;
+}
+
+#my_plan .payment_history_cards .pay-card-info .meta .meta-refund-action {
+    border: 0;
+    background: transparent;
+    padding: 0;
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.2;
+    color: #111111;
+    font-weight: 600;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
 #my_plan .payment_history_cards .pay-card-right {
     display: flex;
     flex-direction: column;
@@ -342,29 +392,39 @@
 }
 
 #my_plan .payment_history_cards .credit-delta.plus {
-    color: #2563eb;
+    color: #111111;
 }
 
 #my_plan .payment_history_cards .credit-delta.minus {
-    color: #7c3aed;
+    color: #111111;
+}
+
+#my_plan .payment_history_cards #useList .pay-card[data-type="match"] .credit-delta.minus {
+    color: #111111;
 }
 
 #my_plan .payment_history_cards .credit-delta.green {
-    color: #16a34a;
+    color: #111111;
 }
 
 #my_plan .payment_history_cards .status-badge {
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    height: 20px;
     font-size: 11px;
     font-weight: 600;
     border-radius: 999px;
-    padding: 2px 9px;
+    padding: 0 9px;
+    line-height: 1;
+    white-space: nowrap;
 }
 
 #my_plan .payment_history_cards .status-badge.done {
-    background: #f0fdf4;
-    color: #16a34a;
-    border: 1px solid #bbf7d0;
+    background: #eff6ff;
+    color: #2563eb;
+    border: 1px solid #bfdbfe;
 }
 
 #my_plan .payment_history_cards .status-badge.free {
@@ -377,6 +437,63 @@
     background: #f5f3ff;
     color: #7c3aed;
     border: 1px solid #ddd6fe;
+}
+
+#my_plan .payment_history_cards .status-badge.used-match {
+    background: #eff6ff;
+    color: #2563eb;
+    border: 1px solid #bfdbfe;
+}
+
+#my_plan .payment_history_cards .status-badge.used-analyze {
+    background: #f5f3ff;
+    color: #7c3aed;
+    border: 1px solid #ddd6fe;
+}
+
+#my_plan .payment_history_cards .status-badge.used-unlisted {
+    background: #fff7ed;
+    color: #fb923c;
+    border: 1px solid #fdba74;
+}
+
+#my_plan .payment_history_cards .status-badge.requested {
+    background: #fff7ed;
+    color: #fb923c;
+    border: 1px solid #fdba74;
+}
+
+#my_plan .payment_history_cards .status-badge.blocked {
+    background: #f0fdf4;
+    color: #16a34a;
+    border: 1px solid #bbf7d0;
+}
+
+#my_plan .payment_history_cards .status-badge.refund-action {
+    appearance: none;
+    -webkit-appearance: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+    box-sizing: border-box;
+    height: 20px;
+    padding: 0 9px;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1;
+    background: #eff6ff;
+    color: #2563eb;
+    border: 1px solid #bfdbfe;
+    border-radius: 999px;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+#my_plan .payment_history_cards .status-badge.refund-action:hover {
+    background: #dbeafe;
+    color: #1d4ed8;
+    border-color: #93c5fd;
 }
 
 #my_plan .payment_history_cards .load-more-wrap {

@@ -1071,7 +1071,8 @@ switch ($type) {
 			break;
 		}
 
-		$uid = sql_real_escape_string(trim((string)$member['mb_id']));
+			$uid_raw = trim((string)$member['mb_id']);
+			$uid = sql_real_escape_string($uid_raw);
 		$member_kedcd_raw = trim((string)$member['mb_company']);
 		if(!$member_kedcd_raw){
 			echo "500|회사 정보가 없어 처리할 수 없습니다.";
@@ -1152,62 +1153,69 @@ switch ($type) {
 		}
 		$warn_text_encoded = rawurlencode($warn_text_value);
 
-		$already = sql_fetch("select id from g5_matching_credit_history where once_key='{$once_key_sql}' and tx_type='USE' and service_code='{$service_code_sql}' limit 1");
+		$already = sql_fetch("select id from credit_history where once_key='{$once_key_sql}' and tx_type='USE' and service_code='{$service_code_sql}' limit 1");
 		if($already['id']) {
-			$status = sql_fetch("select matching_able_cnt from g5_membership_status where uid='{$uid}'");
-			$remain_credit = isset($status['matching_able_cnt']) ? (int)$status['matching_able_cnt'] : 0;
+			$remain_credit = credit_ledger_get_balance($uid_raw);
 			$response = "1000|already|{$remain_credit}|0|{$svps_value}|{$warn_text_encoded}";
 		} else if($check_only) {
-			$status = sql_fetch("select uid, matching_able_cnt from g5_membership_status where uid='{$uid}'");
-			$remain_credit = isset($status['matching_able_cnt']) ? (int)$status['matching_able_cnt'] : 0;
-			if(!$status['uid'] || $remain_credit < $credit_cost) {
+			$remain_credit = credit_ledger_get_balance($uid_raw);
+			if($remain_credit < $credit_cost) {
 				$response = "500|가치 조회 크레딧이 부족합니다.|PLAN";
 			} else {
 				$response = "1000|ready|{$remain_credit}|{$credit_cost}";
 			}
 		} else {
-			$status = sql_fetch("select uid, matching_able_cnt from g5_membership_status where uid='{$uid}'");
-			$remain_credit = isset($status['matching_able_cnt']) ? (int)$status['matching_able_cnt'] : 0;
-			if(!$status['uid'] || $remain_credit < $credit_cost) {
+			$remain_credit = credit_ledger_get_balance($uid_raw);
+			if($remain_credit < $credit_cost) {
 				$response = "500|가치 조회 크레딧이 부족합니다.|PLAN";
 			} else {
 				sql_query("START TRANSACTION");
-
-				sql_query("update g5_membership_status set matching_able_cnt=matching_able_cnt-{$credit_cost} where uid='{$uid}' and matching_able_cnt >= {$credit_cost}");
-				$affected = sql_fetch("select row_count() as cnt");
-				if((int)$affected['cnt'] < 1) {
+				// 원장 최신 행 잠금으로 동시 차감을 직렬화한다.
+				$ledger_last = credit_ledger_get_latest_row($uid_raw, true);
+				$current_credit = isset($ledger_last['credit_after']) ? (int)$ledger_last['credit_after'] : 0;
+				if($current_credit < $credit_cost) {
 					sql_query("ROLLBACK");
 					$response = "500|가치 조회 크레딧이 부족합니다.|PLAN";
 				} else {
-					$after = sql_fetch("select matching_able_cnt from g5_membership_status where uid='{$uid}'");
-					$credit_after = isset($after['matching_able_cnt']) ? (int)$after['matching_able_cnt'] : 0;
-					$memo = addslashes("비상장 주식가치 최초 조회({$credit_cost} 차감)");
-					$history_sql = "insert into g5_matching_credit_history set
+					$credit_after = $current_credit - $credit_cost;
+						$memo = addslashes("비상장 주식가치 조회");
+					$history_sql = "insert into credit_history set
 						uid='{$uid}',
 						tx_type='USE',
 						service_code='{$service_code_sql}',
 						credit_delta='-{$credit_cost}',
 						credit_after='{$credit_after}',
 						order_no=NULL,
-						matching_no='',
+						tr_no='',
 						target_kedcd='{$target_kedcd}',
 						once_key='{$once_key_sql}',
 						memo='{$memo}',
 						request_type=NULL,
 						created_at=now()";
-					$ins = sql_query($history_sql);
-					if(!$ins) {
-						// g5_membership_status가 트랜잭션 비지원(MyISAM)인 환경을 대비한 보정
-						sql_query("update g5_membership_status set matching_able_cnt=matching_able_cnt+{$credit_cost} where uid='{$uid}'");
-						sql_query("ROLLBACK");
-						$response = "500|크레딧 이력 저장에 실패했습니다.";
-					} else {
-						sql_query("COMMIT");
-						$response = "1000|charged|{$credit_after}|{$credit_cost}|{$svps_value}|{$warn_text_encoded}";
+						$ins = sql_query($history_sql);
+						if(!$ins) {
+							sql_query("ROLLBACK");
+							$response = "500|크레딧 이력 저장에 실패했습니다.";
+						} else {
+							$use_history_id = (int)sql_insert_id();
+							// USE 1건을 FIFO LOT 차감으로 분해해 실제 사용 LOT를 기록한다.
+								$lot_use = credit_lot_allocate_use($uid_raw, $use_history_id, $credit_cost);
+								if(empty($lot_use['ok'])) {
+									sql_query("ROLLBACK");
+									$lot_msg = isset($lot_use['message']) ? (string)$lot_use['message'] : '';
+									if($lot_msg === 'not enough lot remain'){
+										$response = "500|가용 크레딧이 부족합니다.";
+									} else {
+										$response = "500|크레딧 차감 처리 중 오류가 발생했습니다.";
+									}
+								} else {
+									sql_query("COMMIT");
+									$response = "1000|charged|{$credit_after}|{$credit_cost}|{$svps_value}|{$warn_text_encoded}";
+								}
+						}
 					}
 				}
 			}
-		}
 
 		unlisted_value_lock_release($lock_name);
 		echo $response;
@@ -1257,8 +1265,8 @@ switch ($type) {
 					$rq_kind=$corp_type[$member['mb_3']];
 					$rc_kind=$corp_type[$t_uinfo['mb_3']];
 
-					$status_row = sql_fetch("select matching_able_cnt from g5_membership_status where uid='{$member['mb_id']}'");
-					if(!$status_row['matching_able_cnt'] || (int)$status_row['matching_able_cnt'] < $matching_credit_cost){
+					$remain_credit = credit_ledger_get_balance($member['mb_id']);
+					if($remain_credit < $matching_credit_cost){
 						echo "500|매칭 가능 크레딧이 부족합니다. (필요: {$matching_credit_cost})|PLAN";
 						exit;
 					}
@@ -1271,26 +1279,41 @@ switch ($type) {
 						echo "500";
 						exit;
 					}
-					$matching_no = sql_insert_id();
+					$tr_no = sql_insert_id();
 
-					// 매칭 차감(원자적 처리)
-					sql_query("update g5_membership_status set matching_able_cnt=matching_able_cnt-{$matching_credit_cost} where uid='{$member['mb_id']}' and matching_able_cnt >= {$matching_credit_cost}");
-					$affected = sql_fetch("select row_count() as cnt");
-					if((int)$affected['cnt'] < 1){
+					// 원장 최신 행 잠금으로 동시 차감을 직렬화한다.
+					$ledger_last = credit_ledger_get_latest_row($member['mb_id'], true);
+					$current_credit = isset($ledger_last['credit_after']) ? (int)$ledger_last['credit_after'] : 0;
+					if($current_credit < $matching_credit_cost){
 						sql_query("ROLLBACK");
 						echo "500|매칭 가능 크레딧이 부족합니다. (필요: {$matching_credit_cost})|PLAN";
 						exit;
 					}
+					$credit_after = $current_credit - $matching_credit_cost;
 
-					// 차감 후 잔액 조회
-					$mat=sql_fetch("select * from g5_membership_status where uid='{$member['mb_id']}' ");
-					if($mat['order_no']) sql_query("update g5_membership_status_history set matching_able_cnt={$mat['matching_able_cnt']} where uid='{$member['mb_id']}' and order_no='{$mat['order_no']}' ");
-
-					// 크레딧 원장 기록 (사용)
+						// 크레딧 원장 기록 (사용)
 						$memo = addslashes($request_type === "TM" ? "TM 서포트 거래 요청" : "일반 거래 요청");
-						sql_query("insert into g5_matching_credit_history set uid='{$member['mb_id']}', tx_type='USE', credit_delta='-{$matching_credit_cost}', credit_after='{$mat['matching_able_cnt']}', order_no=NULL, matching_no='{$matching_no}', request_type='{$request_type}', memo='{$memo}', created_at=now()");
+						$history_use_ok = sql_query("insert into credit_history set uid='{$member['mb_id']}', tx_type='USE', service_code='TRADE_REQUEST', credit_delta='-{$matching_credit_cost}', credit_after='{$credit_after}', order_no=NULL, tr_no='{$tr_no}', request_type='{$request_type}', memo='{$memo}', created_at=now()", false);
+						if(!$history_use_ok){
+							sql_query("ROLLBACK");
+							echo "500|크레딧 이력 저장에 실패했습니다.";
+							exit;
+						}
+						$use_history_id = (int)sql_insert_id();
+						// USE 1건을 FIFO LOT 차감으로 분해해 실제 사용 LOT를 기록한다.
+						$lot_use = credit_lot_allocate_use($member['mb_id'], $use_history_id, $matching_credit_cost);
+						if(empty($lot_use['ok'])){
+							sql_query("ROLLBACK");
+							$lot_msg = isset($lot_use['message']) ? (string)$lot_use['message'] : '';
+							if($lot_msg === 'not enough lot remain'){
+								echo "500|가용 크레딧이 부족합니다. (필요: {$matching_credit_cost})|PLAN";
+							} else {
+								echo "500|크레딧 차감 처리 중 오류가 발생했습니다.";
+							}
+							exit;
+						}
 
-					sql_query("COMMIT");
+						sql_query("COMMIT");
 
 					//알림톡 발송
 					if($t_uinfo['mb_8']){
@@ -1317,17 +1340,15 @@ switch ($type) {
 		$matching_tm_credit_cost_local = (defined('_matching_tm_credit_cost') && (int)_matching_tm_credit_cost > 0) ? (int)_matching_tm_credit_cost : 30;
 		$matching_credit_cost = ($request_type === "TM") ? $matching_tm_credit_cost_local : $matching_basic_credit_cost;
 		if($matching_credit_cost < 1) $matching_credit_cost = $matching_basic_credit_cost;
-		$msinfo=sql_fetch("select * from g5_membership_status where uid='{$member['mb_id']}'" );
-		if($msinfo['uid']) {
-			if((int)$msinfo['matching_able_cnt'] < $matching_credit_cost) {echo "500|매칭 가능 크레딧이 부족합니다. (필요: {$matching_credit_cost})|PLAN"; exit;}
-		}else{
+		$remain_credit = credit_ledger_get_balance($member['mb_id']);
+		if($remain_credit < $matching_credit_cost) {
 			echo "500|매칭 가능 크레딧이 부족합니다. (필요: {$matching_credit_cost})|PLAN";
 			exit;
 		}
 		if($member['mb_id'] && $kedcd) {
 				$chk=sql_fetch("select * from g5_matching where del != 'D' and  request_id='{$member['mb_id']}' and KEDCD='{$kedcd}'");
 				if($chk['no']) echo $chk['no']."|".$chk['receive_approval'];
-				else echo "1000|".$msinfo['matching_able_cnt'];
+				else echo "1000|".$remain_credit;
 		}else{
 			echo "500";
 		}
@@ -1400,6 +1421,9 @@ switch ($type) {
 	break;
 
 	case "membership_chk": //맴버쉽 정보
+		// legacy membership_status 기능 비활성화
+		break;
+	/*
 		if($member['mb_id']) {
 				$today = date("Y-m-d");
 				$chk=sql_fetch("select * from g5_membership_status where (status='S' or status='T') and uid='{$member['mb_id']}' and date_begin >= '{$today}'");
@@ -1442,6 +1466,8 @@ switch ($type) {
 			echo "500|로그인후 이용하세요.";
 		}
 	break;
+
+	*/
 
 	case "membership_chk2": //맴버쉽 체크
 		if($member['mb_id']) {
@@ -1715,6 +1741,9 @@ switch ($type) {
 
 
 	case "membership_cancel": //맴버쉽 정기결제 취소
+		// legacy membership_status 기능 비활성화
+		break;
+	/*
 	//상태(S:유지, C:취소(환불), E:종료(기간만료), T 기간만료후정지)
 			if($_SERVER['REQUEST_METHOD'] !== 'POST'){
 				echo "500|잘못된 요청 방식입니다.";
@@ -1762,7 +1791,8 @@ switch ($type) {
 							exit;
 						}
 
-						$refund_credit = (int)$minfo['matching_cnt'];
+							$refund_credit = (int)$minfo['matching_cnt'];
+							$target_lot_id = 0;
 
 						// 결제 승인일시를 기준으로 7일 환불 가능 기간을 계산한다.
 						$app_date_digits = preg_replace('/[^0-9]/', '', (string)$pinfo['app_date']);
@@ -1788,74 +1818,97 @@ switch ($type) {
 							echo "500|취소 오류: 결제 후 7일이 지나 환불이 불가합니다.";
 							exit;
 						}
-						// 해당 결제 충전분의 사용 여부를 FIFO 기준으로 판정한다.
-						$history_summary = sql_fetch("select
-							IFNULL(sum(if(tx_type='BONUS', credit_delta, 0)), 0) as total_bonus,
-							IFNULL(sum(if(tx_type='USE', -credit_delta, 0)), 0) as total_used
-							from g5_matching_credit_history
-							where uid='{$member['mb_id']}'");
-						$paid_used_credit = (int)$history_summary['total_used'] - (int)$history_summary['total_bonus'];
-						if($paid_used_credit < 0){
-							$paid_used_credit = 0;
-						}
-						$refund_map = array();
-						$refund_result = sql_query("select order_no, IFNULL(sum(-credit_delta), 0) as refunded_credit
-							from g5_matching_credit_history
-							where uid='{$member['mb_id']}'
-							and tx_type='REFUND'
-							and order_no!=''
-							group by order_no");
-						for($ri=0; $refund_row=sql_fetch_array($refund_result); $ri++){
-							$refund_map[(string)$refund_row['order_no']] = (int)$refund_row['refunded_credit'];
-						}
-						$charge_result = sql_query("select order_no, IFNULL(sum(credit_delta), 0) as charge_credit, MIN(created_at) as first_created_at
-							from g5_matching_credit_history
-							where uid='{$member['mb_id']}'
-							and tx_type='CHARGE'
-							and order_no!=''
-							group by order_no
-							order by first_created_at asc, order_no asc");
-						$target_order_no = (string)$chk['order_no'];
-						$target_charge_credit = 0;
-						$target_consumed_credit = 0;
-						$remaining_paid_used = $paid_used_credit;
-						for($ci=0; $charge_row=sql_fetch_array($charge_result); $ci++){
-							$order_no = (string)$charge_row['order_no'];
-							$charge_credit = (int)$charge_row['charge_credit'];
-							if($charge_credit < 1){
-								continue;
+							// LOT 테이블이 있으면 LOT 기준(미사용 + 7일 이내)으로 환불 가능 여부를 판정한다.
+							$lot_refund = credit_lot_find_refundable_by_order($member['mb_id'], (string)$chk['order_no']);
+								if(!empty($lot_refund['skip'])) {
+									echo "500|취소 오류: 환불 데이터가 준비되지 않았습니다.";
+									exit;
+									// LOT 미적용 환경 호환 분기는 비활성화(원장/LOT 불일치 방지)
+									$history_summary = sql_fetch("select
+									IFNULL(sum(if(tx_type='BONUS', credit_delta, 0)), 0) as total_bonus,
+									IFNULL(sum(if(tx_type='USE', -credit_delta, 0)), 0) as total_used
+									from credit_history
+									where uid='{$member['mb_id']}'");
+								$paid_used_credit = (int)$history_summary['total_used'] - (int)$history_summary['total_bonus'];
+								if($paid_used_credit < 0){
+									$paid_used_credit = 0;
+								}
+								$refund_map = array();
+								$refund_result = sql_query("select order_no, IFNULL(sum(-credit_delta), 0) as refunded_credit
+									from credit_history
+									where uid='{$member['mb_id']}'
+									and tx_type='REFUND'
+									and order_no!=''
+									group by order_no");
+								for($ri=0; $refund_row=sql_fetch_array($refund_result); $ri++){
+									$refund_map[(string)$refund_row['order_no']] = (int)$refund_row['refunded_credit'];
+								}
+								$charge_result = sql_query("select order_no, IFNULL(sum(credit_delta), 0) as charge_credit, MIN(created_at) as first_created_at
+									from credit_history
+									where uid='{$member['mb_id']}'
+									and tx_type='CHARGE'
+									and order_no!=''
+									group by order_no
+									order by first_created_at asc, order_no asc");
+								$target_order_no = (string)$chk['order_no'];
+								$target_charge_credit = 0;
+								$target_consumed_credit = 0;
+								$remaining_paid_used = $paid_used_credit;
+								for($ci=0; $charge_row=sql_fetch_array($charge_result); $ci++){
+									$order_no = (string)$charge_row['order_no'];
+									$charge_credit = (int)$charge_row['charge_credit'];
+									if($charge_credit < 1){
+										continue;
+									}
+									$refunded_credit = isset($refund_map[$order_no]) ? (int)$refund_map[$order_no] : 0;
+									$effective_credit = $charge_credit - $refunded_credit;
+									if($effective_credit < 0){
+										$effective_credit = 0;
+									}
+									$consumed_credit = 0;
+									if($remaining_paid_used > 0 && $effective_credit > 0){
+										$consumed_credit = min($effective_credit, $remaining_paid_used);
+										$remaining_paid_used -= $consumed_credit;
+									}
+									if($order_no === $target_order_no){
+										$target_charge_credit = $charge_credit;
+										$target_consumed_credit = $consumed_credit;
+										break;
+									}
+								}
+								if($target_charge_credit > 0){
+									$refund_credit = $target_charge_credit;
+								}
+								if($refund_credit < 1){
+									echo "500|취소 오류: 환불 크레딧 정보가 없습니다.";
+									exit;
+								}
+								if($target_charge_credit < 1){
+									echo "500|취소 오류: 해당 결제의 충전 이력을 찾을 수 없습니다.";
+									exit;
+								}
+								if($target_consumed_credit > 0){
+									echo "500|해당 충전건은 이미 일부 사용되어 환불이 불가합니다.";
+									exit;
+								}
+							} else if(empty($lot_refund['ok'])) {
+								$lot_msg = (string)$lot_refund['message'];
+								if($lot_msg === 'refund deadline passed'){
+									echo "500|취소 오류: 결제 후 7일이 지나 환불이 불가합니다.";
+								} else if($lot_msg === 'lot already used' || $lot_msg === 'lot is not active'){
+									echo "500|해당 충전건은 이미 일부 사용되어 환불이 불가합니다.";
+								} else if($lot_msg === 'already refunded'){
+									echo "500|이미 환불 처리된 결제입니다.";
+								} else if($lot_msg === 'charge lot not found'){
+									echo "500|취소 오류: 해당 결제의 충전 이력을 찾을 수 없습니다.";
+								} else {
+									echo "500|취소 오류: 환불 가능 여부 확인에 실패했습니다.";
+								}
+								exit;
+							} else {
+								$refund_credit = (int)$lot_refund['refund_credit'];
+								$target_lot_id = (int)$lot_refund['lot']['lot_id'];
 							}
-							$refunded_credit = isset($refund_map[$order_no]) ? (int)$refund_map[$order_no] : 0;
-							$effective_credit = $charge_credit - $refunded_credit;
-							if($effective_credit < 0){
-								$effective_credit = 0;
-							}
-							$consumed_credit = 0;
-							if($remaining_paid_used > 0 && $effective_credit > 0){
-								$consumed_credit = min($effective_credit, $remaining_paid_used);
-								$remaining_paid_used -= $consumed_credit;
-							}
-							if($order_no === $target_order_no){
-								$target_charge_credit = $charge_credit;
-								$target_consumed_credit = $consumed_credit;
-								break;
-							}
-						}
-						if($target_charge_credit > 0){
-							$refund_credit = $target_charge_credit;
-						}
-						if($refund_credit < 1){
-							echo "500|취소 오류: 환불 크레딧 정보가 없습니다.";
-							exit;
-						}
-						if($target_charge_credit < 1){
-							echo "500|취소 오류: 해당 결제의 충전 이력을 찾을 수 없습니다.";
-							exit;
-						}
-						if($target_consumed_credit > 0){
-							echo "500|취소 오류: 해당 결제 충전분의 사용 이력이 있어 환불이 불가합니다.";
-							exit;
-						}
 						$refund_amount = (int)$pinfo['card_appl_price'];
 						if($refund_amount < 1){
 							$refund_amount = (int)$pinfo['price'];
@@ -1870,7 +1923,7 @@ switch ($type) {
 							echo "500|동일 주문의 환불이 처리 중입니다. 잠시 후 다시 시도해 주세요.";
 							exit;
 						}
-						$already_refund = sql_fetch("select id from g5_matching_credit_history where order_no='{$chk['order_no']}' and tx_type='REFUND' limit 1");
+						$already_refund = sql_fetch("select id from credit_history where order_no='{$chk['order_no']}' and tx_type='REFUND' limit 1");
 						if($already_refund['id']){
 							membership_refund_lock_release($refund_lock_name);
 							echo "500|이미 환불 처리된 결제입니다.";
@@ -1957,7 +2010,7 @@ switch ($type) {
 						}
 
 						sql_query("START TRANSACTION");
-						$already_refund = sql_fetch("select id from g5_matching_credit_history where order_no='{$chk['order_no']}' and tx_type='REFUND' limit 1");
+						$already_refund = sql_fetch("select id from credit_history where order_no='{$chk['order_no']}' and tx_type='REFUND' limit 1");
 						if($already_refund['id']){
 							sql_query("ROLLBACK");
 							membership_refund_lock_release($refund_lock_name);
@@ -1965,15 +2018,8 @@ switch ($type) {
 							exit;
 						}
 
-						$status = sql_fetch("select * from g5_membership_status where uid='{$member['mb_id']}' for update");
-						if(!$status['uid']){
-							sql_query("ROLLBACK");
-							membership_refund_lock_release($refund_lock_name);
-							echo "500|취소 오류: 회원 상태 정보가 없습니다.";
-							exit;
-						}
-
-						$current_credit = (int)$status['matching_able_cnt'];
+						$ledger_last = credit_ledger_get_latest_row($member['mb_id'], true);
+						$current_credit = isset($ledger_last['credit_after']) ? (int)$ledger_last['credit_after'] : 0;
 						if($current_credit < $refund_credit){
 							sql_query("ROLLBACK");
 							membership_refund_lock_release($refund_lock_name);
@@ -1982,59 +2028,35 @@ switch ($type) {
 						}
 
 						$credit_after = $current_credit - $refund_credit;
-						$memo_refund = addslashes("사용자 일반결제 전액 환불 ({$refund_amount}원)");
-						$refund_history_sql = "insert into g5_matching_credit_history set
+						$plan_name_for_refund = (string)$minfo['title_en'];
+						$memo_refund = addslashes($plan_name_for_refund . " 플랜 환불");
+						$refund_history_sql = "insert into credit_history set
 							uid='{$member['mb_id']}',
 							tx_type='REFUND',
+							service_code='CREDIT_REFUND',
 							credit_delta='-{$refund_credit}',
 							credit_after='{$credit_after}',
 							order_no='{$chk['order_no']}',
-							matching_no='',
+							tr_no='',
 							memo='{$memo_refund}',
 							created_at=now()";
-						$refund_history = sql_query($refund_history_sql, false);
-						if(!$refund_history){
-							sql_query("ROLLBACK");
-							membership_refund_lock_release($refund_lock_name);
-							echo "500|취소 오류: 환불 원장 기록 실패";
-							exit;
-						}
-
-						$refund_status_sql = "update g5_membership_status set
-							matching_able_cnt=matching_able_cnt-{$refund_credit},
-							matching_cnt=IF(matching_cnt >= {$refund_credit}, matching_cnt-{$refund_credit}, 0)
-							where uid='{$member['mb_id']}' and matching_able_cnt >= {$refund_credit}";
-						$refund_status = sql_query($refund_status_sql, false);
-						$verify_status = sql_fetch("select matching_able_cnt from g5_membership_status where uid='{$member['mb_id']}'");
-						if(!$refund_status || !isset($verify_status['matching_able_cnt']) || (int)$verify_status['matching_able_cnt'] !== (int)$credit_after){
-							sql_query("ROLLBACK");
-							membership_refund_lock_release($refund_lock_name);
-							echo "500|취소 오류: 잔액 반영 실패";
-							exit;
-						}
-
-						$snapshot = sql_fetch("select * from g5_membership_status where uid='{$member['mb_id']}'");
-						$history_memo = addslashes("사용자 일반결제 환불\n");
-						$history_status_sql = "insert g5_membership_status_history set
-							uid='{$snapshot['uid']}',
-							order_no='{$chk['order_no']}',
-							date_begin='{$snapshot['date_begin']}',
-							date_end='{$snapshot['date_end']}',
-							month='{$snapshot['month']}',
-							open_able_cnt='{$snapshot['open_able_cnt']}',
-							open_cnt='{$snapshot['open_cnt']}',
-							matching_able_cnt='{$snapshot['matching_able_cnt']}',
-							matching_cnt='{$snapshot['matching_cnt']}',
-							expert_consulting_able_cnt='{$snapshot['expert_consulting_able_cnt']}',
-							expert_consulting_cnt='{$snapshot['expert_consulting_cnt']}',
-							selected_able_cnt='{$snapshot['selected_able_cnt']}',
-							selected_cnt='{$snapshot['selected_cnt']}',
-							regdate=now(),
-							status='{$snapshot['status']}',
-							membership_parent_no='{$snapshot['membership_parent_no']}',
-							memo='{$history_memo}',
-							ext_1='".G5_TIME_YMDHIS."\\n'";
-						sql_query($history_status_sql, false);
+							$refund_history = sql_query($refund_history_sql, false);
+							if(!$refund_history){
+								sql_query("ROLLBACK");
+								membership_refund_lock_release($refund_lock_name);
+								echo "500|취소 오류: 환불 원장 기록 실패";
+								exit;
+							}
+							if($target_lot_id > 0){
+								// 환불 확정 시 해당 LOT를 REFUNDED로 마감한다.
+								$lot_refund_update = credit_lot_mark_refunded($target_lot_id);
+								if(empty($lot_refund_update['ok'])){
+									sql_query("ROLLBACK");
+									membership_refund_lock_release($refund_lock_name);
+									echo "500|취소 오류: 환불 LOT 반영 실패";
+									exit;
+								}
+							}
 
 						sql_query("COMMIT");
 						membership_refund_lock_release($refund_lock_name);
@@ -2096,19 +2118,15 @@ switch ($type) {
 							sql_query($sql);
 
 							if($pay_result->resultCode=="00"){
-								sql_query("update g5_membership_status set status='C' where order_no='{$chk['order_no']}'");
-								sql_query("update g5_membership_status_history set status='C', memo=CONCAT(memo, '{$detail["msg"]}\\n'), ext_1=CONCAT(ext_1, '".G5_TIME_YMDHIS."\\n') where order_no='{$chk['order_no']}'");
 								echo "1000";
 							}else{
 								echo "500|취소 오류:".$pay_result->resultMsg;
 							}
 						}else{
-							sql_query("update g5_membership_status set status='T' where uid='{$member['mb_id']}'");
 							echo "1000|구독은 맴버쉽 만료 후 종료됩니다.";
 							exit;
 						}
 					}else{
-						sql_query("update g5_membership_status set status='T' where uid='{$member['mb_id']}'");
 						echo "1000|구독은 맴버쉽 만료 후 종료됩니다.";
 						exit;
 					}
@@ -2124,14 +2142,158 @@ switch ($type) {
 			}
 	break;
 
+	*/
+
+	case "credit_charge_refund": //충전건 개별 환불
+		if($_SERVER['REQUEST_METHOD'] !== 'POST'){
+			echo "500|잘못된 요청 방식입니다.";
+			exit;
+		}
+		if(!$member['mb_id']){
+			echo "501|로그인 후 이용하세요.";
+			exit;
+		}
+		$cancel_token = isset($_POST['cancel_token']) ? preg_replace('/[^0-9a-z_\.-]/i', '', (string)$_POST['cancel_token']) : '';
+		$session_cancel_token = get_session('ss_membership_cancel_token');
+		if(!$cancel_token || !$session_cancel_token || $cancel_token !== $session_cancel_token){
+			echo "500|유효하지 않은 요청입니다.";
+			exit;
+		}
+		$order_no_refund = isset($_POST['order_no']) ? preg_replace('/[^0-9A-Za-z_\-]/', '', (string)$_POST['order_no']) : '';
+		if($order_no_refund === ''){
+			echo "500|주문 정보를 확인할 수 없습니다.";
+			exit;
+		}
+
+		$uid_sql = sql_real_escape_string((string)$member['mb_id']);
+		$order_no_sql = sql_real_escape_string($order_no_refund);
+		$charge_row = sql_fetch("select id, order_no, created_at from credit_history where uid='{$uid_sql}' and order_no='{$order_no_sql}' and tx_type='CHARGE' order by id desc limit 1");
+		if(!$charge_row['id']){
+			echo "500|해당 결제의 충전 이력을 찾을 수 없습니다.";
+			exit;
+		}
+
+		$pinfo=sql_fetch("select order_no, uid, status, membership_parent_no, order_goods, price, card_appl_price, regdate from g5_membership_paybill where order_no='{$order_no_sql}'");
+		if(!$pinfo['order_no']){
+			echo "500|결제 내역을 찾을 수 없습니다.";
+			exit;
+		}
+		if(strtolower(trim((string)$pinfo['uid'])) !== strtolower(trim((string)$member['mb_id']))){
+			echo "500|본인 결제 건만 환불요청할 수 있습니다.";
+			exit;
+		}
+
+		// 요청 접수 전에도 기존 환불 가능 조건(7일 이내 / 미사용)을 동일하게 검증
+		$lot_refund = credit_lot_find_refundable_by_order($member['mb_id'], $order_no_refund);
+		if(!empty($lot_refund['skip'])){
+			echo "500|취소 오류: 환불 데이터가 준비되지 않았습니다.";
+			exit;
+		}
+		if(empty($lot_refund['ok'])) {
+			$lot_msg = (string)$lot_refund['message'];
+			if($lot_msg === 'refund deadline passed'){
+				echo "500|취소 오류: 결제 후 7일이 지나 환불이 불가합니다.";
+			} else if($lot_msg === 'lot already used' || $lot_msg === 'lot is not active'){
+				echo "500|해당 충전건은 이미 일부 사용되어 환불이 불가합니다.";
+			} else if($lot_msg === 'already refunded'){
+				echo "500|이미 환불 처리된 결제입니다.";
+			} else if($lot_msg === 'charge lot not found'){
+				echo "500|취소 오류: 해당 결제의 충전 이력을 찾을 수 없습니다.";
+			} else {
+				echo "500|취소 오류: 환불 가능 여부 확인에 실패했습니다.";
+			}
+			exit;
+		}
+
+		$refund_lock_name = membership_refund_lock_acquire($order_no_refund, 0);
+		if(!$refund_lock_name){
+			echo "500|동일 주문의 환불이 처리 중입니다. 잠시 후 다시 시도해 주세요.";
+			exit;
+		}
+		$already_refund = sql_fetch("select id from credit_history where order_no='{$order_no_sql}' and tx_type='REFUND' limit 1");
+		if($already_refund['id']){
+			membership_refund_lock_release($refund_lock_name);
+			echo "500|이미 환불 처리된 결제입니다.";
+			exit;
+		}
+
+		// 사용자 환불은 PG 호출 없이 상태값 1->2(요청접수)만 수행
+		$current_step = trim((string)$pinfo['status']);
+		if($current_step === '') $current_step = '1';
+		if($current_step === '2'){
+			membership_refund_lock_release($refund_lock_name);
+			echo "1000|이미 환불요청이 접수된 결제입니다.";
+			exit;
+		}
+		if($current_step === '3'){
+			membership_refund_lock_release($refund_lock_name);
+			echo "500|이미 환불 처리 중인 결제입니다.";
+			exit;
+		}
+		if($current_step === '4'){
+			membership_refund_lock_release($refund_lock_name);
+			echo "500|이미 환불 완료된 결제입니다.";
+			exit;
+		}
+		if($current_step === '5'){
+			membership_refund_lock_release($refund_lock_name);
+			echo "500|환불이 반려/실패 처리된 결제입니다. 관리자에게 문의해 주세요.";
+			exit;
+		}
+		if($current_step !== '1'){
+			membership_refund_lock_release($refund_lock_name);
+			echo "500|환불요청 가능한 상태가 아닙니다.";
+			exit;
+		}
+
+		// 동시 요청 방지를 위해 1단계에서만 2단계로 전이
+		sql_query("update g5_membership_paybill set status='2' where order_no='{$order_no_sql}' and (status is null or status='' or status='1')");
+		$updated_step = sql_fetch("select status from g5_membership_paybill where order_no='{$order_no_sql}'");
+		$updated_step_val = trim((string)$updated_step['status']);
+		if($updated_step_val !== '2'){
+			membership_refund_lock_release($refund_lock_name);
+			echo "500|동시 처리로 인해 요청 접수에 실패했습니다. 잠시 후 다시 시도해 주세요.";
+			exit;
+		}
+
+		// 환불요청 접수 시 관리자 슬랙 알림
+		$plan_title = trim((string)$pinfo['order_goods']);
+		if((int)$pinfo['membership_parent_no'] > 0){
+			$plan_row = sql_fetch("select title from g5_membership_manage where no='".(int)$pinfo['membership_parent_no']."' limit 1");
+			if(is_array($plan_row) && trim((string)$plan_row['title']) !== '') $plan_title = trim((string)$plan_row['title']);
+		}
+		$member_row = sql_fetch("select mb_name from {$g5['member_table']} where mb_id='{$uid_sql}' limit 1");
+		$requested_at = date('Y-m-d H:i:s');
+		$notify_ok = membership_refund_slack_notify(array(
+			'order_no' => $order_no_refund,
+			'uid' => (string)$member['mb_id'],
+			'company' => is_array($member_row) ? trim((string)$member_row['mb_name']) : '',
+			'plan' => $plan_title,
+			'amount' => max((int)$pinfo['card_appl_price'], (int)$pinfo['price']),
+			'credit' => isset($lot_refund['refund_credit']) ? (int)$lot_refund['refund_credit'] : 0,
+			'requested_at' => $requested_at
+		));
+		if(!$notify_ok && function_exists('macomaex_payment_log_write')){
+			macomaex_payment_log_write(array(
+				'stage' => 'refund_request_slack_notify_fail',
+				'order_no' => $order_no_refund,
+				'uid' => (string)$member['mb_id'],
+				'requested_at' => $requested_at
+			));
+		}
+
+		membership_refund_lock_release($refund_lock_name);
+		echo "1000|환불요청이 접수되었습니다.";
+		exit;
+	break;
+
 	case "matching_num_chk": //매칭가능 수 체크
 
 		if($member['mb_id']) {
-				$today = date("Y-m-d");
-				$msinfo=sql_fetch("select * from g5_membership_status where uid='{$member['mb_id']}' and date_begin <= '{$today }' and date_end >='{$today }'" );
-				$cinfo=getComapyInfo($kedcd);
-				if($msinfo['matching_able_cnt']>0) echo "1000|".$msinfo['matching_able_cnt']."|".$cinfo['ENP_NM'];
-				else echo "500|".$msinfo['matching_able_cnt'];
+			$current_credit = credit_ledger_get_balance($member['mb_id']);
+			$cinfo=getComapyInfo($kedcd);
+			if($current_credit > 0) echo "1000|".$current_credit."|".$cinfo['ENP_NM'];
+			else echo "500|".$current_credit;
 		}else{
 			echo "501|로그인 후 이용하세요.";
 		}

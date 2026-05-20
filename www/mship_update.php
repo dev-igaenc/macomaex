@@ -152,9 +152,9 @@ $SignatureUtil = new INIStdPayUtil();
 		$date_end=$nextmonth."-".$lastDay;
 		//$timestamp = strtotime($date_end);
 	}
-	//만료일 지난 맴버쉽 종료로 바꾸기
-	$sql = " update g5_membership_status SET STATUS='E' where date_end < '{$today}' AND (status='S' OR status='T')";
-	sql_query($sql);
+	// legacy membership_status 기능 비활성화: 상태 테이블 갱신 중단
+	// $sql = " update g5_membership_status SET STATUS='E' where date_end < '{$today}' AND (status='S' OR status='T')";
+	// sql_query($sql);
 
 	//시간지난 셀렉티드 중지
 	sql_query("UPDATE g5_selected_data set s_status='E' WHERE DATE(s_start)<='{$today}' AND DATE(s_end)<'{$today}' AND s_status='S'");
@@ -170,9 +170,10 @@ $SignatureUtil = new INIStdPayUtil();
 		SET gs.s_cnt = sd.cnt, gs.s_modi = NOW()
 	");
 	
-	//오늘 만료일 이용자 검색
-	$sql = " select * from g5_membership_status A left join g5_membership_paybill B on A.order_no=B.order_no where A.date_end='{$today}' and A.status='S'";
-	$result = sql_query($sql);
+	// legacy membership_status 기능 비활성화: 정기결제 대상 조회 중단
+	// $sql = " select * from g5_membership_status A left join g5_membership_paybill B on A.order_no=B.order_no where A.date_end='{$today}' and A.status='S'";
+	// $result = sql_query($sql);
+	$result = sql_query("select 1 where 0");
 	for($i = 0; $row = sql_fetch_array($result); $i++){
 		//신규오더 넘버부여
 		$timestamp = $SignatureUtil->getTimestamp();

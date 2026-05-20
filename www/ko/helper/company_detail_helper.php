@@ -44,9 +44,8 @@ function company_detail_trade_request_consume_credit($memberId, $trNo, $targetKe
 		);
 	}
 
-	$status = sql_fetch("select * from g5_membership_status where uid='" . sql_escape_string($memberId) . "' order by no desc limit 1");
-	$currentCredit = isset($status['matching_able_cnt']) ? (int)$status['matching_able_cnt'] : 0;
-	if (empty($status['uid']) || $currentCredit < $creditAmount) {
+	$currentCredit = credit_ledger_get_balance($memberId);
+	if ($currentCredit < $creditAmount) {
 		return array(
 			'success' => false,
 			'message' => '요청 가능 크레딧이 부족합니다. (필요: ' . $creditAmount . ')',
@@ -54,10 +53,11 @@ function company_detail_trade_request_consume_credit($memberId, $trNo, $targetKe
 		);
 	}
 
-	$deductSql = "update g5_membership_status set matching_able_cnt=matching_able_cnt-{$creditAmount} where uid='" . sql_escape_string($memberId) . "' and matching_able_cnt >= {$creditAmount}";
-	$deductResult = sql_query($deductSql, false);
-	$affected = sql_fetch("select row_count() as cnt");
-	if (!$deductResult || (int)$affected['cnt'] < 1) {
+	sql_query("START TRANSACTION");
+	$ledgerLast = credit_ledger_get_latest_row($memberId, true);
+	$currentCredit = isset($ledgerLast['credit_after']) ? (int)$ledgerLast['credit_after'] : 0;
+	if ($currentCredit < $creditAmount) {
+		sql_query("ROLLBACK");
 		return array(
 			'success' => false,
 			'message' => '요청 가능 크레딧이 부족합니다. (필요: ' . $creditAmount . ')',
@@ -65,18 +65,17 @@ function company_detail_trade_request_consume_credit($memberId, $trNo, $targetKe
 		);
 	}
 
-	$afterStatus = sql_fetch("select * from g5_membership_status where uid='" . sql_escape_string($memberId) . "' order by no desc limit 1");
-	$creditAfter = isset($afterStatus['matching_able_cnt']) ? (int)$afterStatus['matching_able_cnt'] : 0;
+	$creditAfter = $currentCredit - $creditAmount;
 	$memo = addslashes($tradeType === 'TM' ? 'TM 서포트 거래 요청' : '일반 거래 요청');
 
-	$historySql = "insert into g5_matching_credit_history set
+	$historySql = "insert into credit_history set
 		uid='" . sql_escape_string($memberId) . "',
 		tx_type='USE',
 		service_code='TRADE_REQUEST',
 		credit_delta='-{$creditAmount}',
 		credit_after='{$creditAfter}',
 		order_no=NULL,
-		matching_no='{$trNo}',
+		tr_no='{$trNo}',
 		target_kedcd='" . sql_escape_string($targetKedcd) . "',
 		once_key=NULL,
 		memo='{$memo}',
@@ -85,22 +84,31 @@ function company_detail_trade_request_consume_credit($memberId, $trNo, $targetKe
 
 	$historyResult = sql_query($historySql, false);
 	if (!$historyResult) {
-		sql_query("update g5_membership_status set matching_able_cnt=matching_able_cnt+{$creditAmount} where uid='" . sql_escape_string($memberId) . "'", false);
+		sql_query("ROLLBACK");
 
 		return array(
 			'success' => false,
 			'message' => '크레딧 이력 저장에 실패했습니다.',
 		);
 	}
-
-	if (!empty($afterStatus['order_no'])) {
-		sql_query("update g5_membership_status_history set matching_able_cnt='{$creditAfter}' where uid='" . sql_escape_string($memberId) . "' and order_no='" . sql_escape_string($afterStatus['order_no']) . "'", false);
+	$useHistoryId = (int)sql_insert_id();
+	// USE 1건을 FIFO LOT 차감으로 분해해 실제 사용 LOT를 기록한다.
+	$lotUse = credit_lot_allocate_use($memberId, $useHistoryId, $creditAmount);
+	if (empty($lotUse['ok'])) {
+		sql_query("ROLLBACK");
+		$lotMsg = isset($lotUse['message']) ? (string)$lotUse['message'] : '';
+		return array(
+			'success' => false,
+			'message' => ($lotMsg === 'not enough lot remain') ? '가용 크레딧이 부족합니다. (필요: ' . $creditAmount . ')' : '크레딧 차감 처리 중 오류가 발생했습니다.',
+		);
 	}
+
+	sql_query("COMMIT");
 
 	return array(
 		'success' => true,
 		'credit_after' => $creditAfter,
-		'order_no' => $afterStatus['order_no'] ?? '',
+		'order_no' => '',
 	);
 }
 
@@ -452,9 +460,8 @@ function company_detail_handle_trade_request_insert($member, $request) {
 		company_detail_trade_request_json_response(false, '거래 목적 처리 중 오류가 발생했습니다.');
 	}
 
-	$creditStatus = sql_fetch("select uid, matching_able_cnt from g5_membership_status where uid='" . sql_escape_string($requestMemberId) . "' order by no desc limit 1");
-	$remainCredit = isset($creditStatus['matching_able_cnt']) ? (int)$creditStatus['matching_able_cnt'] : 0;
-	if (empty($creditStatus['uid']) || $remainCredit < $creditAmount) {
+	$remainCredit = credit_ledger_get_balance($requestMemberId);
+	if ($remainCredit < $creditAmount) {
 		company_detail_trade_request_log('validation_failed', array(
 			'reason' => 'credit_not_enough',
 			'remain_credit' => $remainCredit,

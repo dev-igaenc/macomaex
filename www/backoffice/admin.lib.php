@@ -845,7 +845,24 @@ unset($amenu);
 			}
 			if($key2)  {  $menu[$row['me_gr']][]=$tmp; }
 		}
-    }
+	    }
+
+// 결제 메뉴명 표준화: 정기결제 관리 -> 결제 관리
+if (isset($menu) && is_array($menu)) {
+	foreach ($menu as $menu_key => $menu_rows) {
+		if (!is_array($menu_rows)) continue;
+		foreach ($menu_rows as $idx => $menu_row) {
+			if (!is_array($menu_row)) continue;
+			if (isset($menu_row[0]) && (string)$menu_row[0] === '700100') {
+				$menu[$menu_key][$idx][1] = '결제 관리';
+			}
+			// 결제 하위 700400(membership_list.php) 메뉴명 통일
+			if (isset($menu_row[0]) && (string)$menu_row[0] === '700400') {
+				$menu[$menu_key][$idx][1] = '플랜 관리';
+			}
+		}
+	}
+}
 
 // 결제 하위에 크레딧 모니터링 메뉴를 코드로 보강
 if (isset($menu) && is_array($menu)) {
@@ -872,6 +889,49 @@ if (isset($menu) && is_array($menu)) {
 				1
 			);
 		}
+		break;
+	}
+}
+
+// 결제 하위 순서 통일: 플랜 관리 -> 결제 관리 -> 크레딧 모니터링
+if (isset($menu) && is_array($menu)) {
+	foreach ($menu as $menu_key => $menu_rows) {
+		if (!isset($menu_rows[0][1]) || trim((string)$menu_rows[0][1]) !== '결제') {
+			continue;
+		}
+		if (!is_array($menu_rows) || count($menu_rows) < 2) {
+			break;
+		}
+
+		$head = $menu_rows[0];
+		$children = array_slice($menu_rows, 1);
+		$decorated = array();
+		foreach ($children as $child_idx => $child_row) {
+			$code = isset($child_row[0]) ? (string)$child_row[0] : '';
+			$priority = 1000;
+			if ($code === '700400') $priority = 10;
+			else if ($code === '700100') $priority = 20;
+			else if ($code === '700200') $priority = 30;
+
+			$decorated[] = array(
+				'priority' => $priority,
+				'idx' => $child_idx,
+				'row' => $child_row
+			);
+		}
+
+		usort($decorated, function($a, $b) {
+			if ($a['priority'] === $b['priority']) {
+				return $a['idx'] - $b['idx'];
+			}
+			return $a['priority'] - $b['priority'];
+		});
+
+		$sorted_rows = array($head);
+		foreach ($decorated as $d) {
+			$sorted_rows[] = $d['row'];
+		}
+		$menu[$menu_key] = $sorted_rows;
 		break;
 	}
 }

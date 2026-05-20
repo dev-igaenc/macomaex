@@ -130,45 +130,46 @@ $(function () {
         });
     })();
 
-    // 구독/결제취소 요청
-    $("#membership_cancel").on("click", function () {
-        var ms_id = $("#ms_id").val();
-        var isCredit = $("#is_credit_membership").val();
+    // 충전건 개별 환불 신청
+    $(document).on("click", ".js-charge-refund-btn", function () {
+        var orderNo = ($(this).data("order-no") || "").toString().trim();
+        if (!orderNo) {
+            jAlert("주문 정보를 확인할 수 없습니다.", "알림");
+            return;
+        }
 
-        if (ms_id) {
-            var confirmText = (isCredit == "1")
-                ? "결제 후 7일 이내 해당 결제로 충전한 크레딧 미사용 건만 전액 환불이 가능합니다.\n7일 경과 또는 일부 사용 시 환불이 불가합니다.\n결제 취소를 진행하시겠습니까?"
-                : "구독취소는 결제 후 7일 이내\n매칭 요청 서비스를 이용하지 않은 경우, 전액 환불처리 되며 \n7일 이후 혹은 사용 이력이 있으시면\n만료일까지 유지후 구독 취소됩니다. \n구독을 취소하시겠습니까?";
-
-            jCustomConfirm(confirmText, "알림", "취소", "확인", function (e) {
-                if (!e) {
-                    $.post("../get_set.php", {
-                        type: "membership_cancel",
-                        cancel_token: $("#membership_cancel_token").val()
-                    }).done(function (jqXHR) {
-                        jqXHR = jqXHR.split("|");
-                        if (jqXHR[0] == 1000) {
-                            if (jqXHR[1]) {
-                                jAlert(jqXHR[1], "알림", function () {
-                                    location.reload();
-                                });
-                            } else {
-                                jAlert("구독 취소 처리되었습니다.", "알림", function () {
-                                    location.reload();
-                                });
-                            }
-                        } else {
-                            if (jqXHR[1] == "02") {
-                                jAlert("검색 결과가 없습니다.", "알림");
-                            } else {
-                                jAlert(jqXHR[1], "알림");
-                            }
-                        }
+        var doRefund = function () {
+            $.post("../get_set.php", {
+                type: "credit_charge_refund",
+                order_no: orderNo,
+                cancel_token: $("#membership_cancel_token").val()
+            }).done(function (raw) {
+                var text = String(raw || "").replace(/^\uFEFF/, "").trim();
+                var codeIdx = text.search(/(?:1000|500|429|501)\|/);
+                if (codeIdx > 0) text = text.substring(codeIdx);
+                text = text.replace(/<[^>]*>/g, "").trim();
+                var parts = text.split("|");
+                if (parts[0] === "1000") {
+                    jAlert(parts[1] ? parts[1] : "환불요청이 접수되었습니다.", "알림", function () {
+                        location.reload();
                     });
+                } else {
+                    jAlert(parts[1] ? parts[1] : "환불요청 처리 중 오류가 발생했습니다.", "알림");
                 }
             });
+        };
+
+        var confirmText = "해당 충전건 환불을 신청하시겠습니까?\n결제 후 7일 이내, 해당 충전건 미사용인 경우에만 환불됩니다.";
+        if (typeof jCustomConfirm === "function") {
+            jCustomConfirm(confirmText, "알림", "취소", "확인", function (e) {
+                if (!e) doRefund();
+            });
+        } else if (typeof jConfirm === "function") {
+            jConfirm(confirmText, "알림", function (ok) {
+                if (ok) doRefund();
+            });
         } else {
-            jAlert("구독취소는 맴버쉽 이용자만 가능합니다.");
+            if (confirm(confirmText)) doRefund();
         }
     });
 });
