@@ -2173,7 +2173,7 @@ switch ($type) {
 			exit;
 		}
 
-		$pinfo=sql_fetch("select order_no, uid, status from g5_membership_paybill where order_no='{$order_no_sql}'");
+		$pinfo=sql_fetch("select order_no, uid, status, membership_parent_no, order_goods, price, card_appl_price, regdate from g5_membership_paybill where order_no='{$order_no_sql}'");
 		if(!$pinfo['order_no']){
 			echo "500|결제 내역을 찾을 수 없습니다.";
 			exit;
@@ -2254,6 +2254,32 @@ switch ($type) {
 			membership_refund_lock_release($refund_lock_name);
 			echo "500|동시 처리로 인해 요청 접수에 실패했습니다. 잠시 후 다시 시도해 주세요.";
 			exit;
+		}
+
+		// 환불요청 접수 시 관리자 슬랙 알림
+		$plan_title = trim((string)$pinfo['order_goods']);
+		if((int)$pinfo['membership_parent_no'] > 0){
+			$plan_row = sql_fetch("select title from g5_membership_manage where no='".(int)$pinfo['membership_parent_no']."' limit 1");
+			if(is_array($plan_row) && trim((string)$plan_row['title']) !== '') $plan_title = trim((string)$plan_row['title']);
+		}
+		$member_row = sql_fetch("select mb_name from {$g5['member_table']} where mb_id='{$uid_sql}' limit 1");
+		$requested_at = date('Y-m-d H:i:s');
+		$notify_ok = membership_refund_slack_notify(array(
+			'order_no' => $order_no_refund,
+			'uid' => (string)$member['mb_id'],
+			'company' => is_array($member_row) ? trim((string)$member_row['mb_name']) : '',
+			'plan' => $plan_title,
+			'amount' => max((int)$pinfo['card_appl_price'], (int)$pinfo['price']),
+			'credit' => isset($lot_refund['refund_credit']) ? (int)$lot_refund['refund_credit'] : 0,
+			'requested_at' => $requested_at
+		));
+		if(!$notify_ok && function_exists('macomaex_payment_log_write')){
+			macomaex_payment_log_write(array(
+				'stage' => 'refund_request_slack_notify_fail',
+				'order_no' => $order_no_refund,
+				'uid' => (string)$member['mb_id'],
+				'requested_at' => $requested_at
+			));
 		}
 
 		membership_refund_lock_release($refund_lock_name);
