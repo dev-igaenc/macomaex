@@ -24,10 +24,14 @@ if ($is_member) {
         $header_display_name = isset($member['mb_nick']) ? $member['mb_nick'] : '';
     }
 
-    $uid_sql = sql_real_escape_string((string)$member['mb_id']);
-    $credit_row = sql_fetch("select credit_after from g5_matching_credit_history where uid='{$uid_sql}' order by id desc limit 1");
-    if (isset($credit_row['credit_after']) && $credit_row['credit_after'] !== null && $credit_row['credit_after'] !== '') {
-        $header_credit = (int)$credit_row['credit_after'];
+    if (function_exists('credit_ledger_get_balance')) {
+        $header_credit = (float)credit_ledger_get_balance($member['mb_id']);
+    } else {
+        $uid_sql = sql_real_escape_string((string)$member['mb_id']);
+        $credit_row = sql_fetch("select credit_after from g5_matching_credit_history where uid='{$uid_sql}' order by id desc limit 1");
+        if (isset($credit_row['credit_after']) && $credit_row['credit_after'] !== null && $credit_row['credit_after'] !== '') {
+            $header_credit = (int)$credit_row['credit_after'];
+        }
     }
 }
 ?>

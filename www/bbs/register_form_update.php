@@ -330,7 +330,7 @@ if ($w == '') {
 	        service_code='SIGNUP_BONUS',
 	        credit_delta='{$signup_bonus}',
 	        credit_after='{$signup_bonus_after}',
-	        order_no='',
+	        order_no=NULL,
 	        tr_no='',
 	        memo='{$bonus_memo}',
 	        created_at=now()", false);

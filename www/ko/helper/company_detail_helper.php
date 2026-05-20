@@ -97,9 +97,18 @@ function company_detail_trade_request_consume_credit($memberId, $trNo, $targetKe
 	if (empty($lotUse['ok'])) {
 		sql_query("ROLLBACK");
 		$lotMsg = isset($lotUse['message']) ? (string)$lotUse['message'] : '';
+		$isLotShortage = ($lotMsg === 'not enough lot remain');
+		$userMessage = $isLotShortage
+			? '가용 크레딧이 부족합니다. (필요: ' . $creditAmount . ')'
+			: '크레딧 차감 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.';
 		return array(
 			'success' => false,
-			'message' => ($lotMsg === 'not enough lot remain') ? '가용 크레딧이 부족합니다. (필요: ' . $creditAmount . ')' : '크레딧 차감 처리 중 오류가 발생했습니다.',
+			'message' => $userMessage,
+			'debug_stage' => 'lot_allocate',
+			'debug_reason' => $lotMsg,
+			'debug_allocated' => isset($lotUse['allocated']) ? (int)$lotUse['allocated'] : 0,
+			'debug_missing' => isset($lotUse['missing']) ? (int)$lotUse['missing'] : 0,
+			'plan_required' => $isLotShortage,
 		);
 	}
 
@@ -508,6 +517,10 @@ function company_detail_handle_trade_request_insert($member, $request) {
 		company_detail_trade_request_log('credit_consume_failed', array(
 			'tr_no' => $insertId,
 			'message' => $creditConsume['message'] ?? '',
+			'debug_stage' => $creditConsume['debug_stage'] ?? '',
+			'debug_reason' => $creditConsume['debug_reason'] ?? '',
+			'debug_allocated' => $creditConsume['debug_allocated'] ?? null,
+			'debug_missing' => $creditConsume['debug_missing'] ?? null,
 		));
 		company_detail_trade_request_json_response(false, $creditConsume['message'] ?? '크레딧 차감 중 오류가 발생했습니다.', array(
 			'tr_no' => $insertId,
