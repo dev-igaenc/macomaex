@@ -200,7 +200,7 @@ if (!function_exists('credit_lot_allocate_use')) {
 		$result = sql_query("select lot_id, remain_amount
 			from credit_lot
 			where mb_id='{$mb_id_sql}'
-			  and lot_status='ACTIVE'
+			  and lot_status<>'REFUNDED'
 			  and remain_amount > 0
 			order by charged_at asc, lot_id asc
 			for update", false);
@@ -231,7 +231,7 @@ if (!function_exists('credit_lot_allocate_use')) {
 			$alloc = min($remain_need, $lot_remain);
 			$upd = sql_query("update credit_lot set
 					remain_amount=remain_amount-{$alloc},
-					lot_status=case when remain_amount-{$alloc} <= 0 then 'EXHAUSTED' else 'ACTIVE' end,
+					lot_status=case when remain_amount = {$alloc} then 'EXHAUSTED' else 'ACTIVE' end,
 					updated_at=now()
 				where lot_id='{$lot_id}'
 				  and remain_amount >= {$alloc}", false);
