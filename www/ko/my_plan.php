@@ -307,7 +307,7 @@ for($i=0; $i<count($payment_rows); $i++){
                                 $price_text_display = ($paid_amount > 0) ? "-₩".number_format($paid_amount) : "환불";
                             }
 
-	                            $status_text = "완료";
+	                            $status_text = "결제완료";
 	                            $status_class = "done";
 	                            if($is_free){
 	                                $status_text = "무상지급";
@@ -332,7 +332,7 @@ for($i=0; $i<count($payment_rows); $i++){
 
 	                                if($refund_step === '2'){
 	                                    $status_text = "환불요청됨";
-	                                    $status_class = "used";
+	                                    $status_class = "requested";
 	                                } else if($refund_step === '3'){
 	                                    $status_text = "환불처리중";
 	                                    $status_class = "used";
@@ -380,17 +380,17 @@ for($i=0; $i<count($payment_rows); $i++){
                                     <span><?=htmlspecialchars($meta_credit_text, ENT_QUOTES)?></span>
                                     <span class="dot"></span>
                                     <span><?=htmlspecialchars($meta_method_text, ENT_QUOTES)?></span>
+                                    <?php if($charge_refund_btn){?>
+                                    <span class="meta-sep-pipe">|</span>
+                                    <button class="meta-refund-action js-charge-refund-btn" type="button" data-order-no="<?=htmlspecialchars($charge_order_no, ENT_QUOTES)?>">환불신청</button>
+                                    <?php }?>
                                     <?php }?>
                                 </div>
                             </div>
 	                            <div class="pay-card-right">
 	                                <span class="credit-delta <?=$delta_class?>"><?=$delta_sign?><?=$delta?></span>
 	                                <span class="price-text"><?=htmlspecialchars($price_text_display, ENT_QUOTES)?></span>
-	                                <?php if($charge_refund_btn){?>
-	                                <button class="status-badge refund-action js-charge-refund-btn" type="button" data-order-no="<?=htmlspecialchars($charge_order_no, ENT_QUOTES)?>">환불신청</button>
-	                                <?php }else{?>
 	                                <span class="status-badge <?=$status_class?>"><?=$status_text?></span>
-	                                <?php }?>
 	                            </div>
 	                        </div>
 	                        <?php }?>
@@ -506,7 +506,7 @@ for($i=0; $i<count($payment_rows); $i++){
                                 </div>
                                 <div class="pay-card-right">
                                     <span class="credit-delta minus">-<?=$delta?></span>
-                                    <span class="status-badge used">사용</span>
+                                    <span class="status-badge used used-<?=$use_type?>">사용</span>
                                 </div>
                             </div>
                             <?php }?>

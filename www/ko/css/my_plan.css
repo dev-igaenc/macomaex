@@ -296,7 +296,7 @@
 }
 
 #my_plan .payment_history_cards .pay-card[data-type="refund"] .credit-delta.minus {
-    color: #dc2626;
+    color: #111111;
 }
 
 #my_plan .payment_history_cards .pay-card[data-type="refund"] .status-badge.used {
@@ -318,7 +318,7 @@
 }
 
 #my_plan .payment_history_cards .pay-card[data-type="unlisted"] .credit-delta.minus {
-    color: #fb923c;
+    color: #111111;
 }
 
 #my_plan .payment_history_cards .pay-card-info {
@@ -353,6 +353,24 @@
     flex-shrink: 0;
 }
 
+#my_plan .payment_history_cards .pay-card-info .meta .meta-sep-pipe {
+    color: #d1d5db;
+    font-weight: 500;
+}
+
+#my_plan .payment_history_cards .pay-card-info .meta .meta-refund-action {
+    border: 0;
+    background: transparent;
+    padding: 0;
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.2;
+    color: #111111;
+    font-weight: 600;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
 #my_plan .payment_history_cards .pay-card-right {
     display: flex;
     flex-direction: column;
@@ -374,19 +392,19 @@
 }
 
 #my_plan .payment_history_cards .credit-delta.plus {
-    color: #2563eb;
+    color: #111111;
 }
 
 #my_plan .payment_history_cards .credit-delta.minus {
-    color: #7c3aed;
+    color: #111111;
 }
 
 #my_plan .payment_history_cards #useList .pay-card[data-type="match"] .credit-delta.minus {
-    color: #2563eb;
+    color: #111111;
 }
 
 #my_plan .payment_history_cards .credit-delta.green {
-    color: #16a34a;
+    color: #111111;
 }
 
 #my_plan .payment_history_cards .status-badge {
@@ -404,9 +422,9 @@
 }
 
 #my_plan .payment_history_cards .status-badge.done {
-    background: #f0fdf4;
-    color: #16a34a;
-    border: 1px solid #bbf7d0;
+    background: #eff6ff;
+    color: #2563eb;
+    border: 1px solid #bfdbfe;
 }
 
 #my_plan .payment_history_cards .status-badge.free {
@@ -419,6 +437,30 @@
     background: #f5f3ff;
     color: #7c3aed;
     border: 1px solid #ddd6fe;
+}
+
+#my_plan .payment_history_cards .status-badge.used-match {
+    background: #eff6ff;
+    color: #2563eb;
+    border: 1px solid #bfdbfe;
+}
+
+#my_plan .payment_history_cards .status-badge.used-analyze {
+    background: #f5f3ff;
+    color: #7c3aed;
+    border: 1px solid #ddd6fe;
+}
+
+#my_plan .payment_history_cards .status-badge.used-unlisted {
+    background: #fff7ed;
+    color: #fb923c;
+    border: 1px solid #fdba74;
+}
+
+#my_plan .payment_history_cards .status-badge.requested {
+    background: #fff7ed;
+    color: #fb923c;
+    border: 1px solid #fdba74;
 }
 
 #my_plan .payment_history_cards .status-badge.blocked {
