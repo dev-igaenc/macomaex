@@ -132,11 +132,14 @@ jobs:
                 *) continue ;;
               esac
               rel="${file#www/}"
-              remote_file="$REMOTE_PATH/$rel"
-              remote_dir="$(dirname "$remote_file")"
+              remote_dir="$(dirname "$rel")"
               local_file="$GITHUB_WORKSPACE/$file"
-              echo "mkdir -p \"$remote_dir\"" >> "$CMD_FILE"
-              echo "put -O \"$remote_dir\" \"$local_file\"" >> "$CMD_FILE"
+              if [ "$remote_dir" = "." ]; then
+                echo "put -O \".\" \"$local_file\"" >> "$CMD_FILE"
+              else
+                echo "mkdir -p \"$remote_dir\"" >> "$CMD_FILE"
+                echo "put -O \"$remote_dir\" \"$local_file\"" >> "$CMD_FILE"
+              fi
             done
           fi
 
@@ -148,7 +151,7 @@ jobs:
                 *) continue ;;
               esac
               rel="${file#www/}"
-              remote_file="$REMOTE_PATH/$rel"
+              remote_file="$rel"
               echo "rm -f \"$remote_file\"" >> "$CMD_FILE"
             done
           fi
@@ -157,7 +160,10 @@ jobs:
 
           lftp "sftp://$DEPLOY_HOST:$DEPLOY_PORT" <<EOF
           set sftp:connect-program "ssh -a -x -o PreferredAuthentications=password -o PubkeyAuthentication=no -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
+          set cmd:fail-exit yes
+          set sftp:auto-confirm yes
           user "$DEPLOY_USER" "$DEPLOY_PASSWORD"
+          cd "$REMOTE_PATH"
           source "$CMD_FILE"
           EOF
 
