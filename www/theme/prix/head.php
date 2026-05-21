@@ -259,6 +259,14 @@ if ($is_member) {
                 <li class="sub one" data-gi="mypage" style="display:none"><a href="<?php echo $link_0604; ?>">회원정보수정</a></li>
                 <li class="sub one" data-gi="mypage" style="display:none"><a href="<?php echo $link_0605; ?>">결제정보</a></li>
             </ul>
+			<div class="all_user">
+				<?php if (!$is_member) { ?>
+					<a href="<?php echo G5_BBS_URL ?>/login.php?url=<?php echo urlencode($_SERVER['REQUEST_URI']); ?>" class="side-auth side-login">로그인</a>
+					<a href="<?php echo G5_BBS_URL ?>/register.php" class="side-auth side-signup">회원가입</a>
+				<?php } else { ?>
+					<a href="<?php echo G5_BBS_URL ?>/logout.php?url=<?php echo urlencode($_SERVER['REQUEST_URI']); ?>" class="side-auth side-login">로그아웃</a>
+				<?php } ?>
+			</div>
         </div>
     </div>
     <script>
