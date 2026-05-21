@@ -438,25 +438,25 @@ function build_company_order_clause($sort_key) {
     switch ($sort_key) {
         case 'grow':
             return "
-                CASE WHEN S.growth_score_5 IS NULL OR S.growth_score_5 = '' THEN 1 ELSE 0 END ASC,
-                CAST(S.growth_score_5 AS DECIMAL(10,4)) DESC,
-                CASE WHEN S.final_total_score_5 IS NULL OR S.final_total_score_5 = '' THEN 1 ELSE 0 END ASC,
-                CAST(S.final_total_score_5 AS DECIMAL(10,4)) DESC,
+                (S.growth_score_5 IS NULL) ASC,
+                S.growth_score_5 DESC,
+                (S.final_total_score_5 IS NULL) ASC,
+                S.final_total_score_5 DESC,
                 A.ENP_NM ASC
             ";
         case 'stable':
             return "
-                CASE WHEN S.stability_score_5 IS NULL OR S.stability_score_5 = '' THEN 1 ELSE 0 END ASC,
-                CAST(S.stability_score_5 AS DECIMAL(10,4)) DESC,
-                CASE WHEN S.final_total_score_5 IS NULL OR S.final_total_score_5 = '' THEN 1 ELSE 0 END ASC,
-                CAST(S.final_total_score_5 AS DECIMAL(10,4)) DESC,
+                (S.stability_score_5 IS NULL) ASC,
+                S.stability_score_5 DESC,
+                (S.final_total_score_5 IS NULL) ASC,
+                S.final_total_score_5 DESC,
                 A.ENP_NM ASC
             ";
         case 'rank':
         default:
             return "
-                CASE WHEN S.final_total_score_5 IS NULL OR S.final_total_score_5 = '' THEN 1 ELSE 0 END ASC,
-                CAST(S.final_total_score_5 AS DECIMAL(10,4)) DESC,
+                (S.final_total_score_5 IS NULL) ASC,
+                S.final_total_score_5 DESC,
                 A.ENP_NM ASC
             ";
     }
@@ -531,6 +531,34 @@ function matching_list_count_cache_set($cache_key, $count) {
     $cache_file = $cache_dir . '/count_' . md5($cache_key) . '.php';
     $payload = json_encode(['cnt' => (int)$count], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     @file_put_contents($cache_file, $payload, LOCK_EX);
+}
+
+function matching_list_payload_cache_get($cache_key, $ttl_sec = 20) {
+    $cache_dir = G5_DATA_PATH . '/cache/matching_list';
+    if (!is_dir($cache_dir)) {
+        @mkdir($cache_dir, 0777, true);
+    }
+    $cache_file = $cache_dir . '/payload_' . md5($cache_key) . '.json';
+    if (!is_file($cache_file)) return null;
+    if ((time() - @filemtime($cache_file)) > (int)$ttl_sec) return null;
+
+    $raw = @file_get_contents($cache_file);
+    if ($raw === false || $raw === '') return null;
+    $payload = @json_decode($raw, true);
+    if (!is_array($payload) || empty($payload['ok'])) return null;
+    return $payload;
+}
+
+function matching_list_payload_cache_set($cache_key, $payload) {
+    if (!is_array($payload) || empty($payload['ok'])) return;
+    $cache_dir = G5_DATA_PATH . '/cache/matching_list';
+    if (!is_dir($cache_dir)) {
+        @mkdir($cache_dir, 0777, true);
+    }
+    $cache_file = $cache_dir . '/payload_' . md5($cache_key) . '.json';
+    $json = json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    if ($json === false) return;
+    @file_put_contents($cache_file, $json, LOCK_EX);
 }
 
 // 일반 리스트 카드와 총 개수 조회
@@ -694,6 +722,30 @@ $unlocked_bzno_map = fetch_unlocked_bzno_map_for_member($member['mb_id'] ?? '');
 
 $cards = [];
 $cards_total_count = 0;
+
+$should_use_api_payload_cache = (
+    $is_matching_list_api
+    && !$has_comnum
+    && $offset_req === 0
+);
+$api_payload_cache_key = '';
+if ($should_use_api_payload_cache) {
+    $api_payload_cache_key = implode('|', array(
+        'v1',
+        'matching_list_api',
+        'member:' . (string)($member['mb_id'] ?? ''),
+        'type:' . (string)$current_type,
+        'cat:' . (string)$current_cat,
+        'sort:' . (string)$current_sort,
+        'page_size:' . (int)$page_size
+    ));
+    $cached_payload = matching_list_payload_cache_get($api_payload_cache_key, 20);
+    if (is_array($cached_payload)) {
+        header('Content-Type: application/json; charset=UTF-8');
+        echo json_encode($cached_payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        return;
+    }
+}
 
 if (!$has_comnum) {
     // 7-1. 사업자번호 미입력: 탭/카테고리 기준 기업 조회
@@ -950,8 +1002,7 @@ if (!$has_comnum) {
 
 if ($is_matching_list_api) {
     $grid_html = matching_list_render_cards_grid_html($cards);
-    header('Content-Type: application/json; charset=UTF-8');
-    echo json_encode([
+    $api_payload = [
         'ok' => true,
         'gridHtml' => $grid_html,
         'totalByType' => [
@@ -961,7 +1012,12 @@ if ($is_matching_list_api) {
         'currentType' => ($current_type === 'seller') ? 'seller' : 'buyer',
         'currentSort' => $current_sort,
         'pageSize' => (int)$page_size,
-    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    ];
+    if ($should_use_api_payload_cache && $api_payload_cache_key !== '') {
+        matching_list_payload_cache_set($api_payload_cache_key, $api_payload);
+    }
+    header('Content-Type: application/json; charset=UTF-8');
+    echo json_encode($api_payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     return;
 }
 
@@ -1008,6 +1064,11 @@ $sidebar_icon_map = [
     'medical' => 'cat-iso-17',
     'packaging' => 'cat-iso-12',
 ];
+
+$ai_recommend_href = '/ko/company_list_ai_demo.php?entry=matching_ai_demo';
+if ($has_comnum) {
+    $ai_recommend_href = '/ko/company_list_ai.php?comnum=' . urlencode($input_comnum);
+}
 ?>
 
 <div id="listWrap">
@@ -1028,7 +1089,7 @@ $sidebar_icon_map = [
         <aside class="list-sidebar">
 
             <div class="list-sidebar_ai_section">
-                <a href="/ko/company_list_ai_demo.php?entry=matching_ai_demo" class="list-sidebar_ai <?php echo $has_comnum ? 'on' : ''; ?>">
+                <a href="<?php echo htmlspecialchars($ai_recommend_href, ENT_QUOTES, 'UTF-8'); ?>" class="list-sidebar_ai <?php echo $has_comnum ? 'on' : ''; ?>">
                     <span class="list-sidebar_ai_icon"><span class="ai-magic-wand"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16.8 2.2l1.1 2.3 2.3 1.1-2.3 1.1-1.1 2.3-1.1-2.3-2.3-1.1 2.3-1.1 1.1-2.3zm3.2 2.8.6 1.1 1.1.6-1.1.6-.6 1.1-.6-1.1-1.1-.6 1.1-.6.6-1.1zM7.4 17.4 16.1 8.7l2.6 2.6-8.7 8.7-2.6-2.6zm-1 2.4 1.3 1.3-3.1 1 .8-2.9z"/></svg></span></span>
                     <div class="list-sidebar_ai_body">
                         <span class="list-sidebar_ai_label">AI 추천받기</span>

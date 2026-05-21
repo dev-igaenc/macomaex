@@ -93,6 +93,18 @@ if (empty($company['KEDCD'])) {
     alert('기업 정보를 찾을 수 없습니다.', '/ko/company_list_ai.php');
 }
 
+$is_favorite_company = false;
+if (!empty($member['mb_id'])) {
+    $favorite_row = sql_fetch("
+        SELECT ms_id
+        FROM g5_favorite
+        WHERE mb_id = '" . sql_escape_string((string)$member['mb_id']) . "'
+          AND KEDCD = '" . sql_escape_string($kedcd) . "'
+        LIMIT 1
+    ");
+    $is_favorite_company = !empty($favorite_row['ms_id']);
+}
+
 $company_name = trim((string)($company['ENP_NM'] ?? ''));
 $g5['title'] = ($company_name !== '' ? $company_name . ' AI 기업 상세' : 'AI 추천 기업 상세');
 
@@ -268,9 +280,13 @@ if (empty($member['mb_id'])) {
     $company_seed['ai_analysis_html'] = '';
 }
 
+$current_request_uri = isset($_SERVER['REQUEST_URI']) ? (string)$_SERVER['REQUEST_URI'] : '/ko/company_detail_ai.php';
+$detail_login_url = '/bbs/login.php?url=' . urlencode($current_request_uri);
+
 $trade_request_login_params = $_GET;
 $trade_request_login_params['trade_request_login'] = '1';
-$trade_request_login_url = '/ko/company_detail_ai.php?' . http_build_query($trade_request_login_params);
+$trade_request_return_url = '/ko/company_detail_ai.php?' . http_build_query($trade_request_login_params);
+$trade_request_login_url = '/bbs/login.php?url=' . urlencode($trade_request_return_url);
 
 $requester_company_data = !empty($member['mb_id'])
     ? trade_request_member_company_data($member['mb_4'] ?? '')
@@ -343,7 +359,7 @@ include_once(G5_THEME_PATH . '/head.php');
 		<a class="btn-back" href="javascript:history.back();"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg> 돌아가기</a>
 		<div class="top-nav-actions">
 			<button type="button" class="btn-match-cta-top" id="openTypeModal2">거래 요청하기</button>
-			<button type="button" class="btn-favorite" data-favorite data-kedcd="<?php echo htmlspecialchars($kedcd, ENT_QUOTES, 'UTF-8'); ?>" title="관심기업 등록" aria-label="관심기업 등록">
+			<button type="button" class="btn-favorite<?php echo $is_favorite_company ? ' is-active' : ''; ?>" data-favorite data-kedcd="<?php echo htmlspecialchars($kedcd, ENT_QUOTES, 'UTF-8'); ?>" title="관심기업 등록" aria-label="관심기업 등록">
 				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
 			</button>
 			<button type="button" class="btn-topnav-icon" data-share title="공유하기" aria-label="공유하기">
@@ -395,9 +411,9 @@ include_once(G5_THEME_PATH . '/head.php');
 					<button type="button" class="btn-ai-analyze-cta" id="btnAiAnalyze">
 						<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z"/></svg>
 						분석하기
-				</button>
-				<p class="ai-cta-benefit" id="aiCtaBenefitText">두 기업 간 시너지, 거래 적합도, 협력 전략까지<br>AI가 심층 분석한 맞춤 리포트를 받아보세요.</p>
-			</div>
+				    </button>
+				    <p class="ai-cta-benefit" id="aiCtaBenefitText">두 기업 간 시너지, 거래 적합도, 협력 전략까지<br>AI가 심층 분석한 맞춤 리포트를 받아보세요.</p>
+			    </div>
 				<div class="ai-analysis-body" id="aiAnalysisBody" role="region" aria-live="polite" aria-label="AI 분석 결과" style="display:none;"></div>
 				<!-- LLM 보고서 생성 단계 로딩 템플릿 -->
 				<template id="reportLoadingTpl">
@@ -465,7 +481,8 @@ window.MATCH_REQUEST_CONTEXT = {
 	endpoint: "/ko/company_detail_ai.php",
 	sourcePage: "company_detail_ai",
 	isLoggedIn: <?php echo !empty($member['mb_id']) ? 'true' : 'false'; ?>,
-	loginCheckUrl: <?php echo json_encode($trade_request_login_url, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>,
+	loginCheckUrl: <?php echo json_encode($detail_login_url, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>,
+	tradeRequestLoginUrl: <?php echo json_encode($trade_request_login_url, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>,
 	autoOpenOnLoad: <?php echo $should_open_trade_request_modal ? 'true' : 'false'; ?>,
 	defaultRequestMessage: <?php echo json_encode($default_message, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>,
 	requesterCompany: <?php echo json_encode($requester_company_data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>,

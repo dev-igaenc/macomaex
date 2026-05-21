@@ -5,18 +5,33 @@ $e = static function ($value) {
     return htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8');
 };
 
-$requestCompanyProfileName = isset($requestCompanyProfileName) ? (string)$requestCompanyProfileName : (string)$requestCompanyName;
-$requestCompanyBizNo = isset($requestCompanyBizNo) ? (string)$requestCompanyBizNo : '';
-$requestCompanyFounded = isset($requestCompanyFounded) ? (string)$requestCompanyFounded : '';
-$requestCompanyEmployees = isset($requestCompanyEmployees) ? (string)$requestCompanyEmployees : '';
-$requestCompanyCorpType = isset($requestCompanyCorpType) ? (string)$requestCompanyCorpType : '';
-$requestCompanyIndustry = isset($requestCompanyIndustry) ? (string)$requestCompanyIndustry : '';
-$requestCompanyProduct = isset($requestCompanyProduct) ? (string)$requestCompanyProduct : '';
-$requestCompanyHomepage = isset($requestCompanyHomepage) ? (string)$requestCompanyHomepage : '';
-$tradeDirectionLabel = isset($tradeDirectionLabel) ? (string)$tradeDirectionLabel : '';
-$tradePurposeLabels = (isset($tradePurposeLabels) && is_array($tradePurposeLabels)) ? $tradePurposeLabels : array();
-$messagePreviewLines = (isset($messagePreviewLines) && is_array($messagePreviewLines)) ? $messagePreviewLines : array();
-$mailDateLabel = isset($mailDateLabel) ? (string)$mailDateLabel : date('Y년 m월 d일 H:i');
+    $requestCompanyProfileName = isset($requestCompanyProfileName) ? (string)$requestCompanyProfileName : (string)$requestCompanyName;
+    $requestCompanyBizNo = isset($requestCompanyBizNo) ? (string)$requestCompanyBizNo : '';
+    $requestCompanyFounded = isset($requestCompanyFounded) ? (string)$requestCompanyFounded : '';
+    $requestCompanyEmployees = isset($requestCompanyEmployees) ? (string)$requestCompanyEmployees : '';
+    $requestCompanyCorpType = isset($requestCompanyCorpType) ? (string)$requestCompanyCorpType : '';
+    $requestCompanyIndustry = isset($requestCompanyIndustry) ? (string)$requestCompanyIndustry : '';
+    $requestCompanyProduct = isset($requestCompanyProduct) ? (string)$requestCompanyProduct : '';
+    $requestCompanyHomepage = isset($requestCompanyHomepage) ? (string)$requestCompanyHomepage : '';
+    $hasRequestCompanyHomepage = trim($requestCompanyHomepage) !== '';
+    $tradeDirectionLabel = isset($tradeDirectionLabel) ? (string)$tradeDirectionLabel : '';
+    $tradePurposeLabels = (isset($tradePurposeLabels) && is_array($tradePurposeLabels)) ? $tradePurposeLabels : array();
+    $messagePreviewLines = (isset($messagePreviewLines) && is_array($messagePreviewLines)) ? $messagePreviewLines : array();
+    $messagePreviewImageUrl = isset($messagePreviewImageUrl) ? trim((string)$messagePreviewImageUrl) : '';
+    $mailDateLabel = isset($mailDateLabel) ? (string)$mailDateLabel : date('Y년 m월 d일 H:i');
+
+    // Email clients require absolute image URLs. G5_URL can be relative ('') depending on deployment config.
+    $mailBaseUrl = '';
+    if (defined('G5_HTTPS_DOMAIN') && trim((string)G5_HTTPS_DOMAIN) !== '') {
+        $mailBaseUrl = trim((string)G5_HTTPS_DOMAIN);
+    } elseif (defined('G5_DOMAIN') && trim((string)G5_DOMAIN) !== '') {
+        $mailBaseUrl = trim((string)G5_DOMAIN);
+    } elseif (defined('G5_URL') && preg_match('#^https?://#i', (string)G5_URL)) {
+        $mailBaseUrl = trim((string)G5_URL);
+    } else {
+        $mailBaseUrl = 'https://macomaex.com';
+    }
+    $mailBaseUrl = rtrim($mailBaseUrl, '/');
 ?>
 <!DOCTYPE html>
 <html lang="ko">
@@ -43,10 +58,12 @@ $mailDateLabel = isset($mailDateLabel) ? (string)$mailDateLabel : date('Y년 m�
 
   <tr><td style="padding:26px 28px 22px;border-bottom:1px solid #e5e7eb;">
     <div style="font-size:10px;font-weight:700;color:#3b82f6;letter-spacing:0.2em;text-transform:uppercase;margin-bottom:6px;">MACOMAEX · B2B 거래 플랫폼</div>
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
-      <div style="font-size:18px;font-weight:800;color:#111827;letter-spacing:-0.02em;">거래 요청이 도착했습니다</div>
-      <div style="font-size:11px;color:#9ca3af;"><?php echo $e($mailDateLabel); ?></div>
-    </div>
+    <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
+      <tr>
+        <td valign="middle" style="font-size:18px;font-weight:800;color:#111827;letter-spacing:-0.02em;">거래 요청이 도착했습니다</td>
+        <td valign="middle" align="right" style="font-size:11px;color:#9ca3af;white-space:nowrap;padding-left:12px;"><?php echo $e($mailDateLabel); ?></td>
+      </tr>
+    </table>
   </td></tr>
 
   <tr><td style="padding:14px 14px 18px;background:#f9fafb;">
@@ -55,8 +72,8 @@ $mailDateLabel = isset($mailDateLabel) ? (string)$mailDateLabel : date('Y년 m�
       <tr>
         <td style="width:47%;vertical-align:top;">
           <div style="background:#ffffff;border-radius:12px;padding:16px;border:1px solid #e5e7eb;">
-            <div style="width:36px;height:36px;background:#eff6ff;border-radius:50%;display:flex;align-items:center;justify-content:center;margin-bottom:10px;">
-              <img src="cid:trade-icon-sender" alt="" width="16" height="16" style="display:block;border:0;outline:none;text-decoration:none;">
+            <div style="width:36px;height:36px;background:#eff6ff;border-radius:50%;margin-bottom:10px;text-align:center;line-height:36px;">
+                <img src="<?php echo $mailBaseUrl; ?>/bbs/mail/icon/organization-t.png" width="16" height="16" alt="" style="display:inline-block;vertical-align:middle;border:0;outline:none;text-decoration:none;">
             </div>
             <div style="font-size:13px;font-weight:800;color:#111827;margin-bottom:3px;"><?php echo $e($requestCompanyProfileName); ?></div>
             <div style="font-size:11px;color:#6b7280;">발신 기업</div>
@@ -64,13 +81,13 @@ $mailDateLabel = isset($mailDateLabel) ? (string)$mailDateLabel : date('Y년 m�
         </td>
 
         <td align="center" style="width:6%;padding:0 4px;vertical-align:middle;">
-          <img src="cid:trade-icon-arrow" alt="" width="16" height="16" style="display:block;border:0;outline:none;text-decoration:none;">
+            <img src="<?php echo $mailBaseUrl; ?>/bbs/mail/icon/long-arrow-right.png" width="16" height="16" alt="" style="display:block;border:0;outline:none;text-decoration:none;">
         </td>
 
         <td style="width:47%;vertical-align:top;">
           <div style="background:#ffffff;border-radius:12px;padding:16px;border:1px solid #e5e7eb;">
-            <div style="width:36px;height:36px;background:#ecfdf5;border-radius:50%;display:flex;align-items:center;justify-content:center;margin-bottom:10px;">
-              <img src="cid:trade-icon-receiver" alt="" width="16" height="16" style="display:block;border:0;outline:none;text-decoration:none;">
+            <div style="width:36px;height:36px;background:#ecfdf5;border-radius:50%;margin-bottom:10px;text-align:center;line-height:36px;">
+                <img src="<?php echo $mailBaseUrl; ?>/bbs/mail/icon/organization-r.png" width="16" height="16" alt="" style="display:inline-block;vertical-align:middle;border:0;outline:none;text-decoration:none;">
             </div>
             <div style="font-size:13px;font-weight:800;color:#111827;margin-bottom:3px;"><?php echo $e($targetCompanyName); ?></div>
             <div style="font-size:11px;color:#6b7280;">수신 기업</div>
@@ -82,61 +99,63 @@ $mailDateLabel = isset($mailDateLabel) ? (string)$mailDateLabel : date('Y년 m�
     <div style="background:#ffffff;border-radius:12px;padding:16px 18px;border:1px solid #e5e7eb;margin-bottom:10px;">
       <div style="font-size:12px;font-weight:700;color:#111827;margin-bottom:14px;">발신 기업 정보</div>
       <div style="display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid #f3f4f6;">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 3H8a2 2 0 0 0-2 2v2h12V5a2 2 0 0 0-2-2z"/></svg>
+        <img src="<?php echo $mailBaseUrl; ?>/bbs/mail/icon/briefcase.png" width="13" height="13" alt="" style="display:inline-block;vertical-align:middle;margin-right:8px;border:0;outline:none;text-decoration:none;">
         <span style="font-size:11px;color:#9ca3af;font-weight:600;width:80px;flex-shrink:0;">회사명</span>
         <span style="font-size:13px;color:#374151;font-weight:700;"><?php echo $e($requestCompanyProfileName); ?></span>
       </div>
       <div style="display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid #f3f4f6;">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="8" y1="4" x2="8" y2="9"/></svg>
+        <img src="<?php echo $mailBaseUrl; ?>/bbs/mail/icon/identification-documents.png" width="13" height="13" alt="" style="display:inline-block;vertical-align:middle;margin-right:8px;border:0;outline:none;text-decoration:none;">
         <span style="font-size:11px;color:#9ca3af;font-weight:600;width:80px;flex-shrink:0;">사업자번호</span>
         <span style="font-size:13px;color:#374151;"><?php echo $e($requestCompanyBizNo !== '' ? $requestCompanyBizNo : '—'); ?></span>
       </div>
       <div style="display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid #f3f4f6;">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        <img src="<?php echo $mailBaseUrl; ?>/bbs/mail/icon/calendar--v1.png" width="13" height="13" alt="" style="display:inline-block;vertical-align:middle;margin-right:8px;border:0;outline:none;text-decoration:none;">
         <span style="font-size:11px;color:#9ca3af;font-weight:600;width:80px;flex-shrink:0;">설립</span>
         <span style="font-size:13px;color:#374151;"><?php echo $e($requestCompanyFounded !== '' ? $requestCompanyFounded : '—'); ?></span>
       </div>
       <div style="display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid #f3f4f6;">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        <img src="<?php echo $mailBaseUrl; ?>/bbs/mail/icon/conference-call.png" width="13" height="13" alt="" style="display:inline-block;vertical-align:middle;margin-right:8px;border:0;outline:none;text-decoration:none;">
         <span style="font-size:11px;color:#9ca3af;font-weight:600;width:80px;flex-shrink:0;">고용인원</span>
         <span style="font-size:13px;color:#374151;"><?php echo $e($requestCompanyEmployees !== '' ? $requestCompanyEmployees : '—'); ?></span>
       </div>
       <div style="display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid #f3f4f6;">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+        <img src="<?php echo $mailBaseUrl; ?>/bbs/mail/icon/layers.png" width="13" height="13" alt="" style="display:inline-block;vertical-align:middle;margin-right:8px;border:0;outline:none;text-decoration:none;">
         <span style="font-size:11px;color:#9ca3af;font-weight:600;width:80px;flex-shrink:0;">기업유형</span>
         <span style="font-size:13px;color:#374151;"><?php echo $e($requestCompanyCorpType !== '' ? $requestCompanyCorpType : '—'); ?></span>
       </div>
       <div style="display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid #f3f4f6;">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+        <img src="<?php echo $mailBaseUrl; ?>/bbs/mail/icon/price-tag.png" width="13" height="13" alt="" style="display:inline-block;vertical-align:middle;margin-right:8px;border:0;outline:none;text-decoration:none;">
         <span style="font-size:11px;color:#9ca3af;font-weight:600;width:80px;flex-shrink:0;">업종</span>
         <span style="font-size:13px;color:#374151;"><?php echo $e($requestCompanyIndustry !== '' ? $requestCompanyIndustry : '—'); ?></span>
       </div>
-      <div style="display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:<?php echo $requestCompanyHomepage !== '' ? '1px solid #f3f4f6' : '0'; ?>;">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+      <div style="display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid #f3f4f6;">
+        <img src="<?php echo $mailBaseUrl; ?>/bbs/mail/icon/package.png" width="13" height="13" alt="" style="display:inline-block;vertical-align:middle;margin-right:8px;border:0;outline:none;text-decoration:none;">
         <span style="font-size:11px;color:#9ca3af;font-weight:600;width:80px;flex-shrink:0;">주요제품</span>
         <span style="font-size:13px;color:#374151;"><?php echo $e($requestCompanyProduct !== '' ? $requestCompanyProduct : '—'); ?></span>
       </div>
-      <?php if ($requestCompanyHomepage !== '') { ?>
       <div style="display:flex;align-items:center;gap:8px;padding:9px 0;">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+        <img src="<?php echo $mailBaseUrl; ?>/bbs/mail/icon/globe--v1.png" width="13" height="13" alt="" style="display:inline-block;vertical-align:middle;margin-right:8px;border:0;outline:none;text-decoration:none;">
         <span style="font-size:11px;color:#9ca3af;font-weight:600;width:80px;flex-shrink:0;">홈페이지</span>
+        <?php if ($hasRequestCompanyHomepage) { ?>
         <a href="<?php echo $e($requestCompanyHomepage); ?>" style="font-size:13px;color:#3b82f6;text-decoration:none;"><?php echo $e(preg_replace('#^https?://#', '', $requestCompanyHomepage)); ?></a>
+        <?php } else { ?>
+        <span style="font-size:13px;color:#374151;">정보 준비중</span>
+        <?php } ?>
       </div>
-      <?php } ?>
     </div>
 
     <div style="background:#ffffff;border-radius:12px;padding:16px 18px;border:1px solid #e5e7eb;">
       <div style="font-size:12px;font-weight:700;color:#111827;margin-bottom:14px;">거래 요청 내용</div>
 
       <div style="display:flex;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid #f3f4f6;">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="13 6 19 12 13 18"/></svg>
+        <img src="<?php echo $mailBaseUrl; ?>/bbs/mail/icon/long-arrow-right.png" width="13" height="13" alt="" style="display:inline-block;vertical-align:middle;margin-right:8px;border:0;outline:none;text-decoration:none;">
         <span style="font-size:11px;color:#9ca3af;font-weight:600;width:120px;flex-shrink:0;">거래 방향</span>
         <span style="font-size:13px;color:#374151;font-weight:700;"><?php echo $e($tradeDirectionLabel); ?></span>
       </div>
 
       <div style="padding:10px 0;border-bottom:1px solid #f3f4f6;">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          <img src="<?php echo $mailBaseUrl; ?>/bbs/mail/icon/clock--v1.png" width="13" height="13" alt="" style="display:inline-block;vertical-align:middle;margin-right:8px;border:0;outline:none;text-decoration:none;">
           <span style="font-size:11px;color:#9ca3af;font-weight:600;">거래 목적 선택</span>
         </div>
         <div style="display:flex;flex-wrap:wrap;gap:6px;padding-left:21px;">
@@ -151,41 +170,74 @@ $mailDateLabel = isset($mailDateLabel) ? (string)$mailDateLabel : date('Y년 m�
       </div>
 
       <div style="display:flex;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid #f3f4f6;">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+        <img src="<?php echo $mailBaseUrl; ?>/bbs/mail/icon/monitor--v1.png" width="13" height="13" alt="" style="display:inline-block;vertical-align:middle;margin-right:8px;border:0;outline:none;text-decoration:none;">
         <span style="font-size:11px;color:#9ca3af;font-weight:600;width:120px;flex-shrink:0;">거래 희망 품목</span>
         <span style="font-size:13px;color:#374151;font-weight:700;"><?php echo $e($desiredItem); ?></span>
       </div>
 
       <div style="padding:10px 0 4px;">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          <img src="<?php echo $mailBaseUrl; ?>/bbs/mail/icon/topic.png" width="13" height="13" alt="" style="display:inline-block;vertical-align:middle;margin-right:8px;border:0;outline:none;text-decoration:none;">
           <span style="font-size:11px;color:#9ca3af;font-weight:600;">추가 문의 사항</span>
         </div>
         <div style="background:#f9fafb;border-radius:10px;border:1px solid #e5e7eb;padding:12px 14px;margin-bottom:16px;">
+          <?php if ($messagePreviewImageUrl !== '') { ?>
+          <img src="<?php echo $e($messagePreviewImageUrl); ?>" width="460" alt="문의 내용 미리보기" style="display:block;width:100%;max-width:460px;height:auto;border:0;outline:none;text-decoration:none;">
+          <?php } else { ?>
           <div style="line-height:1.8;font-size:13px;color:#374151;">
             <div style="filter:blur(1px);opacity:0.85;user-select:none;"><?php echo $e(isset($messagePreviewLines[0]) ? $messagePreviewLines[0] : ''); ?></div>
             <div style="filter:blur(2.5px);opacity:0.6;user-select:none;"><?php echo $e(isset($messagePreviewLines[1]) ? $messagePreviewLines[1] : ''); ?></div>
             <div style="filter:blur(4px);opacity:0.35;user-select:none;"><?php echo $e(isset($messagePreviewLines[2]) ? $messagePreviewLines[2] : ''); ?></div>
           </div>
+          <?php } ?>
         </div>
       </div>
 
       <div style="text-align:center;">
-        <a href="<?php echo $e($tradeRequestActionUrl); ?>" style="display:inline-block;background:#3b82f6;color:#ffffff;font-size:13px;font-weight:700;padding:12px 40px;border-radius:10px;text-decoration:none;letter-spacing:0.02em;">채팅하기</a>
-        <div style="font-size:11px;color:#6b7280;margin-top:10px;">채팅 연결은 로그인/회원가입 후 가능합니다.</div>
+        <a href="<?php echo $e($tradeRequestActionUrl); ?>" style="display:inline-block;background:#3b82f6;color:#ffffff;font-size:13px;font-weight:700;padding:12px 40px;border-radius:10px;text-decoration:none;letter-spacing:0.02em;">채팅으로 대화하기</a>
         <div style="font-size:11px;color:#9ca3af;margin-top:10px;">macomaex.com에서 담당자와 직접 소통하세요</div>
       </div>
     </div>
 
   </td></tr>
 
-  <tr><td style="background:#ffffff;border-top:1px solid #e5e7eb;padding:18px 28px;text-align:center;">
-    <div style="font-size:11px;color:#9ca3af;line-height:1.9;">
-      본 메일은 귀사와 관련된 기업 간 거래 요청에 따른 안내이며, 광고 목적이 아닙니다.<br>
-      해당 요청은 로그인 / 회원가입 후 채팅을 통해 상세 협의가 가능합니다.
-    </div>
-    <div style="font-size:11px;color:#9ca3af;margin-top:6px;">문의: <a href="mailto:admin@macomaex.com" style="color:#3b82f6;text-decoration:none;">admin@macomaex.com</a></div>
-  </td></tr>
+    <tr>
+        <td style="background:#ffffff;border-top:1px solid #e5e7eb;padding:28px 28px 24px;">
+            <div style="text-align:center;">
+                <div style="font-size:11px;color:#9ca3af;line-height:1.8;">
+                    (주)이가이엔씨가 운영하는 매커멕스(macomaex.com)에서<br>
+                    회원사의 거래 요청을 대신 전달한 메일입니다.
+                </div>
+                <div style="margin-top:14px;">
+                    <a href="https://macomaex.com" style="font-size:11px;color:#6b7280;text-decoration:none;padding:0 10px;" target="_blank">매커멕스 홈페이지</a>
+                    <span style="display:inline-block;width:1px;height:10px;background:#e5e7eb;vertical-align:middle;"></span>
+                    <a href="https://macomaex.com/unsubscribe?email=sample@company.com" style="font-size:11px;color:#6b7280;text-decoration:none;padding:0 10px;" target="_blank">수신거부</a>
+                </div>
+            </div>
+            <div style="height:24px;"></div>
+            <div style="text-align:center;font-size:10px;color:#b0b6bf;line-height:1.9;letter-spacing:0.01em;">
+                <div>
+                    <span style="color:#9ca3af;font-size:10px;letter-spacing:0.08em;margin-right:6px;">운영사</span>&nbsp;<span style="color:#374151;font-weight:600;font-size:11px;">(주)이가이엔씨</span>
+                </div>
+                <div style="margin-top:6px;">
+                사업자등록번호 186-81-01689
+                <span style="color:#e5e7eb;margin:0 6px;">·</span>
+                통신판매업 제2026-서울강남-02512호
+                </div>
+                <div>
+                서울시 강남구 테헤란로 138 성홍타워 413, 415호
+                </div>
+                <div>
+                02-573-8777
+                <span style="color:#e5e7eb;margin:0 6px;">·</span>
+                <a href="http://www.igaenc.com" style="color:#b0b6bf;text-decoration:none;" target="_blank">www.igaenc.com</a>
+                </div>
+            </div>
+            <div style="text-align:center;margin-top:20px;">
+                <div style="font-size:10px;color:#d1d5db;letter-spacing:0.04em;">© 2026 IGAENC Co., Ltd.</div>
+            </div>
+        </td>
+    </tr>
 
 </table>
 </td></tr>

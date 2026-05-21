@@ -9,6 +9,7 @@ font-weight : 600 -> Bold,
 	font-family: "HanwhaGothic";
 	font-style: normal;
 	font-weight: 100;
+	font-display: swap;
 	src: url("/theme/prix/font_hanwha/HanwhaGothicEL.woff2") format("woff2");
 }
 
@@ -16,6 +17,7 @@ font-weight : 600 -> Bold,
 	font-family: "HanwhaGothic";
 	font-style: normal;
 	font-weight: 400;
+	font-display: swap;
 	src: url("/theme/prix/font_hanwha/HanwhaGothicL.woff2") format("woff2");
 }
 
@@ -23,6 +25,7 @@ font-weight : 600 -> Bold,
 	font-family: "HanwhaGothic";
 	font-style: normal;
 	font-weight: 700;
+	font-display: swap;
 	src: url("/theme/prix/font_hanwha/HanwhaGothicR.woff2") format("woff2");
 }
 
@@ -30,6 +33,7 @@ font-weight : 600 -> Bold,
 	font-family: "HanwhaGothic";
 	font-style: normal;
 	font-weight: 900;
+	font-display: swap;
 	src: url("/theme/prix/font_hanwha/HanwhaGothicB.woff2") format("woff2");
 }
 
@@ -37,5 +41,6 @@ font-weight : 600 -> Bold,
 	font-family: "Hanwha";
 	font-style: normal;
 	font-weight: 100;
+	font-display: swap;
 	src: url("/theme/prix/font_hanwha/HanwhaL.woff2") format("woff2");
 }

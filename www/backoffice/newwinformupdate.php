@@ -15,6 +15,8 @@ else
 check_admin_token();
 
 $nw_subject = isset($_POST['nw_subject']) ? strip_tags(clean_xss_attributes($_POST['nw_subject'])) : '';
+$nw_link = isset($_POST['nw_link']) ? clean_xss_tags($_POST['nw_link'], 1, 1) : '';
+$nw_blank = isset($_POST['nw_blank']) ? (int)$_POST['nw_blank'] : 0;
 $posts = array();
 
 $check_keys = array(

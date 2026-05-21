@@ -307,9 +307,24 @@
         var sortSelect = document.getElementById('sortSelect');
         var grid = document.querySelector('.list-grid');
         if (!grid) return;
+        var activeFetchController = null;
+        var prefetchFetchControllerByType = { buyer: null, seller: null };
+        var prefetchPrimed = false;
 
         initSortDropdown(sortSelect);
         if (moreBtn && moreBtn.textContent) moreBtnDefaultText = moreBtn.textContent.trim() || moreBtnDefaultText;
+
+        function buildFetchOptions(controller) {
+            var options = { credentials: 'same-origin' };
+            if (controller) options.signal = controller.signal;
+            return options;
+        }
+
+        function abortActiveRequest() {
+            if (!activeFetchController) return;
+            activeFetchController.abort();
+            activeFetchController = null;
+        }
 
         // 탭 슬라이더 위치/크기 업데이트
         function updateSlider() {
@@ -413,21 +428,24 @@
             });
             updateSlider();
             renderType(currentType);
+            syncNavLinkParams();
             return true;
         }
 
         // 반대 탭(구매하기 - 판매하기)선 조회
         function prefetchType(type) {
-            if (!isServerPaged) return;
-            if (isLoadingMore) return;
-            if (prefetchedByType[type]) return;
+            if (!isServerPaged) return false;
+            if (isLoadingMore) return false;
+            if (prefetchedByType[type]) return true;
+            if (prefetchFetchControllerByType[type]) return true;
             var preUrl = new URL(window.location.href);
             preUrl.searchParams.set('type', type);
             preUrl.searchParams.set('sort', sortSelect ? (sortSelect.value || 'rank') : 'rank');
             preUrl.searchParams.set('page_size', pageSize);
             preUrl.searchParams.set('offset', 0);
             var preApiUrl = buildApiUrl(preUrl);
-            fetch(preApiUrl.toString(), { credentials: 'same-origin' })
+            prefetchFetchControllerByType[type] = new AbortController();
+            fetch(preApiUrl.toString(), buildFetchOptions(prefetchFetchControllerByType[type]))
                 .then(function (res) { return res.json(); })
                 .then(function (payload) {
                     if (!payload || payload.ok !== true || !payload.gridHtml) return;
@@ -437,12 +455,27 @@
                         url: preUrl.toString()
                     };
                 })
-                .catch(function () {});
+                .catch(function (err) {
+                    if (err && err.name === 'AbortError') return;
+                })
+                .finally(function () {
+                    prefetchFetchControllerByType[type] = null;
+                });
+            return true;
+        }
+
+        function prefetchOppositeTypeOnce() {
+            if (!isServerPaged || prefetchPrimed) return;
+            if (prefetchType(currentType === 'buyer' ? 'seller' : 'buyer')) {
+                prefetchPrimed = true;
+            }
         }
 
         // 서버에서 새 목록으로 교체 로드
         function fetchAndReplaceGrid(url, preserveScroll, nextType) {
             var prevScrollY = window.scrollY || window.pageYOffset || 0;
+            abortActiveRequest();
+            activeFetchController = new AbortController();
             isLoadingMore = true;
             wrap.classList.add('is-loading');
             if (moreBtn) {
@@ -454,7 +487,7 @@
             });
 
             var apiUrl = buildApiUrl(url);
-            return fetch(apiUrl.toString(), { credentials: 'same-origin' })
+            return fetch(apiUrl.toString(), buildFetchOptions(activeFetchController))
                 .then(function (res) { return res.json(); })
                 .then(function (payload) {
                     if (!payload || payload.ok !== true || !payload.gridHtml) throw new Error('grid payload not found');
@@ -470,13 +503,16 @@
                     });
                     updateSlider();
                     renderType(currentType);
+                    syncNavLinkParams();
                     if (preserveScroll) window.scrollTo(0, prevScrollY);
                     window.history.replaceState({ type: currentType }, '', url.toString());
                 })
-                .catch(function () {
+                .catch(function (err) {
+                    if (err && err.name === 'AbortError') return;
                     window.location.href = url.toString();
                 })
                 .finally(function () {
+                    activeFetchController = null;
                     isLoadingMore = false;
                     wrap.classList.remove('is-loading');
                     if (moreBtn) {
@@ -486,13 +522,14 @@
                     btns.forEach(function (btn) {
                         btn.disabled = false;
                     });
-                    prefetchType(currentType === 'buyer' ? 'seller' : 'buyer');
                 });
         }
 
         // 서버에서 다음 목록을 이어붙여 로드
         function fetchAndAppendGrid(url, preserveScroll) {
             var prevScrollY = window.scrollY || window.pageYOffset || 0;
+            abortActiveRequest();
+            activeFetchController = new AbortController();
             isLoadingMore = true;
             if (moreBtn) {
                 moreBtn.disabled = true;
@@ -500,7 +537,7 @@
             }
 
             var apiUrl = buildApiUrl(url);
-            return fetch(apiUrl.toString(), { credentials: 'same-origin' })
+            return fetch(apiUrl.toString(), buildFetchOptions(activeFetchController))
                 .then(function (res) { return res.json(); })
                 .then(function (payload) {
                     if (!payload || payload.ok !== true || payload.gridHtml == null) throw new Error('grid payload not found');
@@ -521,10 +558,12 @@
                     if (preserveScroll) window.scrollTo(0, prevScrollY);
                     window.history.replaceState({ type: currentType }, '', url.toString());
                 })
-                .catch(function () {
+                .catch(function (err) {
+                    if (err && err.name === 'AbortError') return;
                     window.location.href = url.toString();
                 })
                 .finally(function () {
+                    activeFetchController = null;
                     isLoadingMore = false;
                     if (moreBtn) {
                         moreBtn.disabled = false;
@@ -546,9 +585,8 @@
 
                 if (applyPrefetchedType(type, prefetched)) {
                     window.history.replaceState({ type: type }, '', moveUrl.toString());
-                    // 사용한 prefetch는 소모 처리하고 반대편을 다시 준비
+                    // 사용한 prefetch는 소모 처리
                     delete prefetchedByType[type];
-                    prefetchType(currentType === 'buyer' ? 'seller' : 'buyer');
                     return;
                 }
 
@@ -585,6 +623,7 @@
         if (sortSelect) {
             sortSelect.addEventListener('change', function () {
                 prefetchedByType = {};
+                prefetchPrimed = false;
                 if (isServerPaged) {
                     if (isLoadingMore) return;
                     var selectedSort = sortSelect.value || 'rank';
@@ -593,6 +632,7 @@
                     replaceUrl.searchParams.set('offset', 0);
                     replaceUrl.searchParams.set('page_size', pageSize);
                     fetchAndReplaceGrid(replaceUrl, true);
+                    prefetchOppositeTypeOnce();
                     return;
                 }
 
@@ -636,7 +676,7 @@
         }
 
         window.addEventListener('resize', updateSlider);
-        if (isServerPaged) prefetchType(currentType === 'buyer' ? 'seller' : 'buyer');
+        if (isServerPaged) prefetchOppositeTypeOnce();
     }
 
     // 매칭 요청 팝업(템플릿/메시지/검증) 동작

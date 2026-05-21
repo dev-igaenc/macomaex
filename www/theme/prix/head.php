@@ -263,6 +263,14 @@ if ($is_member) {
                 <li class="sub one" data-gi="mypage" style="display:none"><a href="<?php echo $link_0604; ?>">회원정보수정</a></li>
                 <li class="sub one" data-gi="mypage" style="display:none"><a href="<?php echo $link_0605; ?>">결제정보</a></li>
             </ul>
+			<div class="all_user">
+				<?php if (!$is_member) { ?>
+					<a href="<?php echo G5_BBS_URL ?>/login.php?url=<?php echo urlencode($_SERVER['REQUEST_URI']); ?>" class="side-auth side-login">로그인</a>
+					<a href="<?php echo G5_BBS_URL ?>/register.php" class="side-auth side-signup">회원가입</a>
+				<?php } else { ?>
+					<a href="<?php echo G5_BBS_URL ?>/logout.php?url=<?php echo urlencode($_SERVER['REQUEST_URI']); ?>" class="side-auth side-login">로그아웃</a>
+				<?php } ?>
+			</div>
         </div>
     </div>
     <script>
@@ -669,6 +677,8 @@ function requestMainCompCheck(comnum, $form, opts) {
 				if (overlay) {
 					overlay.classList.add("is_open");
 					overlay.setAttribute("aria-hidden", "false");
+					var actionBtn = document.getElementById("modal_verify_btn_ai");
+					if (actionBtn) actionBtn.focus();
 				}
 				} else {
 					if ($form && $form.length) {
@@ -721,6 +731,13 @@ $(document).on("click", "#modal_verify_btn_ai", function() {
 				openGuide("사업자번호 재확인", "입력하신 사업자번호 형식이 올바르지 않습니다.", "사업자번호를 다시 확인해 주세요.");
 			}
 		});
+
+// 모달 CTA 버튼에 포커스된 상태에서 Enter 입력 시 클릭과 동일 동작
+$(document).on("keydown", "#modal_verify_btn_ai", function(e) {
+	if (e.key !== "Enter" && e.key !== "NumpadEnter") return;
+	e.preventDefault();
+	$(this).trigger("click");
+});
 
 // 모달 닫기 이벤트들
 $(document).on("click", "#modal_verify_overlay", function(e) {
