@@ -970,7 +970,7 @@
                 '</div>' +
                 '</div>' +
                 '</div>';
-            document.getElementById('rightCard').innerHTML = buildInner(!loggedIn) + overlayHtml;
+            document.getElementById('rightCard').innerHTML = buildInner(!loggedIn) + (loggedIn ? '' : overlayHtml);
             if (!loggedIn) document.getElementById('rightCard').classList.add('match-box-blur');
             else document.getElementById('rightCard').classList.remove('match-box-blur');
         })();
@@ -1012,7 +1012,7 @@
                 '</div>' +
                 '</div>' +
                 '</div>';
-            document.getElementById('rightCard').innerHTML = buildInner(!loggedIn) + overlayHtml;
+            document.getElementById('rightCard').innerHTML = buildInner(!loggedIn) + (loggedIn ? '' : overlayHtml);
             if (!loggedIn) document.getElementById('rightCard').classList.add('match-box-blur');
             else document.getElementById('rightCard').classList.remove('match-box-blur');
             if (window._bindRadarHover) window._bindRadarHover();
@@ -1034,8 +1034,6 @@
         (function initRightCardBlur() {
             var rightCard = document.getElementById('rightCard');
             if (!rightCard) return;
-            // 초기 블러
-            rightCard.classList.add('match-box-blur');
             var authWaitBlur = setInterval(function () {
                 if (window._isLoggedIn && window._renderRightCard) {
                     clearInterval(authWaitBlur);

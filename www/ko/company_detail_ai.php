@@ -280,9 +280,13 @@ if (empty($member['mb_id'])) {
     $company_seed['ai_analysis_html'] = '';
 }
 
+$current_request_uri = isset($_SERVER['REQUEST_URI']) ? (string)$_SERVER['REQUEST_URI'] : '/ko/company_detail_ai.php';
+$detail_login_url = '/bbs/login.php?url=' . urlencode($current_request_uri);
+
 $trade_request_login_params = $_GET;
 $trade_request_login_params['trade_request_login'] = '1';
-$trade_request_login_url = '/ko/company_detail_ai.php?' . http_build_query($trade_request_login_params);
+$trade_request_return_url = '/ko/company_detail_ai.php?' . http_build_query($trade_request_login_params);
+$trade_request_login_url = '/bbs/login.php?url=' . urlencode($trade_request_return_url);
 
 $requester_company_data = !empty($member['mb_id'])
     ? trade_request_member_company_data($member['mb_4'] ?? '')
@@ -407,9 +411,9 @@ include_once(G5_THEME_PATH . '/head.php');
 					<button type="button" class="btn-ai-analyze-cta" id="btnAiAnalyze">
 						<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z"/></svg>
 						분석하기
-				</button>
-				<p class="ai-cta-benefit" id="aiCtaBenefitText">두 기업 간 시너지, 거래 적합도, 협력 전략까지<br>AI가 심층 분석한 맞춤 리포트를 받아보세요.</p>
-			</div>
+				    </button>
+				    <p class="ai-cta-benefit" id="aiCtaBenefitText">두 기업 간 시너지, 거래 적합도, 협력 전략까지<br>AI가 심층 분석한 맞춤 리포트를 받아보세요.</p>
+			    </div>
 				<div class="ai-analysis-body" id="aiAnalysisBody" role="region" aria-live="polite" aria-label="AI 분석 결과" style="display:none;"></div>
 				<!-- LLM 보고서 생성 단계 로딩 템플릿 -->
 				<template id="reportLoadingTpl">
@@ -477,7 +481,8 @@ window.MATCH_REQUEST_CONTEXT = {
 	endpoint: "/ko/company_detail_ai.php",
 	sourcePage: "company_detail_ai",
 	isLoggedIn: <?php echo !empty($member['mb_id']) ? 'true' : 'false'; ?>,
-	loginCheckUrl: <?php echo json_encode($trade_request_login_url, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>,
+	loginCheckUrl: <?php echo json_encode($detail_login_url, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>,
+	tradeRequestLoginUrl: <?php echo json_encode($trade_request_login_url, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>,
 	autoOpenOnLoad: <?php echo $should_open_trade_request_modal ? 'true' : 'false'; ?>,
 	defaultRequestMessage: <?php echo json_encode($default_message, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>,
 	requesterCompany: <?php echo json_encode($requester_company_data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>,
