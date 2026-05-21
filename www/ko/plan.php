@@ -208,8 +208,8 @@ if (!function_exists('plan_display_title_en')) {
         <div class="free-banner">
             <div class="ic"><?= plan_icon_svg('gift') ?></div>
             <div class="txt">
-                <div class="name">Free 플랜 · 무료 체험</div>
-                <div class="desc">신규 가입 시 <?= number_format($signup_bonus) ?> 크레딧(<?= number_format($free_trade_count) ?>회 거래) 제공 · 서비스 체험용</div>
+                <div class="name">지금 충전하면 크레딧 2배!</div>
+                <div class="desc">더블 크레딧 Event · 6월 30일 까지 (신규 가입 시 <?= number_format($signup_bonus) ?> 크레딧 제공)</div>
             </div>
         </div>
 
@@ -233,9 +233,32 @@ if (!function_exists('plan_display_title_en')) {
                 $label_en = plan_display_title_en($value['title_en']);
                 $label_kr = isset($ui['label_kr']) ? $ui['label_kr'] : trim((string)$value['title']);
                 $target = isset($ui['target']) ? $ui['target'] : '기업 맞춤 충전형';
+                $card_target_overrides = array(
+                    0 => '소규모 스타트업 · 영업팀',
+                    1 => '중소기업 마케팅 · 영업팀 추천',
+                    2 => '제조 · 유통 기업에 최적',
+                    3 => '대기업 구매팀 전용',
+                );
+                if (isset($card_target_overrides[$rendered_plan_count])) {
+                    $target = $card_target_overrides[$rendered_plan_count];
+                }
                 $target_icon = isset($ui['target_icon']) ? $ui['target_icon'] : 'users';
+                $card_target_icon_overrides = array(
+                    0 => 'users',
+                    1 => 'briefcase',
+                    2 => 'monitor',
+                    3 => 'home',
+                );
+                if (isset($card_target_icon_overrides[$rendered_plan_count])) {
+                    $target_icon = $card_target_icon_overrides[$rendered_plan_count];
+                }
                 $badge = isset($ui['badge']) ? $ui['badge'] : '';
                 $featured = !empty($ui['featured']);
+                // 카드 순서를 기준으로 추천 강조를 고정해 이벤트 중 크레딧 값 변경에도 UI 일관성을 유지한다.
+                if ($rendered_plan_count === 1) {
+                    $badge = '추천';
+                    $featured = true;
+                }
                 $request_count = (int)floor($credit_cnt / 10);
                 $analysis_count = (isset($value['open_cnt']) && (int)$value['open_cnt'] > 0)
                     ? (int)$value['open_cnt']
@@ -276,7 +299,7 @@ if (!function_exists('plan_display_title_en')) {
                         <div class="credit-num"><?= number_format($credit_cnt) ?></div>
                         <div class="credit-label">크레딧</div>
                     </div>
-                    <span class="plan-bonus<?= $bonus_rate > 0 ? '' : ' is-hidden' ?>"><?= htmlspecialchars($bonus_label, ENT_QUOTES) ?></span>
+                    <span class="plan-bonus">더블 크레딧 적용중</span>
                     <div class="plan-stats">
                         <div class="plan-feature-row">
                             <?= plan_icon_svg('feature_users') ?>
