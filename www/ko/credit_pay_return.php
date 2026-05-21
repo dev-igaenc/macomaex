@@ -291,7 +291,7 @@ try {
 	if ($plan_title_for_memo === '') {
 		$plan_title_for_memo = '크레딧';
 	}
-	$charge_memo_text = $plan_title_for_memo . ' 플랜 충전';
+	$charge_memo_text = $plan_title_for_memo . ' 플랜 충전 (2배 이벤트)';
 	$memo = addslashes($charge_memo_text);
 	$history_sql = "insert into credit_history set
 		uid='{$pinfo['uid']}',
