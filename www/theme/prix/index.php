@@ -11,9 +11,7 @@ include_once(G5_THEME_PATH . '/head.php');
 ?>
 <?php $stream_chat_vendor_js_ver = file_exists(G5_PATH . '/ko/js/vendor/stream-chat.browser.full-bundle.min.js') ? filemtime(G5_PATH . '/ko/js/vendor/stream-chat.browser.full-bundle.min.js') : G5_JS_VER; ?>
 <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" rel="stylesheet" />
-<link href="<?php echo G5_THEME_URL; ?>/font/SUIT-Variable.css" rel="stylesheet">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;500;600&display=swap">
-<link href="<?php echo G5_THEME_URL; ?>/mont/font.css" rel="stylesheet">
 <link rel="stylesheet" href="<?php echo G5_URL; ?>/ko/css/company-card.css?ver=<?php echo G5_CSS_VER; ?>">
 <link rel="stylesheet" href="<?php echo G5_URL; ?>/ko/css/section-header.css?ver=<?php echo G5_CSS_VER; ?>">
 <link rel="stylesheet" href="<?php echo G5_URL; ?>/ko/css/auth-toggle.css?ver=<?php echo G5_CSS_VER; ?>">
@@ -339,7 +337,7 @@ $stable_list = get_processed_companies('stability_score_5', 3, $unlocked_bzno_ma
                     <div class="mVisual_preview_slide active">
                         <div class="mVisual_preview_card">
                             <div class="mSlide_header">
-                                <span class="mSlide_label">AI 적합도 예측</span>
+                                <span class="mSlide_label">AI 추천점수 예측</span>
                                 <span class="mSlide_sub">A기업 ⇄ B기업</span>
                                 <span class="mSlide_score">87<span class="mSlide_score_unit">%</span></span>
                             </div>
@@ -463,7 +461,7 @@ $stable_list = get_processed_companies('stability_score_5', 3, $unlocked_bzno_ma
                         <div class="swiper-slide">
                             <aside class="mVisual_banner mVisual_banner_card">
                                 <div class="mVisual_banner_inner">
-                                    <span class="mVisual_banner_status">테스트 운영 중 · 4월 말 런칭</span>
+                                    <span class="mVisual_banner_status">정식 서비스 운영 중</span>
                                     <p class="mVisual_banner_main">거래 빈도가 높은<br>핵심 산업 집중</p>
                                     <p class="mVisual_banner_sub">제조·유통 기반 추천 모델 고도화</p>
                                 </div>
@@ -472,9 +470,9 @@ $stable_list = get_processed_companies('stability_score_5', 3, $unlocked_bzno_ma
                         <div class="swiper-slide">
                             <aside class="mVisual_banner mVisual_banner_card">
                                 <div class="mVisual_banner_inner">
-                                    <span class="mVisual_banner_status">오픈 기념 · 크레딧 즉시 지급</span>
-                                    <p class="mVisual_banner_main">가입만 해도<br>무료 크레딧 제공</p>
-                                    <p class="mVisual_banner_sub">지금 가입하고 거래를 시작하세요</p>
+                                    <span class="mVisual_banner_status">OPEN EVENT · 5월 한정</span>
+                                    <p class="mVisual_banner_main">크레딧 충전 시<br>x2 두 배로 적립</p>
+                                    <p class="mVisual_banner_sub">정식 오픈 기념 한정 혜택</p>
                                 </div>
                             </aside>
                         </div>
@@ -517,7 +515,7 @@ $stable_list = get_processed_companies('stability_score_5', 3, $unlocked_bzno_ma
                         ? (int)$com['keyword_count']
                         : count($allTags);
                     $restCount = max($totalCount - count($displayTags), 0);
-                    $growthTop = (int)round($com['growth_score_5'] * 20);
+                    $growthTop = (int)round($com['growth_score_5']);
                     $detailUrl = '/ko/company_detail.php?cd=' . urlencode(simple_crypt($com['KEDCD']));
                 ?>
                 <div class="mCompanyCard detail_view" kedcd="<?= $com['KEDCD'] ?>" data-kedcd="<?= $com['KEDCD'] ?>" data-detail-url="<?= htmlspecialchars($detailUrl, ENT_QUOTES) ?>">
@@ -594,7 +592,7 @@ $stable_list = get_processed_companies('stability_score_5', 3, $unlocked_bzno_ma
                         ? (int)$com['keyword_count']
                         : count($allTags);
                     $restCount = max($totalCount - count($displayTags), 0);
-                    $stableTop = (int)round($com['stability_score_5'] * 20);
+                    $stableTop = (int)round($com['stability_score_5']);
                     $detailUrl = '/ko/company_detail.php?cd=' . urlencode(simple_crypt($com['KEDCD']));
                 ?>
                 <div class="mCompanyCard detail_view" kedcd="<?= $com['KEDCD'] ?>" data-kedcd="<?= $com['KEDCD'] ?>" data-detail-url="<?= htmlspecialchars($detailUrl, ENT_QUOTES) ?>">

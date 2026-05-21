@@ -448,7 +448,7 @@ switch ($type) {
 		}
 	break;
 
-	case "matching": //매칭요청
+		case "matching": //매칭요청
 
 		if($chk=="cancel"){
 			if($member['mb_id'] && $kedcd) {
@@ -481,17 +481,20 @@ switch ($type) {
 						}
 						//알림톡 발송 끝
 
-					//매칭 카운트 차감(요청시)
-					sql_query("update g5_membership_status set matching_able_cnt=matching_able_cnt-1 where uid='{$member['mb_id']}'");
-					//sql_query("update g5_membership_status set matching_able_cnt=matching_able_cnt+1 where uid='{$member['mb_id']}'");
-				echo "1000";
-			}else{
-				echo "500";
+						// legacy membership_status 기능 비활성화: 매칭 카운트 차감 미수행
+						// sql_query("update g5_membership_status set matching_able_cnt=matching_able_cnt-1 where uid='{$member['mb_id']}'");
+						// sql_query("update g5_membership_status set matching_able_cnt=matching_able_cnt+1 where uid='{$member['mb_id']}'");
+					echo "1000";
+				}else{
+					echo "500";
+				}
 			}
-		}
-	break;
+		break;
 
-	case "matching_check": //매칭체크
+		case "matching_check": //매칭체크
+			// legacy membership_status 기능 비활성화
+			break;
+			/*
 
 		//맴버쉽 정보
 		$today = date("Y-m-d");
@@ -510,6 +513,8 @@ switch ($type) {
 			echo "500";
 		}
 	break;
+
+			*/
 
 	case "matching_chk": //매칭체크
 		if($member['mb_id'] && $c_id) {
@@ -566,7 +571,10 @@ switch ($type) {
 		}
 	break;
 
-	case "membership_chk": //맴버쉽 정보
+		case "membership_chk": //맴버쉽 정보
+			// legacy membership_status 기능 비활성화
+			break;
+			/*
 		if($member['mb_id']) {
 				$today = date("Y-m-d");
 				$chk=sql_fetch("select * from g5_membership_status where (status='S' or status='T') and uid='{$member['mb_id']}' and date_begin >= '{$today}'");
@@ -609,6 +617,8 @@ switch ($type) {
 			echo "500|로그인후 이용하세요.";
 		}
 	break;
+
+			*/
 
 	case "membership_pay": //맴버쉽 결제 시도
 		
@@ -703,7 +713,10 @@ switch ($type) {
 	break;
 
 
-	case "membership_cancel": //맴버쉽 정기결제 취소
+		case "membership_cancel": //맴버쉽 정기결제 취소
+			// legacy membership_status 기능 비활성화
+			break;
+			/*
 	//상태(S:유지, C:취소(환불), E:종료(기간만료), T 기간만료후정지)
 		if($member['mb_id']) {
 				$chk=sql_fetch("select * from g5_membership_status where (status='S' or status='T') and uid='{$member['mb_id']}'");
@@ -715,8 +728,8 @@ switch ($type) {
 					$now_time=time();
 					if($now_time<$day7_time){
 					//7일 이내일경우 사용이력 없는경우 취소
-						/*1) 매칭 요청을 1번이라도 한 경우
-							2) 전문가컨설팅 서비스를 신청하거나, 전문가로부터 서비스를 제공받았을 경우*/
+						// 1) 매칭 요청을 1번이라도 한 경우
+						// 2) 전문가컨설팅 서비스를 신청하거나, 전문가로부터 서비스를 제공받았을 경우
 						if($chk['matching_cnt']==$chk['matching_able_cnt'] && $chk['expert_consulting_able_cnt']==$chk['expert_consulting_cnt']) {
 								//무료가 아닐경우 실제 결제 취소 처리
 								//step1. 요청을 위한 파라미터 설정
@@ -808,7 +821,12 @@ switch ($type) {
 		}
 	break;
 
-	case "matching_num_chk": //매칭가능 수 체크
+			*/
+
+		case "matching_num_chk": //매칭가능 수 체크
+			// legacy membership_status 기능 비활성화
+			break;
+			/*
 
 		if($member['mb_id']) {
 				$today = date("Y-m-d");
@@ -819,6 +837,9 @@ switch ($type) {
 			echo "500";
 		}
 	break;
+
+
+			*/
 
 
     default:

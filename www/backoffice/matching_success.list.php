@@ -9,24 +9,61 @@ $g5['title'] = '거래 현황';
 $allowed_search_fields = array(
 	'TR.request_company_name' => 'TR.request_company_name',
 	'M_req.mb_email' => 'M_req.mb_email',
-	'M_req.mb_8' => 'M_req.mb_8',
+	'C_req.TEL_NO' => 'C_req.TEL_NO',
 	'TR.target_company_name' => 'TR.target_company_name',
 	'TR.trade_type' => 'TR.trade_type',
 );
 $search_field = isset($allowed_search_fields[$sfl]) ? $allowed_search_fields[$sfl] : 'TR.request_company_name';
 
+function normalize_company_phone($raw_phone)
+{
+	$raw = trim((string)$raw_phone);
+	if ($raw === '') return '-';
+
+	$digits = preg_replace('/\D+/', '', $raw);
+	if ($digits === '') return '-';
+
+	$len = strlen($digits);
+
+	// 대표번호(예: 15445487 -> 1544-5487)
+	if ($len === 8 && preg_match('/^(15|16|18)\d{6}$/', $digits)) {
+		return substr($digits, 0, 4) . '-' . substr($digits, 4);
+	}
+
+	// 지역번호 02
+	if (strpos($digits, '02') === 0) {
+		if ($len === 9) return '02-' . substr($digits, 2, 3) . '-' . substr($digits, 5, 4);
+		if ($len === 10) return '02-' . substr($digits, 2, 4) . '-' . substr($digits, 6, 4);
+	}
+
+	// 휴대폰 010/011/016/017/018/019
+	if (preg_match('/^01[016789]/', $digits)) {
+		if ($len === 10) return substr($digits, 0, 3) . '-' . substr($digits, 3, 3) . '-' . substr($digits, 6, 4);
+		if ($len === 11) return substr($digits, 0, 3) . '-' . substr($digits, 3, 4) . '-' . substr($digits, 7, 4);
+	}
+
+	// 일반 지역번호/인터넷전화(031..., 070...)
+	if ($len === 10) return substr($digits, 0, 3) . '-' . substr($digits, 3, 3) . '-' . substr($digits, 6, 4);
+	if ($len === 11) return substr($digits, 0, 3) . '-' . substr($digits, 3, 4) . '-' . substr($digits, 7, 4);
+
+	// 포맷 규칙을 확정하기 어려운 길이는 원본 숫자 그대로 노출
+	return $digits;
+}
+
 $sql_common = " from trade_request TR
 left join g5_member M_req on TR.request_mb_id = M_req.mb_id
+left join company C_req on C_req.BZNO = TR.request_bzno
 left join (
 	select MM.*
 	from g5_member MM
 	inner join (
 		select mb_company, max(mb_no) as max_mb_no
 		from g5_member
-		where ifnull(mb_company, '') != ''
+	where ifnull(mb_company, '') != ''
 		group by mb_company
 	) MX on MM.mb_company = MX.mb_company and MM.mb_no = MX.max_mb_no
-) M_tgt on M_tgt.mb_company = TR.target_kedcd";
+) M_tgt on M_tgt.mb_company = TR.target_kedcd
+left join company C_tgt on C_tgt.KEDCD = TR.target_kedcd";
 $sql_search = " where 1=1 ";
 
 if ($stx) {
@@ -69,8 +106,10 @@ $sql = "select
 		TR.approval_status,
 		TR.request_company_name,
 		TR.request_bzno,
+		C_req.TEL_NO as req_manager_phone,
 		TR.target_company_name,
 		TR.target_bzno,
+		C_tgt.TEL_NO as tgt_manager_phone,
 		TR.target_kedcd,
 		TR.message_content,
 		TR.adm_chk,
@@ -79,11 +118,9 @@ $sql = "select
 		M_req.mb_6 as req_manager_name,
 		M_req.mb_7 as req_manager_position,
 		M_req.mb_email as req_manager_email,
-		M_req.mb_8 as req_manager_phone,
 		M_tgt.mb_no as tgt_mb_no,
 		M_tgt.mb_6 as tgt_manager_name,
 		M_tgt.mb_7 as tgt_manager_position,
-		M_tgt.mb_8 as tgt_manager_phone,
 		M_tgt.mb_email as tgt_manager_email
 		$sql_common $sql_search order by TR.tr_no desc limit $from_record, {$config['cf_page_rows']} ";
 $result = sql_query($sql);
@@ -112,7 +149,7 @@ $rnumber=($total_count-($page-1)*$rows)+1;
 <select name="sfl" id="sfl">
     <option value="TR.request_company_name"<?php echo get_selected($sfl, "TR.request_company_name"); ?>>요청업체</option>
     <option value="M_req.mb_email"<?php echo get_selected($sfl, "M_req.mb_email"); ?>>이메일</option>
-	<option value="M_req.mb_8"<?php echo get_selected($sfl, "M_req.mb_8"); ?>>연락처</option>
+	<option value="C_req.TEL_NO"<?php echo get_selected($sfl, "C_req.TEL_NO"); ?>>연락처</option>
 	<option value="TR.target_company_name"<?php echo get_selected($sfl, "TR.target_company_name"); ?>>대상업체</option>
 	<option value="TR.trade_type"<?php echo get_selected($sfl, "TR.trade_type"); ?>>요청구분</option>
 </select>
@@ -133,15 +170,15 @@ $rnumber=($total_count-($page-1)*$rows)+1;
 		<th scope="col">TM 24시간</th>
         <th scope="col">요청 업체</th>
 		<th scope="col">사업자등록번호</th>
+		<th scope="col">연락처</th>
         <th scope="col">담당자 이름</th>
 		<th scope="col">직위</th>
 		<th scope="col">이메일</th>
-		<th scope="col">연락처</th>
         <th scope="col">대상 업체</th>
         <th scope="col">사업자등록번호</th>
+		<th scope="col">연락처</th>
 		<th scope="col">담당자 이름</th>
         <th scope="col">직위</th>
-		<th scope="col">연락처</th>
 		<th scope="col">이메일</th>
 		<th scope="col" style="width:200px">메세지</th>
 		<th scope="col">체크</th>
@@ -213,15 +250,15 @@ $rnumber=($total_count-($page-1)*$rows)+1;
 														<?=trim((string)$v['request_company_name']) ? $v['request_company_name'] : '-'?>
 			</td>
 			<td class="td_center"><?=trim((string)$v['request_bzno']) ? licenseNum($v['request_bzno']) : '-'?></td>
+			<td class="td_center"><?=normalize_company_phone($v['req_manager_phone'])?></td>
 			<td class="td_center"><?=trim((string)$v['req_manager_name']) ? $v['req_manager_name'] : '-'?></td>
 			<td class="td_center"><?=trim((string)$v['req_manager_position']) ? $v['req_manager_position'] : '-'?></td>
 			<td class="td_center"><?=trim((string)$v['req_manager_email']) ? $v['req_manager_email'] : '-'?></td>
-			<td class="td_center"><?=trim((string)$v['req_manager_phone']) ? $v['req_manager_phone'] : '-'?></td>
 			<td class="td_center"><?=trim((string)$v['target_company_name']) ? $v['target_company_name'] : '-'?></td>
 			<td class="td_center"><?=trim((string)$v['target_bzno']) ? licenseNum($v['target_bzno']) : '-'?></td>
+			<td class="td_center"><?=normalize_company_phone($v['tgt_manager_phone'])?></td>
 			<td class="td_center"><?=trim((string)$v['tgt_manager_name']) ? $v['tgt_manager_name'] : '-'?></td>
 			<td class="td_center"><?=trim((string)$v['tgt_manager_position']) ? $v['tgt_manager_position'] : '-'?></td>
-			<td class="td_center"><?=trim((string)$v['tgt_manager_phone']) ? $v['tgt_manager_phone'] : '-'?></td>
 			<td class="td_center"><?=trim((string)$v['tgt_manager_email']) ? $v['tgt_manager_email'] : '-'?></td>
 			<td class="td_center"><?=nl2br((string)$v['message_content'])?></td>
 			<td class="td_center">

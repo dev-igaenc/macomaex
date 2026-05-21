@@ -563,7 +563,7 @@ body.ai-mode .mCompanyCard_content .radar-card { margin-top: 8px; }
 /* AI 섹션 타이틀 폰트 두께 */
 body.ai-mode .mHookSection_title { font-weight: 600; }
 
-/* AI 적합도 배너 */
+/* AI 추천점수 배너 */
 .mCompanyCard_ai_match {
     display: flex;
     align-items: center;
@@ -743,8 +743,7 @@ body.ai-mode .mHookSection_title { font-weight: 600; }
 /* 기업카드 그리드 (메인과 동일 스타일) */
 .list-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(320px, 360px));
-    justify-content: center;
+    grid-template-columns: repeat(3, 1fr);
     gap: 20px;
 }
 @media (max-width: 1024px) {
@@ -798,6 +797,8 @@ body.ai-mode .mHookSection_title { font-weight: 600; }
 #listWrap .mCompanyCard_badge_placeholder {
     background: #f3f4f6 !important;
     color: #9ca3af !important;
+    visibility: visible !important;
+    pointer-events: auto !important;
 }
 
 /* Card tag chips override: keep mock design against theme defaults */

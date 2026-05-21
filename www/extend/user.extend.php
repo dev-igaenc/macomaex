@@ -84,6 +84,365 @@ if (!function_exists('macomaex_parse_kodata_xml')) {
 	}
 }
 
+if (!function_exists('credit_lot_tables_ready')) {
+	// LOT 기반 충전/차감 테이블이 준비된 환경인지 확인한다.
+	function credit_lot_tables_ready() {
+		static $ready = null;
+		if ($ready !== null) return $ready;
+
+		$lot = sql_fetch("SHOW TABLES LIKE 'credit_lot'");
+		$lot_use = sql_fetch("SHOW TABLES LIKE 'credit_lot_use'");
+		$ready = (is_array($lot) && count($lot) > 0 && is_array($lot_use) && count($lot_use) > 0);
+		return $ready;
+	}
+}
+
+if (!function_exists('credit_ledger_get_latest_row')) {
+	// 원장 최신 1건(credit_after)을 조회한다. 차감 시에는 FOR UPDATE로 잠근다.
+	function credit_ledger_get_latest_row($mb_id, $for_update = false) {
+		$mb_id = trim((string)$mb_id);
+		if ($mb_id === '') return array();
+		$mb_id_sql = sql_escape_string($mb_id);
+		$for_update_sql = $for_update ? " for update" : "";
+		$row = sql_fetch("select id, credit_after
+			from credit_history
+			where uid='{$mb_id_sql}'
+			order by id desc
+			limit 1{$for_update_sql}");
+		return is_array($row) ? $row : array();
+	}
+}
+
+if (!function_exists('credit_ledger_get_balance')) {
+	// 실시간 잔액은 원장 최신 credit_after를 사용한다.
+	function credit_ledger_get_balance($mb_id) {
+		$row = credit_ledger_get_latest_row($mb_id, false);
+		return isset($row['credit_after']) ? (int)$row['credit_after'] : 0;
+	}
+}
+
+if (!function_exists('credit_lot_register_charge')) {
+	// CHARGE 원장 1건을 LOT 1건으로 등록한다.
+	function credit_lot_register_charge($mb_id, $charge_history_id, $order_no, $credit_amount, $charged_at = '') {
+		$ret = array('ok' => false, 'skip' => false, 'message' => '');
+		if (!credit_lot_tables_ready()) {
+			$ret['skip'] = true;
+			$ret['message'] = 'credit_lot tables not ready';
+			return $ret;
+		}
+
+		$mb_id = trim((string)$mb_id);
+		$charge_history_id = (int)$charge_history_id;
+		$order_no = trim((string)$order_no);
+		$credit_amount = (int)$credit_amount;
+		if ($mb_id === '' || $charge_history_id < 1 || $order_no === '' || $credit_amount < 1) {
+			$ret['message'] = 'invalid params';
+			return $ret;
+		}
+
+		$charged_at_ts = strtotime((string)$charged_at);
+		if (!$charged_at_ts) $charged_at_ts = time();
+		$charged_at_sql = date('Y-m-d H:i:s', $charged_at_ts);
+		$refund_deadline_at_sql = date('Y-m-d H:i:s', strtotime('+7 days', $charged_at_ts));
+
+		$mb_id_sql = sql_escape_string($mb_id);
+		$order_no_sql = sql_escape_string($order_no);
+		$insert_sql = "insert into credit_lot set
+			mb_id='{$mb_id_sql}',
+			charge_history_id='{$charge_history_id}',
+			order_no='{$order_no_sql}',
+			credit_amount='{$credit_amount}',
+			remain_amount='{$credit_amount}',
+			charged_at='{$charged_at_sql}',
+			refund_deadline_at='{$refund_deadline_at_sql}',
+			lot_status='ACTIVE',
+			refunded_at=NULL,
+			created_at=now(),
+			updated_at=now()
+			on duplicate key update
+				lot_id=lot_id";
+		$ok = sql_query($insert_sql, false);
+		$ret['ok'] = (bool)$ok;
+		$ret['message'] = $ok ? 'ok' : 'insert failed';
+		return $ret;
+	}
+}
+
+if (!function_exists('credit_lot_allocate_use')) {
+	// USE 원장 1건을 FIFO로 여러 LOT에 분할 차감한다.
+	function credit_lot_allocate_use($mb_id, $use_history_id, $use_amount, $used_at = '') {
+		$ret = array('ok' => false, 'skip' => false, 'allocated' => 0, 'missing' => 0, 'message' => '');
+		if (!credit_lot_tables_ready()) {
+			$ret['skip'] = true;
+			$ret['message'] = 'credit_lot tables not ready';
+			return $ret;
+		}
+
+		$mb_id = trim((string)$mb_id);
+		$use_history_id = (int)$use_history_id;
+		$use_amount = (int)$use_amount;
+		if ($mb_id === '' || $use_history_id < 1 || $use_amount < 1) {
+			$ret['message'] = 'invalid params';
+			return $ret;
+		}
+
+		$mb_id_sql = sql_escape_string($mb_id);
+		$already = sql_fetch("select lot_use_id from credit_lot_use where use_history_id='{$use_history_id}' limit 1");
+		if (is_array($already) && !empty($already['lot_use_id'])) {
+			$ret['ok'] = true;
+			$ret['allocated'] = $use_amount;
+			$ret['message'] = 'already allocated';
+			return $ret;
+		}
+
+		$rows = array();
+		$total_remain = 0;
+		$result = sql_query("select lot_id, remain_amount
+			from credit_lot
+			where mb_id='{$mb_id_sql}'
+			  and lot_status<>'REFUNDED'
+			  and remain_amount > 0
+			order by charged_at asc, lot_id asc
+			for update", false);
+		if ($result) {
+			for ($i=0; $row=sql_fetch_array($result); $i++) {
+				$rows[] = $row;
+				$total_remain += (int)$row['remain_amount'];
+			}
+		}
+		if ($total_remain < $use_amount) {
+			$ret['missing'] = $use_amount - $total_remain;
+			$ret['message'] = 'not enough lot remain';
+			return $ret;
+		}
+
+		$used_at_ts = strtotime((string)$used_at);
+		if (!$used_at_ts) $used_at_ts = time();
+		$used_at_sql = date('Y-m-d H:i:s', $used_at_ts);
+
+		$remain_need = $use_amount;
+		$allocated = 0;
+		for ($i=0; $i<count($rows); $i++) {
+			if ($remain_need < 1) break;
+			$lot_id = (int)$rows[$i]['lot_id'];
+			$lot_remain = (int)$rows[$i]['remain_amount'];
+			if ($lot_id < 1 || $lot_remain < 1) continue;
+
+			$alloc = min($remain_need, $lot_remain);
+			$upd = sql_query("update credit_lot set
+					remain_amount=remain_amount-{$alloc},
+					lot_status=case when remain_amount = {$alloc} then 'EXHAUSTED' else 'ACTIVE' end,
+					updated_at=now()
+				where lot_id='{$lot_id}'
+				  and remain_amount >= {$alloc}", false);
+			$affected = sql_fetch("select row_count() as cnt");
+			if (!$upd || (int)$affected['cnt'] < 1) {
+				$ret['message'] = 'lot update failed';
+				return $ret;
+			}
+
+			$ins = sql_query("insert into credit_lot_use set
+				use_history_id='{$use_history_id}',
+				lot_id='{$lot_id}',
+				mb_id='{$mb_id_sql}',
+				use_amount='{$alloc}',
+				created_at='{$used_at_sql}'", false);
+			if (!$ins) {
+				$ret['message'] = 'lot_use insert failed';
+				return $ret;
+			}
+
+			$allocated += $alloc;
+			$remain_need -= $alloc;
+		}
+
+		$ret['ok'] = ($allocated === $use_amount);
+		$ret['allocated'] = $allocated;
+		$ret['missing'] = max(0, $use_amount - $allocated);
+		$ret['message'] = $ret['ok'] ? 'ok' : 'partial';
+		return $ret;
+	}
+}
+
+if (!function_exists('credit_lot_release_use')) {
+	// USE 원장 롤백 시 기존 LOT 차감을 되돌린다.
+	function credit_lot_release_use($use_history_id) {
+		$ret = array('ok' => false, 'skip' => false, 'released' => 0, 'message' => '');
+		if (!credit_lot_tables_ready()) {
+			$ret['skip'] = true;
+			$ret['message'] = 'credit_lot tables not ready';
+			return $ret;
+		}
+
+		$use_history_id = (int)$use_history_id;
+		if ($use_history_id < 1) {
+			$ret['message'] = 'invalid params';
+			return $ret;
+		}
+
+		$result = sql_query("select lot_use_id, lot_id, use_amount
+			from credit_lot_use
+			where use_history_id='{$use_history_id}'
+			order by lot_use_id asc
+			for update", false);
+		$rows = array();
+		if ($result) {
+			for ($i=0; $row=sql_fetch_array($result); $i++) {
+				$rows[] = $row;
+			}
+		}
+		if (!count($rows)) {
+			$ret['ok'] = true;
+			$ret['message'] = 'nothing to release';
+			return $ret;
+		}
+
+		$released = 0;
+		for ($i=0; $i<count($rows); $i++) {
+			$lot_id = (int)$rows[$i]['lot_id'];
+			$use_amount = (int)$rows[$i]['use_amount'];
+			if ($lot_id < 1 || $use_amount < 1) continue;
+
+			$upd = sql_query("update credit_lot set
+					remain_amount=remain_amount+{$use_amount},
+					lot_status=case when lot_status='REFUNDED' then lot_status else 'ACTIVE' end,
+					updated_at=now()
+				where lot_id='{$lot_id}'", false);
+			if (!$upd) {
+				$ret['message'] = 'lot release update failed';
+				return $ret;
+			}
+			$released += $use_amount;
+		}
+
+		$del = sql_query("delete from credit_lot_use where use_history_id='{$use_history_id}'", false);
+		if (!$del) {
+			$ret['message'] = 'lot_use delete failed';
+			return $ret;
+		}
+
+		$ret['ok'] = true;
+		$ret['released'] = $released;
+		$ret['message'] = 'ok';
+		return $ret;
+	}
+}
+
+if (!function_exists('credit_lot_find_refundable_by_order')) {
+	// 주문번호 기준으로 "미사용 + 7일 이내" 환불 가능 LOT를 찾는다.
+	function credit_lot_find_refundable_by_order($mb_id, $order_no, $as_of = '') {
+		$ret = array(
+			'ok' => false,
+			'skip' => false,
+			'message' => '',
+			'lot' => null,
+			'refund_credit' => 0
+		);
+		if (!credit_lot_tables_ready()) {
+			$ret['skip'] = true;
+			$ret['message'] = 'credit_lot tables not ready';
+			return $ret;
+		}
+
+		$mb_id = trim((string)$mb_id);
+		$order_no = trim((string)$order_no);
+		if ($mb_id === '' || $order_no === '') {
+			$ret['message'] = 'invalid params';
+			return $ret;
+		}
+
+		$mb_id_sql = sql_escape_string($mb_id);
+		$order_no_sql = sql_escape_string($order_no);
+		$lot = sql_fetch("select lot_id, mb_id, charge_history_id, order_no, credit_amount, remain_amount, charged_at, refund_deadline_at, lot_status, refunded_at
+			from credit_lot
+			where mb_id='{$mb_id_sql}'
+			  and order_no='{$order_no_sql}'
+			order by lot_id desc
+			limit 1");
+		if (!is_array($lot) || empty($lot['lot_id'])) {
+			$ret['message'] = 'charge lot not found';
+			return $ret;
+		}
+
+		$as_of_ts = strtotime((string)$as_of);
+		if (!$as_of_ts) $as_of_ts = time();
+		$deadline_ts = strtotime((string)$lot['refund_deadline_at']);
+		$credit_amount = (int)$lot['credit_amount'];
+		$remain_amount = (int)$lot['remain_amount'];
+		$lot_status = strtoupper(trim((string)$lot['lot_status']));
+
+		if ($credit_amount < 1) {
+			$ret['message'] = 'invalid lot amount';
+			return $ret;
+		}
+		if ($lot_status === 'REFUNDED') {
+			$ret['message'] = 'already refunded';
+			return $ret;
+		}
+		if ($deadline_ts && $as_of_ts > $deadline_ts) {
+			$ret['message'] = 'refund deadline passed';
+			return $ret;
+		}
+		if ($remain_amount !== $credit_amount) {
+			$ret['message'] = 'lot already used';
+			return $ret;
+		}
+		if ($lot_status !== 'ACTIVE') {
+			$ret['message'] = 'lot is not active';
+			return $ret;
+		}
+
+		$ret['ok'] = true;
+		$ret['lot'] = $lot;
+		$ret['refund_credit'] = $credit_amount;
+		$ret['message'] = 'ok';
+		return $ret;
+	}
+}
+
+if (!function_exists('credit_lot_mark_refunded')) {
+	// 환불 확정된 LOT를 REFUNDED 상태로 마감한다.
+	function credit_lot_mark_refunded($lot_id) {
+		$ret = array('ok' => false, 'skip' => false, 'message' => '');
+		if (!credit_lot_tables_ready()) {
+			$ret['skip'] = true;
+			$ret['message'] = 'credit_lot tables not ready';
+			return $ret;
+		}
+
+		$lot_id = (int)$lot_id;
+		if ($lot_id < 1) {
+			$ret['message'] = 'invalid lot_id';
+			return $ret;
+		}
+
+		$upd = sql_query("update credit_lot set
+				remain_amount=0,
+				lot_status='REFUNDED',
+				refunded_at=now(),
+				updated_at=now()
+			where lot_id='{$lot_id}'
+			  and lot_status='ACTIVE'
+			  and remain_amount=credit_amount", false);
+		$affected = sql_fetch("select row_count() as cnt");
+		if ($upd && (int)$affected['cnt'] > 0) {
+			$ret['ok'] = true;
+			$ret['message'] = 'ok';
+			return $ret;
+		}
+
+		$current = sql_fetch("select lot_status, remain_amount, credit_amount from credit_lot where lot_id='{$lot_id}'");
+		if (is_array($current) && strtoupper(trim((string)$current['lot_status'])) === 'REFUNDED') {
+			$ret['ok'] = true;
+			$ret['message'] = 'already refunded';
+			return $ret;
+		}
+
+		$ret['message'] = 'lot refund update failed';
+		return $ret;
+	}
+}
+
 //사업자등록증 하이픈
 function licenseNum($str=""){
 	$tmp="";
@@ -725,52 +1084,8 @@ function useCoupon($id, $mb_id=""){
 			
 			$orderid="C_".time().round((float)microtime(false) * 1000);
 			
-			//기존 맴버쉽 삭제
-			sql_query("delete from g5_membership_status where uid='{$mb_id}'");
-
-			//맴버쉽 추가
-			$sql="insert g5_membership_status set ";
-			$sql.="uid='{$mb_id}',";
-			$sql.="order_no='{$orderid}',";
-			$sql.="date_begin='{$date_begin}',";
-			$sql.="date_end='{$date_end}',";
-			$sql.="month='1',";
-			$sql.="open_able_cnt='{$minfo['open_cnt']}',";
-			$sql.="open_cnt='{$minfo['open_cnt']}',";
-			$sql.="matching_able_cnt='{$minfo['matching_cnt']}',";
-			$sql.="matching_cnt='{$minfo['matching_cnt']}',";
-			$sql.="expert_consulting_able_cnt='{$minfo['expert_consulting_cnt']}',";
-			$sql.="expert_consulting_cnt='{$minfo['expert_consulting_cnt']}',";
-			$sql.="selected_able_cnt='{$minfo['selected_cnt']}',";
-			$sql.="selected_cnt='{$selected_cnt_limit}',";
-			$sql.="regdate=now(),";
-			$sql.="coupon='{$coupon['cp_id']}',";
-			$sql.="status='T',";
-			$sql.="membership_parent_no='{$coupon['cp_type']}'";
-			sql_query($sql);
-			
-			//맵버쉽 스테이터스 히스토리
-			$sql="insert g5_membership_status_history set ";
-			$sql.="uid='{$mb_id}',";
-			$sql.="order_no='{$orderid}',";
-			$sql.="date_begin='{$date_begin}',";
-			$sql.="date_end='{$date_end}',";
-			$sql.="month='1',";
-			$sql.="open_able_cnt='{$minfo['open_cnt']}',";
-			$sql.="open_cnt='{$minfo['open_cnt']}',";
-			$sql.="matching_able_cnt='{$minfo['matching_cnt']}',";
-			$sql.="matching_cnt='{$minfo['matching_cnt']}',";
-			$sql.="expert_consulting_able_cnt='{$minfo['expert_consulting_cnt']}',";
-			$sql.="expert_consulting_cnt='{$minfo['expert_consulting_cnt']}',";
-			$sql.="selected_able_cnt='{$minfo['selected_cnt']}',";
-			$sql.="selected_cnt='{$selected_cnt_limit}',";
-			$sql.="regdate=now(),";
-			$sql.="coupon='{$coupon['cp_id']}',";
-			$sql.="status='T',";
-			$sql.="membership_parent_no='{$coupon['cp_type']}',";
-			$sql.="memo='쿠폰 사용\\n',";
-			$sql.="ext_1='".G5_TIME_YMDHIS."\\n'";
-			sql_query($sql);
+			// membership_status / membership_status_history 미사용 정책:
+			// 쿠폰 처리 시 해당 테이블 저장은 수행하지 않는다.
 
 			//페이먼트 정보 추가
 			$sql="insert g5_membership_payment set ";

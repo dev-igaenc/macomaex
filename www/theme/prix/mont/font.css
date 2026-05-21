@@ -9,6 +9,7 @@ font-weight : 600 -> Bold,
 	font-family:'Mont';
 	font-style:normal;
 	font-weight:400;
+	font-display: swap;
 	src:url('Mont-ExtraLightDEMO.eot');
 	src:url('Mont-ExtraLightDEMO.eot?#iefix') format('embedded-opentype'),
 		url('Mont-ExtraLightDEMO.woff') format('woff')
@@ -18,6 +19,7 @@ font-weight : 600 -> Bold,
 	font-family:'Mont';
 	font-style:normal;
 	font-weight:600;
+	font-display: swap;
 	src:url('Mont-HeavyDEMO.eot');
 	src:url('Mont-HeavyDEMO.eot?#iefix') format('embedded-opentype'),
 		url('Mont-HeavyDEMO.woff') format('woff')

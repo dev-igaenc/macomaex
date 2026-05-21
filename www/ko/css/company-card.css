@@ -17,10 +17,23 @@
     box-shadow: 0 4px 20px rgba(0,0,0,0.08);
     border-color: #d0d5dd;
 }
+/* theme/prix/css/main.css 의 .mCompanyCard:hover 보다 우선 적용 */
+.list-grid .mCompanyCard:hover,
+.mCompanyGrid .mCompanyCard:hover,
+.mCompanyCard.company-ai-card:hover {
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08) !important;
+    border-color: #d0d5dd !important;
+}
 @media (hover: none) {
     .mCompanyCard:hover {
         box-shadow: none;
         border-color: #e5e7eb;
+    }
+    .list-grid .mCompanyCard:hover,
+    .mCompanyGrid .mCompanyCard:hover,
+    .mCompanyCard.company-ai-card:hover {
+        box-shadow: none !important;
+        border-color: #e5e7eb !important;
     }
 }
 .mCompanyCard_bookmark {

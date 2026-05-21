@@ -53,6 +53,9 @@ function renderDetailLeftCard(co, scoreHtml) {
     (Array.isArray(co.tags) ? co.tags : []).forEach(function(t) {
         tagsHtml += '<span class="tag-pill">' + _esc(t) + '</span>';
     });
+    if (!tagsHtml) {
+        tagsHtml = '<span class="tag-pill">정보 준비중</span>';
+    }
 
     var creditTooltip =
         '재무상태 등급은 내부 기준으로 산정됩니다.' +
@@ -85,7 +88,7 @@ function renderDetailLeftCard(co, scoreHtml) {
             '<dt>기업유형</dt><dd>' + _esc(co.corp_type || '법인기업') + '</dd>' +
             '<dt>주요제품</dt><dd class="info-product-line">' + _esc(co.product_line) + '</dd>' +
             '<dt>' + creditDt + '</dt><dd>' + _esc(co.credit) + '</dd>' +
-            '<dt>주소(도로명)</dt><dd' + addressClass + '>' + addressHtml + '</dd>' +
+            '<dt>주소</dt><dd' + addressClass + '>' + addressHtml + '</dd>' +
             '<dt>홈페이지</dt><dd' + homepageClass + '>' + homepageHtml + '</dd>' +
         '</dl>' +
         (isUnlocked ? '' : '<p class="info-mask-notice">거래 요청 및 수락 시 *** 으로 표시된 정보가 공개됩니다.</p>');

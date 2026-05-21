@@ -6,6 +6,10 @@
 
 $g5['title'] = '맴버쉽 결제 히스토리';
 
+echo '<div class="local_ov01 local_ov">membership_status_history 레거시 기능 비활성화(로컬 주석 처리)</div>';
+include_once (G5_ADMIN_PATH.'/admin.tail.php');
+return;
+
 $sql_common = " from g5_membership_status_history";
 
 $sql_search = " where (1)";

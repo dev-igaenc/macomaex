@@ -132,7 +132,6 @@ history.scrollRestoration = "auto";
 <script type="text/javascript" src="<?php echo G5_THEME_JS_URL; ?>/BezierPlugin.min.js"></script>
 <script type="text/javascript" src="<?php echo G5_THEME_JS_URL; ?>/jquery.throttledresize.js"></script>
 <script type="text/javascript" src="<?php echo G5_THEME_JS_URL; ?>/jquery.rwdImageMaps.min.js"></script>
-<script type="text/javascript" src="<?php echo G5_THEME_JS_URL; ?>/prefixfree.min.js"></script>
 <script type="text/javascript" src="<?php echo G5_THEME_JS_URL; ?>/ofi.js"></script>
 <script type="text/javascript" src="<?php echo G5_THEME_JS_URL; ?>/picturefill.min.js"></script>
 <script type="text/javascript" src="<?php echo G5_THEME_JS_URL; ?>/jquery-input-file-text.js"></script>

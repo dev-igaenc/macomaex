@@ -14,12 +14,44 @@
 }
 
 /* 배지 */
-#detailWrap .card .mCompanyCard_badges { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
-#detailWrap .mCompanyCard_badge { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 500; line-height: 1.2; white-space: nowrap; }
-#detailWrap .mCompanyCard_badge_top_growth    { background: #dbeafe; color: #1e40af; }
-#detailWrap .mCompanyCard_badge_top_stability { background: #ede9fe; color: #5b21b6; }
-#detailWrap .mCompanyCard_badge_venture       { background: #10b981; color: #fff; }
-#detailWrap .mCompanyCard_badge_placeholder   { background: #f3f4f6; color: #9ca3af; }
+#detailWrap .card .mCompanyCard_badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 12px;
+}
+
+#detailWrap .mCompanyCard_badge {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 1.2;
+    white-space: nowrap;
+}
+
+#detailWrap .mCompanyCard_badge_top_growth {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+#detailWrap .mCompanyCard_badge_top_stability {
+    background: #ede9fe;
+    color: #5b21b6;
+}
+
+#detailWrap .mCompanyCard_badge_venture {
+    background: #10b981;
+    color: #fff;
+}
+
+#detailWrap .mCompanyCard_badge_placeholder {
+    background: #f3f4f6;
+    color: #9ca3af;
+    visibility: visible !important;
+    pointer-events: auto !important;
+}
 
 /* 카드 제목 */
 .card-title-row {
@@ -27,6 +59,7 @@
     padding-bottom: 16px;
     border-bottom: 1px solid #eee;
 }
+
 .card-title-label {
     font-size: 20px;
     font-weight: 800;
@@ -35,6 +68,7 @@
     align-items: center;
     gap: 8px;
 }
+
 .card-title-label::before {
     content: '';
     display: inline-block;
@@ -52,8 +86,20 @@
     gap: 12px;
     margin-bottom: 12px;
 }
-.profile-head h1   { font-size: 18px; font-weight: 700; letter-spacing: -0.02em; margin: 0; }
-.profile-head .sub { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
+
+#detailWrap .profile-head h1 {
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin: 0;
+    color: var(--company-detail-heading-color, #111);
+}
+
+.profile-head .sub {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-top: 4px;
+}
 
 /* 업종 태그 */
 .industry-tags {
@@ -62,6 +108,7 @@
     gap: 6px;
     margin-bottom: 16px;
 }
+
 .tag-pill {
     display: inline-flex;
     align-items: center;
@@ -78,15 +125,58 @@
 .info-grid {
     display: grid;
     grid-template-columns: 118px 1fr;
-    gap: 10px 16px;
+    gap: 21px 16px;
     font-size: 14px;
 }
-.info-grid dt                 { color: var(--text-muted); font-weight: 500; align-self: start; line-height: 1.35; }
-.info-grid dd                 { font-weight: 600; }
-.info-grid dd.info-product-line { line-height: 1.45; font-weight: 600; word-break: keep-all; }
-.info-grid dd.info-masked     { color: #bbb; letter-spacing: 0.05em; user-select: none; }
-.info-mask-notice             { margin-top: 10px; font-size: 13px; color: #7c3aed; background: #f5f0ff; border: 1px solid #ede9fe; border-radius: 8px; padding: 10px 14px; line-height: 1.5; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-@media (max-width: 480px) { .info-mask-notice { font-size: clamp(10px, 3vw, 13px); padding: 8px 10px; } }
+
+.info-grid dt {
+    margin: 0;
+    color: var(--text-muted);
+    font-weight: 500;
+    align-self: start;
+    line-height: 1.35;
+}
+
+.info-grid dd {
+    margin: 0;
+    font-weight: 600;
+    align-self: start;
+    line-height: 1.35;
+}
+
+.info-grid dd.info-product-line {
+    line-height: 1.45;
+    font-weight: 600;
+    word-break: keep-all;
+}
+
+.info-grid dd.info-masked {
+    color: #bbb;
+    letter-spacing: 0.05em;
+    user-select: none;
+}
+
+.info-mask-notice {
+    margin-top: 10px;
+    font-size: 13px;
+    color: #7c3aed;
+    background: #f5f0ff;
+    border: 1px solid #ede9fe;
+    border-radius: 8px;
+    padding: 10px 14px;
+    line-height: 1.5;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+@media (max-width: 480px) {
+    .info-mask-notice {
+        font-size: clamp(10px, 3vw, 13px);
+        padding: 8px 10px;
+    }
+}
 
 /* 재무상태 물음표 툴팁 */
 .credit-q-wrap {
@@ -96,8 +186,10 @@
     vertical-align: 1px;
     margin-left: 4px;
 }
+
 .credit-q {
-    width: 16px; height: 16px;
+    width: 16px;
+    height: 16px;
     border-radius: 50%;
     background: #e8e8e8;
     color: #999;
@@ -109,7 +201,12 @@
     font-weight: 700;
     line-height: 1;
 }
-.credit-q:hover { background: #ddd; color: #666; }
+
+.credit-q:hover {
+    background: #ddd;
+    color: #666;
+}
+
 .credit-q-tooltip {
     position: absolute;
     bottom: 100%;
@@ -124,13 +221,14 @@
     font-weight: 400;
     line-height: 1.6;
     white-space: nowrap;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
     opacity: 0;
     visibility: hidden;
     transition: opacity 0.2s, visibility 0.2s;
     z-index: 20;
     pointer-events: none;
 }
+
 .credit-q-tooltip::after {
     content: '';
     position: absolute;
@@ -140,11 +238,19 @@
     border: 5px solid transparent;
     border-top-color: #333;
 }
-.credit-q-tooltip strong { color: #fbbf24; }
+
+.credit-q-tooltip strong {
+    color: #fbbf24;
+}
+
 .credit-q-tooltip .credit-q-sub {
     display: block;
     margin-top: 6px;
     font-size: 11px;
-    color: rgba(255,255,255,0.6);
+    color: rgba(255, 255, 255, 0.6);
 }
-.credit-q-wrap:hover .credit-q-tooltip { opacity: 1; visibility: visible; }
+
+.credit-q-wrap:hover .credit-q-tooltip {
+    opacity: 1;
+    visibility: visible;
+}

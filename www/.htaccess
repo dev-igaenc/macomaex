@@ -15,3 +15,41 @@ RewriteRule ^([0-9a-zA-Z_]+)/write$  bbs/write.php?bo_table=$1&rewrite=1    [QSA
 RewriteRule ^([0-9a-zA-Z_]+)/([0-9]+)$  bbs/board.php?bo_table=$1&wr_id=$2&rewrite=1  [QSA,L]
 </IfModule>
 #### 그누보드5 rewrite END #####
+
+#### Cache Policy BEGIN #####
+<IfModule mod_expires.c>
+  ExpiresActive On
+
+  # Static assets: long cache (versioned by ?ver=...)
+  ExpiresByType text/css "access plus 1 year"
+  ExpiresByType application/javascript "access plus 1 year"
+  ExpiresByType text/javascript "access plus 1 year"
+  ExpiresByType image/svg+xml "access plus 1 year"
+  ExpiresByType image/x-icon "access plus 1 year"
+  ExpiresByType image/gif "access plus 1 year"
+  ExpiresByType image/png "access plus 1 year"
+  ExpiresByType image/jpeg "access plus 1 year"
+  ExpiresByType image/webp "access plus 1 year"
+  ExpiresByType font/woff2 "access plus 1 year"
+  ExpiresByType font/woff "access plus 1 year"
+  ExpiresByType application/font-woff2 "access plus 1 year"
+  ExpiresByType application/font-woff "access plus 1 year"
+  ExpiresByType application/vnd.ms-fontobject "access plus 1 year"
+  ExpiresByType font/ttf "access plus 1 year"
+  ExpiresByType application/octet-stream "access plus 1 year"
+</IfModule>
+
+<IfModule mod_headers.c>
+  # Static assets
+  <FilesMatch "\.(css|js|mjs|gif|png|jpe?g|svg|webp|ico|woff2?|ttf|eot)$">
+    Header set Cache-Control "public, max-age=31536000, immutable"
+  </FilesMatch>
+
+  # Dynamic documents
+  <FilesMatch "\.(php|html?)$">
+    Header set Cache-Control "no-cache, no-store, must-revalidate"
+    Header set Pragma "no-cache"
+    Header set Expires "0"
+  </FilesMatch>
+</IfModule>
+#### Cache Policy END #####

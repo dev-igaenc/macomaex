@@ -313,7 +313,46 @@
 			if (normalized.length > MESSAGE_TEXT_MAX_LENGTH) {
 				return { valid: false, message: '메시지는 2000자 이하로 입력해 주세요.', text: '' };
 			}
+			if (normalized && isBlockedSqlLikeMessage(normalized)) {
+				return { valid: false, message: '부적절한 채팅 내용이 감지되어 전송할 수 없습니다.', text: '' };
+			}
 			return { valid: true, message: '', text: normalized };
+		}
+
+		// SQL 실행/공격 시나리오로 오해될 수 있는 문장 패턴을 프론트 1차에서 차단한다.
+		function isBlockedSqlLikeMessage(text) {
+			var value = String(text || '').trim();
+			if (!value) return false;
+			var lowered = value.toLowerCase();
+
+			var sqlLikePatterns = [
+				/\bselect\b[\s\S]{1,200}?\bfrom\b/i,
+				/\binsert\b[\s\S]{1,120}?\binto\b[\s\S]{1,200}?\bvalues?\b/i,
+				/\bupdate\b[\s\S]{1,200}?\bset\b/i,
+				/\bdelete\b[\s\S]{1,120}?\bfrom\b/i,
+				/\bcreate\b[\s\S]{1,80}?\btable\b/i,
+				/\bdrop\b[\s\S]{1,80}?\btable\b/i,
+				/\balter\b[\s\S]{1,80}?\btable\b/i,
+				/\btruncate\b[\s\S]{1,80}?\btable\b/i,
+				/\bunion\b[\s\S]{0,40}?\bselect\b/i,
+				/\bexec(?:ute)?\s*\(/i,
+				/\bsleep\s*\(/i,
+				/\bbenchmark\s*\(/i
+			];
+
+			for (var i = 0; i < sqlLikePatterns.length; i += 1) {
+				if (sqlLikePatterns[i].test(value)) {
+					return true;
+				}
+			}
+
+			// 주석/세미콜론 + SQL 핵심 키워드 조합은 우회 시도로 간주한다.
+			if ((/--|\/\*|\*\//.test(lowered) || /;/.test(lowered)) &&
+				/\b(select|insert|update|delete|drop|alter|truncate|create|union|exec|execute)\b/.test(lowered)) {
+				return true;
+			}
+
+			return false;
 		}
 
 		function getFileExtension(fileName) {

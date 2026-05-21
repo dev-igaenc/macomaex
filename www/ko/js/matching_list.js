@@ -3,7 +3,7 @@
 
     // PHP에서 내려준 페이지 설정값
     var cfg = window.MATCHING_LIST_CONFIG || {};
-    var pageSize = parseInt(cfg.freeLimit, 10) || 9;
+    var pageSize = parseInt(cfg.pageSize, 10) || parseInt(cfg.freeLimit, 10) || 24;
     var canLoadMore = !!cfg.canLoadMore;
     var isServerPaged = !!cfg.isServerPaged;
     var totalByType = cfg.totalByType || { buyer: 0, seller: 0 };
@@ -12,11 +12,12 @@
     var categories = Array.isArray(cfg.listCategories) ? cfg.listCategories : [];
     var showCount = { buyer: pageSize, seller: pageSize };
     var isLoadingMore = false;
+    var moreBtnDefaultText = '더보기';
+    var prefetchedByType = {};
 
     var sortLabelMap = {
         rank: '랭킹순',
         grow: '성장성순',
-        profit: '수익성순',
         stable: '안정성순'
     };
 
@@ -91,6 +92,7 @@
         var params = new URLSearchParams(window.location.search);
         params.set('cat', catSlug);
         params.delete('offset');
+        params.set('page_size', pageSize);
         if (!params.get('type')) params.set('type', currentType);
         params.set('sort', 'rank');
         return '?' + params.toString();
@@ -119,6 +121,7 @@
 
             url.searchParams.set('type', currentType);
             url.searchParams.set('sort', 'rank');
+            url.searchParams.set('page_size', pageSize);
             url.searchParams.delete('offset');
 
             a.setAttribute('href', url.pathname + '?' + url.searchParams.toString());
@@ -304,8 +307,24 @@
         var sortSelect = document.getElementById('sortSelect');
         var grid = document.querySelector('.list-grid');
         if (!grid) return;
+        var activeFetchController = null;
+        var prefetchFetchControllerByType = { buyer: null, seller: null };
+        var prefetchPrimed = false;
 
         initSortDropdown(sortSelect);
+        if (moreBtn && moreBtn.textContent) moreBtnDefaultText = moreBtn.textContent.trim() || moreBtnDefaultText;
+
+        function buildFetchOptions(controller) {
+            var options = { credentials: 'same-origin' };
+            if (controller) options.signal = controller.signal;
+            return options;
+        }
+
+        function abortActiveRequest() {
+            if (!activeFetchController) return;
+            activeFetchController.abort();
+            activeFetchController = null;
+        }
 
         // 탭 슬라이더 위치/크기 업데이트
         function updateSlider() {
@@ -338,6 +357,8 @@
                 var totalCountForType = totalByType[type] || 0;
                 var shouldShowMoreBtn = totalCountForType > visibleCount;
                 moreBtn.style.display = shouldShowMoreBtn ? '' : 'none';
+                moreBtn.textContent = moreBtnDefaultText;
+                moreBtn.disabled = false;
             }
         }
 
@@ -382,49 +403,152 @@
             });
         }
 
+        // 조회 속도 개선용 JSON 형태 전달
+        function buildApiUrl(urlLike) {
+            var apiUrl = new URL(urlLike.toString(), window.location.origin);
+            apiUrl.pathname = '/ko/matching_list_api.php';
+            return apiUrl;
+        }
+
+        function parseCardsFromGridHtml(gridHtml) {
+            var holder = document.createElement('div');
+            holder.innerHTML = gridHtml || '';
+            return Array.from(holder.querySelectorAll('.mCompanyCard'));
+        }
+
+        function applyPrefetchedType(type, prefetched) {
+            if (!prefetched || !prefetched.gridHtml) return false;
+            if (prefetched.totalByType) totalByType = prefetched.totalByType;
+            grid.innerHTML = prefetched.gridHtml;
+            currentType = type;
+            btns.forEach(function (btn) {
+                var isActive = btn.getAttribute('data-type') === currentType;
+                btn.classList.toggle('on', isActive);
+                btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+            });
+            updateSlider();
+            renderType(currentType);
+            syncNavLinkParams();
+            return true;
+        }
+
+        // 반대 탭(구매하기 - 판매하기)선 조회
+        function prefetchType(type) {
+            if (!isServerPaged) return false;
+            if (isLoadingMore) return false;
+            if (prefetchedByType[type]) return true;
+            if (prefetchFetchControllerByType[type]) return true;
+            var preUrl = new URL(window.location.href);
+            preUrl.searchParams.set('type', type);
+            preUrl.searchParams.set('sort', sortSelect ? (sortSelect.value || 'rank') : 'rank');
+            preUrl.searchParams.set('page_size', pageSize);
+            preUrl.searchParams.set('offset', 0);
+            var preApiUrl = buildApiUrl(preUrl);
+            prefetchFetchControllerByType[type] = new AbortController();
+            fetch(preApiUrl.toString(), buildFetchOptions(prefetchFetchControllerByType[type]))
+                .then(function (res) { return res.json(); })
+                .then(function (payload) {
+                    if (!payload || payload.ok !== true || !payload.gridHtml) return;
+                    prefetchedByType[type] = {
+                        gridHtml: payload.gridHtml,
+                        totalByType: payload.totalByType || null,
+                        url: preUrl.toString()
+                    };
+                })
+                .catch(function (err) {
+                    if (err && err.name === 'AbortError') return;
+                })
+                .finally(function () {
+                    prefetchFetchControllerByType[type] = null;
+                });
+            return true;
+        }
+
+        function prefetchOppositeTypeOnce() {
+            if (!isServerPaged || prefetchPrimed) return;
+            if (prefetchType(currentType === 'buyer' ? 'seller' : 'buyer')) {
+                prefetchPrimed = true;
+            }
+        }
+
         // 서버에서 새 목록으로 교체 로드
-        function fetchAndReplaceGrid(url, preserveScroll) {
+        function fetchAndReplaceGrid(url, preserveScroll, nextType) {
             var prevScrollY = window.scrollY || window.pageYOffset || 0;
+            abortActiveRequest();
+            activeFetchController = new AbortController();
             isLoadingMore = true;
-            if (moreBtn) moreBtn.disabled = true;
+            wrap.classList.add('is-loading');
+            if (moreBtn) {
+                moreBtn.disabled = true;
+                moreBtn.textContent = '불러오는 중...';
+            }
+            btns.forEach(function (btn) {
+                btn.disabled = true;
+            });
 
-            return fetch(url.toString(), { credentials: 'same-origin' })
-                .then(function (res) { return res.text(); })
-                .then(function (html) {
-                    var doc = new DOMParser().parseFromString(html, 'text/html');
-                    var nextGrid = doc.querySelector('.list-grid');
-                    if (!nextGrid) throw new Error('list-grid not found');
+            var apiUrl = buildApiUrl(url);
+            return fetch(apiUrl.toString(), buildFetchOptions(activeFetchController))
+                .then(function (res) { return res.json(); })
+                .then(function (payload) {
+                    if (!payload || payload.ok !== true || !payload.gridHtml) throw new Error('grid payload not found');
+                    if (payload.totalByType) totalByType = payload.totalByType;
 
-                    grid.innerHTML = nextGrid.innerHTML;
+                    grid.innerHTML = payload.gridHtml;
                     if (!isServerPaged) sortCards(sortSelect ? (sortSelect.value || 'rank') : 'rank');
+                    if (nextType) currentType = nextType;
+                    btns.forEach(function (btn) {
+                        var isActive = btn.getAttribute('data-type') === currentType;
+                        btn.classList.toggle('on', isActive);
+                        btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+                    });
+                    updateSlider();
                     renderType(currentType);
+                    syncNavLinkParams();
                     if (preserveScroll) window.scrollTo(0, prevScrollY);
                     window.history.replaceState({ type: currentType }, '', url.toString());
                 })
-                .catch(function () {
+                .catch(function (err) {
+                    if (err && err.name === 'AbortError') return;
                     window.location.href = url.toString();
                 })
                 .finally(function () {
+                    activeFetchController = null;
                     isLoadingMore = false;
-                    if (moreBtn) moreBtn.disabled = false;
+                    wrap.classList.remove('is-loading');
+                    if (moreBtn) {
+                        moreBtn.disabled = false;
+                        moreBtn.textContent = moreBtnDefaultText;
+                    }
+                    btns.forEach(function (btn) {
+                        btn.disabled = false;
+                    });
                 });
         }
 
         // 서버에서 다음 목록을 이어붙여 로드
         function fetchAndAppendGrid(url, preserveScroll) {
             var prevScrollY = window.scrollY || window.pageYOffset || 0;
+            abortActiveRequest();
+            activeFetchController = new AbortController();
             isLoadingMore = true;
-            if (moreBtn) moreBtn.disabled = true;
+            if (moreBtn) {
+                moreBtn.disabled = true;
+                moreBtn.textContent = '불러오는 중...';
+            }
 
-            return fetch(url.toString(), { credentials: 'same-origin' })
-                .then(function (res) { return res.text(); })
-                .then(function (html) {
-                    var doc = new DOMParser().parseFromString(html, 'text/html');
-                    var nextGrid = doc.querySelector('.list-grid');
-                    if (!nextGrid) throw new Error('list-grid not found');
+            var apiUrl = buildApiUrl(url);
+            return fetch(apiUrl.toString(), buildFetchOptions(activeFetchController))
+                .then(function (res) { return res.json(); })
+                .then(function (payload) {
+                    if (!payload || payload.ok !== true || payload.gridHtml == null) throw new Error('grid payload not found');
+                    if (payload.totalByType) totalByType = payload.totalByType;
 
-                    var nodes = Array.from(nextGrid.querySelectorAll('.mCompanyCard'));
-                    if (!nodes.length) return;
+                    var nodes = parseCardsFromGridHtml(payload.gridHtml);
+                    if (!nodes.length) {
+                        totalByType[currentType] = document.querySelectorAll('.list-grid .mCompanyCard[data-type="' + currentType + '"]').length;
+                        renderType(currentType);
+                        return;
+                    }
                     nodes.forEach(function (card) {
                         grid.appendChild(card);
                     });
@@ -434,22 +558,39 @@
                     if (preserveScroll) window.scrollTo(0, prevScrollY);
                     window.history.replaceState({ type: currentType }, '', url.toString());
                 })
-                .catch(function () {
+                .catch(function (err) {
+                    if (err && err.name === 'AbortError') return;
                     window.location.href = url.toString();
                 })
                 .finally(function () {
+                    activeFetchController = null;
                     isLoadingMore = false;
-                    if (moreBtn) moreBtn.disabled = false;
+                    if (moreBtn) {
+                        moreBtn.disabled = false;
+                        moreBtn.textContent = moreBtnDefaultText;
+                    }
                 });
         }
 
         // 타입 전환 처리 (server/client 모드 분기)
         function setType(type) {
             if (isServerPaged && type !== currentType) {
+                if (isLoadingMore) return;
+                var prefetched = prefetchedByType[type];
                 var moveUrl = new URL(window.location.href);
                 moveUrl.searchParams.set('type', type);
-                moveUrl.searchParams.delete('offset');
-                window.location.href = moveUrl.toString();
+                moveUrl.searchParams.set('sort', sortSelect ? (sortSelect.value || 'rank') : 'rank');
+                moveUrl.searchParams.set('page_size', pageSize);
+                moveUrl.searchParams.set('offset', 0);
+
+                if (applyPrefetchedType(type, prefetched)) {
+                    window.history.replaceState({ type: type }, '', moveUrl.toString());
+                    // 사용한 prefetch는 소모 처리
+                    delete prefetchedByType[type];
+                    return;
+                }
+
+                fetchAndReplaceGrid(moveUrl, true, type);
                 return;
             }
 
@@ -481,13 +622,17 @@
 
         if (sortSelect) {
             sortSelect.addEventListener('change', function () {
+                prefetchedByType = {};
+                prefetchPrimed = false;
                 if (isServerPaged) {
                     if (isLoadingMore) return;
                     var selectedSort = sortSelect.value || 'rank';
                     var replaceUrl = new URL(window.location.href);
                     replaceUrl.searchParams.set('sort', selectedSort);
                     replaceUrl.searchParams.set('offset', 0);
+                    replaceUrl.searchParams.set('page_size', pageSize);
                     fetchAndReplaceGrid(replaceUrl, true);
+                    prefetchOppositeTypeOnce();
                     return;
                 }
 
@@ -520,6 +665,7 @@
                     var appendUrl = new URL(window.location.href);
                     appendUrl.searchParams.set('offset', currentShown);
                     appendUrl.searchParams.set('sort', sortSelect ? (sortSelect.value || 'rank') : 'rank');
+                    appendUrl.searchParams.set('page_size', pageSize);
                     fetchAndAppendGrid(appendUrl, true);
                     return;
                 }
@@ -530,6 +676,7 @@
         }
 
         window.addEventListener('resize', updateSlider);
+        if (isServerPaged) prefetchOppositeTypeOnce();
     }
 
     // 매칭 요청 팝업(템플릿/메시지/검증) 동작

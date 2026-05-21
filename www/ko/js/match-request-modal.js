@@ -109,8 +109,9 @@ if (openMatchBtn) {
     openMatchBtn.addEventListener('click', function () {
         // 비로그인 진입은 각 페이지가 내려준 로그인 유도 URL로만 처리한다.
         if (MATCH_REQUEST_CONTEXT.isLoggedIn === false) {
-            if (MATCH_REQUEST_CONTEXT.loginCheckUrl) {
-                window.location.href = MATCH_REQUEST_CONTEXT.loginCheckUrl;
+            var tradeRequestLoginUrl = MATCH_REQUEST_CONTEXT.tradeRequestLoginUrl || MATCH_REQUEST_CONTEXT.loginCheckUrl;
+            if (tradeRequestLoginUrl) {
+                window.location.href = tradeRequestLoginUrl;
             }
             return;
         }
