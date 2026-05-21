@@ -295,14 +295,9 @@ for($i=0; $i<count($payment_rows); $i++){
                             $meta_method_text = $is_free ? "무료" : ($pay_method_text ? $pay_method_text : ($tx_type=="REFUND" ? "환불" : "카드결제"));
                             $paid_amount = (int)$row['bill_paid_amount'];
                             if($paid_amount < 1) $paid_amount = (int)$row['payment_price'];
-                            $is_vat_separate = (strpos((string)$row['plan_vat'], '별도') !== false);
-                            $paid_amount_ex_vat = $paid_amount;
-                            if($tx_type=="CHARGE" && $paid_amount > 0 && $is_vat_separate){
-                                $paid_amount_ex_vat = (int)round($paid_amount / 1.1);
-                            }
                             $price_text_display = $is_free ? "무료" : ($pay_method_text ? $pay_method_text : "카드결제");
                             if($tx_type=="CHARGE" && $paid_amount > 0){
-                                $price_text_display = "₩".number_format($paid_amount_ex_vat);
+                                $price_text_display = "₩".number_format($paid_amount);
                             }else if($tx_type=="REFUND"){
                                 $price_text_display = ($paid_amount > 0) ? "-₩".number_format($paid_amount) : "환불";
                             }
