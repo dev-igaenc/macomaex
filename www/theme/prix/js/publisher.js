@@ -24,7 +24,6 @@ function sideMenuClose() {
 }
 
 $(function(){
-	$("#wrap").append('<div id="progressBar"></div>');
 
 	$("body").on("mouseenter", "#wrap[data-device='pc'] #header:not('.all') #pcMenu>#list>li", function(){// [PC] GNB OVER
 		var idx = $("#pcMenu #list>li:not('.one')").index($(this));
@@ -254,9 +253,6 @@ $(window).on('scroll', function(){// Scroll Event
 	ST_Event();
 });
 function ST_Event(){
-	var progress = ScrollporgressBar();
-	$('#progressBar').css("width", progress+'%');
-
 	if(scroll_T > 0){
 		$("a.goTop").addClass("open");
 		$("#header").addClass("move");
@@ -440,12 +436,6 @@ function popFancy(name){// 팝업 열기 javascript:popFancy('#layer-schdule');
 // 팝업닫기
 function popFancyClose(){
 	Fancybox.close();
-}
-
-function ScrollporgressBar(){
-	var maxY = document.documentElement.scrollHeight - document.documentElement.clientHeight;
-	var scrollY = window.scrollY || document.documentElement.scrollTop;
-	return (scrollY / maxY) * 100;
 }
 
 // 레이어 열기

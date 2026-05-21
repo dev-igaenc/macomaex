@@ -196,7 +196,6 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 <!-- End Google Tag Manager (noscript) -->
 
 
-<div id="progressBar"></div>
 <div id="wrap" class="<?php if (!defined("_INDEX_")) { ?> sub<?php } ?>">
 
 <?php
