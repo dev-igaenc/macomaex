@@ -5,16 +5,16 @@ $e = static function ($value) {
     return htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8');
 };
 
-$requestCompanyProfileName = isset($requestCompanyProfileName) ? (string)$requestCompanyProfileName : (string)$requestCompanyName;
-$requestCompanyBizNo = isset($requestCompanyBizNo) ? (string)$requestCompanyBizNo : '';
-$requestCompanyFounded = isset($requestCompanyFounded) ? (string)$requestCompanyFounded : '';
-$requestCompanyEmployees = isset($requestCompanyEmployees) ? (string)$requestCompanyEmployees : '';
-$requestCompanyCorpType = isset($requestCompanyCorpType) ? (string)$requestCompanyCorpType : '';
-$requestCompanyIndustry = isset($requestCompanyIndustry) ? (string)$requestCompanyIndustry : '';
-$requestCompanyProduct = isset($requestCompanyProduct) ? (string)$requestCompanyProduct : '';
-$requestCompanyHomepage = isset($requestCompanyHomepage) ? (string)$requestCompanyHomepage : '';
-$hasRequestCompanyHomepage = trim($requestCompanyHomepage) !== '';
-$tradeDirectionLabel = isset($tradeDirectionLabel) ? (string)$tradeDirectionLabel : '';
+    $requestCompanyProfileName = isset($requestCompanyProfileName) ? (string)$requestCompanyProfileName : (string)$requestCompanyName;
+    $requestCompanyBizNo = isset($requestCompanyBizNo) ? (string)$requestCompanyBizNo : '';
+    $requestCompanyFounded = isset($requestCompanyFounded) ? (string)$requestCompanyFounded : '';
+    $requestCompanyEmployees = isset($requestCompanyEmployees) ? (string)$requestCompanyEmployees : '';
+    $requestCompanyCorpType = isset($requestCompanyCorpType) ? (string)$requestCompanyCorpType : '';
+    $requestCompanyIndustry = isset($requestCompanyIndustry) ? (string)$requestCompanyIndustry : '';
+    $requestCompanyProduct = isset($requestCompanyProduct) ? (string)$requestCompanyProduct : '';
+    $requestCompanyHomepage = isset($requestCompanyHomepage) ? (string)$requestCompanyHomepage : '';
+    $hasRequestCompanyHomepage = trim($requestCompanyHomepage) !== '';
+    $tradeDirectionLabel = isset($tradeDirectionLabel) ? (string)$tradeDirectionLabel : '';
     $tradePurposeLabels = (isset($tradePurposeLabels) && is_array($tradePurposeLabels)) ? $tradePurposeLabels : array();
     $messagePreviewLines = (isset($messagePreviewLines) && is_array($messagePreviewLines)) ? $messagePreviewLines : array();
     $messagePreviewImageUrl = isset($messagePreviewImageUrl) ? trim((string)$messagePreviewImageUrl) : '';
