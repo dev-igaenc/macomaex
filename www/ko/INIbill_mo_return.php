@@ -181,7 +181,7 @@ if($_REQUEST["resultcode"]=="00"){
 
 	//기존 자료 삭제
 	if($member['mb_id']) $msinfo_row = getUserMembership();
-	if($member['mb_id']) sql_query("delete from g5_membership_status where uid='{$member['mb_id']}'");
+		// if($member['mb_id']) sql_query("delete from g5_membership_status where uid='{$member['mb_id']}'");
 	/*
 		맴버쉽 변경시 이전되는 DATA처리
 
@@ -199,47 +199,46 @@ if($_REQUEST["resultcode"]=="00"){
 		$minfo['expert_consulting_cnt'] =  $minfo['expert_consulting_cnt'] + $expert_consulting_able_cnt;
 
 	}
-	$sql="insert g5_membership_status set ";
-	$sql.="uid='{$member['mb_id']}',";
-	$sql.="order_no='{$orderid}',";
-	$sql.="date_begin='{$date_begin}',";
-	$sql.="date_end='{$date_end}',";
-	$sql.="month='1',";
-	$sql.="open_able_cnt='{$minfo['open_cnt']}',";
-	$sql.="open_cnt='{$minfo['open_cnt']}',";
-	$sql.="matching_able_cnt='{$minfo['matching_cnt']}',";
-	$sql.="matching_cnt='{$minfo['matching_cnt']}',";
-	$sql.="expert_consulting_able_cnt='{$minfo['expert_consulting_cnt']}',";
-	$sql.="expert_consulting_cnt='{$minfo['expert_consulting_cnt']}',";
-	$sql.="selected_able_cnt='{$minfo['selected_cnt']}',";
-	$sql.="selected_cnt='{$minfo['selected_cnt']}',";
-	$sql.="regdate=now(),";
-	$sql.="status='S',";
-	$sql.="membership_parent_no='{$pinfo['membership_parent_no']}'";
-	//echo $sql;
-	sql_query($sql);
-	
-	//맵버쉽 스테이터스 히스토리
-	$sql="insert g5_membership_status_history set ";
-	$sql.="uid='{$member['mb_id']}',";
-	$sql.="order_no='{$orderid}',";
-	$sql.="date_begin='{$date_begin}',";
-	$sql.="date_end='{$date_end}',";
-	$sql.="month='1',";
-	$sql.="open_able_cnt='{$minfo['open_cnt']}',";
-	$sql.="open_cnt='{$minfo['open_cnt']}',";
-	$sql.="matching_able_cnt='{$minfo['matching_cnt']}',";
-	$sql.="matching_cnt='{$minfo['matching_cnt']}',";
-	$sql.="expert_consulting_able_cnt='{$minfo['expert_consulting_cnt']}',";
-	$sql.="expert_consulting_cnt='{$minfo['expert_consulting_cnt']}',";
-	$sql.="selected_able_cnt='{$minfo['selected_cnt']}',";
-	$sql.="selected_cnt='{$minfo['selected_cnt']}',";
-	$sql.="regdate=now(),";
-	$sql.="status='S',";
-	$sql.="membership_parent_no='{$pinfo['membership_parent_no']}',";
-	$sql.="memo='사용자 결제\\n',";
-	$sql.="ext_1='".G5_TIME_YMDHIS."\\n'";
-	sql_query($sql);
+		// $sql="insert g5_membership_status set ";
+		// $sql.="uid='{$member['mb_id']}',";
+		// $sql.="order_no='{$orderid}',";
+		// $sql.="date_begin='{$date_begin}',";
+		// $sql.="date_end='{$date_end}',";
+		// $sql.="month='1',";
+		// $sql.="open_able_cnt='{$minfo['open_cnt']}',";
+		// $sql.="open_cnt='{$minfo['open_cnt']}',";
+		// $sql.="matching_able_cnt='{$minfo['matching_cnt']}',";
+		// $sql.="matching_cnt='{$minfo['matching_cnt']}',";
+		// $sql.="expert_consulting_able_cnt='{$minfo['expert_consulting_cnt']}',";
+		// $sql.="expert_consulting_cnt='{$minfo['expert_consulting_cnt']}',";
+		// $sql.="selected_able_cnt='{$minfo['selected_cnt']}',";
+		// $sql.="selected_cnt='{$minfo['selected_cnt']}',";
+		// $sql.="regdate=now(),";
+		// $sql.="status='S',";
+		// $sql.="membership_parent_no='{$pinfo['membership_parent_no']}'";
+		// sql_query($sql);
+		
+		//맵버쉽 스테이터스 히스토리
+		// $sql="insert g5_membership_status_history set ";
+		// $sql.="uid='{$member['mb_id']}',";
+		// $sql.="order_no='{$orderid}',";
+		// $sql.="date_begin='{$date_begin}',";
+		// $sql.="date_end='{$date_end}',";
+		// $sql.="month='1',";
+		// $sql.="open_able_cnt='{$minfo['open_cnt']}',";
+		// $sql.="open_cnt='{$minfo['open_cnt']}',";
+		// $sql.="matching_able_cnt='{$minfo['matching_cnt']}',";
+		// $sql.="matching_cnt='{$minfo['matching_cnt']}',";
+		// $sql.="expert_consulting_able_cnt='{$minfo['expert_consulting_cnt']}',";
+		// $sql.="expert_consulting_cnt='{$minfo['expert_consulting_cnt']}',";
+		// $sql.="selected_able_cnt='{$minfo['selected_cnt']}',";
+		// $sql.="selected_cnt='{$minfo['selected_cnt']}',";
+		// $sql.="regdate=now(),";
+		// $sql.="status='S',";
+		// $sql.="membership_parent_no='{$pinfo['membership_parent_no']}',";
+		// $sql.="memo='사용자 결제\\n',";
+		// $sql.="ext_1='".G5_TIME_YMDHIS."\\n'";
+		// sql_query($sql);
 
 	//셀렉티드 추가 처리
 	if($minfo['selected_cnt']>0){

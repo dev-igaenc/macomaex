@@ -205,7 +205,7 @@ function llm_report_has_recent_use($memberId, $onceKey, $months = 6) {
     $uidSql = sql_escape_string($memberId);
     $onceKeySql = sql_escape_string($onceKey);
     $serviceCodeSql = sql_escape_string('AI_COMPANY_REPORT');
-    $row = sql_fetch("select id from g5_matching_credit_history where uid='{$uidSql}' and once_key='{$onceKeySql}' and tx_type='USE' and service_code='{$serviceCodeSql}' and created_at >= date_sub(now(), interval {$months} month) limit 1");
+    $row = sql_fetch("select id from credit_history where uid='{$uidSql}' and once_key='{$onceKeySql}' and tx_type='USE' and service_code='{$serviceCodeSql}' and created_at >= date_sub(now(), interval {$months} month) limit 1");
     return !empty($row['id']);
 }
 
@@ -264,7 +264,7 @@ function llm_report_consume_credit_once($memberId, $sourceKedcd, $targetKedcd, $
         );
     }
 
-    $already = sql_fetch("select id from g5_matching_credit_history where once_key='{$onceKeySql}' and tx_type='USE' and service_code='{$serviceCodeSql}' limit 1");
+    $already = sql_fetch("select id from credit_history where once_key='{$onceKeySql}' and tx_type='USE' and service_code='{$serviceCodeSql}' limit 1");
     if (!empty($already['id'])) {
         llm_report_lock_release($lockName);
         return array(
@@ -275,9 +275,8 @@ function llm_report_consume_credit_once($memberId, $sourceKedcd, $targetKedcd, $
         );
     }
 
-    $status = sql_fetch("select * from g5_membership_status where uid='{$uidSql}' order by no desc limit 1");
-    $remain = isset($status['matching_able_cnt']) ? (int)$status['matching_able_cnt'] : 0;
-    if (empty($status['uid']) || $remain < $creditCost) {
+    $remain = credit_ledger_get_balance($memberId);
+    if ($remain < $creditCost) {
         llm_report_lock_release($lockName);
         return array(
             'success' => false,
@@ -288,10 +287,9 @@ function llm_report_consume_credit_once($memberId, $sourceKedcd, $targetKedcd, $
     }
 
     sql_query('START TRANSACTION');
-    $deductSql = "update g5_membership_status set matching_able_cnt=matching_able_cnt-{$creditCost} where uid='{$uidSql}' and matching_able_cnt >= {$creditCost}";
-    $deductResult = sql_query($deductSql, false);
-    $affected = sql_fetch('select row_count() as cnt');
-    if (!$deductResult || (int)$affected['cnt'] < 1) {
+    $ledgerLast = credit_ledger_get_latest_row($memberId, true);
+    $currentCredit = isset($ledgerLast['credit_after']) ? (int)$ledgerLast['credit_after'] : 0;
+    if ($currentCredit < $creditCost) {
         sql_query('ROLLBACK');
         llm_report_lock_release($lockName);
         return array(
@@ -301,19 +299,17 @@ function llm_report_consume_credit_once($memberId, $sourceKedcd, $targetKedcd, $
             'plan_required' => true,
         );
     }
-
-    $afterStatus = sql_fetch("select * from g5_membership_status where uid='{$uidSql}' order by no desc limit 1");
-    $creditAfter = isset($afterStatus['matching_able_cnt']) ? (int)$afterStatus['matching_able_cnt'] : 0;
+    $creditAfter = $currentCredit - $creditCost;
     $memo = addslashes('AI 기업 분석');
 
-    $historySql = "insert into g5_matching_credit_history set
+    $historySql = "insert into credit_history set
         uid='{$uidSql}',
         tx_type='USE',
         service_code='{$serviceCodeSql}',
         credit_delta='-{$creditCost}',
         credit_after='{$creditAfter}',
         order_no=NULL,
-        matching_no='',
+        tr_no='',
         target_kedcd='{$targetKedcdSql}',
         once_key='{$onceKeySql}',
         memo='{$memo}',
@@ -321,8 +317,6 @@ function llm_report_consume_credit_once($memberId, $sourceKedcd, $targetKedcd, $
         created_at=now()";
     $ins = sql_query($historySql, false);
     if (!$ins) {
-        // 이력 저장 실패 시 즉시 원복해서 과금 불일치를 막는다.
-        sql_query("update g5_membership_status set matching_able_cnt=matching_able_cnt+{$creditCost} where uid='{$uidSql}'", false);
         sql_query('ROLLBACK');
         llm_report_lock_release($lockName);
         return array(
@@ -331,10 +325,18 @@ function llm_report_consume_credit_once($memberId, $sourceKedcd, $targetKedcd, $
             'status' => 500,
         );
     }
-
-    if (!empty($afterStatus['order_no'])) {
-        $orderNoSql = sql_escape_string($afterStatus['order_no']);
-        sql_query("update g5_membership_status_history set matching_able_cnt='{$creditAfter}' where uid='{$uidSql}' and order_no='{$orderNoSql}'", false);
+    $useHistoryId = (int)sql_insert_id();
+    // USE 1건을 FIFO LOT 차감으로 분해해 실제 사용 LOT를 기록한다.
+    $lotUse = credit_lot_allocate_use($memberId, $useHistoryId, $creditCost);
+    if (empty($lotUse['ok'])) {
+        sql_query('ROLLBACK');
+        llm_report_lock_release($lockName);
+        $lotMsg = isset($lotUse['message']) ? (string)$lotUse['message'] : '';
+        return array(
+            'success' => false,
+            'message' => ($lotMsg === 'not enough lot remain') ? 'AI 분석 크레딧이 부족합니다. (필요: ' . $creditCost . ')' : '크레딧 차감 처리 중 오류가 발생했습니다.',
+            'status' => 500,
+        );
     }
 
     sql_query('COMMIT');
@@ -364,16 +366,36 @@ function llm_report_refund_credit_once($memberId, $onceKey, $creditCost = 1) {
     if ($lockName === '') return;
 
     sql_query('START TRANSACTION');
-    $del = sql_query("delete from g5_matching_credit_history where uid='{$uidSql}' and once_key='{$onceKeySql}' and tx_type='USE' and service_code='{$serviceCodeSql}' limit 1", false);
-    $affected = sql_fetch('select row_count() as cnt');
-    if ($del && (int)$affected['cnt'] > 0) {
-        sql_query("update g5_membership_status set matching_able_cnt=matching_able_cnt+{$creditCost} where uid='{$uidSql}'", false);
-        $afterStatus = sql_fetch("select * from g5_membership_status where uid='{$uidSql}' order by no desc limit 1");
-        $creditAfter = isset($afterStatus['matching_able_cnt']) ? (int)$afterStatus['matching_able_cnt'] : 0;
-        if (!empty($afterStatus['order_no'])) {
-            $orderNoSql = sql_escape_string($afterStatus['order_no']);
-            sql_query("update g5_membership_status_history set matching_able_cnt='{$creditAfter}' where uid='{$uidSql}' and order_no='{$orderNoSql}'", false);
+    $useRow = sql_fetch("select id from credit_history where uid='{$uidSql}' and once_key='{$onceKeySql}' and tx_type='USE' and service_code='{$serviceCodeSql}' limit 1");
+    $useHistoryId = isset($useRow['id']) ? (int)$useRow['id'] : 0;
+    if ($useHistoryId > 0) {
+        // 실패 환불 시 기존 USE의 LOT 차감부터 원복한다.
+        $release = credit_lot_release_use($useHistoryId);
+        if (empty($release['ok'])) {
+            sql_query('ROLLBACK');
+            llm_report_lock_release($lockName);
+            return;
         }
+    }
+    $alreadyAdjust = sql_fetch("select id from credit_history where uid='{$uidSql}' and once_key='{$onceKeySql}' and tx_type='ADJUST' and service_code='CREDIT_ADJUST' limit 1");
+    if ($useHistoryId > 0 && empty($alreadyAdjust['id'])) {
+        $ledgerLast = credit_ledger_get_latest_row($memberId, true);
+        $currentCredit = isset($ledgerLast['credit_after']) ? (int)$ledgerLast['credit_after'] : 0;
+        $creditAfter = $currentCredit + $creditCost;
+        $memo = addslashes('AI 분석 실패 복원');
+        sql_query("insert into credit_history set
+            uid='{$uidSql}',
+            tx_type='ADJUST',
+            service_code='CREDIT_ADJUST',
+            credit_delta='{$creditCost}',
+            credit_after='{$creditAfter}',
+            order_no=NULL,
+            tr_no='',
+            target_kedcd='',
+            once_key='{$onceKeySql}',
+            memo='{$memo}',
+            request_type=NULL,
+            created_at=now()", false);
     }
     sql_query('COMMIT');
     llm_report_lock_release($lockName);
