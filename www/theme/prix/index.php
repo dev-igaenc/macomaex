@@ -15,7 +15,6 @@ include_once(G5_THEME_PATH . '/head.php');
 <link rel="stylesheet" href="<?php echo G5_URL; ?>/ko/css/company-card.css?ver=<?php echo G5_CSS_VER; ?>">
 <link rel="stylesheet" href="<?php echo G5_URL; ?>/ko/css/section-header.css?ver=<?php echo G5_CSS_VER; ?>">
 <link rel="stylesheet" href="<?php echo G5_URL; ?>/ko/css/auth-toggle.css?ver=<?php echo G5_CSS_VER; ?>">
-<link rel="stylesheet" href="<?php echo G5_URL; ?>/ko/css/verify-modal.css?ver=<?php echo G5_CSS_VER; ?>">
 <link rel="stylesheet" href="<?php echo G5_URL; ?>/ko/css/ai-loading.css?ver=<?php echo G5_CSS_VER; ?>">
 <link rel="stylesheet" href="<?php echo G5_URL; ?>/ko/css/trade_chat_modal.css?ver=<?php echo G5_CSS_VER; ?>">
 <link rel="stylesheet" href="<?php echo G5_THEME_URL; ?>/css/index.css?ver=<?php echo G5_CSS_VER; ?>&rev=20260417-1610">

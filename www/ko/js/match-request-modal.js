@@ -150,6 +150,37 @@ function hideReqWarning() {
     if (warn) warn.style.display = 'none';
 }
 
+function showCreditShortageModal(message) {
+    var msg = message || '매칭 가능 크레딧이 부족합니다.';
+    // 거래요청 모달이 열려 있으면 먼저 닫아야 안내 모달이 뒤에 가려지지 않는다.
+    closeModal('modalType');
+    closeModal('modalRequest');
+    if (typeof window.openCreditShortageGuide === 'function') {
+        setTimeout(function () {
+            window.openCreditShortageGuide({
+                text: msg,
+                text2: '크레딧 충전 후 다시 거래 요청을 진행해 주세요.'
+            });
+        }, 0);
+        return;
+    }
+    if (typeof window.openAiGuideModal === 'function') {
+        setTimeout(function () {
+            window.openAiGuideModal({
+                title: '크레딧 부족 안내',
+                text: msg,
+                text2: '크레딧 충전 후 다시 거래 요청을 진행해 주세요.',
+                okText: '닫기',
+                okVariant: 'outline',
+                secondaryText: '크레딧 충전하러 가기',
+                secondaryHref: '/ko/plan.php'
+            });
+        }, 0);
+        return;
+    }
+    alert(msg);
+}
+
 /* ---- 다음 버튼: 검증 → 거래 타입 선택 ---- */
 var goToTypeBtn = document.getElementById('goToTypeStep');
 if (goToTypeBtn) {
@@ -326,8 +357,7 @@ if (confirmTypeBtn) {
             if (!data || !data.success) {
                 var errorMessage = data && data.message ? data.message : '거래 요청서 저장 중 오류가 발생했습니다.';
                 if (data && data.plan_required) {
-                    alert(errorMessage);
-                    window.location.href = '/ko/plan.php';
+                    showCreditShortageModal(errorMessage);
                     return;
                 }
                 alert(errorMessage);

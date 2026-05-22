@@ -246,11 +246,15 @@
 }
 .trm-extra:focus { outline: none; border-color: var(--modal-accent); box-shadow: 0 0 0 3px var(--modal-accent-muted); }
 
-/* 모달 내부 스크롤바 */
-.trm-body::-webkit-scrollbar { width: 6px; }
-.trm-body::-webkit-scrollbar-track { background: #eff6ff; border-radius: 3px; }
-.trm-body::-webkit-scrollbar-thumb { background: var(--modal-chip-hover); border-radius: 3px; }
-.trm-body::-webkit-scrollbar-thumb:hover { background: var(--modal-accent); }
+/* 모달 내부 스크롤바 (페이지 전역 스크롤바와 분리) */
+.trm-modal .trm-body {
+	scrollbar-width: thin;
+	scrollbar-color: var(--modal-accent) var(--modal-accent-soft);
+}
+.trm-modal .trm-body::-webkit-scrollbar { width: 6px; }
+.trm-modal .trm-body::-webkit-scrollbar-track { background: var(--modal-accent-soft); border-radius: 3px; }
+.trm-modal .trm-body::-webkit-scrollbar-thumb { background: var(--modal-accent); border-radius: 3px; }
+.trm-modal .trm-body::-webkit-scrollbar-thumb:hover { background: var(--modal-accent-dark); }
 
 /* 거래요청 폼 */
 .req2-step { margin-bottom: 20px; }

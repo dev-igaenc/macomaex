@@ -6,7 +6,7 @@
     background: rgba(0, 0, 0, 0.5);
     backdrop-filter: blur(4px);
     -webkit-backdrop-filter: blur(4px);
-    z-index: 1000;
+    z-index: 1100;
     align-items: center;
     justify-content: center;
     padding: 24px;
@@ -211,6 +211,46 @@
     fill: #fff;
     filter: drop-shadow(0 0 2px rgba(255,255,255,0.5));
 }
+.modal_verify_btn_row {
+    display: flex;
+    gap: 10px;
+}
+.modal_verify_btn_row .modal_verify_btn {
+    flex: 1 1 0;
+    max-width: none;
+}
+.modal_verify_btn_secondary {
+    background: linear-gradient(90deg, #1e40af 0%, #2563eb 50%, #3b82f6 100%);
+    color: #fff;
+    box-shadow: 0 8px 24px rgba(37, 99, 235, 0.3);
+}
+.modal_verify_btn_secondary::before { display: none; }
+.modal_verify_btn_secondary:hover {
+    background: #1d4ed8;
+    color: #fff;
+    transform: translateY(-1px);
+    box-shadow: 0 12px 28px rgba(29, 78, 216, 0.35);
+    animation: none;
+}
+.modal_verify_btn.modal_verify_btn_outline {
+    background: #fff;
+    color: #2563eb;
+    border: 1px solid #2563eb;
+    box-shadow: none;
+}
+.modal_verify_btn.modal_verify_btn_outline::before { display: none; }
+.modal_verify_btn.modal_verify_btn_outline:hover {
+    background: #eff6ff;
+    color: #1d4ed8;
+    transform: translateY(-1px);
+    box-shadow: none;
+    animation: none;
+}
+.modal_verify_btn.modal_verify_btn_outline:active {
+    background: #dbeafe;
+    color: #1d4ed8;
+    box-shadow: none;
+}
 @media (max-width: 640px) {
     .modal_verify_overlay { padding: 16px; }
     .modal_verify {
@@ -259,4 +299,5 @@
         font-size: 14px;
         border-radius: 12px;
     }
+    .modal_verify_btn_row { flex-direction: column; }
 }

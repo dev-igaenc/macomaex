@@ -443,7 +443,20 @@
                 });
         })();
 
-        document.title = String(co.title || 'AI 추천 기업') + ' \xB7 AI \uCD94\uCC9C \uAE30\uC5C5 \uC0C1\uC138 \u2014 \uB9E4\uCEE4\uBA59\uC2A4';
+        function maskedBrowserTitle(title) {
+            var raw = String(title || '').trim();
+            if (!raw) return 'AI 추천 기업';
+            var m = raw.match(/^(\(주\)|\(유\)|\(사\))?(.*)$/);
+            var prefix = m[1] || '';
+            var name = m[2] || '';
+            var visible = prefix ? name.substring(0, 1) : name.substring(0, 2);
+            if (!visible) return 'AI 추천 기업';
+            return prefix + visible + '****';
+        }
+        var browserTitleText = co.is_unlocked
+            ? String(co.title_display || co.title || 'AI 추천 기업')
+            : maskedBrowserTitle(co.title);
+        document.title = browserTitleText + ' · AI 추천 기업 상세 — 매커멕스';
         var _demoEl = document.getElementById('demoIdDisplay');
         if (_demoEl) _demoEl.textContent = demoId;
 
@@ -1362,7 +1375,10 @@
                             try { parsed = JSON.parse(text); } catch (e) { }
                             if (!r.ok) {
                                 var errMsg = (parsed && parsed.error) ? parsed.error : ('HTTP ' + r.status);
-                                throw new Error(errMsg);
+                                var httpErr = new Error(errMsg);
+                                httpErr.httpStatus = r.status;
+                                httpErr.planRequired = !!(parsed && parsed.plan_required);
+                                throw httpErr;
                             }
                             // PHP 경고/HTML 응답 섞임을 JSON 파싱 단계에서 명확히 에러 처리
                             if (!parsed || typeof parsed !== 'object') {
@@ -1382,13 +1398,49 @@
                             if (icon) icon.textContent = '✓';
                         });
                         if (bar) bar.style.width = '100%';
-                        if (res.error) throw new Error(res.error);
+                        if (res.error) {
+                            var apiErr = new Error(res.error);
+                            apiErr.planRequired = !!res.plan_required;
+                            throw apiErr;
+                        }
                         // 응답 수신 즉시 렌더링(추가 지연 없음)
                         var rendered = renderMarkdownToSafeHtml(res.report || '');
                         showAnalysisHtml(rendered);
                     })
                     .catch(function (err) {
                         clearStepTimers();
+                        var errMsg = String(err && err.message ? err.message : '알 수 없는 오류');
+                        var isCreditError = !!(err && err.planRequired)
+                            || Number(err && err.httpStatus) === 402
+                            || /크레딧.*부족/.test(errMsg)
+                            || /credit/i.test(errMsg);
+
+                        if (isCreditError && (typeof window.openCreditShortageGuide === 'function' || typeof window.openAiGuideModal === 'function')) {
+                            if (blurBg) blurBg.style.display = '';
+                            if (ctaOverlay) ctaOverlay.style.display = '';
+                            body.style.display = 'none';
+                            body.classList.remove('ai-analysis-result-ready');
+                            body.innerHTML = '';
+                            if (typeof window.openCreditShortageGuide === 'function') {
+                                window.openCreditShortageGuide({
+                                    text: 'AI 분석 가능 크레딧이 부족합니다.',
+                                    text2: '크레딧 충전 후 다시 시도해 주세요.'
+                                });
+                            } else {
+                                window.openAiGuideModal({
+                                    title: '크레딧 부족 안내',
+                                    text: 'AI 분석 가능 크레딧이 부족합니다.',
+                                    text2: '크레딧 충전 후 다시 시도해 주세요.',
+                                    okText: '닫기',
+                                    okVariant: 'outline',
+                                    secondaryText: '크레딧 충전하러 가기',
+                                    secondaryHref: '/ko/plan.php'
+                                });
+                            }
+                            btn.disabled = false;
+                            return;
+                        }
+
                         body.innerHTML = '<div class="ai-analysis-result"><p style="color:#e53935;">분석 중 오류가 발생했습니다: ' + esc(err && err.message ? err.message : '알 수 없는 오류') + '</p></div>';
                         body.classList.add('ai-analysis-result-ready');
                         btn.disabled = false;
