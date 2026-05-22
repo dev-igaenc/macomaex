@@ -60,6 +60,16 @@ if (!function_exists('mail_preview_apply_blur')) {
     }
 }
 
+if (!function_exists('mail_preview_apply_pixelate')) {
+    function mail_preview_apply_pixelate($image, $blockSize)
+    {
+        $blockSize = max(2, (int) $blockSize);
+        if (function_exists('imagefilter') && defined('IMG_FILTER_PIXELATE')) {
+            @imagefilter($image, IMG_FILTER_PIXELATE, $blockSize, true);
+        }
+    }
+}
+
 if (!function_exists('mail_preview_generate_trade_request_blur_image')) {
     function mail_preview_generate_trade_request_blur_image($lines, $baseUrl)
     {
@@ -105,12 +115,12 @@ if (!function_exists('mail_preview_generate_trade_request_blur_image')) {
         $fontSize = 13;
         $x = 12;
         $yList = array(24, 52, 80);
-        $opacityList = array(0.85, 0.60, 0.35);
-        $blurPassList = array(1, 3, 5);
+        $opacityList = array(0.50, 0.35, 0.25);
+        $blurPassList = array(6, 9, 12);
         $baseColor = array(55, 65, 81);
 
         $hashSource = json_encode(array(
-            'v' => 2,
+            'v' => 5,
             'font' => $fontPath,
             'lines' => $cleanLines,
             'w' => $width,
@@ -156,9 +166,15 @@ if (!function_exists('mail_preview_generate_trade_request_blur_image')) {
             imagettftext($lineLayer, $fontSize, 0, $x, $yList[$i], $textColor, $fontPath, $line);
 
             mail_preview_apply_blur($lineLayer, $blurPassList[$i]);
+            // 메일 클라이언트 호환을 위해 CSS blur 의존 대신 이미지 자체를 픽셀화한다.
+            mail_preview_apply_pixelate($lineLayer, 10 + ($i * 2));
             imagecopy($canvas, $lineLayer, 0, 0, 0, 0, $width, $height);
             imagedestroy($lineLayer);
         }
+
+        // 최종 베일 오버레이로 원문 판독성을 추가로 낮춘다.
+        $veil = imagecolorallocatealpha($canvas, 255, 255, 255, 44);
+        imagefilledrectangle($canvas, 0, 0, $width, $height, $veil);
 
         $saved = @imagepng($canvas, $targetPath);
         imagedestroy($canvas);
