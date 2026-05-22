@@ -308,12 +308,19 @@
     var inp  = document.getElementById('comnum');
     if (!btn && !form) return;
 
+    // theme/prix/head.php의 공통 모달/핸들러가 이미 있으면
+    // 레거시 주입 로직을 실행하지 않아 중복 바인딩과 스타일 충돌을 막는다.
+    var hasSharedModalLayer = !!document.getElementById('modal_ai_guide_overlay')
+      && !!document.getElementById('modal_verify_overlay')
+      && typeof window.openAiGuideModal === 'function';
+    if (hasSharedModalLayer) return;
+
     var _pendingComnum = '';
 
     // ── CSS 로드 ──
     if (!document.querySelector('link[href*="verify-modal.css"]')) {
       var lnk = document.createElement('link');
-      lnk.rel = 'stylesheet'; lnk.href = 'css/verify-modal.css';
+      lnk.rel = 'stylesheet'; lnk.href = '/ko/css/verify-modal.css';
       document.head.appendChild(lnk);
     }
 

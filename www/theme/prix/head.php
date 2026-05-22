@@ -443,7 +443,10 @@ if ($is_member) {
         <h2 class="modal_verify_company" id="modal_ai_guide_title">AI 추천 안내</h2>
         <p class="modal_verify_text" id="modal_ai_guide_text">사업자 번호를 입력하고 AI 추천받기를 눌러주세요.</p>
         <p class="modal_verify_text2" id="modal_ai_guide_text2">AI 분석을 통해 업종/거래 데이터를 기반으로 적합한 거래처 판매처를 추천해드립니다.</p>
-        <button type="button" class="modal_verify_btn" id="modal_ai_guide_btn_ok">확인했어요</button>
+        <div class="modal_verify_btn_row">
+            <button type="button" class="modal_verify_btn modal_verify_btn_secondary" id="modal_ai_guide_btn_secondary" hidden>바로가기</button>
+            <button type="button" class="modal_verify_btn" id="modal_ai_guide_btn_ok">확인했어요</button>
+        </div>
     </div>
 </div>
 
@@ -489,13 +492,63 @@ function openAiGuideModal(opts) {
 	var titleEl = document.getElementById("modal_ai_guide_title");
 	var textEl = document.getElementById("modal_ai_guide_text");
 	var text2El = document.getElementById("modal_ai_guide_text2");
+	var okBtn = document.getElementById("modal_ai_guide_btn_ok");
+	var secondaryBtn = document.getElementById("modal_ai_guide_btn_secondary");
 	if (!overlay) return;
 	opts = opts || {};
 	if (titleEl) titleEl.textContent = opts.title || "AI 추천 안내";
 	if (textEl) textEl.textContent = opts.text || "사업자 번호를 입력하고 AI 추천받기를 눌러주세요.";
 	if (text2El) text2El.textContent = opts.text2 || "AI 분석을 통해 업종/거래 데이터를 기반으로 적합한 거래처 판매처를 추천해드립니다.";
+	if (okBtn) {
+		okBtn.textContent = opts.okText || "확인했어요";
+		okBtn.classList.remove("modal_verify_btn_outline");
+		if (opts.okVariant === "outline") {
+			okBtn.classList.add("modal_verify_btn_outline");
+		}
+	}
+	if (secondaryBtn) {
+		var secondaryText = (opts.secondaryText || "").trim();
+		if (secondaryText) {
+			secondaryBtn.hidden = false;
+			secondaryBtn.textContent = secondaryText;
+		} else {
+			secondaryBtn.hidden = true;
+			secondaryBtn.textContent = "바로가기";
+		}
+	}
+	window._aiGuideModalState = {
+		onOk: (typeof opts.onOk === "function") ? opts.onOk : null,
+		onSecondary: (typeof opts.onSecondary === "function") ? opts.onSecondary : null,
+		secondaryHref: opts.secondaryHref || ""
+	};
 	overlay.classList.add("is_open");
 	overlay.setAttribute("aria-hidden", "false");
+}
+
+function openCreditShortageGuide(opts) {
+	var options = opts || {};
+	if (typeof options === "string") {
+		options = { text: options };
+	}
+	var text = (options.text || options.message || "매칭 가능 크레딧이 부족합니다.");
+	var text2 = (options.text2 || "크레딧 충전 후 다시 거래 요청을 진행해 주세요.");
+	var secondaryHref = options.secondaryHref || "/ko/plan.php";
+	var secondaryText = options.secondaryText || "크레딧 충전하러 가기";
+	var okText = options.okText || "닫기";
+	var okVariant = options.okVariant || "outline";
+
+	if (typeof openAiGuideModal !== "function") return false;
+
+	openAiGuideModal({
+		title: "크레딧 부족 안내",
+		text: text,
+		text2: text2,
+		okText: okText,
+		okVariant: okVariant,
+		secondaryText: secondaryText,
+		secondaryHref: secondaryHref
+	});
+	return true;
 }
 
 function openGuide(title, text, text2) {
@@ -526,6 +579,7 @@ function closeAiGuideModal() {
 	if (!overlay) return;
 	overlay.classList.remove("is_open");
 	overlay.setAttribute("aria-hidden", "true");
+	window._aiGuideModalState = null;
 }
 
 function closeVerifyModal() {
@@ -752,9 +806,26 @@ $(document).on("click", "#modal_ai_guide_overlay", function(e) {
 		if (window.currentSearchInput) window.currentSearchInput.focus();
 	}
 });
-$(document).on("click", "#modal_ai_guide_btn_close, #modal_ai_guide_btn_ok", function() {
+$(document).on("click", "#modal_ai_guide_btn_close", function() {
 	closeAiGuideModal();
 	if (window.currentSearchInput) window.currentSearchInput.focus();
+});
+$(document).on("click", "#modal_ai_guide_btn_ok", function() {
+	var state = window._aiGuideModalState || null;
+	closeAiGuideModal();
+	if (state && typeof state.onOk === "function") state.onOk();
+	if (window.currentSearchInput) window.currentSearchInput.focus();
+});
+$(document).on("click", "#modal_ai_guide_btn_secondary", function() {
+	var state = window._aiGuideModalState || null;
+	closeAiGuideModal();
+	if (state && typeof state.onSecondary === "function") {
+		state.onSecondary();
+		return;
+	}
+	if (state && state.secondaryHref) {
+		window.location.href = state.secondaryHref;
+	}
 });
 
 $(document).on("keydown", function(e) {

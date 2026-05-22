@@ -21,7 +21,6 @@ add_stylesheet('<link rel="stylesheet" href="' . G5_URL . '/ko/css/badges.css?ve
 add_stylesheet('<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css">', 195);
 add_stylesheet('<link rel="stylesheet" href="' . G5_URL . '/ko/css/company-card.css?ver=' . G5_CSS_VER . '">', 200);
 add_stylesheet('<link rel="stylesheet" href="' . G5_URL . '/ko/css/section-header.css?ver=' . G5_CSS_VER . '">', 210);
-add_stylesheet('<link rel="stylesheet" href="' . G5_URL . '/ko/css/verify-modal.css?ver=' . G5_CSS_VER . '">', 215);
 add_stylesheet('<link rel="stylesheet" href="' . G5_URL . '/ko/css/ai-loading.css?ver=' . G5_CSS_VER . '">', 216);
 add_stylesheet('<link rel="stylesheet" href="' . G5_URL . '/ko/css/company_list_ai_demo.css?ver=' . (int)$company_list_ai_demo_css_ver . '">', 220);
 
