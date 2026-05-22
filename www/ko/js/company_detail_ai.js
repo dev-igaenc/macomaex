@@ -945,7 +945,7 @@
                     '<div class="fit-header">' +
                     '<div class="fit-header-top">' +
                     '<div class="fit-header-companies">우리회사 <strong>A기업</strong> <span class="fit-header-arrow">⇄</span> 추천 <strong>B기업</strong></div>' +
-                    '<div class="fit-header-score"><span class="fit-header-score-num">' + scoreNum + '</span><span class="fit-header-score-unit">.</span></div>' +
+                    '<div class="fit-header-score"><span class="fit-header-score-num">' + scoreNum + '</span><span class="fit-header-score-unit">점</span></div>' +
                     '</div>' +
                     '<div class="fit-header-label">AI 추천점수 예측</div>' +
                     '</div>' +
@@ -987,7 +987,7 @@
                     '<div class="fit-header">' +
                     '<div class="fit-header-top">' +
                     '<div class="fit-header-companies">우리회사 <strong>A기업</strong> <span class="fit-header-arrow">⇄</span> 추천 <strong>B기업</strong></div>' +
-                    '<div class="fit-header-score"><span class="fit-header-score-num">' + scoreNum + '</span><span class="fit-header-score-unit">.</span></div>' +
+                    '<div class="fit-header-score"><span class="fit-header-score-num">' + scoreNum + '</span><span class="fit-header-score-unit">점</span></div>' +
                     '</div>' +
                     '<div class="fit-header-label">AI 추천점수 예측</div>' +
                     '</div>' +
