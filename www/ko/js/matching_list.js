@@ -1,6 +1,13 @@
 (function (window, document, $) {
     'use strict';
 
+    // BFCache(뒤로가기 복원)로 이전 로그인 상태 DOM이 남는 경우를 방지한다.
+    window.addEventListener('pageshow', function (event) {
+        if (event && event.persisted) {
+            window.location.reload();
+        }
+    });
+
     // PHP에서 내려준 페이지 설정값
     var cfg = window.MATCHING_LIST_CONFIG || {};
     var pageSize = parseInt(cfg.pageSize, 10) || parseInt(cfg.freeLimit, 10) || 24;
