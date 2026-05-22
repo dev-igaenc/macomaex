@@ -45,24 +45,42 @@
     letter-spacing: 0.02em;
 }
 
-/* 거래 요청하기 버튼 — 구조 공통, 색상은 각 페이지에서 오버라이드 */
+/* 거래 요청하기 버튼 */
+@keyframes tradeAurora {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+}
+
+@keyframes ctaRing {
+    0% { box-shadow: 0 4px 14px rgba(37,99,235,0.45), 0 0 0 0 rgba(37,99,235,0.35); }
+    60% { box-shadow: 0 4px 14px rgba(37,99,235,0.45), 0 0 0 8px rgba(37,99,235,0); }
+    100% { box-shadow: 0 4px 14px rgba(37,99,235,0.45), 0 0 0 0 rgba(37,99,235,0); }
+}
+
 .btn-match-cta-top {
-    display: flex;
+    display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 6px;
-    padding: 10px 24px;
+    padding: 10px 20px;
     box-sizing: border-box;
     font-size: 15px;
     font-weight: 700;
-    line-height: 19px;
+    line-height: 1;
     color: #fff;
     border: none;
     border-radius: 10px;
     cursor: pointer;
-    transition: all 0.2s;
     white-space: nowrap;
+    background: linear-gradient(135deg, #3b82f6, #6366f1, #2563eb, #818cf8, #1d4ed8, #3b82f6);
+    background-size: 300% 300%;
+    animation: tradeAurora 4s ease infinite, ctaRing 2.5s ease-out infinite;
+    transition: box-shadow 0.2s, transform 0.2s;
 }
-.btn-match-cta-top:hover { transform: scale(1.03); }
+.btn-match-cta-top:hover {
+    box-shadow: 0 6px 20px rgba(37,99,235,0.65);
+    transform: scale(1.03);
+}
 
 /* 전역 #wrap * letter-spacing 덮어쓰기 */
 #wrap .top-nav .btn-match-cta-top {

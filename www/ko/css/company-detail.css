@@ -419,16 +419,6 @@ html.no-cta.in-iframe .top-nav-actions { flex: 0 0 auto; }
 	height: 14px;
 	flex-shrink: 0;
 }
-/* 거래 요청하기 — 파란색 테마 */
-.btn-match-cta-top {
-	background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
-	box-shadow: 0 4px 14px rgba(37,99,235,0.3);
-}
-.btn-match-cta-top:hover {
-	background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-	box-shadow: 0 6px 20px rgba(37,99,235,0.4);
-	transform: scale(1.03);
-}
 #detailWrap .top-nav .btn-back { border-color: #bfdbfe; color: #2563eb; background: #eff6ff; }
 #detailWrap .top-nav .btn-back:hover { border-color: #2563eb; color: #1e40af; background: #dbeafe; }
 /* Floating bar */

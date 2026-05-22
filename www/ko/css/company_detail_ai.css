@@ -518,16 +518,6 @@ html.in-iframe { --header-h: 0px; }
     --auth-modal-color: #6d28d9;
     --auth-modal-color-dark: #4c1d95;
 }
-/* 거래 요청하기 — 보라색 테마 */
-.btn-match-cta-top {
-	background: linear-gradient(135deg, var(--purple) 0%, #4c1d95 100%);
-	box-shadow: 0 4px 14px rgba(109,40,217,0.3);
-}
-.btn-match-cta-top:hover {
-	background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
-	box-shadow: 0 6px 20px rgba(109,40,217,0.4);
-	transform: scale(1.03);
-}
 /* 하단 고정 플로팅 바 */
 .floating-match-bar {
 	position: fixed;
