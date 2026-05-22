@@ -750,9 +750,11 @@ function company_list_ai_render_card($card, $trade_type, $rank = 0, $src_kedcd =
     $capital_negative_attr = (isset($card['capital_negative']) && $card['capital_negative'] !== null && $card['capital_negative'] !== '') ? ((int)$card['capital_negative'] ? '1' : '0') : '';
     $one_line_attr = htmlspecialchars((string)($card['one_line'] ?? ''), ENT_QUOTES, 'UTF-8');
     $trade_q = (int)$trade_type;
-    $url = '/ko/company_detail_ai.php?kedcd=' . rawurlencode($card['kedcd']) . '&trade_type=' . $trade_q;
+    $card_cd = simple_crypt((string)$card['kedcd'], 'e');
+    $url = '/ko/company_detail_ai.php?cd=' . rawurlencode((string)$card_cd) . '&trade_type=' . $trade_q;
     if ($src_kedcd_raw !== '') {
-        $url .= '&src_kedcd=' . rawurlencode($src_kedcd_raw);
+        $src_cd = simple_crypt((string)$src_kedcd_raw, 'e');
+        $url .= '&src_cd=' . rawurlencode((string)$src_cd);
     }
     $is_top3 = ($rank > 0);
 
@@ -782,7 +784,7 @@ function company_list_ai_render_card($card, $trade_type, $rank = 0, $src_kedcd =
     $html .= '<a href="' . $url . '" class="company-ai-link" data-kedcd="' . $kedcd . '" data-src-kedcd="' . $src_kedcd_attr . '" data-trade-type="' . $trade_q . '" data-score="' . $score . '" data-candidate-type="' . $candidate_type . '" data-bzc-cd="' . $industry . '" data-bzc-nm="' . $industry_nm . '" data-sido="' . $region . '" data-sze="' . $sze_attr . '" data-company-age="' . $company_age_attr . '" data-sales-growth-pct="' . htmlspecialchars($sales_growth_attr, ENT_QUOTES, 'UTF-8') . '" data-debt-ratio-pct="' . htmlspecialchars($debt_ratio_attr, ENT_QUOTES, 'UTF-8') . '" data-consec-profit-2y="' . $consec_profit_attr . '" data-capital-negative="' . $capital_negative_attr . '" data-one-line="' . $one_line_attr . '" style="text-decoration:none;color:inherit;">';
     $html .= '<div class="mCompanyCard company-ai-card" style="position:relative;">';
     $html .= '<div class="mCompanyCard_content">';
-    $html .= '<div class="mCompanyCard_ai_match"><span class="mCompanyCard_ai_match_label">AI 추천점수</span><span><span class="mCompanyCard_ai_match_value">' . $score . '</span><span class="mCompanyCard_ai_match_unit">.</span></span></div>';
+    $html .= '<div class="mCompanyCard_ai_match"><span class="mCompanyCard_ai_match_label">AI 추천점수</span><span><span class="mCompanyCard_ai_match_value">' . $score . '</span><span class="mCompanyCard_ai_match_unit">    점</span></span></div>';
     $html .= '<div class="mCompanyCard_badges">' . $badge_html . '</div>';
     $html .= '<h3 class="mCompanyCard_title">' . $title . '</h3>';
     $html .= '<p class="mCompanyCard_desc">' . $tags_html . '</p>';

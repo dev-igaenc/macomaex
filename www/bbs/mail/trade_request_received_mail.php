@@ -72,9 +72,13 @@ $e = static function ($value) {
       <tr>
         <td style="width:47%;vertical-align:top;">
           <div style="background:#ffffff;border-radius:12px;padding:16px;border:1px solid #e5e7eb;">
-            <div style="width:36px;height:36px;background:#eff6ff;border-radius:50%;margin-bottom:10px;text-align:center;line-height:36px;">
-                <img src="<?php echo $mailBaseUrl; ?>/bbs/mail/icon/organization-t.png" width="16" height="16" alt="" style="display:inline-block;vertical-align:middle;border:0;outline:none;text-decoration:none;">
-            </div>
+            <table role="presentation" cellpadding="0" cellspacing="0" style="width:36px;height:36px;background:#eff6ff;border-radius:18px;margin:0 0 10px 0;">
+              <tr>
+                <td align="center" valign="middle" style="width:36px;height:36px;line-height:0;font-size:0;">
+                  <img src="<?php echo $mailBaseUrl; ?>/bbs/mail/icon/organization-t.png" width="16" height="16" alt="" style="display:block;margin:0 auto;border:0;outline:none;text-decoration:none;">
+                </td>
+              </tr>
+            </table>
             <div style="font-size:13px;font-weight:800;color:#111827;margin-bottom:3px;"><?php echo $e($requestCompanyProfileName); ?></div>
             <div style="font-size:11px;color:#6b7280;">발신 기업</div>
           </div>
@@ -86,9 +90,13 @@ $e = static function ($value) {
 
         <td style="width:47%;vertical-align:top;">
           <div style="background:#ffffff;border-radius:12px;padding:16px;border:1px solid #e5e7eb;">
-            <div style="width:36px;height:36px;background:#ecfdf5;border-radius:50%;margin-bottom:10px;text-align:center;line-height:36px;">
-                <img src="<?php echo $mailBaseUrl; ?>/bbs/mail/icon/organization-r.png" width="16" height="16" alt="" style="display:inline-block;vertical-align:middle;border:0;outline:none;text-decoration:none;">
-            </div>
+            <table role="presentation" cellpadding="0" cellspacing="0" style="width:36px;height:36px;background:#ecfdf5;border-radius:18px;margin:0 0 10px 0;">
+              <tr>
+                <td align="center" valign="middle" style="width:36px;height:36px;line-height:0;font-size:0;">
+                  <img src="<?php echo $mailBaseUrl; ?>/bbs/mail/icon/organization-r.png" width="16" height="16" alt="" style="display:block;margin:0 auto;border:0;outline:none;text-decoration:none;">
+                </td>
+              </tr>
+            </table>
             <div style="font-size:13px;font-weight:800;color:#111827;margin-bottom:3px;"><?php echo $e($targetCompanyName); ?></div>
             <div style="font-size:11px;color:#6b7280;">수신 기업</div>
           </div>
@@ -184,10 +192,10 @@ $e = static function ($value) {
           <?php if ($messagePreviewImageUrl !== '') { ?>
           <img src="<?php echo $e($messagePreviewImageUrl); ?>" width="460" alt="문의 내용 미리보기" style="display:block;width:100%;max-width:460px;height:auto;border:0;outline:none;text-decoration:none;">
           <?php } else { ?>
-          <div style="line-height:1.8;font-size:13px;color:#374151;">
-            <div style="filter:blur(1px);opacity:0.85;user-select:none;"><?php echo $e(isset($messagePreviewLines[0]) ? $messagePreviewLines[0] : ''); ?></div>
-            <div style="filter:blur(2.5px);opacity:0.6;user-select:none;"><?php echo $e(isset($messagePreviewLines[1]) ? $messagePreviewLines[1] : ''); ?></div>
-            <div style="filter:blur(4px);opacity:0.35;user-select:none;"><?php echo $e(isset($messagePreviewLines[2]) ? $messagePreviewLines[2] : ''); ?></div>
+          <div style="line-height:1.8;font-size:13px;color:#9ca3af;">
+            <div style="height:14px;background:#e5e7eb;border-radius:7px;margin:2px 0 8px;max-width:92%;"></div>
+            <div style="height:14px;background:#e5e7eb;border-radius:7px;margin:2px 0 8px;max-width:82%;"></div>
+            <div style="height:14px;background:#e5e7eb;border-radius:7px;margin:2px 0;max-width:76%;"></div>
           </div>
           <?php } ?>
         </div>

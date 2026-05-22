@@ -70,11 +70,17 @@ function company_detail_ai_extract_report_from_llm_log_content($raw_content)
     return '';
 }
 
-// 상세 대상 기업 식별자(kedcd)는 kedcd 또는 id 파라미터로 받는다.
-$kedcd = isset($_GET['kedcd']) ? preg_replace('/\D/', '', (string)$_GET['kedcd']) : '';
-if ($kedcd === '' && isset($_GET['id'])) {
-    $id = preg_replace('/\D/', '', (string)$_GET['id']);
-    if (strlen($id) === 10) $kedcd = $id;
+// 상세 대상 기업 식별자(kedcd)는 일반 상세와 동일하게 cd(암호화 기업코드)를 우선 사용한다.
+$cd = isset($_GET['cd']) ? trim((string)$_GET['cd']) : '';
+$kedcd = $cd ? simple_crypt($cd, 'd') : '';
+
+// 하위호환: 기존 kedcd 또는 id(10자리 숫자) 파라미터도 허용한다.
+if (!preg_match('/^\d{10}$/', $kedcd)) {
+    $kedcd = isset($_GET['kedcd']) ? preg_replace('/\D/', '', (string)$_GET['kedcd']) : '';
+    if ($kedcd === '' && isset($_GET['id'])) {
+        $id = preg_replace('/\D/', '', (string)$_GET['id']);
+        if (strlen($id) === 10) $kedcd = $id;
+    }
 }
 
 // 잘못된 식별자로 직접 진입한 경우 목록으로 되돌린다.
@@ -181,7 +187,11 @@ $preloaded_ai_once_key = '';
 if (!empty($member['mb_id'])) {
     $preload_trade_type = $detail_trade_type;
 
-    $preload_src_kedcd = isset($_GET['src_kedcd']) ? preg_replace('/\D/', '', (string)$_GET['src_kedcd']) : '';
+    $src_cd = isset($_GET['src_cd']) ? trim((string)$_GET['src_cd']) : '';
+    $preload_src_kedcd = $src_cd ? preg_replace('/\D/', '', (string)simple_crypt($src_cd, 'd')) : '';
+    if (strlen($preload_src_kedcd) !== 10) {
+        $preload_src_kedcd = isset($_GET['src_kedcd']) ? preg_replace('/\D/', '', (string)$_GET['src_kedcd']) : '';
+    }
     if (strlen($preload_src_kedcd) !== 10) {
         $preload_src_kedcd = preg_replace('/\D/', '', (string)($member['mb_company'] ?? ''));
     }
@@ -453,6 +463,7 @@ window.MATCH_REQUEST_CONTEXT = {
 		industry: <?php echo json_encode($company['BZC_CD'] ?? '', JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>,
 		product: <?php echo json_encode($company_seed['product_line'] ?? '', JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>
 	},
+	sourceKedcd: <?php echo json_encode($preload_src_kedcd, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>,
 	seedCompany: <?php echo json_encode($company_seed, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>
 };
 window.PRELOADED_AI_REPORT = {
