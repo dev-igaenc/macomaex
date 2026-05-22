@@ -515,7 +515,7 @@ function AutoHypen(companyNum){
 						return text.split("|");
 					};
 					var jqXHR = parsePipeResponse(data);
-				if(jqXHR[0] == "1000"){
+					if(jqXHR[0] == "1000"){
 					applyUnlistedReveal($front, jqXHR[4], jqXHR[5]);
 					if(jqXHR[1] == "charged"){
 						jAlert("가치 공개로 " + creditCost + "크레딧이 사용되었습니다.","알림",function(){
@@ -524,15 +524,32 @@ function AutoHypen(companyNum){
 					}else{
 						toggleUnlistedCard($front);
 					}
-				}else{
-					var msg = jqXHR[1] ? jqXHR[1] : "처리 중 오류가 발생했습니다.";
-					if(jqXHR[2] == "PLAN"){
-						jAlert(msg,"알림",function(){ location.href='/ko/plan.php'; });
-					}else{
-						jAlert(msg,"알림");
-					}
-				}
-			});
+						}else{
+								var msg = jqXHR[1] ? jqXHR[1] : "처리 중 오류가 발생했습니다.";
+								if(jqXHR[2] == "PLAN"){
+									if (typeof window.openCreditShortageGuide === "function") {
+										window.openCreditShortageGuide({
+											text: msg,
+											text2: "크레딧 충전 후 다시 가치 조회를 진행해 주세요."
+										});
+									} else if (typeof window.openAiGuideModal === "function") {
+										window.openAiGuideModal({
+											title: "크레딧 부족 안내",
+											text: msg,
+											text2: "크레딧 충전 후 다시 가치 조회를 진행해 주세요.",
+											okText: "닫기",
+											okVariant: "outline",
+											secondaryText: "크레딧 충전하러 가기",
+											secondaryHref: "/ko/plan.php"
+										});
+									} else {
+										jAlert(msg,"알림",function(){ location.href='/ko/plan.php'; });
+									}
+							}else{
+								jAlert(msg,"알림");
+							}
+						}
+				});
 		};
 
 				$.post("../get_set.php", {type:'unlisted_value_unlock', kedcd:kedcd, check_only:1, unlock_token:unlockToken}, function(preData){
@@ -565,15 +582,32 @@ function AutoHypen(companyNum){
 				}else{
 					if(confirm(confirmMessage)) unlockAction();
 				}
-			}else{
-				var preMsg = pre[1] ? pre[1] : "처리 중 오류가 발생했습니다.";
-				if(pre[2] == "PLAN"){
-					jAlert(preMsg,"알림",function(){ location.href='/ko/plan.php'; });
-				}else{
-					jAlert(preMsg,"알림");
-				}
-			}
-		});
+					}else{
+							var preMsg = pre[1] ? pre[1] : "처리 중 오류가 발생했습니다.";
+							if(pre[2] == "PLAN"){
+								if (typeof window.openCreditShortageGuide === "function") {
+									window.openCreditShortageGuide({
+										text: preMsg,
+										text2: "크레딧 충전 후 다시 가치 조회를 진행해 주세요."
+									});
+								} else if (typeof window.openAiGuideModal === "function") {
+									window.openAiGuideModal({
+										title: "크레딧 부족 안내",
+										text: preMsg,
+										text2: "크레딧 충전 후 다시 가치 조회를 진행해 주세요.",
+										okText: "닫기",
+										okVariant: "outline",
+										secondaryText: "크레딧 충전하러 가기",
+										secondaryHref: "/ko/plan.php"
+									});
+								} else {
+									jAlert(preMsg,"알림",function(){ location.href='/ko/plan.php'; });
+								}
+						}else{
+							jAlert(preMsg,"알림");
+						}
+					}
+			});
 
 		return false;
 	});

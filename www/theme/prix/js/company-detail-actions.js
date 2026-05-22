@@ -40,6 +40,36 @@
         }
     }
 
+    function showCreditShortageModal(msg) {
+        var text = msg || "매칭 가능 크레딧이 부족합니다.";
+        // 기존 거래요청 팝업이 열려 있으면 먼저 닫는다.
+        closePopup();
+        if (typeof window.openCreditShortageGuide === "function") {
+            setTimeout(function () {
+                window.openCreditShortageGuide({
+                    text: text,
+                    text2: "크레딧 충전 후 다시 거래 요청을 진행해 주세요."
+                });
+            }, 0);
+            return;
+        }
+        if (typeof window.openAiGuideModal === "function") {
+            setTimeout(function () {
+                window.openAiGuideModal({
+                    title: "크레딧 부족 안내",
+                    text: text,
+                    text2: "크레딧 충전 후 다시 거래 요청을 진행해 주세요.",
+                    okText: "닫기",
+                    okVariant: "outline",
+                    secondaryText: "크레딧 충전하러 가기",
+                    secondaryHref: "/ko/plan.php"
+                });
+            }, 0);
+            return;
+        }
+        showAlert(text);
+    }
+
     function getLoginUrl(opts) {
         return (typeof opts.loginUrl === "function") ? opts.loginUrl() : opts.loginUrl;
     }
@@ -158,9 +188,7 @@
 
             var msg = parts[1] ? parts[1] : "요청에 문제가 있습니다.";
             if (parts[2] === "PLAN" || msg.indexOf(opts.shortagePrefix) === 0) {
-                showAlert(msg, function () {
-                    location.href = opts.planUrl;
-                });
+                showCreditShortageModal(msg);
                 return;
             }
 
