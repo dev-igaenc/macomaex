@@ -106,7 +106,7 @@ if (!empty($member['mb_id'])) {
 }
 
 $company_name = trim((string)($company['ENP_NM'] ?? ''));
-$g5['title'] = ($company_name !== '' ? $company_name . ' AI 기업 상세' : 'AI 추천 기업 상세');
+$g5['title'] = 'AI 추천 기업 상세';
 
 $design_tokens_ver = file_exists(__DIR__ . '/css/design-tokens.css') ? filemtime(__DIR__ . '/css/design-tokens.css') : time();
 $badges_css_ver = file_exists(__DIR__ . '/css/badges.css') ? filemtime(__DIR__ . '/css/badges.css') : time();

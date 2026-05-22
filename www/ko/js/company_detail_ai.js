@@ -436,7 +436,20 @@
                 });
         })();
 
-        document.title = String(co.title || 'AI 추천 기업') + ' \xB7 AI \uCD94\uCC9C \uAE30\uC5C5 \uC0C1\uC138 \u2014 \uB9E4\uCEE4\uBA59\uC2A4';
+        function maskedBrowserTitle(title) {
+            var raw = String(title || '').trim();
+            if (!raw) return 'AI 추천 기업';
+            var m = raw.match(/^(\(주\)|\(유\)|\(사\))?(.*)$/);
+            var prefix = m[1] || '';
+            var name = m[2] || '';
+            var visible = prefix ? name.substring(0, 1) : name.substring(0, 2);
+            if (!visible) return 'AI 추천 기업';
+            return prefix + visible + '****';
+        }
+        var browserTitleText = co.is_unlocked
+            ? String(co.title_display || co.title || 'AI 추천 기업')
+            : maskedBrowserTitle(co.title);
+        document.title = browserTitleText + ' · AI 추천 기업 상세 — 매커멕스';
         var _demoEl = document.getElementById('demoIdDisplay');
         if (_demoEl) _demoEl.textContent = demoId;
 
