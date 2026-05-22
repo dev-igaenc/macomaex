@@ -92,11 +92,15 @@
 
         /* URL 파라미터 */
         var params = new URLSearchParams(window.location.search);
-        var demoId = params.get('id') || params.get('kedcd') || '';
-        demoId = demoId.replace(/[^a-z0-9\-_]/gi, '');
+        var contextKedcd = String((window.MATCH_REQUEST_CONTEXT && window.MATCH_REQUEST_CONTEXT.target && window.MATCH_REQUEST_CONTEXT.target.kedcd) || '').replace(/\D/g, '');
+        var demoId = params.get('id') || params.get('kedcd') || contextKedcd || '';
+        demoId = String(demoId).replace(/\D/g, '');
         var pageTradeType = parseInt(params.get('trade_type') || '1', 10);
         if (pageTradeType !== 2) pageTradeType = 1;
         var srcKedcdParam = String(params.get('src_kedcd') || '').replace(/\D/g, '');
+        if (srcKedcdParam.length !== 10) {
+            srcKedcdParam = String((window.MATCH_REQUEST_CONTEXT && window.MATCH_REQUEST_CONTEXT.sourceKedcd) || '').replace(/\D/g, '');
+        }
         if (srcKedcdParam.length === 10) {
             try { sessionStorage.setItem('_aiSrcKedcd', srcKedcdParam); } catch (e) { }
         }
@@ -320,6 +324,9 @@
             try { sessionStorage.removeItem(hydrateKey); } catch (e0a) { }
 
             var srcKedcd = String(params.get('src_kedcd') || '').replace(/\D/g, '');
+            if (srcKedcd.length !== 10) {
+                srcKedcd = String((window.MATCH_REQUEST_CONTEXT && window.MATCH_REQUEST_CONTEXT.sourceKedcd) || '').replace(/\D/g, '');
+            }
             if (srcKedcd.length !== 10) {
                 try { srcKedcd = String(sessionStorage.getItem('_aiSrcKedcd') || '').replace(/\D/g, ''); } catch (e1) { }
             }

@@ -750,9 +750,11 @@ function company_list_ai_render_card($card, $trade_type, $rank = 0, $src_kedcd =
     $capital_negative_attr = (isset($card['capital_negative']) && $card['capital_negative'] !== null && $card['capital_negative'] !== '') ? ((int)$card['capital_negative'] ? '1' : '0') : '';
     $one_line_attr = htmlspecialchars((string)($card['one_line'] ?? ''), ENT_QUOTES, 'UTF-8');
     $trade_q = (int)$trade_type;
-    $url = '/ko/company_detail_ai.php?kedcd=' . rawurlencode($card['kedcd']) . '&trade_type=' . $trade_q;
+    $card_cd = simple_crypt((string)$card['kedcd'], 'e');
+    $url = '/ko/company_detail_ai.php?cd=' . rawurlencode((string)$card_cd) . '&trade_type=' . $trade_q;
     if ($src_kedcd_raw !== '') {
-        $url .= '&src_kedcd=' . rawurlencode($src_kedcd_raw);
+        $src_cd = simple_crypt((string)$src_kedcd_raw, 'e');
+        $url .= '&src_cd=' . rawurlencode((string)$src_cd);
     }
     $is_top3 = ($rank > 0);
 
