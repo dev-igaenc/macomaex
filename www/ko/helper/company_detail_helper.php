@@ -284,9 +284,16 @@ function company_detail_trade_request_send_receiver_mail($tradeRequestNo, $reque
 		? mail_preview_resolve_base_url('https://macomaex.com')
 		: 'https://macomaex.com';
 
+	// 메일 발송 블러 이미지 생성
 	$messagePreviewImageUrl = '';
 	if (function_exists('mail_preview_generate_trade_request_blur_image')) {
-		$generatedPreviewImage = mail_preview_generate_trade_request_blur_image($messagePreviewLines, $mailBaseUrl);
+		$generatedPreviewImage = mail_preview_generate_trade_request_blur_image(
+			$messagePreviewLines,
+			$mailBaseUrl,
+			array(
+				'style' => 'gradient_reveal',
+			)
+		);
 		if (!empty($generatedPreviewImage['url'])) {
 			$messagePreviewImageUrl = (string)$generatedPreviewImage['url'];
 		}
