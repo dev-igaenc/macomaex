@@ -398,6 +398,8 @@ function get_target_codes_by_category($list_categories, $current_cat) {
 // company 조회 WHERE 만들기
 function build_company_where_clause($target_codes, $restrict_cg_prefix = false) {
     $where_clause = "WHERE A.KEDCD != '' AND A.ENP_NM != ''";
+    $where_clause .= " AND A.ENP_SCD = '01'";
+    $where_clause .= " AND A.ENP_SZE IN ('02', '03', '06')";
     if ($restrict_cg_prefix) {
         $where_clause .= " AND (A.BZC_CD LIKE 'C%' OR A.BZC_CD LIKE 'G%')";
     }
@@ -414,6 +416,8 @@ function build_company_where_clause($target_codes, $restrict_cg_prefix = false) 
 // 판매하기처럼 코드 후보가 많은 경우, 상세 코드 정확매칭(IN)으로 필터링
 function build_company_where_clause_in_codes($target_codes, $restrict_cg_prefix = false) {
     $where_clause = "WHERE A.KEDCD != '' AND A.ENP_NM != ''";
+    $where_clause .= " AND A.ENP_SCD = '01'";
+    $where_clause .= " AND A.ENP_SZE IN ('02', '03', '06')";
     if ($restrict_cg_prefix) {
         $where_clause .= " AND (A.BZC_CD LIKE 'C%' OR A.BZC_CD LIKE 'G%')";
     }

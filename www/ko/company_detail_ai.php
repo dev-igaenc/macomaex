@@ -70,11 +70,17 @@ function company_detail_ai_extract_report_from_llm_log_content($raw_content)
     return '';
 }
 
-// 상세 대상 기업 식별자(kedcd)는 kedcd 또는 id 파라미터로 받는다.
-$kedcd = isset($_GET['kedcd']) ? preg_replace('/\D/', '', (string)$_GET['kedcd']) : '';
-if ($kedcd === '' && isset($_GET['id'])) {
-    $id = preg_replace('/\D/', '', (string)$_GET['id']);
-    if (strlen($id) === 10) $kedcd = $id;
+// 상세 대상 기업 식별자(kedcd)는 일반 상세와 동일하게 cd(암호화 기업코드)를 우선 사용한다.
+$cd = isset($_GET['cd']) ? trim((string)$_GET['cd']) : '';
+$kedcd = $cd ? simple_crypt($cd, 'd') : '';
+
+// 하위호환: 기존 kedcd 또는 id(10자리 숫자) 파라미터도 허용한다.
+if (!preg_match('/^\d{10}$/', $kedcd)) {
+    $kedcd = isset($_GET['kedcd']) ? preg_replace('/\D/', '', (string)$_GET['kedcd']) : '';
+    if ($kedcd === '' && isset($_GET['id'])) {
+        $id = preg_replace('/\D/', '', (string)$_GET['id']);
+        if (strlen($id) === 10) $kedcd = $id;
+    }
 }
 
 // 잘못된 식별자로 직접 진입한 경우 목록으로 되돌린다.
@@ -106,14 +112,13 @@ if (!empty($member['mb_id'])) {
 }
 
 $company_name = trim((string)($company['ENP_NM'] ?? ''));
-$g5['title'] = ($company_name !== '' ? $company_name . ' AI 기업 상세' : 'AI 추천 기업 상세');
+$g5['title'] = 'AI 추천 기업 상세';
 
 $design_tokens_ver = file_exists(__DIR__ . '/css/design-tokens.css') ? filemtime(__DIR__ . '/css/design-tokens.css') : time();
 $badges_css_ver = file_exists(__DIR__ . '/css/badges.css') ? filemtime(__DIR__ . '/css/badges.css') : time();
 $favorite_css_ver = file_exists(__DIR__ . '/css/favorite.css') ? filemtime(__DIR__ . '/css/favorite.css') : time();
 $confirm_modal_css_ver = file_exists(__DIR__ . '/css/confirm-modal.css') ? filemtime(__DIR__ . '/css/confirm-modal.css') : time();
 $share_css_ver = file_exists(__DIR__ . '/css/share.css') ? filemtime(__DIR__ . '/css/share.css') : time();
-$verify_modal_css_ver = file_exists(__DIR__ . '/css/verify-modal.css') ? filemtime(__DIR__ . '/css/verify-modal.css') : time();
 $ai_loading_css_ver = file_exists(__DIR__ . '/css/ai-loading.css') ? filemtime(__DIR__ . '/css/ai-loading.css') : time();
 $auth_toggle_css_ver = file_exists(__DIR__ . '/css/auth-toggle.css') ? filemtime(__DIR__ . '/css/auth-toggle.css') : time();
 $company_detail_left_css_ver = file_exists(__DIR__ . '/css/company-detail-left.css') ? filemtime(__DIR__ . '/css/company-detail-left.css') : time();
@@ -128,7 +133,6 @@ $company_detail_ai_js_ver = file_exists(__DIR__ . '/js/company_detail_ai.js') ? 
 $favorite_js_ver = file_exists(__DIR__ . '/js/favorite.js') ? filemtime(__DIR__ . '/js/favorite.js') : time();
 $share_js_ver = file_exists(__DIR__ . '/js/share.js') ? filemtime(__DIR__ . '/js/share.js') : time();
 $confirm_modal_js_ver = file_exists(__DIR__ . '/js/confirm-modal.js') ? filemtime(__DIR__ . '/js/confirm-modal.js') : time();
-$verify_modal_js_ver = file_exists(__DIR__ . '/js/verify-modal.js') ? filemtime(__DIR__ . '/js/verify-modal.js') : time();
 $ai_loading_js_ver = file_exists(__DIR__ . '/js/ai-loading.js') ? filemtime(__DIR__ . '/js/ai-loading.js') : time();
 $match_request_modal_js_ver = file_exists(__DIR__ . '/js/match-request-modal.js') ? filemtime(__DIR__ . '/js/match-request-modal.js') : time();
 
@@ -183,7 +187,11 @@ $preloaded_ai_once_key = '';
 if (!empty($member['mb_id'])) {
     $preload_trade_type = $detail_trade_type;
 
-    $preload_src_kedcd = isset($_GET['src_kedcd']) ? preg_replace('/\D/', '', (string)$_GET['src_kedcd']) : '';
+    $src_cd = isset($_GET['src_cd']) ? trim((string)$_GET['src_cd']) : '';
+    $preload_src_kedcd = $src_cd ? preg_replace('/\D/', '', (string)simple_crypt($src_cd, 'd')) : '';
+    if (strlen($preload_src_kedcd) !== 10) {
+        $preload_src_kedcd = isset($_GET['src_kedcd']) ? preg_replace('/\D/', '', (string)$_GET['src_kedcd']) : '';
+    }
     if (strlen($preload_src_kedcd) !== 10) {
         $preload_src_kedcd = preg_replace('/\D/', '', (string)($member['mb_company'] ?? ''));
     }
@@ -302,7 +310,6 @@ add_stylesheet('<link rel="stylesheet" href="/ko/css/badges.css?ver=' . $badges_
 add_stylesheet('<link rel="stylesheet" href="/ko/css/favorite.css?ver=' . $favorite_css_ver . '" />', 210);
 add_stylesheet('<link rel="stylesheet" href="/ko/css/confirm-modal.css?ver=' . $confirm_modal_css_ver . '" />', 220);
 add_stylesheet('<link rel="stylesheet" href="/ko/css/share.css?ver=' . $share_css_ver . '" />', 230);
-add_stylesheet('<link rel="stylesheet" href="/ko/css/verify-modal.css?ver=' . $verify_modal_css_ver . '" />', 240);
 add_stylesheet('<link rel="stylesheet" href="/ko/css/ai-loading.css?ver=' . $ai_loading_css_ver . '" />', 250);
 add_stylesheet('<link rel="stylesheet" href="/ko/css/auth-toggle.css?ver=' . $auth_toggle_css_ver . '" />', 255);
 add_stylesheet('<link rel="stylesheet" href="/ko/css/top-nav.css?ver=' . $top_nav_css_ver . '" />', 260);
@@ -313,47 +320,7 @@ add_stylesheet('<link rel="stylesheet" href="/ko/css/company_detail_ai.css?ver='
 include_once(G5_THEME_PATH . '/head.php');
 ?>
 <style>#pageTop,#sVisual{display:none !important;}</style>
-<svg xmlns="http://www.w3.org/2000/svg" style="position:absolute;width:0;height:0;">
-<defs>
-<symbol id="icon-magic-wand" viewBox="0 0 24 24">
-<path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z"/>
-<path d="M5 3l.6 1.8L7.4 5.4 5.6 6 5 7.8 4.4 6 2.6 5.4 4.4 4.8z" opacity=".6"/>
-<path d="M19 13l.6 1.8 1.8.6-1.8.6-.6 1.8-.6-1.8-1.8-.6 1.8-.6z" opacity=".6"/>
-</symbol>
-</defs>
-</svg>
-
 <div id="detailWrap">
-<div class="modal_verify_overlay" id="modal_verify_overlay" aria-hidden="true">
-	<div class="modal_verify" role="dialog" aria-labelledby="modal_verify_company" aria-modal="true">
-		<button type="button" class="modal_verify_close" id="modal_verify_btn_close" aria-label="닫기">&times;</button>
-		<div class="modal_verify_icon" aria-hidden="true">
-			<svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>
-		</div>
-		<h2 class="modal_verify_company" id="modal_verify_company"><?php echo htmlspecialchars($company_name !== '' ? $company_name : '(주)이가이엔씨', ENT_QUOTES, 'UTF-8'); ?></h2>
-		<p class="modal_verify_text">귀사는 데이터베이스 및 온라인 정보 제공업<br>법인기업으로 확인되었습니다.</p>
-		<p class="modal_verify_text2">본 서비스는 귀사와 동일/유사 업종의 실제 거래 데이터를 분석해 적합한 거래처를 추천해드립니다.</p>
-		<hr class="modal_verify_hr">
-		<p class="modal_verify_guide">추천 결과를 확인해보세요.</p>
-		<button type="button" class="modal_verify_btn" id="modal_verify_btn_ai">
-			<span class="sparkle" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-magic-wand"/></svg></span>
-			거래처 확인하기
-		</button>
-	</div>
-</div>
-<div class="modal_verify_overlay" id="modal_ai_guide_overlay" aria-hidden="true">
-	<div class="modal_verify" role="dialog" aria-labelledby="modal_ai_guide_title" aria-modal="true">
-		<button type="button" class="modal_verify_close" id="modal_ai_guide_btn_close" aria-label="닫기">&times;</button>
-		<div class="modal_verify_icon" aria-hidden="true">
-			<svg viewBox="0 0 24 24"><path d="M12 17v-5M12 8h.01M4 12a8 8 0 1 0 16 0 8 8 0 1 0-16 0z"/></svg>
-		</div>
-		<h2 class="modal_verify_company" id="modal_ai_guide_title">AI 추천 안내</h2>
-		<p class="modal_verify_text" id="modal_ai_guide_text">사업자 번호를 입력하고 AI 추천받기를 눌러주세요.</p>
-		<p class="modal_verify_text2" id="modal_ai_guide_text2">AI 분석을 통해 업종/거래 데이터를 기반으로 적합한 거래처 판매처를 추천해드립니다.</p>
-		<button type="button" class="modal_verify_btn" id="modal_ai_guide_btn_ok">확인했어요</button>
-	</div>
-</div>
-
 <div class="page-wrap">
 	<nav class="top-nav">
 		<a class="btn-back" href="javascript:history.back();"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg> 돌아가기</a>
@@ -496,6 +463,7 @@ window.MATCH_REQUEST_CONTEXT = {
 		industry: <?php echo json_encode($company['BZC_CD'] ?? '', JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>,
 		product: <?php echo json_encode($company_seed['product_line'] ?? '', JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>
 	},
+	sourceKedcd: <?php echo json_encode($preload_src_kedcd, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>,
 	seedCompany: <?php echo json_encode($company_seed, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>
 };
 window.PRELOADED_AI_REPORT = {
@@ -511,7 +479,6 @@ window.PRELOADED_AI_REPORT = {
 <script src="/ko/js/confirm-modal.js?ver=<?php echo $confirm_modal_js_ver; ?>"></script>
 <script src="/ko/js/match-request-modal.js?ver=<?php echo $match_request_modal_js_ver; ?>"></script>
 <script src="/ko/js/ai-loading.js?ver=<?php echo $ai_loading_js_ver; ?>"></script>
-<script src="/ko/js/verify-modal.js?ver=<?php echo $verify_modal_js_ver; ?>"></script>
 <!-- LLM 보고서 markdown 렌더링 -->
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <!-- LLM markdown 렌더 결과 XSS 방지를 위한 sanitize -->

@@ -15,7 +15,6 @@ $badges_css_ver = file_exists(__DIR__ . '/css/badges.css') ? filemtime(__DIR__ .
 $favorite_css_ver = file_exists(__DIR__ . '/css/favorite.css') ? filemtime(__DIR__ . '/css/favorite.css') : time();
 $confirm_modal_css_ver = file_exists(__DIR__ . '/css/confirm-modal.css') ? filemtime(__DIR__ . '/css/confirm-modal.css') : time();
 $share_css_ver = file_exists(__DIR__ . '/css/share.css') ? filemtime(__DIR__ . '/css/share.css') : time();
-$verify_modal_css_ver = file_exists(__DIR__ . '/css/verify-modal.css') ? filemtime(__DIR__ . '/css/verify-modal.css') : time();
 $ai_loading_css_ver = file_exists(__DIR__ . '/css/ai-loading.css') ? filemtime(__DIR__ . '/css/ai-loading.css') : time();
 $company_detail_left_css_ver = file_exists(__DIR__ . '/css/company-detail-left.css') ? filemtime(__DIR__ . '/css/company-detail-left.css') : time();
 $company_detail_css_ver = file_exists(__DIR__ . '/css/company-detail.css') ? filemtime(__DIR__ . '/css/company-detail.css') : time();
@@ -30,7 +29,6 @@ $ai_loading_js_ver = file_exists(__DIR__ . '/js/ai-loading.js') ? filemtime(__DI
 $match_request_modal_js_ver = file_exists(__DIR__ . '/js/match-request-modal.js') ? filemtime(__DIR__ . '/js/match-request-modal.js') : time();
 $share_js_ver = file_exists(__DIR__ . '/js/share.js') ? filemtime(__DIR__ . '/js/share.js') : time();
 $confirm_modal_js_ver = file_exists(__DIR__ . '/js/confirm-modal.js') ? filemtime(__DIR__ . '/js/confirm-modal.js') : time();
-$verify_modal_js_ver = file_exists(__DIR__ . '/js/verify-modal.js') ? filemtime(__DIR__ . '/js/verify-modal.js') : time();
 $defaultMessage = trade_request_default_message();
 
 // badge 퍼센트 포맷 변환
@@ -240,7 +238,6 @@ add_stylesheet('<link rel="stylesheet" href="/ko/css/badges.css?ver=' . $badges_
 add_stylesheet('<link rel="stylesheet" href="/ko/css/favorite.css?ver=' . $favorite_css_ver . '" />', 210);
 add_stylesheet('<link rel="stylesheet" href="/ko/css/confirm-modal.css?ver=' . $confirm_modal_css_ver . '" />', 220);
 add_stylesheet('<link rel="stylesheet" href="/ko/css/share.css?ver=' . $share_css_ver . '" />', 230);
-add_stylesheet('<link rel="stylesheet" href="/ko/css/verify-modal.css?ver=' . $verify_modal_css_ver . '" />', 240);
 add_stylesheet('<link rel="stylesheet" href="/ko/css/ai-loading.css?ver=' . $ai_loading_css_ver . '" />', 250);
 add_stylesheet('<link rel="stylesheet" href="/ko/css/company-detail-left.css?ver=' . $company_detail_left_css_ver . '" />', 260);
 add_stylesheet('<link rel="stylesheet" href="/ko/css/company-detail.css?ver=' . $company_detail_css_ver . '" />', 270);
@@ -365,5 +362,4 @@ window.MATCH_REQUEST_CONTEXT = {
 <script src="/ko/js/favorite.js?ver=<?php echo $favorite_js_ver; ?>"></script>
 <script src="/ko/js/share.js?ver=<?php echo $share_js_ver; ?>"></script>
 <script src="/ko/js/confirm-modal.js?ver=<?php echo $confirm_modal_js_ver; ?>"></script>
-<script src="/ko/js/verify-modal.js?ver=<?php echo $verify_modal_js_ver; ?>"></script>
 <?php include_once(G5_THEME_PATH . '/tail.php'); ?>

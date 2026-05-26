@@ -60,8 +60,18 @@ if (!function_exists('mail_preview_apply_blur')) {
     }
 }
 
+if (!function_exists('mail_preview_apply_pixelate')) {
+    function mail_preview_apply_pixelate($image, $blockSize)
+    {
+        $blockSize = max(2, (int) $blockSize);
+        if (function_exists('imagefilter') && defined('IMG_FILTER_PIXELATE')) {
+            @imagefilter($image, IMG_FILTER_PIXELATE, $blockSize, true);
+        }
+    }
+}
+
 if (!function_exists('mail_preview_generate_trade_request_blur_image')) {
-    function mail_preview_generate_trade_request_blur_image($lines, $baseUrl)
+    function mail_preview_generate_trade_request_blur_image($lines, $baseUrl, $options = array())
     {
         if (!extension_loaded('gd') || !function_exists('imagecreatetruecolor') || !function_exists('imagettftext')) {
             return array('url' => '', 'path' => '', 'error' => 'gd_or_freetype_unavailable');
@@ -100,19 +110,45 @@ if (!function_exists('mail_preview_generate_trade_request_blur_image')) {
             $cleanLines[] = end($cleanLines);
         }
 
+        if (!is_array($options)) {
+            $options = array();
+        }
+
+        $style = trim((string) (isset($options['style']) ? $options['style'] : ''));
+        if ($style === '') {
+            $style = 'default';
+        }
+
         $width = 460;
         $height = 92;
         $fontSize = 13;
         $x = 12;
         $yList = array(24, 52, 80);
-        $opacityList = array(0.85, 0.60, 0.35);
-        $blurPassList = array(1, 3, 5);
+        $opacityList = array(0.50, 0.35, 0.25);
+        $blurPassList = array(6, 9, 12);
+        $pixelateBase = 10;
+        $pixelateStep = 2;
+        $veilAlpha = 44;
+        $gradientFromY = 30;
+        $gradientToY = 90;
         $baseColor = array(55, 65, 81);
 
+        if ($style === 'gradient_reveal') {
+            // 첫 줄은 노출하고 하단으로 갈수록 점진적으로 판독성이 낮아지는 프리뷰 스타일.
+            $opacityList = array(0.92, 0.45, 0.28);
+            $blurPassList = array(0, 3, 6);
+            $pixelateBase = 0;
+            $pixelateStep = 0;
+            $veilAlpha = 18;
+            $gradientFromY = 36;
+            $gradientToY = 91;
+        }
+
         $hashSource = json_encode(array(
-            'v' => 2,
+            'v' => 6,
             'font' => $fontPath,
             'lines' => $cleanLines,
+            'style' => $style,
             'w' => $width,
             'h' => $height,
             'fs' => $fontSize,
@@ -155,9 +191,31 @@ if (!function_exists('mail_preview_generate_trade_request_blur_image')) {
             $textColor = imagecolorallocatealpha($lineLayer, $baseColor[0], $baseColor[1], $baseColor[2], $alpha);
             imagettftext($lineLayer, $fontSize, 0, $x, $yList[$i], $textColor, $fontPath, $line);
 
-            mail_preview_apply_blur($lineLayer, $blurPassList[$i]);
+            if ($blurPassList[$i] > 0) {
+                mail_preview_apply_blur($lineLayer, $blurPassList[$i]);
+            }
+            if ($pixelateBase > 0) {
+                // 메일 클라이언트 호환을 위해 CSS blur 의존 대신 이미지 자체를 픽셀화한다.
+                mail_preview_apply_pixelate($lineLayer, $pixelateBase + ($i * $pixelateStep));
+            }
             imagecopy($canvas, $lineLayer, 0, 0, 0, 0, $width, $height);
             imagedestroy($lineLayer);
+        }
+
+        // 최종 베일 오버레이로 원문 판독성을 추가로 낮춘다.
+        $veil = imagecolorallocatealpha($canvas, 255, 255, 255, $veilAlpha);
+        imagefilledrectangle($canvas, 0, 0, $width, $height, $veil);
+
+        if ($style === 'gradient_reveal') {
+            // 하단으로 갈수록 안개가 두꺼워지는 느낌을 준다.
+            for ($y = $gradientFromY; $y <= $gradientToY; $y++) {
+                $ratio = ($y - $gradientFromY) / max(1, ($gradientToY - $gradientFromY));
+                $lineAlpha = (int) round(122 - (46 * $ratio));
+                if ($lineAlpha < 0) $lineAlpha = 0;
+                if ($lineAlpha > 127) $lineAlpha = 127;
+                $mist = imagecolorallocatealpha($canvas, 255, 255, 255, $lineAlpha);
+                imageline($canvas, 0, $y, $width, $y, $mist);
+            }
         }
 
         $saved = @imagepng($canvas, $targetPath);
