@@ -188,9 +188,9 @@ $e = static function ($value) {
           <img src="<?php echo $mailBaseUrl; ?>/bbs/mail/icon/topic.png" width="13" height="13" alt="" style="display:inline-block;vertical-align:middle;margin-right:8px;border:0;outline:none;text-decoration:none;">
           <span style="font-size:11px;color:#9ca3af;font-weight:600;">추가 문의 사항</span>
         </div>
-        <div style="background:#f9fafb;border-radius:10px;border:1px solid #e5e7eb;padding:12px 14px;margin-bottom:16px;">
+        <div style="background:#f6f8fb;border-radius:10px;border:1px solid #e5e7eb;padding:10px 12px 12px;margin-bottom:16px;">
           <?php if ($messagePreviewImageUrl !== '') { ?>
-          <img src="<?php echo $e($messagePreviewImageUrl); ?>" width="460" alt="문의 내용 미리보기" style="display:block;width:100%;max-width:460px;height:auto;border:0;outline:none;text-decoration:none;">
+          <img src="<?php echo $e($messagePreviewImageUrl); ?>" width="460" alt="문의 내용 미리보기" style="display:block;width:100%;max-width:460px;height:auto;border:0;outline:none;text-decoration:none;border-radius:8px;">
           <?php } else { ?>
           <div style="line-height:1.8;font-size:13px;color:#9ca3af;">
             <div style="height:14px;background:#e5e7eb;border-radius:7px;margin:2px 0 8px;max-width:92%;"></div>
