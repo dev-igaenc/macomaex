@@ -197,6 +197,7 @@ for($i=0; $i<count($payment_rows); $i++){
 <div id="my_plan">
 
     <input type="hidden" name="membership_cancel_token" id="membership_cancel_token" value="<?=$membership_cancel_token?>">
+    <input type="hidden" id="current_order_no" value="">
     <div class="payment_history_cards">
         <div class="pay-page">
                     <div class="pay-page-header">

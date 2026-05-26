@@ -139,6 +139,7 @@ $(function () {
         }
 
         var doRefund = function () {
+            $("#current_order_no").val(orderNo);
             $.post("../get_set.php", {
                 type: "credit_charge_refund",
                 order_no: orderNo,
@@ -150,6 +151,14 @@ $(function () {
                 text = text.replace(/<[^>]*>/g, "").trim();
                 var parts = text.split("|");
                 if (parts[0] === "1000") {
+                    window.dataLayer = window.dataLayer || [];
+                    window.dataLayer.push({
+                        event: "refund",
+                        ecommerce: {
+                            transaction_id: $("#current_order_no").val(),
+                            currency: "KRW"
+                        }
+                    });
                     jAlert(parts[1] ? parts[1] : "환불요청이 접수되었습니다.", "알림", function () {
                         location.reload();
                     });
