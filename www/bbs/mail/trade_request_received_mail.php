@@ -17,6 +17,7 @@ $e = static function ($value) {
     $tradeDirectionLabel = isset($tradeDirectionLabel) ? (string)$tradeDirectionLabel : '';
     $tradePurposeLabels = (isset($tradePurposeLabels) && is_array($tradePurposeLabels)) ? $tradePurposeLabels : array();
     $messagePreviewLines = (isset($messagePreviewLines) && is_array($messagePreviewLines)) ? $messagePreviewLines : array();
+    $messagePreviewFirstLine = isset($messagePreviewFirstLine) ? trim((string)$messagePreviewFirstLine) : (isset($messagePreviewLines[0]) ? trim((string)$messagePreviewLines[0]) : '');
     $messagePreviewImageUrl = isset($messagePreviewImageUrl) ? trim((string)$messagePreviewImageUrl) : '';
     $mailDateLabel = isset($mailDateLabel) ? (string)$mailDateLabel : date('Y년 m월 d일 H:i');
 
@@ -189,13 +190,13 @@ $e = static function ($value) {
           <span style="font-size:11px;color:#9ca3af;font-weight:600;">추가 문의 사항</span>
         </div>
         <div style="background:#f6f8fb;border-radius:10px;border:1px solid #e5e7eb;padding:10px 12px 12px;margin-bottom:16px;">
+          <div style="font-size:13px;line-height:1.6;color:#4b5563;margin:0 0 8px;"><?php echo $e($messagePreviewFirstLine !== '' ? $messagePreviewFirstLine : '문의 내용이 접수되었습니다.'); ?></div>
           <?php if ($messagePreviewImageUrl !== '') { ?>
           <img src="<?php echo $e($messagePreviewImageUrl); ?>" width="460" alt="문의 내용 미리보기" style="display:block;width:100%;max-width:460px;height:auto;border:0;outline:none;text-decoration:none;border-radius:8px;">
           <?php } else { ?>
-          <div style="line-height:1.8;font-size:13px;color:#9ca3af;">
-            <div style="height:14px;background:#e5e7eb;border-radius:7px;margin:2px 0 8px;max-width:92%;"></div>
-            <div style="height:14px;background:#e5e7eb;border-radius:7px;margin:2px 0 8px;max-width:82%;"></div>
-            <div style="height:14px;background:#e5e7eb;border-radius:7px;margin:2px 0;max-width:76%;"></div>
+          <div style="border-radius:8px;overflow:hidden;background:#f3f4f6;">
+            <div style="height:30px;background:linear-gradient(to bottom, rgba(156,163,175,0.22), rgba(156,163,175,0.14));border-radius:8px;margin:0 0 6px;"></div>
+            <div style="height:24px;background:linear-gradient(to bottom, rgba(156,163,175,0.18), rgba(156,163,175,0.10));border-radius:8px;"></div>
           </div>
           <?php } ?>
         </div>

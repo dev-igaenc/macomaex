@@ -279,6 +279,13 @@ function company_detail_trade_request_send_receiver_mail($tradeRequestNo, $reque
 	while (count($messagePreviewLines) < 3) {
 		$messagePreviewLines[] = $messagePreviewLines[count($messagePreviewLines) - 1];
 	}
+	$messagePreviewFirstLine = isset($messagePreviewLines[0]) ? trim((string)$messagePreviewLines[0]) : '';
+	$messagePreviewBlurLines = array_values(array_filter(array_slice($messagePreviewLines, 1, 2), static function ($line) {
+		return trim((string)$line) !== '';
+	}));
+	if (empty($messagePreviewBlurLines) && $messagePreviewFirstLine !== '') {
+		$messagePreviewBlurLines = array($messagePreviewFirstLine);
+	}
 
 	$mailBaseUrl = function_exists('mail_preview_resolve_base_url')
 		? mail_preview_resolve_base_url('https://macomaex.com')
@@ -288,7 +295,7 @@ function company_detail_trade_request_send_receiver_mail($tradeRequestNo, $reque
 	$messagePreviewImageUrl = '';
 	if (function_exists('mail_preview_generate_trade_request_blur_image')) {
 		$generatedPreviewImage = mail_preview_generate_trade_request_blur_image(
-			$messagePreviewLines,
+			$messagePreviewBlurLines,
 			$mailBaseUrl,
 			array(
 				'style' => 'gradient_reveal',
@@ -296,6 +303,12 @@ function company_detail_trade_request_send_receiver_mail($tradeRequestNo, $reque
 		);
 		if (!empty($generatedPreviewImage['url'])) {
 			$messagePreviewImageUrl = (string)$generatedPreviewImage['url'];
+		} else {
+			company_detail_trade_request_log('mail_preview_generate_failed', array(
+				'error' => (string)($generatedPreviewImage['error'] ?? ''),
+				'path' => (string)($generatedPreviewImage['path'] ?? ''),
+				'line_count' => count($messagePreviewBlurLines),
+			));
 		}
 	}
 
