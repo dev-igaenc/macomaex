@@ -46,6 +46,9 @@ if($w == 'u'){
 if(!$mb_id)
     alert('회원아이디 값이 없습니다. 올바른 방법으로 이용해 주십시오.');
 
+$register_flow = isset($_POST['register_flow']) ? trim((string)$_POST['register_flow']) : '';
+$is_single_join_flow = ($register_flow === 'single_join_v1');
+
 $mb_password    = isset($_POST['mb_password']) ? trim($_POST['mb_password']) : '';
 $mb_name        = isset($_POST['mb_name']) ? trim($_POST['mb_name']) : '';
 $mb_nick        = isset($_POST['mb_name']) ? trim($_POST['mb_name']) : '';
@@ -107,6 +110,9 @@ if (!isset($default) || !is_array($default)) {
 }
 
 $mb_name        = clean_xss_tags($mb_name);
+if ($is_single_join_flow && $mb_name === '') {
+    $mb_name = $mb_id;
+}
 $mb_email       = get_email_address($mb_email);
 $mb_homepage    = clean_xss_tags($mb_homepage);
 $mb_tel         = clean_xss_tags($mb_tel);
@@ -127,9 +133,11 @@ if ($w == '') {
 
     // 이름, 닉네임에 utf-8 이외의 문자가 포함됐다면 오류
     // 서버환경에 따라 정상적으로 체크되지 않을 수 있음.
-    $tmp_mb_name = iconv('UTF-8', 'UTF-8//IGNORE', $mb_name);
-    if($tmp_mb_name != $mb_name) {
-        alert('이름을 올바르게 입력해 주십시오.');
+    if (!$is_single_join_flow) {
+        $tmp_mb_name = iconv('UTF-8', 'UTF-8//IGNORE', $mb_name);
+        if($tmp_mb_name != $mb_name) {
+            alert('이름을 올바르게 입력해 주십시오.');
+        }
     }
 	/*
     $tmp_mb_nick = iconv('UTF-8', 'UTF-8//IGNORE', $mb_nick);
@@ -144,7 +152,9 @@ if ($w == '') {
     if($w == '' && $mb_password != $mb_password_re)
         alert('비밀번호가 일치하지 않습니다.');
 	*/
-    if ($msg = empty_mb_name($mb_name))       alert($msg, "", true, true);
+    if (!$is_single_join_flow) {
+        if ($msg = empty_mb_name($mb_name))       alert($msg, "", true, true);
+    }
     if ($msg = empty_mb_email($mb_email))   alert($msg, "", true, true);
     if ($msg = reserve_mb_id($mb_id))       alert($msg, "", true, true);
     //if ($msg = reserve_mb_nick($mb_nick))   alert($msg, "", true, true);
@@ -155,8 +165,10 @@ if ($w == '') {
     if ($msg = prohibit_mb_email($mb_email))alert($msg, "", true, true);
 
     // 휴대폰 필수입력일 경우 휴대폰번호 유효성 체크
-    if ($config['cf_use_hp'] || ($config['cf_cert_hp'] || $config['cf_cert_simple']) && $config['cf_req_hp']) {
-        if ($msg = valid_mb_hp($mb_hp))     alert($msg, "", true, true);
+    if (!$is_single_join_flow) {
+        if ($config['cf_use_hp'] || ($config['cf_cert_hp'] || $config['cf_cert_simple']) && $config['cf_req_hp']) {
+            if ($msg = valid_mb_hp($mb_hp))     alert($msg, "", true, true);
+        }
     }
 
     if ($w=='') {
@@ -168,7 +180,7 @@ if ($w == '') {
         }
 
         // 본인확인 체크
-        if($config['cf_cert_use'] && $config['cf_cert_req']) {
+        if(!$is_single_join_flow && $config['cf_cert_use'] && $config['cf_cert_req']) {
             $post_cert_no = isset($_POST['cert_no']) ? trim($_POST['cert_no']) : '';
             if($post_cert_no !== get_session('ss_cert_no') || ! get_session('ss_cert_no'))
                 alert("회원가입을 위해서는 본인확인을 해주셔야 합니다.");

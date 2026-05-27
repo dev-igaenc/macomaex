@@ -10,16 +10,54 @@ if (!defined('_GNUBOARD_')) exit; // 개별 페이지 접근 불가
     #join_single .section_divider{width: 100%; height: 1px; background: #ddd; margin: 0 0 3rem;}
     #join_single .required_mark{position: relative; display: inline-block;}
     #join_single .required_mark::after{content: '*'; color: #ff0000; padding-left: 0.25rem;}
+    #join_single .formBox_title a{color: #666; text-decoration: underline; text-underline-offset: 0.2rem;}
+    #join_single .formBox_title a:hover{color: #444;}
+    #join_single .formBox.terms_box{margin-bottom: 2.2rem;}
+    #join_single .formBox.terms_box .formBox_title{margin-bottom: 2.2rem;}
+    #join_single .formBox.terms_box .checkBox{margin-top: 0.8rem;}
+    #join_single .formBox.terms_all_box{margin-top: 0.6rem; margin-bottom: 2.6rem;}
+    #join_single .formBox.terms_all_box .checkBox label{font-size: 1.8rem; font-weight: 700; line-height: 1.2; padding-left: 2.4rem;}
+    #join_single .formBox.terms_all_box .checkBox label::before{width: 1.8rem; height: 1.8rem;}
+    #join_single .formBox.terms_all_box .checkBox label::after{left: 0.25rem; width: 1.3rem;}
+    #join_single .formBox.terms_box .checkBox{display: flex; align-items: center; gap: 0.8rem;}
+    #join_single .formBox.terms_box .checkBox input{
+        position: static;
+        top: auto;
+        left: auto;
+        width: 1.6rem;
+        height: 1.6rem;
+        z-index: auto;
+        flex: 0 0 1.6rem;
+        cursor: pointer;
+        opacity: 1;
+        appearance: auto !important;
+        -webkit-appearance: checkbox !important;
+        -moz-appearance: auto !important;
+        accent-color: #111;
+    }
+    #join_single .formBox.terms_box .consent_text{font-size: 1.5rem; line-height: 1.4; color: #666;}
+    #join_single .formBox.terms_box .consent_text a{
+        color: #666;
+        text-decoration: underline;
+        text-underline-offset: 0.2rem;
+    }
+    #join_single .formBox.terms_box .consent_text a:hover{color: #444;}
 </style>
 
 <div id="join_single">
     <div class="member_sign_layout">
-        <form action="<?= $register_action_url ?? '' ?>" method="post" id="join_form" onsubmit="return false;" autocomplete="off">
+        <form action="<?= $register_action_url ?? '' ?>" method="post" id="join_form" autocomplete="off">
             <input type="hidden" name="url" value="<?= $url ?? '' ?>">
             <input type="hidden" name="w" value="">
             <input type="hidden" name="mb_id" id="mb_id" value="">
+            <input type="hidden" id="reg_mb_id" value="">
             <input type="hidden" name="mb_password" id="mb_password_hidden" value="">
             <input type="hidden" name="agree_chk" id="agree_chk" value="">
+            <!-- 사업자번호/법인명 자동조회 기능 이관 전 임시 유지값 -->
+            <input type="hidden" name="com_chk" id="com_chk" class="com_chk" value="true">
+            <input type="hidden" name="mb_name" id="mb_name" value="">
+            <input type="hidden" name="mb_company" id="mb_company" value="">
+            <input type="hidden" name="register_flow" value="single_join_v1">
             <input type="hidden" name="provider" value="<?php echo $provider ?? ''; ?>">
             <input type="hidden" name="cert_type" value="<?php echo $cert_type ?? ''; ?>">
             <input type="hidden" name="cert_no" value="<?php echo $cert_no ?? ''; ?>">
@@ -66,35 +104,10 @@ if (!defined('_GNUBOARD_')) exit; // 개별 페이지 접근 불가
                         <p class="formBox_errorM"></p>
                     </div>
 
-					<div class="section_divider"></div>
-
-					<div class="join_agree_head">
-						<h4>회원정보입력</h4>
-						<p>필수 정보를 입력하고 약관에 동의해 주세요.</p>
-					</div>
-
-                    <div class="formBox">
-                        <p class="formBox_title">이용약관(필수)</p>
-                        <div class="clauseArea"><div class="scroll"><? include_once(G5_THEME_PATH . '/clause.php'); ?></div></div>
-                        <div class="checkBox"><input type="checkbox" name="terms" id="terms" class="req"><label for="terms">이용약관에 동의합니다.</label></div>
-                    </div>
-
-                    <div class="formBox">
-                        <p class="formBox_title">개인정보 수집 및 이용동의(필수)</p>
-                        <div class="clauseArea"><div class="scroll"><? include_once(G5_THEME_PATH . '/privacy.php'); ?></div></div>
-                        <div class="checkBox"><input type="checkbox" name="privacy" id="privacy" class="req"><label for="privacy">개인정보수집에 동의합니다.</label></div>
-                    </div>
-
-                    <div class="formBox">
-                        <div class="checkBox all"><input type="checkbox" name="agreeAll" id="agreeAll"><label for="agreeAll">모든 약관에 동의합니다.</label></div>
-                    </div>
-
-                    <div class="section_divider"></div>
-
+                    <!--
                     <div class="formBox">
                         <div class="inputBox requied type2">
                             <p class="title">사업자등록번호</p>
-                            <input type="hidden" name="com_chk" id="com_chk" class="com_chk" value="false">
                             <input type="text" name="mb_4" id="mb_4" class="comnum_chk" maxlength="12">
                             <button type="button" class="btn srh">확인</button>
                         </div>
@@ -117,8 +130,36 @@ if (!defined('_GNUBOARD_')) exit; // 개별 페이지 접근 불가
                             </div>
                         </div>
                     </div>
+                    -->
 
-                    <div class="formBox">
+                    <div class="section_divider"></div>
+
+					<div class="join_agree_head">
+						<div class="formBox terms_all_box">
+                        	<div class="checkBox all"><input type="checkbox" name="agreeAll" id="agreeAll"><label for="agreeAll">모두 동의합니다.</label></div>
+                    	</div>
+						<p>회원 가입 및 회원 관리 등의 목적으로 서비스 이용약관, 개인정보를 수집 및 이용하고 있습니다.</p>
+					</div>
+
+                    <div class="formBox terms_box">
+                        <div class="checkBox">
+                            <input type="checkbox" name="terms" id="terms" class="req">
+                            <span class="consent_text">
+                                <a href="<?= $link_1201 ?? '/etc/clause.php' ?>" target="_blank" rel="noopener noreferrer">이용약관</a>에 동의합니다.
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="formBox terms_box">
+                        <div class="checkBox">
+                            <input type="checkbox" name="privacy" id="privacy" class="req">
+                            <span class="consent_text">
+                                <a href="<?= $link_1202 ?? '/etc/privacy.php' ?>" target="_blank" rel="noopener noreferrer">개인정보 수집 및 이용동의</a>에 동의합니다.
+                            </span>
+                        </div>
+                    </div>
+
+					<div class="formBox">
                         <div class="inputBox type2">
                             <p class="title">가입이벤트쿠폰</p>
                             <input type="text" name="coupon" id="coupon" placeholder="ex) ED9A01" maxlength="6">
@@ -208,11 +249,12 @@ $("#agreeAll").click(function(){
     else $("input.req").prop("checked", false);
 });
 
-$('.comnum_chk').on('keyup', function(){
-    var num = $(this).val();
-    num.trim();
-    this.value = AutoHypen(num);
-});
+// 사업자등록번호 자동조회 기능 이관 예정으로 임시 비활성화
+// $('.comnum_chk').on('keyup', function(){
+//     var num = $(this).val();
+//     num.trim();
+//     this.value = AutoHypen(num);
+// });
 
 function AutoHypen(companyNum){
     companyNum = companyNum.replace(/[^0-9]/g, '');
@@ -229,42 +271,46 @@ function AutoHypen(companyNum){
     }
 }
 
-$(".srh").click(function(){
-    var comnum = $(this).prev().val();
-    if(comnum.length < 12) {
-        $("#com_chk").val("false");
-        jAlert("사업자등록번호를 확인하세요.","알림",function(){ $("#mb_4").focus(); });
-        return false;
+// $(".srh").click(function(){
+//     var comnum = $(this).prev().val();
+//     if(comnum.length < 12) {
+//         $("#com_chk").val("false");
+//         jAlert("사업자등록번호를 확인하세요.","알림",function(){ $("#mb_4").focus(); });
+//         return false;
+//     }
+//
+//     $.post("../get_set.php", { type: 'join_comp_chk', comnum: comnum })
+//         .done(function(jqXHR) {
+//             jqXHR = jqXHR.split("|");
+//             if(jqXHR[0] == 1000){
+//                 $("#com_chk").val("true");
+//                 $("#mb_name").val(jqXHR[1]).attr('readonly', true);
+//                 $("#mb_company").val(jqXHR[2]).attr('readonly', true);
+//             } else if(jqXHR[0] == 501){
+//                 $("#com_chk").val("false");
+//                 jAlert("해당 사업자 번호로는 등록할 수 없습니다.","알림",function(){ $("#mb_4").focus(); });
+//             } else {
+//                 $("#com_chk").val("false");
+//                 jAlert("처리에 오류가 있습니다.","알림");
+//             }
+//         })
+//         .fail(function() {
+//             $("#com_chk").val("false");
+//             jAlert("처리에 오류가 있습니다.","알림");
+//         });
+// });
+
+if ($(".Product .addz").length > 0) {
+    $(".Product .addz").wrap("<div></div>");
+    var addz = $(".Product .addz").parent().html();
+    if (addz) {
+        addz = addz.replace("+","-");
+        addz = addz.replace('"add"','"minus"');
     }
-
-    $.post("../get_set.php", { type: 'join_comp_chk', comnum: comnum })
-        .done(function(jqXHR) {
-            jqXHR = jqXHR.split("|");
-            if(jqXHR[0] == 1000){
-                $("#com_chk").val("true");
-                $("#mb_name").val(jqXHR[1]).attr('readonly', true);
-                $("#mb_company").val(jqXHR[2]).attr('readonly', true);
-            } else if(jqXHR[0] == 501){
-                $("#com_chk").val("false");
-                jAlert("해당 사업자 번호로는 등록할 수 없습니다.","알림",function(){ $("#mb_4").focus(); });
-            } else {
-                $("#com_chk").val("false");
-                jAlert("처리에 오류가 있습니다.","알림");
-            }
-        })
-        .fail(function() {
-            $("#com_chk").val("false");
-            jAlert("처리에 오류가 있습니다.","알림");
-        });
-});
-
-$(".Product .addz").wrap("<div></div>");
-var addz = $(".Product .addz").parent().html();
-addz = addz.replace("+","-");
-addz = addz.replace('"add"','"minus"');
-$(".Product .addz").unwrap();
-$(".Product .add").click(function(){ $(".Product").append(addz); });
-$("body").on("click", ".Product .minus", function(){ $(this).parents(".products").remove(); });
+    $(".Product .addz").unwrap();
+    $(".Product .add").click(function(){ if (addz) $(".Product").append(addz); });
+    $("body").on("click", ".Product .minus", function(){ $(this).parents(".products").remove(); });
+}
 
 if($("#coupon").length > 0){
     $("#coupon").keyup(function(){
@@ -298,20 +344,7 @@ function fregisterform_submit(){
         }
     }
 
-    if($("#com_chk").val() != "true") {
-        jAlert("등록가능한 사업자등록번호를 입력해주세요.","알림",function(){ $("#mb_4").focus(); });
-        return false;
-    }
-
-    if(!$("#mb_name").val().trim()) {
-        jAlert("법인명을 확인해 주세요.","알림",function(){ $("#mb_name").focus(); });
-        return false;
-    }
-
-    if(!$("#mb_4").val().trim()) {
-        jAlert("사업자등록번호를 확인해 주세요.","알림",function(){ $("#mb_4").focus(); });
-        return false;
-    }
+    // 사업자등록번호/법인명 확인 기능은 이관 예정으로 임시 비활성화
 
     if($("#coupon").val().length > 0 && $("#coupon").val().length < 6) {
         jAlert("쿠폰번호를 확인해 주세요.","알림");
@@ -368,10 +401,13 @@ $("#join_submit").on("click", function(){
         return false;
     }
 
+    $("#reg_mb_id").val(email);
     if(!fregisterform_submit()) return false;
 
     $("#agree_chk").val("#terms#privacy");
     $("#mb_id").val(email);
+    // 서버의 mb_name 필수검증 유지 대응: 별도 입력필드가 없으므로 이메일을 기본값으로 전달
+    $("#mb_name").val(email);
     $("#mb_password_hidden").val($("#password").val());
     $("#join_form").off("submit").on("submit", function(){ return true; });
     $("#join_form").submit();
