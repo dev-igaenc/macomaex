@@ -3,6 +3,9 @@ if (!defined('_GNUBOARD_')) exit; // 개별 페이지 접근 불가
 
 // add_stylesheet('css 구문', 출력순서); 숫자가 작을 수록 먼저 출력됨
 add_stylesheet('<link rel="stylesheet" href="'.$member_skin_url.'/style.css">', 0);
+
+$reg_prev_url = trim((string)get_session('ss_reg_prev_url'));
+if ($reg_prev_url === '') $reg_prev_url = G5_URL;
 ?>
 
 <!-- 회원가입결과 시작 { -->
@@ -40,7 +43,17 @@ add_stylesheet('<link rel="stylesheet" href="'.$member_skin_url.'/style.css">', 
 	</dl>
 
 	<fieldset id="login_fs">
-		<button type="submit" id="btn_submit" accesskey="s" class="btn_submit" onclick="location.href='<?php echo G5_URL ?>/'">메인으로</button>
+		<div class="btn_box">
+			<button type="button" id="btn_submit" accesskey="s" class="btn_submit" onclick="location.href='<?php echo G5_URL ?>/'">메인으로</button>
+			<button type="button" class="btn_submit btn_prev" onclick="location.href='<?php echo htmlspecialchars($reg_prev_url, ENT_QUOTES); ?>'">이전 페이지로</button>
+		</div>
 	</fieldset>
 </div>
 <!-- } 회원가입결과 끝 -->
+
+<style>
+#reg_result #login_fs .btn_box{display:flex;justify-content:space-between;}
+#reg_result #login_fs .btn_box .btn_submit{width:100%;margin:40px 0 0 !important;}
+#reg_result #login_fs .btn_box .btn_submit + .btn_submit{margin-left:10px !important;}
+#reg_result #login_fs .btn_box .btn_prev{background-color:#999;border:0;color:#fff;}
+</style>

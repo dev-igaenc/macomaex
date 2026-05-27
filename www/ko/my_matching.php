@@ -1,5 +1,9 @@
 <?php
 include_once(__DIR__ . '/_common.php');
+
+// 비로그인 접근은 어떤 후속 로직보다 먼저 로그인 유도 모달로 분기한다.
+login_chk();
+
 include_once(__DIR__ . '/helper/trade_request_helper.php');
 include_once(__DIR__ . '/helper/my_matching_helper.php');
 
@@ -39,8 +43,6 @@ add_javascript('<script src="/ko/js/match-request-modal.js?ver=' . $match_reques
 add_javascript('<script src="/ko/js/my_matching.js?ver=' . $my_matching_js_ver . '"></script>', 240);
 add_javascript('<script src="/ko/js/vendor/stream-chat.browser.full-bundle.min.js?ver=' . $stream_chat_vendor_js_ver . '"></script>', 245);
 add_javascript('<script src="/ko/js/trade_chat_modal.js?ver=' . $trade_chat_modal_js_ver . '"></script>', 250);
-
-login_chk();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 	$action = trim((string)$_POST['action']);
@@ -171,23 +173,23 @@ function my_matching_build_item($row, $starred = false) {
 }
 
 $memberBzno = preg_replace('/[^0-9]/', '', (string)($member['mb_4'] ?? ''));
-if ($memberBzno === '') {
-	alert('회원 사업자번호 정보가 없어 거래 히스토리를 확인할 수 없습니다.', '/');
-}
+$memberHasBzno = ($memberBzno !== '');
 
 // 관심기업 탭 공통 모달에서도 같은 "우리 기업 정보"를 쓰도록 로그인 기업 데이터를 미리 준비한다.
-$requesterCompanyData = trade_request_member_company_data($memberBzno);
+$requesterCompanyData = $memberHasBzno ? trade_request_member_company_data($memberBzno) : array();
 
 $memberIdSql = sql_escape_string($member['mb_id']);
-$memberBznoSql = sql_escape_string($memberBzno);
+$memberBznoSql = $memberHasBzno ? sql_escape_string($memberBzno) : '';
 
 $favoriteKedcdMap = array();
-$favoriteResult = sql_query("SELECT KEDCD FROM g5_favorite WHERE mb_id = '{$memberIdSql}'", false);
-if ($favoriteResult) {
-	for ($i = 0; $fav = sql_fetch_array($favoriteResult); $i++) {
-		$favKedcd = trim((string)($fav['KEDCD'] ?? ''));
-		if ($favKedcd !== '') {
-			$favoriteKedcdMap[$favKedcd] = true;
+if ($memberHasBzno) {
+	$favoriteResult = sql_query("SELECT KEDCD FROM g5_favorite WHERE mb_id = '{$memberIdSql}'", false);
+	if ($favoriteResult) {
+		for ($i = 0; $fav = sql_fetch_array($favoriteResult); $i++) {
+			$favKedcd = trim((string)($fav['KEDCD'] ?? ''));
+			if ($favKedcd !== '') {
+				$favoriteKedcdMap[$favKedcd] = true;
+			}
 		}
 	}
 }
@@ -225,11 +227,13 @@ $receivedSql = "
 	ORDER BY TR.tr_no DESC
 ";
 // 받은 요청은 요청 기업 기준으로 회사/담당자 정보를 매칭한다.
-$receivedResult = sql_query($receivedSql, false);
-if ($receivedResult) {
-	for ($i = 0; $row = sql_fetch_array($receivedResult); $i++) {
-		$kedcd = trim((string)($row['company_kedcd'] ?? ''));
-		$receivedRows[] = my_matching_build_item($row, isset($favoriteKedcdMap[$kedcd]));
+if ($memberHasBzno) {
+	$receivedResult = sql_query($receivedSql, false);
+	if ($receivedResult) {
+		for ($i = 0; $row = sql_fetch_array($receivedResult); $i++) {
+			$kedcd = trim((string)($row['company_kedcd'] ?? ''));
+			$receivedRows[] = my_matching_build_item($row, isset($favoriteKedcdMap[$kedcd]));
+		}
 	}
 }
 
@@ -267,11 +271,13 @@ $sentSql = "
 ";
 
 // 보낸 요청은 대상 기업 기준으로 회사 정보를 매칭한다.
-$sentResult = sql_query($sentSql, false);
-if ($sentResult) {
-	for ($i = 0; $row = sql_fetch_array($sentResult); $i++) {
-		$kedcd = trim((string)($row['company_kedcd'] ?? ''));
-		$sentRows[] = my_matching_build_item($row, isset($favoriteKedcdMap[$kedcd]));
+if ($memberHasBzno) {
+	$sentResult = sql_query($sentSql, false);
+	if ($sentResult) {
+		for ($i = 0; $row = sql_fetch_array($sentResult); $i++) {
+			$kedcd = trim((string)($row['company_kedcd'] ?? ''));
+			$sentRows[] = my_matching_build_item($row, isset($favoriteKedcdMap[$kedcd]));
+		}
 	}
 }
 
@@ -319,35 +325,37 @@ $interestedSql = "
 ";
 
 // 관심기업은 기존 요청 상태를 함께 계산해 버튼 상태를 결정한다.
-$interestedResult = sql_query($interestedSql, false);
-if ($interestedResult) {
-	for ($i = 0; $row = sql_fetch_array($interestedResult); $i++) {
-		$kedcd = trim((string)($row['company_kedcd'] ?? ''));
-		$matchStatus = null;
-		$chatMeta = array();
-		if (isset($receivedStatusByKedcd[$kedcd])) {
-			$matchStatus = $receivedStatusByKedcd[$kedcd];
-			$chatMeta = $receivedChatByKedcd[$kedcd] ?? array();
-		} else if (isset($sentStatusByKedcd[$kedcd])) {
-			$matchStatus = $sentStatusByKedcd[$kedcd];
-			$chatMeta = $sentChatByKedcd[$kedcd] ?? array();
-		}
+if ($memberHasBzno) {
+	$interestedResult = sql_query($interestedSql, false);
+	if ($interestedResult) {
+		for ($i = 0; $row = sql_fetch_array($interestedResult); $i++) {
+			$kedcd = trim((string)($row['company_kedcd'] ?? ''));
+			$matchStatus = null;
+			$chatMeta = array();
+			if (isset($receivedStatusByKedcd[$kedcd])) {
+				$matchStatus = $receivedStatusByKedcd[$kedcd];
+				$chatMeta = $receivedChatByKedcd[$kedcd] ?? array();
+			} else if (isset($sentStatusByKedcd[$kedcd])) {
+				$matchStatus = $sentStatusByKedcd[$kedcd];
+				$chatMeta = $sentChatByKedcd[$kedcd] ?? array();
+			}
 
-		$interestedRows[] = array(
-			'id' => 'fav_' . $kedcd,
-			'company' => trim((string)($row['company_name'] ?? '')) ?: '정보 준비중',
-			'bzno' => trim((string)($row['company_bzno'] ?? '')),
-			'address' => trim((string)($row['LOC_ADDRA'] ?? '') . ' ' . (string)($row['LOC_ADDRB'] ?? '')) ?: '정보 준비중',
-			'industry' => trim((string)($row['industry_name'] ?? '')) ?: '정보 준비중',
-			'matchStatus' => $matchStatus,
-			'chatRoomId' => (int)($chatMeta['chatRoomId'] ?? 0),
-			'chatEnabled' => !empty($chatMeta['chatEnabled']),
-			'chatRoomStatus' => trim((string)($chatMeta['chatRoomStatus'] ?? '')),
-			'creditUsed' => (int)($chatMeta['creditUsed'] ?? 0),
-			'starred' => true,
-			'kedcd' => $kedcd,
-			'detailUrl' => my_matching_company_detail_url($row['company_kedcd'] ?? ''),
-		);
+			$interestedRows[] = array(
+				'id' => 'fav_' . $kedcd,
+				'company' => trim((string)($row['company_name'] ?? '')) ?: '정보 준비중',
+				'bzno' => trim((string)($row['company_bzno'] ?? '')),
+				'address' => trim((string)($row['LOC_ADDRA'] ?? '') . ' ' . (string)($row['LOC_ADDRB'] ?? '')) ?: '정보 준비중',
+				'industry' => trim((string)($row['industry_name'] ?? '')) ?: '정보 준비중',
+				'matchStatus' => $matchStatus,
+				'chatRoomId' => (int)($chatMeta['chatRoomId'] ?? 0),
+				'chatEnabled' => !empty($chatMeta['chatEnabled']),
+				'chatRoomStatus' => trim((string)($chatMeta['chatRoomStatus'] ?? '')),
+				'creditUsed' => (int)($chatMeta['creditUsed'] ?? 0),
+				'starred' => true,
+				'kedcd' => $kedcd,
+				'detailUrl' => my_matching_company_detail_url($row['company_kedcd'] ?? ''),
+			);
+		}
 	}
 }
 

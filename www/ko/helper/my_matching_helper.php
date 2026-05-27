@@ -6,8 +6,6 @@ if (!defined('_GNUBOARD_')) exit;
  * 받은 요청 승인/거절 처리와 보낸 요청 상태 조회를 페이지 밖으로 분리해 관리한다.
  */
 
-include_once(__DIR__ . '/trade_chat_helper.php');
-
 function my_matching_json_response($payload) {
 	header('Content-Type: application/json; charset=utf-8');
 	echo json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
@@ -27,9 +25,26 @@ function my_matching_csrf_session_key() {
 function my_matching_create_csrf_token() {
 	$token = '';
 	if (function_exists('random_bytes')) {
-		$token = bin2hex(random_bytes(32));
+		try {
+			$token = bin2hex(random_bytes(32));
+		} catch (Throwable $e) {
+			$token = '';
+		}
+	}
+
+	if ($token === '') {
+		if (function_exists('openssl_random_pseudo_bytes')) {
+			$bytes = openssl_random_pseudo_bytes(32);
+			if ($bytes !== false) {
+				$token = bin2hex($bytes);
+			}
+		}
 	} else {
-		$token = md5(uniqid(rand(), true));
+		$token = '';
+	}
+
+	if ($token === '') {
+		$token = md5(uniqid((string)mt_rand(), true));
 	}
 
 	set_session(my_matching_csrf_session_key(), $token);
@@ -56,6 +71,8 @@ function my_matching_member_bzno($member) {
 }
 
 function my_matching_handle_trade_request_approval($member, $request) {
+	include_once(__DIR__ . '/trade_chat_helper.php');
+
 	if (empty($member['mb_id'])) {
 		my_matching_text_response('501');
 	}
@@ -183,6 +200,8 @@ function my_matching_handle_sent_status($member) {
 }
 
 function my_matching_handle_trade_chat_retry($member, $request) {
+	include_once(__DIR__ . '/trade_chat_helper.php');
+
 	if (empty($member['mb_id'])) {
 		my_matching_json_response(array(
 			'success' => false,
