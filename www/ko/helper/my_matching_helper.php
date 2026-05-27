@@ -78,7 +78,7 @@ function my_matching_handle_trade_request_approval($member, $request) {
 
 	$memberBznoSql = sql_escape_string($memberBzno);
 	$targetRequest = sql_fetch("
-		select tr_no, approval_status
+		select tr_no, approval_status, request_mb_id
 		from trade_request
 		where tr_no='{$idx}'
 		  and target_bzno='{$memberBznoSql}'
@@ -112,6 +112,20 @@ function my_matching_handle_trade_request_approval($member, $request) {
 	$updated = sql_query($updateSql, false);
 	if (!$updated) {
 		my_matching_text_response('500');
+	}
+
+	if ($nextStatus === '1' && (int)($targetRequest['approval_status'] ?? 0) !== 1) {
+		$requestMemberId = trim((string)($targetRequest['request_mb_id'] ?? ''));
+		if ($requestMemberId !== '') {
+			$requestMemberInfo = getUserInfo($requestMemberId);
+			$requestHp = trim((string)($requestMemberInfo['mb_8'] ?? ''));
+			if ($requestHp !== '' && class_exists('NCP_SENS_AT')) {
+				$gw_msg = new NCP_SENS_AT();
+				$gw_msg->templateCode = 'accmatching';
+				$gw_msg->to = $requestHp;
+				$gw_msg->send();
+			}
+		}
 	}
 
 	if ($nextStatus === '1') {

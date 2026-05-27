@@ -1380,13 +1380,13 @@ switch ($type) {
 					$chk2=sql_query("update g5_matching set receive_approval='{$status}', receive_approval_date=now() where receive_id='{$member['mb_id']}' and no='{$idx}'");
 				}
 
-				if($status=="Y" && $send_accept_notice) {
-						//알림톡 발송
-						$minfo=sql_fetch("select * from g5_matching where no='{$idx}'");
-						$t_uinfo= getUserInfo($minfo['request_id']);
-						if($t_uinfo['mb_8']){
-							$gw_msg = new NCP_SENS_AT();
-							$gw_msg->templateCode	= 'accmatching'; // 템플릿 코드 매칭수락
+					if($status=="Y" && $send_accept_notice) {
+							//알림톡 발송
+							$minfo=sql_fetch("select request_mb_id from trade_request where tr_no='{$idx}'");
+							$t_uinfo= getUserInfo($minfo['request_mb_id']);
+							if($t_uinfo['mb_8']){
+								$gw_msg = new NCP_SENS_AT();
+								$gw_msg->templateCode	= 'accmatching'; // 템플릿 코드 매칭수락
 							$gw_msg->to				= $t_uinfo['mb_8']; // 수신자 휴대폰번호
 							$gw_msg->send();
 						}

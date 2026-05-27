@@ -343,6 +343,7 @@ function company_detail_trade_request_send_receiver_mail($tradeRequestNo, $reque
 }
 
 function company_detail_handle_trade_request_insert($member, $request) {
+	global $g5;
 	$defaultMessage = trade_request_default_message();
 
 	company_detail_trade_request_log('request_received', array(
@@ -564,6 +565,36 @@ function company_detail_handle_trade_request_insert($member, $request) {
 		'trade_type' => $tradeType,
 		'credit_amount' => $creditAmount,
 		'credit_after' => $creditConsume['credit_after'] ?? null,
+	));
+
+	$alimtalkResult = array(
+		'attempted' => false,
+		'sent' => false,
+		'to' => '',
+	);
+	$receiverAlimtalk = sql_fetch(" select mb_8
+		from {$g5['member_table']}
+		where mb_company = '" . sql_escape_string($targetKedcd) . "'
+		  and (mb_leave_date = '' or mb_leave_date is null)
+		order by mb_no asc
+		limit 1 ");
+	$receiverHp = trim((string)($receiverAlimtalk['mb_8'] ?? ''));
+	if ($receiverHp !== '' && class_exists('NCP_SENS_AT')) {
+		$alimtalkResult['attempted'] = true;
+		$alimtalkResult['to'] = $receiverHp;
+		$gw_msg = new NCP_SENS_AT();
+		$gw_msg->templateCode = 'reqmatching2';
+		$gw_msg->to = $receiverHp;
+		$sendRes = $gw_msg->send();
+		if (is_array($sendRes) && !empty($sendRes['requestId'])) {
+			$alimtalkResult['sent'] = true;
+		}
+	}
+	company_detail_trade_request_log('receiver_alimtalk', array(
+		'tr_no' => $insertId,
+		'attempted' => $alimtalkResult['attempted'],
+		'sent' => $alimtalkResult['sent'],
+		'to' => $alimtalkResult['to'],
 	));
 
 	$mailResult = company_detail_trade_request_send_receiver_mail(
