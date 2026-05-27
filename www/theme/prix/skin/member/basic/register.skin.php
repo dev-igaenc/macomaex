@@ -177,14 +177,104 @@ if (!defined('_GNUBOARD_')) exit; // 개별 페이지 접근 불가
 </div>
 
 <script>
+function isValidEmailFormat(email) {
+    return /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/.test(email);
+}
+
+function levenshteinDistance(a, b) {
+    var s = String(a || "");
+    var t = String(b || "");
+    var m = s.length;
+    var n = t.length;
+    var dp = [];
+    var i, j;
+
+    for (i = 0; i <= m; i++) {
+        dp[i] = [];
+        dp[i][0] = i;
+    }
+    for (j = 0; j <= n; j++) {
+        dp[0][j] = j;
+    }
+
+    for (i = 1; i <= m; i++) {
+        for (j = 1; j <= n; j++) {
+            var cost = (s.charAt(i - 1) === t.charAt(j - 1)) ? 0 : 1;
+            dp[i][j] = Math.min(
+                dp[i - 1][j] + 1,
+                dp[i][j - 1] + 1,
+                dp[i - 1][j - 1] + cost
+            );
+        }
+    }
+
+    return dp[m][n];
+}
+
+function suggestEmailDomainCorrection(email) {
+    var value = $.trim(String(email || ""));
+    var at = value.lastIndexOf("@");
+    if (at < 1 || at === value.length - 1) return "";
+
+    var localPart = value.substring(0, at);
+    var domain = value.substring(at + 1).toLowerCase();
+    var parts = domain.split(".");
+    if (parts.length < 2) return "";
+
+    var commonDomains = [
+        "gmail.com", "naver.com", "daum.net", "hanmail.net", "kakao.com",
+        "nate.com", "hotmail.com", "outlook.com", "icloud.com", "yahoo.com"
+    ];
+    var tldFixMap = {
+        "cmo": "com", "xom": "com", "vom": "com", "con": "com",
+        "nett": "net", "nte": "net", "or": "org", "ogr": "org",
+        "krd": "kr", "coom": "com", "comm": "com"
+    };
+
+    var tld = parts[parts.length - 1];
+    var sld = parts[parts.length - 2];
+    var base = sld + "." + tld;
+    var best = "";
+    var bestDist = 99;
+    var i;
+
+    if (tldFixMap[tld]) {
+        var fixedParts = parts.slice(0);
+        fixedParts[fixedParts.length - 1] = tldFixMap[tld];
+        return localPart + "@" + fixedParts.join(".");
+    }
+
+    for (i = 0; i < commonDomains.length; i++) {
+        var d = levenshteinDistance(base, commonDomains[i]);
+        if (d < bestDist) {
+            bestDist = d;
+            best = commonDomains[i];
+        }
+    }
+
+    if (best && bestDist <= 2 && base !== best) {
+        var prefixParts = parts.slice(0, parts.length - 2);
+        var suggestedDomain = (prefixParts.length ? (prefixParts.join(".") + ".") : "") + best;
+        return localPart + "@" + suggestedDomain;
+    }
+
+    return "";
+}
+
 function validateSignupEmailAndMark() {
     var $input = $("#id");
     var email = $.trim($input.val());
-    var patternEmail = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 
-    if (!patternEmail.test(email)) {
+    if (!isValidEmailFormat(email)) {
         if (email) $input.parents(".formBox").find(".formBox_errorM").text("올바른 이메일 주소가 아닙니다.");
         else $input.parents(".formBox").find(".formBox_errorM").text("이메일 주소를 입력해주세요.");
+        $("#id_chk").val("false");
+        return;
+    }
+
+    var suggestion = suggestEmailDomainCorrection(email);
+    if (suggestion) {
+        $input.parents(".formBox").find(".formBox_errorM").text("이메일 도메인 오타 가능성: " + suggestion);
         $("#id_chk").val("false");
         return;
     }
@@ -208,7 +298,7 @@ function validateSignupEmailAndMark() {
 $("#id").on("input blur change", function(){ validateSignupEmailAndMark(); });
 
 function validateString(event){
-    const pattern = /^(?=.*[a-zA-Z])(?=.*\d)(?=.*[~@#$!%*?&^()])[a-zA-Z\d~@#$!%*?&^()]{8,14}$/;
+    const pattern = /^(?=.*[a-zA-Z])(?=.*\d)(?=.*[~@#$!%*?&^()])[a-zA-Z\d~@#$!%*?&^()]{8,16}$/;
     return !/[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(event) && pattern.test(event);
 }
 
@@ -356,11 +446,19 @@ function fregisterform_submit(){
 
 $("#join_submit").on("click", function(){
     var email = $.trim($("#id").val());
-    var checkEmail = /^([a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})$/;
 
-    if(!checkEmail.test(email)) {
+    if(!isValidEmailFormat(email)) {
         alert("이메일을 확인해 주세요.");
         $("#id").focus();
+        return false;
+    }
+
+    var suggestedEmail = suggestEmailDomainCorrection(email);
+    if (suggestedEmail) {
+        jAlert("이메일 도메인이 오타로 보입니다.\n" + suggestedEmail + " 로 입력해 주세요.","알림", function(){
+            $("#id").val(suggestedEmail).focus();
+            $("#id").trigger("input");
+        });
         return false;
     }
 
