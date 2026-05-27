@@ -18,12 +18,6 @@ $g5['title'] = '회원 가입';
 
 include_once('./_head.php');
 
-$register_action_url = G5_BBS_URL.'/register_form.php';
-$step = isset($step) ? (int)$step : 0;
-if(!$step) include_once($member_skin_path.'/register.skin.php');
-if($step==2) include_once($member_skin_path.'/register2.skin.php');
-if($step==3) { 
-	$register_action_url = G5_BBS_URL.'/register_form_update.php';
-	include_once($member_skin_path.'/register3.skin.php');
-}
+$register_action_url = G5_BBS_URL.'/register_form_update.php';
+include_once($member_skin_path.'/register.skin.php');
 include_once('./_tail.php');

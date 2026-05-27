@@ -68,18 +68,24 @@ $mb_mailling    = isset($_POST['mb_mailling'])      ? trim($_POST['mb_mailling']
 $mb_sms         = isset($_POST['mb_sms'])           ? trim($_POST['mb_sms'])         : "";
 $mb_1           = isset($_POST['mb_1'])             ? trim($_POST['mb_1'])           : "";
 $mb_2           = isset($_POST['mb_2'])             ? trim($_POST['mb_2'])           : "";
-$mb_3           = isset($_POST['mb_3'])             ? trim($_POST['mb_3'])           : "";
+// $mb_3           = isset($_POST['mb_3'])             ? trim($_POST['mb_3'])           : "";
+$mb_3           = "";
 $mb_4           = isset($_POST['mb_4'])             ? trim($_POST['mb_4'])           : "";
 $mb_open        = isset($_POST['mb_open'])          ? trim($_POST['mb_open'])        : "";
 $mb_open_default = isset($_POST['mb_open_default']) ? trim($_POST['mb_open_default']) : "";
 $mb_nick_default = isset($_POST['mb_nick_default']) ? trim($_POST['mb_nick_default']) : "";
 $mb_company     = isset($_POST['mb_company'])       ? trim($_POST['mb_company'])     : "";
-$mb_5           = isset($_POST['mb_5'])             ? trim($_POST['mb_5'])           : "";
-$mb_6           = isset($_POST['mb_6'])             ? trim($_POST['mb_6'])           : "";
-$mb_7           = isset($_POST['mb_7'])             ? trim($_POST['mb_7'])           : "";
-$mb_8           = isset($_POST['mb_8'])             ? trim($_POST['mb_8'])           : "";
+// $mb_5           = isset($_POST['mb_5'])             ? trim($_POST['mb_5'])           : "";
+// $mb_6           = isset($_POST['mb_6'])             ? trim($_POST['mb_6'])           : "";
+// $mb_7           = isset($_POST['mb_7'])             ? trim($_POST['mb_7'])           : "";
+// $mb_8           = isset($_POST['mb_8'])             ? trim($_POST['mb_8'])           : "";
+$mb_5           = "";
+$mb_6           = "";
+$mb_7           = "";
+$mb_8           = "";
 $mb_9_list      = (isset($_POST['mb_9']) && is_array($_POST['mb_9'])) ? $_POST['mb_9'] : array();
-$mb_10_list     = (isset($_POST['mb_10']) && is_array($_POST['mb_10'])) ? $_POST['mb_10'] : array();
+// $mb_10_list     = (isset($_POST['mb_10']) && is_array($_POST['mb_10'])) ? $_POST['mb_10'] : array();
+$mb_10_list     = array();
 
 $mb_9_list = array_map('trim', $mb_9_list);
 $mb_10_list = array_map('trim', $mb_10_list);
@@ -92,7 +98,8 @@ $mb_10_list = array_values(array_filter($mb_10_list, static function ($value) {
 }));
 
 $mb_9 = implode(":|:", $mb_9_list);
-$mb_10 = implode(":|:", $mb_10_list);
+// $mb_10 = implode(":|:", $mb_10_list);
+$mb_10 = "";
 $comnum = $mb_4;
 
 if (!isset($default) || !is_array($default)) {
@@ -279,14 +286,14 @@ if ($w == '') {
 					 mb_company = '{$mb_company}',
                      mb_1 = '{$mb_1}',
                      mb_2 = '{$mb_2}',
-                     mb_3 = '{$mb_3}',
+                     /* mb_3 = '{$mb_3}', */
                      mb_4 = '{$mb_4}',
-                     mb_5 = '{$mb_5}',
-                     mb_6 = '{$mb_6}',
-                     mb_7 = '{$mb_7}',
-                     mb_8 = '{$mb_8}',
-                     mb_9 = '{$mb_9}',
-                     mb_10 = '{$mb_10}'
+                     /* mb_5 = '{$mb_5}', */
+                     /* mb_6 = '{$mb_6}', */
+                     /* mb_7 = '{$mb_7}', */
+                     /* mb_8 = '{$mb_8}', */
+                     mb_9 = '{$mb_9}'
+                     /* mb_10 = '{$mb_10}' */
                      {$sql_certify} ";
 
     // 이메일 인증을 사용하지 않는다면 이메일 인증시간을 바로 넣는다
@@ -490,14 +497,14 @@ if($mb_profile) $sql .= "                    mb_profile = '{$mb_profile}',";
 $sql .= "                    mb_company = '{$mb_company}',";
 if($mb_1) $sql .= "                    mb_1 = '{$mb_1}',";
 if($mb_2) $sql .= "                    mb_2 = '{$mb_2}',";
-$sql .= "                    mb_3 = '{$mb_3}',";
+// $sql .= "                    mb_3 = '{$mb_3}',";
 $sql .= "                    mb_4 = '{$mb_4}',";
-if($mb_5) $sql .= "                    mb_5 = '{$mb_5}',";
-$sql .= "                    mb_6 = '{$mb_6}',";
-$sql .= "                    mb_7 = '{$mb_7}',";
-$sql .= "                    mb_8 = '{$mb_8}',";
+// if($mb_5) $sql .= "                    mb_5 = '{$mb_5}',";
+// $sql .= "                    mb_6 = '{$mb_6}',";
+// $sql .= "                    mb_7 = '{$mb_7}',";
+// $sql .= "                    mb_8 = '{$mb_8}',";
 if($mb_9) $sql .= "                    mb_9 = '{$mb_9}',";
-if($mb_10) $sql .= "                    mb_10 = '{$mb_10}'";
+// if($mb_10) $sql .= "                    mb_10 = '{$mb_10}'";
 if(substr($sql,-1)==",") $sql=substr($sql,0,-1);
 //$sql .= "                    {$sql_password}";
 //$sql .= "                    {$sql_nick_date}";

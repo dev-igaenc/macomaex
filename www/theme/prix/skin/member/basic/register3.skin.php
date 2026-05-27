@@ -53,13 +53,14 @@ if (!defined('_GNUBOARD_')) exit; // 개별 페이지 접근 불가
                         <p class="title">사업자등록번호</p>
 						<input type="hidden" name="com_chk" id="com_chk" class="com_chk" value="false">
                         <input type="text" name="mb_4" id="mb_4" class="comnum_chk" maxlength="12">
-						<button type="button" class="btn srh">중복확인</button>
+						<button type="button" class="btn srh">확인</button>
                     </div>
                     <div class="inputBox requied type2">
                         <p class="title">법인명</p>
                         <input type="text" name="mb_name" id="mb_name" value="" readonly>
 						<input type="hidden" name="mb_company" id="mb_company" class="readonly" readonly value="">
                     </div>
+                    <!--
                     <div class="inputBox requied type2">
                         <p class="title">회사 유형</p>
                         <ul class="radioBox">
@@ -100,10 +101,10 @@ if (!defined('_GNUBOARD_')) exit; // 개별 페이지 접근 불가
                     </div>
 					<div class="inputBox requied type2">
                         <p class="title">담당자 이메일</p>
-						<input type="hidden" name="mb_5_chk" value="false" id="mb_5_chk">
                         <input type="text" name="mb_5" id="mb_5" maxlength="32">
 						<p class="txt-right formBox_errorM ">이메일 주소를 입력해주세요</p>
                     </div>
+                    -->
                     <div class="inputBox type2 type3 Product">
                         <p class="title">주요 서비스/제품</p>
                         <div class="products addz">
@@ -130,38 +131,7 @@ if (!defined('_GNUBOARD_')) exit; // 개별 페이지 접근 불가
 
 </div>
 <script>
-function validateMb5EmailAndMark() {
-	var $input = $("#mb_5");
-	var email = $.trim($input.val());
-	var patternEmail = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-
-	if (!patternEmail.test(email)) {
-		if (email) $input.parents(".inputBox").find(".formBox_errorM").text("올바른 이메일 주소가 아닙니다.");
-		else $input.parents(".inputBox").find(".formBox_errorM").text("이메일 주소를 입력해주세요.");
-		$("#mb_5_chk").val("false");
-		return;
-	}
-
-	$input.parents(".inputBox").find(".formBox_errorM").text("");
-	$.post("../get_set.php", {
-		type: "member_check2",
-		id: email
-	}).done(function(jqXHR) {
-		if ($.trim(jqXHR) == "500") {
-			$input.parents(".inputBox").find(".formBox_errorM").text("가입한 이력이 있습니다.");
-			$("#mb_5_chk").val("false");
-		} else {
-			$("#mb_5_chk").val("true");
-		}
-	}).fail(function() {
-		// 네트워크 오류로 인한 오탐 방지: 서버 최종 검증에 맡긴다.
-		$("#mb_5_chk").val("true");
-	});
-}
-
-$("#mb_5").on("input blur change", function(){
-	validateMb5EmailAndMark();
-});
+// 담당자 정보 입력(이메일 포함) 비활성화에 따라 mb_5 중복체크 로직 비활성화
 //사업자번호
 	$('.comnum_chk').on('keyup', function(){
         var num = $(this).val();
@@ -228,12 +198,6 @@ function AutoHypen(companyNum){
 				//$("#com_chk").val("true");
 					//$("#mb_name").val("").attr('readonly', false).focus();
 					//$("#mb_company").val("").attr('readonly', true);
-				}else if(jqXHR[0]==502){
-					//등록된 사업자가 있을 경우
-					$("#com_chk").val("false");
-					jAlert("해당 사업자 번호로 등록된 가입자가 있습니다.","알림",function(){
-						$("#mb_4").focus();
-					});
 				}else{
 					//오류시
 					$("#com_chk").val("false");
@@ -254,12 +218,7 @@ $(".tel_chk").keyup(function(){
 	phone=phone.replace(/[^0-9]/g, '').replace(/^(\d{2,3})(\d{3,4})(\d{4})$/, `$1-$2-$3`);
 	$(this).val(phone);
 })
-$("input[name='mb_3']").click(function(){
-	chk=$(this).val();
-	if(chk=="제조사") $(".Product .title").text("주요 서비스/제품");
-	if(chk=="유통사") $(".Product .title").text("주요 유통 취급 제품");
-	else $(".Product .title").text("주요 서비스/제품");
-})
+// 회사 유형 입력 비활성화로 타이틀 변경 로직 비활성화
 $(".Product .addz").wrap("<div></div>");
 var addz=$(".Product .addz").parent().html();
 addz=addz.replace("+","-");
@@ -305,13 +264,7 @@ $("body").on("click",".Product .minus",function(){
 		})
 	}
 
-$("input[name='mb_10[]']").click(function(){
-	$this=$(this);
-	if($this.is(":checked")){
-		if($this.val()=="해당사항없음") $("input[name='mb_10[]'][value!='해당사항없음']").prop("checked",false);
-		else $("input[name='mb_10[]'][value='해당사항없음']").prop("checked",false);
-	}
-})
+// 회원사 가입유무 입력 비활성화
 
 function fregisterform_submit()
 {
@@ -335,66 +288,11 @@ function fregisterform_submit()
 		return false;
 	}
 
-	if($("input[name='mb_3']:checked").length==0){
-		jAlert("회사 유형을 선택해 주세요.","알림",function(){$("input[name='mb_3']").focus();});
-		return false;
-	}
-
-	if($("input[name='mb_10[]']:checked").length==0){
-		jAlert("회원사 가입유무 선택해 주세요.","알림",function(){$("input[name='mb_10[]:eq(0)']").focus();});
-		return false;
-	}
-
 	if(!$("#mb_4").val().trim()) {
 		jAlert("사업자등록번호를 확인해 주세요.","알림",function(){$("#mb_4").focus();});
 		return false;
 	}
-	if(!$("#mb_6").val().trim()) {
-		jAlert("담당자 이름을 확인해 주세요.","알림",function(){$("#mb_6").focus();});
-		return false;
-	}
-	if(!$("#mb_7").val().trim()) {
-		jAlert("담당자 직위를 확인해 주세요.","알림",function(){$("#mb_7").focus();});
-		return false;
-	}
-	if(!$("#mb_8").val().trim()) {
-		jAlert("휴대폰 번호를 확인해 주세요.","알림",function(){$("#mb_8").focus();});
-		return false;
-	}
-
-	var mb5Val = $.trim($("#mb_5").val());
-	if(!mb5Val) {
-		jAlert("담당자 이메일을 확인해 주세요.","알림",function(){$("#mb_5").focus();});
-		return false;
-	}else{
-		let checkEmail = RegExp(/^([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})$/);
-		if(!checkEmail.test(mb5Val)) { 
-			jAlert("이메일을 확인해 주세요.","알림",function(){$("#mb_5").focus();});
-			return false;
-		}
-
-		// keyup 미발생(자동완성/붙여넣기) 케이스 방지: 제출 시점에 마지막 1회 중복확인
-		if($("#mb_5_chk").val()!="true") {
-			var mb5Dup = false;
-			$.ajax({
-				url: "../get_set.php",
-				type: "POST",
-				data: { type: "member_check2", id: mb5Val },
-				async: false,
-				success: function(resp) {
-					mb5Dup = ($.trim(resp) == "500");
-				},
-				error: function() {
-					mb5Dup = false;
-				}
-			});
-			if(mb5Dup) {
-				jAlert("가입한 이력이 있습니다.","알림",function(){$("#mb_5").focus();});
-				return false;
-			}
-			$("#mb_5_chk").val("true");
-		}
-	}
+	// 담당자 정보 입력/검증 비활성화 (mb_5/mb_6/mb_7/mb_8)
 /*
 	mb_9_chk="false";
 	$("input[name='mb_9[]']").each(function(){
