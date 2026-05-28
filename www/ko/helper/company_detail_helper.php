@@ -7,6 +7,7 @@ if (!defined('_GNUBOARD_')) exit;
  */
 
 include_once(__DIR__ . '/trade_request_helper.php');
+include_once(__DIR__ . '/alimtalk_log_helper.php');
 
 function company_detail_trade_request_json_response($success, $message, $extra = array()) {
 	header('Content-Type: application/json; charset=utf-8');
@@ -571,6 +572,10 @@ function company_detail_handle_trade_request_insert($member, $request) {
 		'attempted' => false,
 		'sent' => false,
 		'to' => '',
+		'request_id' => '',
+		'error_code' => '',
+		'provider_status' => '',
+		'reason' => '',
 	);
 	$receiverAlimtalk = sql_fetch(" select mb_8
 		from {$g5['member_table']}
@@ -579,7 +584,11 @@ function company_detail_handle_trade_request_insert($member, $request) {
 		order by mb_no asc
 		limit 1 ");
 	$receiverHp = trim((string)($receiverAlimtalk['mb_8'] ?? ''));
-	if ($receiverHp !== '' && class_exists('NCP_SENS_AT')) {
+	if ($receiverHp === '') {
+		$alimtalkResult['reason'] = 'receiver_hp_empty';
+	} elseif (!class_exists('NCP_SENS_AT')) {
+		$alimtalkResult['reason'] = 'alimtalk_class_missing';
+	} else {
 		$alimtalkResult['attempted'] = true;
 		$alimtalkResult['to'] = $receiverHp;
 		$gw_msg = new NCP_SENS_AT();
@@ -588,6 +597,13 @@ function company_detail_handle_trade_request_insert($member, $request) {
 		$sendRes = $gw_msg->send();
 		if (is_array($sendRes) && !empty($sendRes['requestId'])) {
 			$alimtalkResult['sent'] = true;
+			$alimtalkResult['request_id'] = trim((string)$sendRes['requestId']);
+		} else {
+			$alimtalkResult['reason'] = 'send_failed';
+		}
+		if (is_array($sendRes)) {
+			$alimtalkResult['error_code'] = trim((string)($sendRes['statusCode'] ?? $sendRes['errorCode'] ?? ''));
+			$alimtalkResult['provider_status'] = trim((string)($sendRes['statusName'] ?? $sendRes['requestStatusName'] ?? ''));
 		}
 	}
 	company_detail_trade_request_log('receiver_alimtalk', array(
@@ -595,7 +611,25 @@ function company_detail_handle_trade_request_insert($member, $request) {
 		'attempted' => $alimtalkResult['attempted'],
 		'sent' => $alimtalkResult['sent'],
 		'to' => $alimtalkResult['to'],
+		'request_id' => $alimtalkResult['request_id'],
+		'error_code' => $alimtalkResult['error_code'],
+		'provider_status' => $alimtalkResult['provider_status'],
+		'reason' => $alimtalkResult['reason'],
 	));
+	alimtalk_write_event_log(
+		'reqmatching2',
+		$alimtalkResult['sent'] ? 'success' : ($alimtalkResult['attempted'] ? 'fail' : 'skip'),
+		array(
+			'template_code' => 'reqmatching2',
+			'tr_no' => $insertId,
+			'mb_id' => $requestMemberId,
+			'to' => $alimtalkResult['to'],
+			'request_id' => $alimtalkResult['request_id'],
+			'provider_status' => $alimtalkResult['provider_status'],
+			'error_code' => $alimtalkResult['error_code'],
+			'reason' => $alimtalkResult['reason'],
+		)
+	);
 
 	$mailResult = company_detail_trade_request_send_receiver_mail(
 		$insertId,

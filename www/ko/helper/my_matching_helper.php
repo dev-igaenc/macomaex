@@ -7,6 +7,7 @@ if (!defined('_GNUBOARD_')) exit;
  */
 
 include_once(__DIR__ . '/trade_chat_helper.php');
+include_once(__DIR__ . '/alimtalk_log_helper.php');
 
 function my_matching_json_response($payload) {
 	header('Content-Type: application/json; charset=utf-8');
@@ -116,16 +117,46 @@ function my_matching_handle_trade_request_approval($member, $request) {
 
 	if ($nextStatus === '1' && (int)($targetRequest['approval_status'] ?? 0) !== 1) {
 		$requestMemberId = trim((string)($targetRequest['request_mb_id'] ?? ''));
+		$alimtalkLogPayload = array(
+			'template_code' => 'accmatching',
+			'tr_no' => $idx,
+			'mb_id' => $member['mb_id'] ?? '',
+			'reason' => '',
+			'to' => '',
+			'request_id' => '',
+			'provider_status' => '',
+			'error_code' => '',
+		);
+		$alimtalkLogStatus = 'skip';
 		if ($requestMemberId !== '') {
 			$requestMemberInfo = getUserInfo($requestMemberId);
 			$requestHp = trim((string)($requestMemberInfo['mb_8'] ?? ''));
-			if ($requestHp !== '' && class_exists('NCP_SENS_AT')) {
+			if ($requestHp === '') {
+				$alimtalkLogPayload['reason'] = 'requester_hp_empty';
+			} elseif (!class_exists('NCP_SENS_AT')) {
+				$alimtalkLogPayload['reason'] = 'alimtalk_class_missing';
+			} else {
+				$alimtalkLogPayload['to'] = $requestHp;
 				$gw_msg = new NCP_SENS_AT();
 				$gw_msg->templateCode = 'accmatching';
 				$gw_msg->to = $requestHp;
-				$gw_msg->send();
+				$sendRes = $gw_msg->send();
+				$alimtalkLogStatus = 'fail';
+				if (is_array($sendRes)) {
+					$alimtalkLogPayload['request_id'] = trim((string)($sendRes['requestId'] ?? ''));
+					$alimtalkLogPayload['provider_status'] = trim((string)($sendRes['statusName'] ?? $sendRes['requestStatusName'] ?? ''));
+					$alimtalkLogPayload['error_code'] = trim((string)($sendRes['statusCode'] ?? $sendRes['errorCode'] ?? ''));
+				}
+				if (is_array($sendRes) && !empty($sendRes['requestId'])) {
+					$alimtalkLogStatus = 'success';
+				} else {
+					$alimtalkLogPayload['reason'] = 'send_failed';
+				}
 			}
+		} else {
+			$alimtalkLogPayload['reason'] = 'request_member_id_empty';
 		}
+		alimtalk_write_event_log('accmatching', $alimtalkLogStatus, $alimtalkLogPayload);
 	}
 
 	if ($nextStatus === '1') {

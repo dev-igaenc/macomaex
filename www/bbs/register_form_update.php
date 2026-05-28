@@ -4,6 +4,7 @@ include_once(G5_CAPTCHA_PATH.'/captcha.lib.php');
 include_once(G5_LIB_PATH.'/register.lib.php');
 include_once(G5_LIB_PATH.'/mailer.lib.php');
 include_once(G5_LIB_PATH.'/thumbnail.lib.php');
+include_once(G5_PATH.'/ko/helper/alimtalk_log_helper.php');
 
 if (!function_exists('register_mail_log_failure')) {
     function register_mail_log_failure($mail_type, $related_id, $recipient_email, $subject, $error_message)
@@ -744,12 +745,41 @@ run_event('register_form_update_after', $mb_id, $w);
 
 if ($w == '') {
 	//회원가입 알림톡 발송
+	$signupAlimtalkPayload = array(
+		'template_code' => 'signup',
+		'mb_id' => $mb_id,
+		'to' => '',
+		'request_id' => '',
+		'provider_status' => '',
+		'error_code' => '',
+		'reason' => '',
+	);
+	$signupAlimtalkStatus = 'skip';
 	if($mb_8){
-		$gw_msg = new NCP_SENS_AT();
-		$gw_msg->templateCode	= 'signup'; // 템플릿 코드 매칭요청
-		$gw_msg->to				= $mb_8; // 수신자 휴대폰번호
-		$gw_msg->send();
+		$signupAlimtalkPayload['to'] = $mb_8;
+		if (!class_exists('NCP_SENS_AT')) {
+			$signupAlimtalkPayload['reason'] = 'alimtalk_class_missing';
+		} else {
+			$signupAlimtalkStatus = 'fail';
+			$gw_msg = new NCP_SENS_AT();
+			$gw_msg->templateCode	= 'signup'; // 템플릿 코드 매칭요청
+			$gw_msg->to				= $mb_8; // 수신자 휴대폰번호
+			$sendRes = $gw_msg->send();
+			if (is_array($sendRes)) {
+				$signupAlimtalkPayload['request_id'] = trim((string)($sendRes['requestId'] ?? ''));
+				$signupAlimtalkPayload['provider_status'] = trim((string)($sendRes['statusName'] ?? $sendRes['requestStatusName'] ?? ''));
+				$signupAlimtalkPayload['error_code'] = trim((string)($sendRes['statusCode'] ?? $sendRes['errorCode'] ?? ''));
+			}
+			if (is_array($sendRes) && !empty($sendRes['requestId'])) {
+				$signupAlimtalkStatus = 'success';
+			} else {
+				$signupAlimtalkPayload['reason'] = 'send_failed';
+			}
+		}
+	} else {
+		$signupAlimtalkPayload['reason'] = 'receiver_hp_empty';
 	}
+	alimtalk_write_event_log('signup', $signupAlimtalkStatus, $signupAlimtalkPayload);
 	//알림톡 발송 끝
 	if($url) {
 		if (preg_match('/%[0-9A-Fa-f]{2}/', $url)) {
