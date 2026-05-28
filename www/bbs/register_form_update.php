@@ -81,11 +81,10 @@ $mb_company     = isset($_POST['mb_company'])       ? trim($_POST['mb_company'])
 // $mb_5           = isset($_POST['mb_5'])             ? trim($_POST['mb_5'])           : "";
 // $mb_6           = isset($_POST['mb_6'])             ? trim($_POST['mb_6'])           : "";
 // $mb_7           = isset($_POST['mb_7'])             ? trim($_POST['mb_7'])           : "";
-// $mb_8           = isset($_POST['mb_8'])             ? trim($_POST['mb_8'])           : "";
+$mb_8           = isset($_POST['mb_8'])             ? trim($_POST['mb_8'])           : "";
 $mb_5           = "";
 $mb_6           = "";
 $mb_7           = "";
-$mb_8           = "";
 $mb_9_list      = (isset($_POST['mb_9']) && is_array($_POST['mb_9'])) ? $_POST['mb_9'] : array();
 // $mb_10_list     = (isset($_POST['mb_10']) && is_array($_POST['mb_10'])) ? $_POST['mb_10'] : array();
 $mb_10_list     = array();
@@ -116,6 +115,18 @@ if ($is_single_join_flow && $mb_name === '') {
 $mb_email       = get_email_address($mb_email);
 $mb_homepage    = clean_xss_tags($mb_homepage);
 $mb_tel         = clean_xss_tags($mb_tel);
+$mb_8_digits    = preg_replace('/[^0-9]/', '', $mb_8);
+if ($mb_8_digits !== '') {
+    if (strlen($mb_8_digits) >= 11) {
+        $mb_8 = substr($mb_8_digits, 0, 3) . '-' . substr($mb_8_digits, 3, 4) . '-' . substr($mb_8_digits, 7, 4);
+    } else if (strlen($mb_8_digits) >= 10) {
+        $mb_8 = substr($mb_8_digits, 0, 3) . '-' . substr($mb_8_digits, 3, 3) . '-' . substr($mb_8_digits, 6, 4);
+    } else {
+        $mb_8 = $mb_8_digits;
+    }
+} else {
+    $mb_8 = '';
+}
 $mb_zip1        = preg_replace('/[^0-9]/', '', $mb_zip1);
 $mb_zip2        = preg_replace('/[^0-9]/', '', $mb_zip2);
 $mb_addr1       = clean_xss_tags($mb_addr1);
@@ -303,7 +314,7 @@ if ($w == '') {
                      /* mb_5 = '{$mb_5}', */
                      /* mb_6 = '{$mb_6}', */
                      /* mb_7 = '{$mb_7}', */
-                     /* mb_8 = '{$mb_8}', */
+                     mb_8 = '{$mb_8}',
                      mb_9 = '{$mb_9}'
                      /* mb_10 = '{$mb_10}' */
                      {$sql_certify} ";
@@ -514,7 +525,7 @@ $sql .= "                    mb_4 = '{$mb_4}',";
 // if($mb_5) $sql .= "                    mb_5 = '{$mb_5}',";
 // $sql .= "                    mb_6 = '{$mb_6}',";
 // $sql .= "                    mb_7 = '{$mb_7}',";
-// $sql .= "                    mb_8 = '{$mb_8}',";
+if($mb_8) $sql .= "                    mb_8 = '{$mb_8}',";
 if($mb_9) $sql .= "                    mb_9 = '{$mb_9}',";
 // if($mb_10) $sql .= "                    mb_10 = '{$mb_10}'";
 if(substr($sql,-1)==",") $sql=substr($sql,0,-1);

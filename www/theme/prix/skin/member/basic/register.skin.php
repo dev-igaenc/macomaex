@@ -104,6 +104,14 @@ if (!defined('_GNUBOARD_')) exit; // 개별 페이지 접근 불가
                         <p class="formBox_errorM"></p>
                     </div>
 
+                    <div class="formBox mobile">
+                        <p class="formBox_title">휴대폰 번호(선택)</p>
+                        <div class="inputBox">
+                            <input type="text" name="mb_8" id="mb_8" class="normal" maxlength="13" placeholder="010-1234-5678">
+                        </div>
+                        <p class="formBox_supM">휴대폰 번호 미입력 시 알림톡이 발송되지 않습니다.</p>
+                    </div>
+
                     <!--
                     <div class="formBox">
                         <div class="inputBox requied type2">
@@ -302,6 +310,34 @@ function validateString(event){
     return !/[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(event) && pattern.test(event);
 }
 
+function validateOptionalMobileAndMark() {
+    var $input = $("#mb_8");
+    if (!$input.length) return true;
+
+    var value = $.trim($input.val());
+    if (value === "") {
+        $input.parents(".formBox").find(".formBox_errorM").text("");
+        return true;
+    }
+
+    var mobilePattern = /^01[0-9]-?[0-9]{3,4}-?[0-9]{4}$/;
+    if (!mobilePattern.test(value)) {
+        $input.parents(".formBox").find(".formBox_errorM").text("휴대폰 번호 형식을 확인해 주세요.");
+        return false;
+    }
+
+    $input.parents(".formBox").find(".formBox_errorM").text("");
+    return true;
+}
+
+function formatMobileNumber(value) {
+    var digits = String(value || "").replace(/\D/g, "").substring(0, 11);
+    if (digits.length < 4) return digits;
+    if (digits.length < 8) return digits.substring(0, 3) + "-" + digits.substring(3);
+    if (digits.length < 11) return digits.substring(0, 3) + "-" + digits.substring(3, 6) + "-" + digits.substring(6);
+    return digits.substring(0, 3) + "-" + digits.substring(3, 7) + "-" + digits.substring(7);
+}
+
 var errorM = "first";
 $(".pass_chk").keyup(function(){
     var $this = $(this);
@@ -331,6 +367,11 @@ $("#password_re").keyup(function(){
         $this.parents(".formBox").find(".formBox_errorM").text("비밀번호가 일치하지 않습니다.").show();
         $("#passwordre_chk").val("false");
     }
+});
+
+$("#mb_8").on("input blur change", function(){
+    $(this).val(formatMobileNumber($(this).val()));
+    validateOptionalMobileAndMark();
 });
 
 $("#agreeAll").click(function(){
@@ -487,6 +528,12 @@ $("#join_submit").on("click", function(){
     }
     if($("#passwordre_chk").val() == "false") {
         alert("비밀번호 확인을 진행해 주세요.");
+        return false;
+    }
+
+    if(!validateOptionalMobileAndMark()) {
+        alert("휴대폰 번호 형식을 확인해 주세요.");
+        $("#mb_8").focus();
         return false;
     }
 

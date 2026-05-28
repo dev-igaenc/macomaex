@@ -1519,6 +1519,12 @@ html.hide {
     color: #ff0000;
 }
 
+.formArea .formBox .formBox_supM {
+    font-size: 1.5rem;
+    line-height: 1.25;
+    color: #666666;
+}
+
 .txt-right {
     text-align: right !important;
     display: block;
