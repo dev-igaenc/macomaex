@@ -147,6 +147,7 @@ if($com['HPAGE_URL']) {
 <div id="sub-visual"><div class="inConts">
 	<h2>사업자번호 입력만으로,<br />맞춤형 기업 매칭을 경험하세요.</h2>
 
+	<!--
 	<div search shadow>
 		<form action="/ko/matching_list.php" method="POST" id="match">
 			<input type="hidden" name="cominfo" id="cominfo">
@@ -154,6 +155,7 @@ if($com['HPAGE_URL']) {
 		<input type="text" name="comnum" id="comnum" class="comnum_chk" placeholder="법인 사업자번호를 입력하세요" maxlength="12">
 		<button type="submit" id="sub_submit"><img src="/images/icon_search.svg" alt="search"></button>
 	</div>
+	-->
 </div></div>
 
 <div class="company-view" no my><div class="layer-in new">
