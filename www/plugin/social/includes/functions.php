@@ -313,7 +313,9 @@ function social_extends_get_keys($provider){
                     "keys" => array("id" => $config['cf_kakao_rest_key'],
                                     "secret" => $config['cf_kakao_client_secret'] ? $config['cf_kakao_client_secret'] : $config['cf_kakao_rest_key']
                     ),
-                    "redirect_uri" => get_social_callbackurl('kakao')
+                    "redirect_uri" => get_social_callbackurl('kakao'),
+                    // 카카오 동의항목: 이메일/이름/휴대폰
+                    "scope" => "account_email profile_nickname profile_image name phone_number"
                 );
 
         // Facebook
@@ -332,7 +334,8 @@ function social_extends_get_keys($provider){
                     "keys" => array("id" => $config['cf_google_clientid'],
                     "secret" => $config['cf_google_secret']),
                     "redirect_uri" => get_social_callbackurl('google'),
-                    "scope"   => "https://www.googleapis.com/auth/userinfo.profile "."https://www.googleapis.com/auth/userinfo.email",
+                    // 구글 동의항목: 프로필/이메일/전화번호(People API)
+                    "scope"   => "https://www.googleapis.com/auth/userinfo.profile "."https://www.googleapis.com/auth/userinfo.email "."https://www.googleapis.com/auth/user.phonenumbers.read",
                     /*
                     "scope"   => "https://www.googleapis.com/auth/plus.login ". // optional
                                     "https://www.googleapis.com/auth/plus.me ". // optional
@@ -602,7 +605,8 @@ function social_check_login_before($p_service=''){
             /*
              * 회원이 아닌 경우에만 아래 실행
             */
-            $register_url = G5_SOCIAL_LOGIN_URL.'/register_member.php?provider='.$provider_name;
+            // 소셜 인증 완료 시 추가 입력 폼 없이 자동가입 엔드포인트로 이동합니다.
+            $register_url = G5_SOCIAL_LOGIN_URL.'/register_member_auto.php?provider='.$provider_name;
 
             if( $url ){
                 $register_url .= '&url='.urlencode($url);

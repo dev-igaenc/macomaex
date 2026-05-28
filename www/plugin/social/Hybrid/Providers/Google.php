@@ -19,7 +19,8 @@ class Hybrid_Providers_Google extends Hybrid_Provider_Model_OAuth2 {
 	 * default permissions
 	 * {@inheritdoc}
 	 */
-	public $scope = "https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email https://www.google.com/m8/feeds/";
+	// 기본 동의항목에 전화번호 읽기 권한(People API)을 포함합니다.
+	public $scope = "https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/user.phonenumbers.read https://www.google.com/m8/feeds/";
 
 	/**
 	 * {@inheritdoc}
@@ -85,8 +86,8 @@ class Hybrid_Providers_Google extends Hybrid_Provider_Model_OAuth2 {
 		$this->user->profile->profileURL = (property_exists($response, 'profile')) ? $response->profile : "";
 		$this->user->profile->gender = (property_exists($response, 'gender')) ? $response->gender : "";
 		$this->user->profile->language = (property_exists($response, 'locale')) ? $response->locale : "";
-		$this->user->profile->email = (property_exists($response, 'email')) ? $response->email : "";
-		$this->user->profile->emailVerified = (property_exists($response, 'email_verified')) ? ($response->email_verified === true || $response->email_verified === 1 ? $response->email : "") : "";
+			$this->user->profile->email = (property_exists($response, 'email')) ? $response->email : "";
+			$this->user->profile->emailVerified = (property_exists($response, 'email_verified')) ? ($response->email_verified === true || $response->email_verified === 1 ? $response->email : "") : "";
         
 		if (property_exists($response, 'emails')) {
 			if (count($response->emails) == 1) {
@@ -110,13 +111,82 @@ class Hybrid_Providers_Google extends Hybrid_Provider_Model_OAuth2 {
 						}
 					}
 				}
+				}
 			}
+
+	        // People API에서 이름/전화번호를 보강 조회합니다.
+	        $peopleProfile = $this->getPeopleProfile();
+	        if (is_array($peopleProfile)) {
+	            // userinfo 이름이 비어있을 때만 People 이름으로 보강합니다.
+	            if (empty($this->user->profile->displayName) && !empty($peopleProfile['name'])) {
+	                $this->user->profile->displayName = $peopleProfile['name'];
+	            }
+	            // 소셜 공통 매핑에서 사용할 실명 필드를 함께 채웁니다.
+	            if (empty($this->user->profile->username) && !empty($peopleProfile['name'])) {
+	                $this->user->profile->username = $peopleProfile['name'];
+	            }
+	            // 휴대폰은 People API 결과를 우선 사용합니다.
+	            if (!empty($peopleProfile['phone'])) {
+	                $this->user->profile->phone = $peopleProfile['phone'];
+	            }
+	        }
+
+	        $this->user->profile->sid         = get_social_convert_id( $this->user->profile->identifier, $this->providerId );
+
+			return $this->user->profile;
 		}
 
-        $this->user->profile->sid         = get_social_convert_id( $this->user->profile->identifier, $this->providerId );
+		// Google People API에서 이름/전화번호를 조회합니다.
+		function getPeopleProfile() {
+			try {
+				$response = $this->api->api("https://people.googleapis.com/v1/people/me?personFields=names,phoneNumbers");
+				if (!$response || isset($response->error)) {
+					return array('name' => '', 'phone' => '');
+				}
 
-		return $this->user->profile;
-	}
+				$name = '';
+				$phone = '';
+
+				// 이름은 displayName을 우선 사용합니다.
+				if (property_exists($response, 'names') && is_array($response->names)) {
+					foreach ($response->names as $nameItem) {
+						if (property_exists($nameItem, 'displayName') && !empty($nameItem->displayName)) {
+							$name = (string)$nameItem->displayName;
+							break;
+						}
+					}
+				}
+
+				// 전화번호는 mobile > main > 첫 값 순으로 선택합니다.
+				if (property_exists($response, 'phoneNumbers') && is_array($response->phoneNumbers) && count($response->phoneNumbers) > 0) {
+					$firstValue = '';
+					foreach ($response->phoneNumbers as $phoneItem) {
+						if (property_exists($phoneItem, 'value') && !empty($phoneItem->value)) {
+							if ($firstValue === '') {
+								$firstValue = (string)$phoneItem->value;
+							}
+							$type = property_exists($phoneItem, 'type') ? (string)$phoneItem->type : '';
+							if ($type === 'mobile') {
+								$phone = (string)$phoneItem->value;
+								break;
+							}
+							if ($phone === '' && $type === 'main') {
+								$phone = (string)$phoneItem->value;
+							}
+						}
+					}
+
+					if ($phone === '' && $firstValue !== '') {
+						$phone = $firstValue;
+					}
+				}
+
+				return array('name' => $name, 'phone' => $phone);
+			} catch (Exception $e) {
+				// People API 오류가 나더라도 로그인 자체는 유지합니다.
+				return array('name' => '', 'phone' => '');
+			}
+		}
 
 	/**
 	 * {@inheritdoc}
@@ -229,4 +299,3 @@ class Hybrid_Providers_Google extends Hybrid_Provider_Model_OAuth2 {
 	}
 
 }
-
