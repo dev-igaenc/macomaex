@@ -99,37 +99,55 @@ function company_detail_trade_request_write_daily_file_log($eventType, $status, 
 		$message = trade_request_log_default_message($eventType, $status);
 	}
 
-	$fields = array(
+	$commonFields = array(
 		'event_type' => trim((string)$eventType),
 		'event_status' => trim((string)$status),
 		'request_id' => trim((string)($payload['request_id'] ?? '')),
 		'tr_no' => (int)($payload['tr_no'] ?? 0),
 		'mb_id' => trim((string)($payload['mb_id'] ?? '')),
-		'request_bzno' => trim((string)($payload['request_bzno'] ?? '')),
-		'target_kedcd' => trim((string)($payload['target_kedcd'] ?? '')),
-		'target_bzno' => trim((string)($payload['target_bzno'] ?? '')),
-		'trade_type' => trim((string)($payload['trade_type'] ?? '')),
-		'trade_direction' => trim((string)($payload['trade_direction'] ?? '')),
-		'credit_amount' => (int)($payload['credit_amount'] ?? 0),
-		'credit_after' => (int)($payload['credit_after'] ?? 0),
-		'remain_credit' => (int)($payload['remain_credit'] ?? 0),
-		'plan_required' => !empty($payload['plan_required']) ? 'Y' : 'N',
-		'purpose_count' => (int)($payload['purpose_count'] ?? 0),
-		'desired_item_len' => (int)($payload['desired_item_len'] ?? 0),
-		'message_len' => (int)($payload['message_len'] ?? 0),
-		'error_code' => trim((string)($payload['error_code'] ?? '')),
-		'error_category' => trim((string)($payload['error_category'] ?? '')),
-		'stage' => trim((string)($payload['stage'] ?? '')),
-		'mail_attempted' => !empty($payload['mail_attempted']) ? 'Y' : 'N',
-		'mail_sent' => !empty($payload['mail_sent']) ? 'Y' : 'N',
-		'mail_recipient_type' => trim((string)($payload['mail_recipient_type'] ?? '')),
-		'mail_reason' => trim((string)($payload['mail_reason'] ?? '')),
 		'message' => $message,
 		'context' => trade_request_log_context_label($eventType, $status, $payload),
 		'request_uri' => $requestUri,
 		'client_ip' => trim((string)($payload['client_ip'] ?? ($_SERVER['REMOTE_ADDR'] ?? ''))),
 		'user_agent' => trade_request_compact_log_message((string)($payload['user_agent'] ?? ($_SERVER['HTTP_USER_AGENT'] ?? '')), 300),
 	);
+
+	$eventFields = array();
+	if ($eventType === 'submit') {
+		$eventFields = array(
+			'request_bzno' => trim((string)($payload['request_bzno'] ?? '')),
+			'target_kedcd' => trim((string)($payload['target_kedcd'] ?? '')),
+			'target_bzno' => trim((string)($payload['target_bzno'] ?? '')),
+			'trade_type' => trim((string)($payload['trade_type'] ?? '')),
+			'trade_direction' => trim((string)($payload['trade_direction'] ?? '')),
+			'credit_amount' => (int)($payload['credit_amount'] ?? 0),
+			'credit_after' => (int)($payload['credit_after'] ?? 0),
+			'remain_credit' => (int)($payload['remain_credit'] ?? 0),
+			'plan_required' => !empty($payload['plan_required']) ? 'Y' : 'N',
+			'purpose_count' => (int)($payload['purpose_count'] ?? 0),
+			'error_code' => trim((string)($payload['error_code'] ?? '')),
+			'error_category' => trim((string)($payload['error_category'] ?? '')),
+			'stage' => trim((string)($payload['stage'] ?? '')),
+		);
+	} elseif ($eventType === 'receiver_mail') {
+		$eventFields = array(
+			'target_kedcd' => trim((string)($payload['target_kedcd'] ?? '')),
+			'trade_type' => trim((string)($payload['trade_type'] ?? '')),
+			'trade_direction' => trim((string)($payload['trade_direction'] ?? '')),
+			'mail_attempted' => !empty($payload['mail_attempted']) ? 'Y' : 'N',
+			'mail_sent' => !empty($payload['mail_sent']) ? 'Y' : 'N',
+			'mail_recipient_type' => trim((string)($payload['mail_recipient_type'] ?? '')),
+			'mail_reason' => trim((string)($payload['mail_reason'] ?? '')),
+		);
+	} else {
+		$eventFields = array(
+			'error_code' => trim((string)($payload['error_code'] ?? '')),
+			'error_category' => trim((string)($payload['error_category'] ?? '')),
+			'stage' => trim((string)($payload['stage'] ?? '')),
+		);
+	}
+
+	$fields = array_merge($commonFields, $eventFields);
 
 	$lines = array();
 	if ($isNewFile) {
@@ -139,7 +157,7 @@ function company_detail_trade_request_write_daily_file_log($eventType, $status, 
 	$lines[] = '[' . $loggedAt . ']';
 	foreach ($fields as $key => $value) {
 		if ($value === '' || $value === null) continue;
-		if ($value === 0 && !in_array($key, array('tr_no', 'credit_amount', 'credit_after', 'remain_credit', 'purpose_count', 'desired_item_len', 'message_len'), true)) continue;
+		if ($value === 0 && !in_array($key, array('tr_no', 'credit_amount', 'credit_after', 'remain_credit', 'purpose_count'), true)) continue;
 		$lines[] = $key . ': ' . $value;
 	}
 	$lines[] = '---';
@@ -1036,8 +1054,6 @@ function company_detail_handle_trade_request_insert($member, $request) {
 		'credit_after' => (int)($creditConsume['credit_after'] ?? 0),
 		'remain_credit' => (int)($creditConsume['credit_after'] ?? 0),
 		'purpose_count' => count($mappedPurposes),
-		'desired_item_len' => function_exists('mb_strlen') ? mb_strlen($desiredItem, 'UTF-8') : strlen($desiredItem),
-		'message_len' => function_exists('mb_strlen') ? mb_strlen($messageContent, 'UTF-8') : strlen($messageContent),
 		'stage' => 'completed',
 	), array(
 		'tr_no' => $insertId,
