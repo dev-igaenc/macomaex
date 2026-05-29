@@ -32,7 +32,18 @@ $mb_nick        = isset($_POST['mb_nick']) ? trim(strip_tags($_POST['mb_nick']))
 $mb_email       = isset($_POST['mb_email']) ? trim($_POST['mb_email']) : '';
 $mb_name        = isset($_POST['mb_name']) ? clean_xss_tags(trim(strip_tags($_POST['mb_name']))) : '';
 $mb_hp          = isset($_POST['mb_hp']) ? trim($_POST['mb_hp']) : '';
+$mb_6           = isset($_POST['mb_6']) ? trim($_POST['mb_6']) : '';
+$mb_8           = isset($_POST['mb_8']) ? trim($_POST['mb_8']) : '';
 $mb_email       = get_email_address($mb_email);
+
+// 소셜 프로필에서 이름/휴대폰을 추출해 회원 확장필드 기본값으로 사용합니다.
+$social_contact = social_get_profile_contact_data($user_profile);
+if( !$mb_6 && !empty($social_contact['name']) ){
+    $mb_6 = clean_xss_tags(trim(strip_tags($social_contact['name'])));
+}
+if( !$mb_8 && !empty($social_contact['phone']) ){
+    $mb_8 = trim((string)$social_contact['phone']);
+}
 
 // 이름, 닉네임에 utf-8 이외의 문자가 포함됐다면 오류
 // 서버환경에 따라 정상적으로 체크되지 않을 수 있음.
@@ -166,7 +177,9 @@ $sql = " insert into {$g5['member_table']}
                 mb_mailling = '{$mb_mailling}',
                 mb_sms = '0',
                 mb_open = '{$mb_open}',
-                mb_open_date = '".G5_TIME_YMD."'
+                mb_open_date = '".G5_TIME_YMD."',
+                mb_6 = '".sql_real_escape_string($mb_6)."',
+                mb_8 = '".sql_real_escape_string($mb_8)."'
                 {$sql_certify} ";
 $result = sql_query($sql, false);
 

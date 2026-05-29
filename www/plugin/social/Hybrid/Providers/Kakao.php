@@ -73,7 +73,8 @@ class Hybrid_Providers_Kakao extends Hybrid_Provider_Model_OAuth2
     function getUserProfile()
     {
         //$params = array('property_keys'=>'kaccount_email');	// v1 parameter
-        $params = array('property_keys'=>array('kakao_account.email'));		// v2 parameter
+        // 카카오 계정 정보에서 이메일/이름/휴대폰을 함께 요청합니다.
+        $params = array('property_keys'=>array('kakao_account.email','kakao_account.name','kakao_account.phone_number'));		// v2 parameter
 
         $this->api->decode_json = false;
         $this->api->curl_header = array( 'Authorization: Bearer ' . $this->api->access_token );
@@ -87,12 +88,20 @@ class Hybrid_Providers_Kakao extends Hybrid_Provider_Model_OAuth2
         $this->user->profile->identifier  = @ $data->id;
         $this->user->profile->displayName = @ $data->properties->nickname;
         $this->user->profile->photoURL    = @ $data->properties->thumbnail_image;
+        // 실명 동의가 있을 경우 username에 저장해 후속 매핑에서 우선 활용합니다.
+        $this->user->profile->username = @ $data->kakao_account->name;
         //$email = @ $data->properties->kaccount_email;	// v1 version
         
         $email = @ $data->kakao_account->email;   // v2 version
 
         if( $email ){
             $this->user->profile->email = $email;
+        }
+
+        // 휴대폰 동의가 있을 경우 phone에 저장합니다.
+        $phone = @ $data->kakao_account->phone_number;
+        if( $phone ){
+            $this->user->profile->phone = $phone;
         }
 
         $this->user->profile->sid         = get_social_convert_id( $this->user->profile->identifier, $this->providerId );

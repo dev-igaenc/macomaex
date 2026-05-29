@@ -13,7 +13,7 @@
 					<div class="form-section-head">
 						<div class="form-section-title">1. 우리 기업 정보</div>
 					</div>
-					<table class="read-table">
+							<table class="read-table" id="reqCompanyInfoTable">
 						<tr><th>회사명</th><td id="matchRequesterCompanyName">정보 준비중</td></tr>
 						<tr><th>사업자번호</th><td id="matchRequesterBzno">정보 준비중</td></tr>
 						<tr><th>설립</th><td id="matchRequesterFounded">정보 준비중</td></tr>
@@ -21,11 +21,34 @@
 						<tr><th>기업유형</th><td id="matchRequesterCorpType">정보 준비중</td></tr>
 						<tr><th>업종</th><td id="matchRequesterIndustry">정보 준비중</td></tr>
 						<tr><th>주요제품</th><td id="matchRequesterProduct">정보 준비중</td></tr>
-						<tr id="matchRequesterHomepageRow" hidden><th>홈페이지</th><td id="matchRequesterHomepage">정보 준비중</td></tr>
-					</table>
-					<div class="form-section-callout">
-						<div class="form-section-help">실제 기업 정보와 다른 경우 아래 메일로 문의 부탁드립니다.</div>
-						<a class="form-section-help-mail" href="mailto:admin@macomaex.com">admin@macomaex.com</a>
+							<tr id="matchRequesterHomepageRow" hidden><th>홈페이지</th><td id="matchRequesterHomepage">정보 준비중</td></tr>
+							</table>
+							<div class="req-bzno-box" id="reqBznoBox" hidden>
+							<div class="req-bzno-title req2-required">사업자번호 확인</div>
+								<div class="req-bzno-row">
+									<input type="text" id="reqRequesterBzno" maxlength="12" placeholder="사업자번호를 입력해 주세요.">
+									<button type="button" id="reqRequesterBznoVerifyBtn">확인</button>
+								</div>
+							</div>
+								<div class="req2-step req-manager-box" id="reqManagerBox" hidden>
+									<div class="req-manager-title">담당자 정보</div>
+									<div class="req-manager-grid">
+									<div class="req-manager-field">
+										<label class="req2-required" for="reqManagerName">담당자 성함</label>
+										<input type="text" id="reqManagerName" maxlength="50" placeholder="홍길동">
+									</div>
+									<div class="req-manager-field">
+										<label class="req2-required" for="reqManagerPhone">휴대폰 번호</label>
+										<input type="text" id="reqManagerPhone" maxlength="13" placeholder="010-1234-5678">
+									</div>
+								</div>
+								<div class="req-manager-note">거래 상대 기업이 연락 시 사용할 정보입니다.</div>
+							</div>
+							<div class="form-section-callout" id="reqCompanyInfoCallout">
+								<div class="form-section-help">사업자번호, 담당자 정보는 최초 거래 요청 시에만 확인합니다.</div>
+								<div class="form-section-help">정보 변경 시 마이페이지 > 회원정보수정 이용 부탁드립니다.</div>
+								<div class="form-section-help">실제 기업 정보와 다른 경우 아래 메일로 문의 부탁드립니다.</div>
+								<a class="form-section-help-mail" href="mailto:admin@macomaex.com">admin@macomaex.com</a>
 					</div>
 				</div>
 				<div id="reqSection">
@@ -45,13 +68,13 @@
 						<div class="req2-chips" id="reqTypeChips"></div>
 					</div>
 
-					<div class="req2-step">
-						<div class="req2-step-label">거래 상세 정보</div>
-						<div class="req2-dynamic">
-							<label class="req2-required" for="reqItemField">거래 희망 품목</label>
-							<input type="text" id="reqItemField" name="req_item" placeholder="거래 희망 품목을 입력해 주세요.">
+						<div class="req2-step">
+							<div class="req2-step-label">거래 상세 정보</div>
+							<div class="req2-dynamic">
+								<label class="req2-required" for="reqItemField">거래 희망 품목</label>
+								<input type="text" id="reqItemField" name="req_item" placeholder="거래 희망 품목을 입력해 주세요.">
+							</div>
 						</div>
-					</div>
 
 					<div class="req2-step">
 						<div class="req2-step-head">
