@@ -313,7 +313,9 @@ function social_extends_get_keys($provider){
                     "keys" => array("id" => $config['cf_kakao_rest_key'],
                                     "secret" => $config['cf_kakao_client_secret'] ? $config['cf_kakao_client_secret'] : $config['cf_kakao_rest_key']
                     ),
-                    "redirect_uri" => get_social_callbackurl('kakao')
+                    "redirect_uri" => get_social_callbackurl('kakao'),
+                    // 카카오 동의항목: 이메일/이름/휴대폰
+                    "scope" => "account_email profile_nickname profile_image name phone_number"
                 );
 
         // Facebook
@@ -332,7 +334,8 @@ function social_extends_get_keys($provider){
                     "keys" => array("id" => $config['cf_google_clientid'],
                     "secret" => $config['cf_google_secret']),
                     "redirect_uri" => get_social_callbackurl('google'),
-                    "scope"   => "https://www.googleapis.com/auth/userinfo.profile "."https://www.googleapis.com/auth/userinfo.email",
+                    // 구글 동의항목: 프로필/이메일/전화번호(People API)
+                    "scope"   => "https://www.googleapis.com/auth/userinfo.profile "."https://www.googleapis.com/auth/userinfo.email "."https://www.googleapis.com/auth/user.phonenumbers.read",
                     /*
                     "scope"   => "https://www.googleapis.com/auth/plus.login ". // optional
                                     "https://www.googleapis.com/auth/plus.me ". // optional
@@ -602,7 +605,8 @@ function social_check_login_before($p_service=''){
             /*
              * 회원이 아닌 경우에만 아래 실행
             */
-            $register_url = G5_SOCIAL_LOGIN_URL.'/register_member.php?provider='.$provider_name;
+            // 소셜 인증 완료 시 추가 입력 폼 없이 자동가입 엔드포인트로 이동합니다.
+            $register_url = G5_SOCIAL_LOGIN_URL.'/register_member_auto.php?provider='.$provider_name;
 
             if( $url ){
                 $register_url .= '&url='.urlencode($url);
@@ -1015,6 +1019,76 @@ function exist_mb_nick_recursive($mb_nick){
     
     $count++;
     return exist_mb_nick_recursive($mb_nick);
+}
+
+// 소셜에서 수집한 전화번호를 내부 저장 포맷(숫자만)으로 정규화합니다.
+function social_normalize_phone_number($phone=''){
+    $phone = trim((string)$phone);
+    if($phone === ''){
+        return '';
+    }
+
+    // 숫자/플러스 외 문자를 제거합니다.
+    $phone = preg_replace('/[^0-9\+]/', '', $phone);
+    if($phone === ''){
+        return '';
+    }
+
+    // 국가번호 +82 포맷은 국내 0 시작 포맷으로 변환합니다.
+    if(strpos($phone, '+82') === 0){
+        $phone = '0'.substr($phone, 3);
+    }
+
+    // 국가번호 82 포맷도 국내 0 시작 포맷으로 변환합니다.
+    if(strpos($phone, '82') === 0){
+        $phone = '0'.substr($phone, 2);
+    }
+
+    // DB 저장 일관성을 위해 최종적으로 숫자만 남깁니다.
+    $phone = preg_replace('/[^0-9]/', '', $phone);
+    if($phone === ''){
+        return '';
+    }
+
+    return $phone;
+}
+
+// 소셜 프로필 객체에서 이름/전화번호를 공통 키로 추출합니다.
+function social_get_profile_contact_data($profile){
+    $result = array(
+        'name' => '',
+        'phone' => '',
+    );
+
+    // 프로필 값이 객체가 아니면 빈 결과를 반환합니다.
+    if( !is_object($profile) ){
+        return $result;
+    }
+
+    // 이름은 username > displayName > firstName+lastName 순으로 우선 사용합니다.
+    $name = '';
+    if( isset($profile->username) && trim((string)$profile->username) !== '' ){
+        $name = trim((string)$profile->username);
+    } else if( isset($profile->displayName) && trim((string)$profile->displayName) !== '' ){
+        $name = trim((string)$profile->displayName);
+    } else if( isset($profile->firstName) || isset($profile->lastName) ){
+        $name = trim(((string)(isset($profile->firstName) ? $profile->firstName : '')).' '.((string)(isset($profile->lastName) ? $profile->lastName : '')));
+    }
+
+    // 전화번호는 provider 구현 차이를 고려해 여러 후보 키를 순차 확인합니다.
+    $phone = '';
+    if( isset($profile->phone) && trim((string)$profile->phone) !== '' ){
+        $phone = (string)$profile->phone;
+    } else if( isset($profile->mobile) && trim((string)$profile->mobile) !== '' ){
+        $phone = (string)$profile->mobile;
+    } else if( isset($profile->mobilePhoneNumber) && trim((string)$profile->mobilePhoneNumber) !== '' ){
+        $phone = (string)$profile->mobilePhoneNumber;
+    }
+
+    $result['name'] = $name;
+    $result['phone'] = social_normalize_phone_number($phone);
+
+    return $result;
 }
 
 function social_get_nonce($key=''){

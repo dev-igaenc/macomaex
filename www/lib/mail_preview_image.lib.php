@@ -105,11 +105,6 @@ if (!function_exists('mail_preview_generate_trade_request_blur_image')) {
             return array('url' => '', 'path' => '', 'error' => 'empty_lines');
         }
 
-        $cleanLines = array_slice($cleanLines, 0, 3);
-        while (count($cleanLines) < 3) {
-            $cleanLines[] = end($cleanLines);
-        }
-
         if (!is_array($options)) {
             $options = array();
         }
@@ -132,16 +127,33 @@ if (!function_exists('mail_preview_generate_trade_request_blur_image')) {
         $gradientFromY = 30;
         $gradientToY = 90;
         $baseColor = array(55, 65, 81);
+        $lineCount = min(3, count($cleanLines));
+        if ($lineCount < 1) {
+            return array('url' => '', 'path' => '', 'error' => 'empty_lines');
+        }
 
         if ($style === 'gradient_reveal') {
-            // 첫 줄은 노출하고 하단으로 갈수록 점진적으로 판독성이 낮아지는 프리뷰 스타일.
-            $opacityList = array(0.92, 0.45, 0.28);
-            $blurPassList = array(0, 3, 6);
+            // 이 스타일은 "블러 전용(아래 줄)" 이미지를 그린다.
+            $lineCount = min(2, count($cleanLines));
+            if ($lineCount < 1) {
+                return array('url' => '', 'path' => '', 'error' => 'empty_lines');
+            }
+            $cleanLines = array_slice($cleanLines, 0, $lineCount);
+            $height = 64;
+            $yList = array(24, 52);
+            $opacityList = array(0.45, 0.28);
+            $blurPassList = array(3, 6);
             $pixelateBase = 0;
             $pixelateStep = 0;
-            $veilAlpha = 18;
-            $gradientFromY = 36;
-            $gradientToY = 91;
+            $veilAlpha = 12;
+            $gradientFromY = 18;
+            $gradientToY = 63;
+        } else {
+            $cleanLines = array_slice($cleanLines, 0, $lineCount);
+            while (count($cleanLines) < 3) {
+                $cleanLines[] = end($cleanLines);
+            }
+            $lineCount = 3;
         }
 
         $hashSource = json_encode(array(
@@ -162,6 +174,12 @@ if (!function_exists('mail_preview_generate_trade_request_blur_image')) {
         if (!is_dir($targetDir)) {
             @mkdir($targetDir, 0755, true);
         }
+        if (!is_dir($targetDir)) {
+            return array('url' => '', 'path' => $targetPath, 'error' => 'target_dir_create_failed');
+        }
+        if (!is_writable($targetDir)) {
+            return array('url' => '', 'path' => $targetPath, 'error' => 'target_dir_not_writable');
+        }
 
         if (is_file($targetPath) && is_readable($targetPath)) {
             return array(
@@ -178,7 +196,7 @@ if (!function_exists('mail_preview_generate_trade_request_blur_image')) {
         imagefilledrectangle($canvas, 0, 0, $width, $height, $transparent);
 
         imagealphablending($canvas, true);
-        for ($i = 0; $i < 3; $i++) {
+        for ($i = 0; $i < $lineCount; $i++) {
             $line = $cleanLines[$i];
             $lineLayer = imagecreatetruecolor($width, $height);
             imagealphablending($lineLayer, false);

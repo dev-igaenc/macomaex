@@ -3,6 +3,23 @@ if (!defined('_GNUBOARD_')) exit; // 개별 페이지 접근 불가
 
 // add_stylesheet('css 구문', 출력순서); 숫자가 작을 수록 먼저 출력됨
 add_stylesheet('<link rel="stylesheet" href="'.$member_skin_url.'/style.css">', 0);
+
+$reg_prev_url = trim((string)get_session('ss_reg_prev_url'));
+if ($reg_prev_url === '') $reg_prev_url = G5_URL;
+$trade_request_return_url = trim((string)get_session('ss_reg_trade_request_return_url'));
+
+$is_trade_request_return = false;
+if ($trade_request_return_url !== '') {
+	$parsed = @parse_url($trade_request_return_url);
+	$path = isset($parsed['path']) ? (string)$parsed['path'] : '';
+	$query = isset($parsed['query']) ? (string)$parsed['query'] : '';
+	parse_str($query, $query_params);
+	$trade_login_flag = isset($query_params['trade_request_login']) ? (string)$query_params['trade_request_login'] : '';
+	if (($path === '/ko/company_detail.php' || $path === '/ko/company_detail_ai.php') && $trade_login_flag === '1') {
+		$is_trade_request_return = true;
+		$reg_prev_url = $trade_request_return_url;
+	}
+}
 ?>
 
 <!-- 회원가입결과 시작 { -->
@@ -40,7 +57,18 @@ add_stylesheet('<link rel="stylesheet" href="'.$member_skin_url.'/style.css">', 
 	</dl>
 
 	<fieldset id="login_fs">
-		<button type="submit" id="btn_submit" accesskey="s" class="btn_submit" onclick="location.href='<?php echo G5_URL ?>/'">메인으로</button>
+		<div class="btn_box">
+			<?php if ($is_trade_request_return) { ?>
+			<button type="button" id="btn_submit" accesskey="s" class="btn_submit" onclick="location.href='<?php echo htmlspecialchars($reg_prev_url, ENT_QUOTES); ?>'">추천기업 페이지로</button>
+			<?php } else { ?>
+			<button type="button" id="btn_submit" accesskey="s" class="btn_submit" onclick="location.href='<?php echo G5_URL ?>/'">메인으로</button>
+			<?php } ?>
+		</div>
 	</fieldset>
 </div>
 <!-- } 회원가입결과 끝 -->
+
+<style>
+#reg_result #login_fs .btn_box{display:flex;justify-content:space-between;}
+#reg_result #login_fs .btn_box .btn_submit{width:100%;margin:40px 0 0 !important;}
+</style>

@@ -95,26 +95,26 @@
 			guard.className = 'login-guard-modal';
 			guard.innerHTML = '' +
 				'<div class="login-guard">' +
-					'<div class="login-guard__overlay" aria-hidden="true"></div>' +
-					'<div class="login-guard__modal" role="dialog" aria-modal="true" aria-labelledby="tradeChatLoginGuardTitle">' +
-						'<button type="button" class="login-guard__close" id="tradeChatLoginGuardClose" aria-label="닫기">' +
-							'<svg viewBox="0 0 24 24">' +
-								'<line x1="18" y1="6" x2="6" y2="18"></line>' +
-								'<line x1="6" y1="6" x2="18" y2="18"></line>' +
-							'</svg>' +
-						'</button>' +
-						'<div class="login-guard__icon" aria-hidden="true">' +
-							'<svg viewBox="0 0 24 24">' +
-								'<path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1s3.1 1.39 3.1 3.1v2z"></path>' +
-							'</svg>' +
-						'</div>' +
-						'<h1 class="login-guard__title" id="tradeChatLoginGuardTitle">로그인이 필요합니다</h1>' +
-						'<p class="login-guard__desc" id="tradeChatLoginGuardDesc">채팅을 확인하시려면 로그인이 필요합니다.</p>' +
-						'<div class="login-guard__actions">' +
-							'<a class="login-guard__btn login-guard__btn--ghost" id="tradeChatLoginGuardSignupLink" href="/bbs/register.php">회원가입</a>' +
-							'<a class="login-guard__btn login-guard__btn--primary" id="tradeChatLoginGuardLink" href="/bbs/login.php">로그인</a>' +
-						'</div>' +
-					'</div>' +
+				'<div class="login-guard__overlay" aria-hidden="true"></div>' +
+				'<div class="login-guard__modal" role="dialog" aria-modal="true" aria-labelledby="tradeChatLoginGuardTitle">' +
+				'<button type="button" class="login-guard__close" id="tradeChatLoginGuardClose" aria-label="닫기">' +
+				'<svg viewBox="0 0 24 24">' +
+				'<line x1="18" y1="6" x2="6" y2="18"></line>' +
+				'<line x1="6" y1="6" x2="18" y2="18"></line>' +
+				'</svg>' +
+				'</button>' +
+				'<div class="login-guard__icon" aria-hidden="true">' +
+				'<svg viewBox="0 0 24 24">' +
+				'<path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1s3.1 1.39 3.1 3.1v2z"></path>' +
+				'</svg>' +
+				'</div>' +
+				'<h1 class="login-guard__title" id="tradeChatLoginGuardTitle">로그인이 필요합니다</h1>' +
+				'<p class="login-guard__desc" id="tradeChatLoginGuardDesc">채팅을 확인하시려면 로그인이 필요합니다.</p>' +
+				'<div class="login-guard__actions">' +
+				'<a class="login-guard__btn login-guard__btn--ghost" id="tradeChatLoginGuardSignupLink" href="/bbs/register.php">회원가입</a>' +
+				'<a class="login-guard__btn login-guard__btn--primary" id="tradeChatLoginGuardLink" href="/bbs/login.php">로그인</a>' +
+				'</div>' +
+				'</div>' +
 				'</div>';
 
 			document.body.appendChild(guard);
@@ -287,7 +287,7 @@
 				},
 				body: payload.toString(),
 				keepalive: true
-			}).catch(function () {});
+			}).catch(function () { });
 		}
 
 		function sendFileUploadAttemptLog(file, eventStatus, attemptResult, attemptReason, policyExpected) {
@@ -417,7 +417,7 @@
 			if (isImageAttachment(attachment)) {
 				return '<a class="chat-attachment chat-attachment--image" href="' + safeUrl + '" target="_blank" rel="noopener noreferrer">' +
 					'<img src="' + safeUrl + '" alt="첨부 이미지">' +
-				'</a>';
+					'</a>';
 			}
 
 			var fileName = String(attachment.title || attachment.name || attachment.file_name || attachment.filename || '첨부파일');
@@ -425,7 +425,7 @@
 			return '<a class="chat-attachment chat-attachment--file" href="' + safeUrl + '" target="_blank" rel="noopener noreferrer">' +
 				'<span class="chat-attachment__label">FILE</span>' +
 				'<span class="chat-attachment__name">' + escapeHtml(fileName + (fileSize ? ' (' + fileSize + ')' : '')) + '</span>' +
-			'</a>';
+				'</a>';
 		}
 
 		function buildMessageBubbleHtml(message) {
@@ -453,8 +453,8 @@
 			var title = room && room.title ? room.title : '채팅방';
 			messagesEl.innerHTML = '' +
 				'<div class="trade-chat-state-card is-' + escapeHtml(meta.code) + '">' +
-					'<strong class="trade-chat-state-card__title">' + escapeHtml(title) + '</strong>' +
-					'<p class="trade-chat-state-card__body">' + escapeHtml(detail) + '</p>' +
+				'<strong class="trade-chat-state-card__title">' + escapeHtml(title) + '</strong>' +
+				'<p class="trade-chat-state-card__body">' + escapeHtml(detail) + '</p>' +
 				'</div>';
 		}
 
@@ -513,7 +513,7 @@
 					(mine ? '' : '<span class="chat-msg-sender">' + escapeHtml(sender) + '</span>') +
 					'<div class="chat-msg-bubble">' + buildMessageBubbleHtml(message) + '</div>' +
 					'<span class="chat-msg-time">' + escapeHtml(formatTime(message.created_at)) + '</span>' +
-				'</div>';
+					'</div>';
 			}).join('');
 
 			scheduleScrollMessagesToBottom();
@@ -670,7 +670,7 @@
 
 			return {
 				code: 'unknown',
-				label: '확인중',
+				label: '확인 중',
 				header: '준비 중',
 				placeholder: '채팅 정보를 불러오는 중입니다.'
 			};
@@ -704,11 +704,11 @@
 				return '<button type="button" class="chat-room-item' + (active ? ' active' : '') + '" data-room-id="' + room.roomId + '">' +
 					'<div class="chat-room-avatar">' + escapeHtml(room.initial || '채') + '</div>' +
 					'<div class="chat-room-info">' +
-						'<span class="chat-room-time">' + escapeHtml(timeText) + '</span>' +
-						'<div class="chat-room-name">' + escapeHtml(room.title || '채팅방') + '</div>' +
-						'<div class="chat-room-preview">' + escapeHtml(room.preview || '최근 대화가 없습니다.') + '</div>' +
+					'<span class="chat-room-time">' + escapeHtml(timeText) + '</span>' +
+					'<div class="chat-room-name">' + escapeHtml(room.title || '채팅방') + '</div>' +
+					'<div class="chat-room-preview">' + escapeHtml(room.preview || '최근 대화가 없습니다.') + '</div>' +
 					'</div>' +
-				'</button>';
+					'</button>';
 			}).join('');
 		}
 

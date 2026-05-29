@@ -331,11 +331,10 @@ switch ($type) {
 			else $mem_chk=sql_fetch("select count(*) as cnt from g5_member where mb_leave_date='' and mb_4='$comnum'");
 			if($mem_chk['cnt']>0) {
 				macomaex_join_comp_chk_log_write(array(
-					'stage' => 'member_duplicate',
+					'stage' => 'member_duplicate_allowed',
 					'normalized_comnum' => $comnum,
 					'count' => (int)$mem_chk['cnt'],
 				));
-				echo "502|이미 등록된 회원 있습니다."; exit;
 			}
 			$comnum=str_replace("-","",$comnum);
 					$chk=sql_fetch("select * from company where BZNO='$comnum'");

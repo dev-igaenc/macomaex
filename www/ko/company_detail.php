@@ -72,8 +72,13 @@ function resolve_keyword_tag_total_count_detail($keyword_count, $tags) {
 	return is_array($tags) ? count($tags) : 0;
 }
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'trade_request_insert') {
-	company_detail_handle_trade_request_insert($member, $_POST);
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
+	if ($_POST['action'] === 'trade_request_verify_bzno') {
+		company_detail_handle_trade_request_verify_bzno($member, $_POST);
+	}
+	if ($_POST['action'] === 'trade_request_insert') {
+		company_detail_handle_trade_request_insert($member, $_POST);
+	}
 }
 
 // 진입 시 암호화 기업코드 복호화 후 조회하기 위함
@@ -193,10 +198,14 @@ $companyProductLineText = implode(' · ', $companyKeywordTags);
 $requesterCompanyData = !empty($member['mb_id'])
 	? trade_request_member_company_data($member['mb_4'] ?? '')
 	: array();
+$requesterProfileState = !empty($member['mb_id'])
+	? company_detail_trade_request_profile_state($member)
+	: array();
 
 $tradeRequestLoginParams = $_GET;
 $tradeRequestLoginParams['trade_request_login'] = '1';
-$tradeRequestLoginUrl = '/ko/company_detail.php?' . http_build_query($tradeRequestLoginParams);
+$tradeRequestReturnUrl = '/ko/company_detail.php?' . http_build_query($tradeRequestLoginParams);
+$tradeRequestLoginUrl = '/bbs/login.php?url=' . urlencode($tradeRequestReturnUrl);
 
 // 프론트 렌더링과 마스킹 분기에 필요한 상세 페이지 데이터 구조를 한 번에 정리해 JS로 내려준다.
 $companyDetailData = array(
@@ -339,9 +348,11 @@ window.MATCH_REQUEST_CONTEXT = {
 	sourcePage: "company_detail",
 	isLoggedIn: <?php echo !empty($member['mb_id']) ? 'true' : 'false'; ?>,
 	loginCheckUrl: <?php echo json_encode($tradeRequestLoginUrl, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>,
+	tradeRequestReturnUrl: <?php echo json_encode($tradeRequestReturnUrl, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>,
 	autoOpenOnLoad: <?php echo $shouldOpenTradeRequestModal ? 'true' : 'false'; ?>,
 	defaultRequestMessage: <?php echo json_encode($defaultMessage, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>,
 	requesterCompany: <?php echo json_encode($requesterCompanyData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>,
+	requesterProfile: <?php echo json_encode($requesterProfileState, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>,
 	target: {
 		kedcd: <?php echo json_encode($company['KEDCD'] ?? '', JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>,
 		company: <?php echo json_encode($company['ENP_NM'] ?? '', JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>,

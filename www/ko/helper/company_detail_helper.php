@@ -18,6 +18,186 @@ function company_detail_trade_request_json_response($success, $message, $extra =
 	exit;
 }
 
+function trade_request_compact_log_message($message, $maxLength = 255) {
+	$message = trim((string)$message);
+	if ($message === '') return '';
+
+	$message = preg_replace('/\s+/u', ' ', $message);
+	$maxLength = (int)$maxLength;
+	if ($maxLength < 1) return $message;
+
+	if (function_exists('mb_strlen') && function_exists('mb_substr')) {
+		if (mb_strlen($message, 'UTF-8') > $maxLength) {
+			return mb_substr($message, 0, $maxLength - 1, 'UTF-8') . '…';
+		}
+
+		return $message;
+	}
+
+	if (strlen($message) > $maxLength) {
+		return substr($message, 0, $maxLength - 3) . '...';
+	}
+
+	return $message;
+}
+
+function trade_request_log_directory_path() {
+	return dirname(dirname(__DIR__)) . '/logs/trade_request';
+}
+
+function trade_request_log_file_path($dateYmd = '') {
+	$dateYmd = preg_replace('/[^0-9]/', '', (string)$dateYmd);
+	if ($dateYmd === '') {
+		$dateYmd = date('Ymd');
+	}
+
+	return trade_request_log_directory_path() . '/trade_request_log_' . $dateYmd . '.php';
+}
+
+function trade_request_log_context_label($eventType, $status, $payload = array()) {
+	$eventType = trim((string)$eventType);
+	$status = trim((string)$status);
+	$errorCategory = trim((string)($payload['error_category'] ?? ''));
+
+	if ($eventType === 'submit' && $status === 'success') {
+		return '거래 요청서 전송 완료';
+	}
+	if ($eventType === 'submit' && $status === 'fail') {
+		if ($errorCategory === 'credit') return '크레딧 부족/차감 실패';
+		if ($errorCategory === 'validation') return '입력값 검증 실패';
+		if ($errorCategory === 'resource') return '필수 데이터 조회 실패';
+		if ($errorCategory === 'system') return '시스템 처리 실패';
+		return '거래 요청서 전송 실패';
+	}
+	if ($eventType === 'receiver_mail') {
+		return '거래 요청 알림 메일 처리';
+	}
+
+	return '거래 요청 처리';
+}
+
+function trade_request_log_default_message($eventType, $status) {
+	if ($eventType === 'submit' && $status === 'success') return '거래 요청서가 정상 저장되었습니다.';
+	if ($eventType === 'submit' && $status === 'fail') return '거래 요청서 저장에 실패했습니다.';
+	if ($eventType === 'receiver_mail' && $status === 'success') return '알림 메일 전송 상태를 기록했습니다.';
+	if ($eventType === 'receiver_mail' && $status === 'fail') return '알림 메일 전송에 실패했습니다.';
+	return '';
+}
+
+function company_detail_trade_request_write_daily_file_log($eventType, $status, $payload = array(), $message = '') {
+	$payload = is_array($payload) ? $payload : array();
+	$dir = trade_request_log_directory_path();
+	if (!is_dir($dir) && !@mkdir($dir, 0775, true) && !is_dir($dir)) {
+		return false;
+	}
+
+	$filePath = trade_request_log_file_path();
+	$isNewFile = !file_exists($filePath);
+	$requestUri = trim((string)($_SERVER['REQUEST_URI'] ?? ''));
+	$loggedAt = date('Y-m-d H:i:s');
+	$message = trade_request_compact_log_message($message, 500);
+	if ($message === '') {
+		$message = trade_request_log_default_message($eventType, $status);
+	}
+
+	$commonFields = array(
+		'event_type' => trim((string)$eventType),
+		'event_status' => trim((string)$status),
+		'request_id' => trim((string)($payload['request_id'] ?? '')),
+		'tr_no' => (int)($payload['tr_no'] ?? 0),
+		'mb_id' => trim((string)($payload['mb_id'] ?? '')),
+		'message' => $message,
+		'context' => trade_request_log_context_label($eventType, $status, $payload),
+		'request_uri' => $requestUri,
+		'client_ip' => trim((string)($payload['client_ip'] ?? ($_SERVER['REMOTE_ADDR'] ?? ''))),
+		'user_agent' => trade_request_compact_log_message((string)($payload['user_agent'] ?? ($_SERVER['HTTP_USER_AGENT'] ?? '')), 300),
+	);
+
+	$eventFields = array();
+	if ($eventType === 'submit') {
+		$eventFields = array(
+			'request_bzno' => trim((string)($payload['request_bzno'] ?? '')),
+			'target_kedcd' => trim((string)($payload['target_kedcd'] ?? '')),
+			'target_bzno' => trim((string)($payload['target_bzno'] ?? '')),
+			'trade_type' => trim((string)($payload['trade_type'] ?? '')),
+			'trade_direction' => trim((string)($payload['trade_direction'] ?? '')),
+			'credit_amount' => (int)($payload['credit_amount'] ?? 0),
+			'credit_after' => (int)($payload['credit_after'] ?? 0),
+			'remain_credit' => (int)($payload['remain_credit'] ?? 0),
+			'plan_required' => !empty($payload['plan_required']) ? 'Y' : 'N',
+			'purpose_count' => (int)($payload['purpose_count'] ?? 0),
+			'error_code' => trim((string)($payload['error_code'] ?? '')),
+			'error_category' => trim((string)($payload['error_category'] ?? '')),
+			'stage' => trim((string)($payload['stage'] ?? '')),
+		);
+	} elseif ($eventType === 'receiver_mail') {
+		$eventFields = array(
+			'target_kedcd' => trim((string)($payload['target_kedcd'] ?? '')),
+			'trade_type' => trim((string)($payload['trade_type'] ?? '')),
+			'trade_direction' => trim((string)($payload['trade_direction'] ?? '')),
+			'mail_attempted' => !empty($payload['mail_attempted']) ? 'Y' : 'N',
+			'mail_sent' => !empty($payload['mail_sent']) ? 'Y' : 'N',
+			'mail_recipient_type' => trim((string)($payload['mail_recipient_type'] ?? '')),
+			'mail_reason' => trim((string)($payload['mail_reason'] ?? '')),
+		);
+	} else {
+		$eventFields = array(
+			'error_code' => trim((string)($payload['error_code'] ?? '')),
+			'error_category' => trim((string)($payload['error_category'] ?? '')),
+			'stage' => trim((string)($payload['stage'] ?? '')),
+		);
+	}
+
+	$fields = array_merge($commonFields, $eventFields);
+
+	$lines = array();
+	if ($isNewFile) {
+		$lines[] = "<?php exit; ?>";
+		$lines[] = '';
+	}
+	$lines[] = '[' . $loggedAt . ']';
+	foreach ($fields as $key => $value) {
+		if ($value === '' || $value === null) continue;
+		if ($value === 0 && !in_array($key, array('tr_no', 'credit_amount', 'credit_after', 'remain_credit', 'purpose_count'), true)) continue;
+		$lines[] = $key . ': ' . $value;
+	}
+	$lines[] = '---';
+	$lines[] = '';
+
+	return @file_put_contents($filePath, implode(PHP_EOL, $lines), FILE_APPEND | LOCK_EX) !== false;
+}
+
+function company_detail_trade_request_classify_failure($errorCode) {
+	$errorCode = trim((string)$errorCode);
+	$map = array(
+		'member_not_logged_in' => 'auth',
+		'requester_bzno_empty' => 'validation',
+		'requester_company_unresolved' => 'resource',
+		'manager_info_missing' => 'validation',
+		'manager_phone_invalid' => 'validation',
+		'invalid_target_kedcd' => 'validation',
+		'invalid_trade_direction' => 'validation',
+		'trade_purpose_empty' => 'validation',
+		'desired_item_empty' => 'validation',
+		'desired_item_too_long' => 'validation',
+		'message_too_long' => 'validation',
+		'invalid_trade_type' => 'validation',
+		'invalid_trade_purpose' => 'validation',
+		'mapped_trade_purpose_empty' => 'validation',
+		'trade_purpose_json_encode_failed' => 'system',
+		'target_company_not_found' => 'resource',
+		'invalid_request_member_info' => 'resource',
+		'same_company_request' => 'validation',
+		'credit_not_enough' => 'credit',
+		'trade_request_insert_failed' => 'system',
+		'credit_consume_failed' => 'credit',
+		'credit_used_update_failed' => 'system',
+		'member_profile_update_failed' => 'system',
+	);
+
+	return $map[$errorCode] ?? 'unknown';
+}
+
 // 운영 로그는 식별자 중심으로만 남기고 원문 데이터는 최소화한다.
 function company_detail_trade_request_log($stage, $data = array()) {
 	$payload = array(
@@ -29,6 +209,47 @@ function company_detail_trade_request_log($stage, $data = array()) {
 	);
 
 	error_log('[trade_request] ' . json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+}
+
+function company_detail_trade_request_write_event_log($eventType, $status, $payload = array(), $message = '') {
+	$eventType = trim((string)$eventType);
+	$status = trim((string)$status);
+	if ($eventType === '') $eventType = 'unknown';
+	if (!in_array($status, array('success', 'fail', 'skip'), true)) {
+		$status = 'fail';
+	}
+
+	company_detail_trade_request_log('event_' . $eventType . '_' . $status, $payload);
+	company_detail_trade_request_write_daily_file_log($eventType, $status, $payload, $message);
+}
+
+function company_detail_trade_request_fail_response($message, $errorCode, $payload = array(), $extra = array()) {
+	$errorCode = trim((string)$errorCode);
+	if ($errorCode === '') $errorCode = 'unknown_error';
+
+	$basePayload = is_array($payload) ? $payload : array();
+	$basePayload['error_code'] = $errorCode;
+	$basePayload['error_category'] = company_detail_trade_request_classify_failure($errorCode);
+	company_detail_trade_request_write_event_log('submit', 'fail', $basePayload, $message);
+
+	company_detail_trade_request_json_response(false, $message, array_merge(array(
+		'error_code' => $errorCode,
+		'error_category' => $basePayload['error_category'],
+	), is_array($extra) ? $extra : array()));
+}
+
+function company_detail_trade_request_success_response($message, $payload = array(), $extra = array()) {
+	$basePayload = is_array($payload) ? $payload : array();
+	company_detail_trade_request_write_event_log('submit', 'success', $basePayload, $message);
+	company_detail_trade_request_json_response(true, $message, is_array($extra) ? $extra : array());
+}
+
+function company_detail_format_phone_hyphen($phoneDigits) {
+	$digits = preg_replace('/[^0-9]/', '', (string)$phoneDigits);
+	if (strlen($digits) === 11) {
+		return preg_replace('/(\d{3})(\d{4})(\d{4})/', '$1-$2-$3', $digits);
+	}
+	return $digits;
 }
 
 function company_detail_trade_request_consume_credit($memberId, $trNo, $targetKedcd, $tradeType, $creditAmount) {
@@ -54,11 +275,9 @@ function company_detail_trade_request_consume_credit($memberId, $trNo, $targetKe
 		);
 	}
 
-	sql_query("START TRANSACTION");
 	$ledgerLast = credit_ledger_get_latest_row($memberId, true);
 	$currentCredit = isset($ledgerLast['credit_after']) ? (int)$ledgerLast['credit_after'] : 0;
 	if ($currentCredit < $creditAmount) {
-		sql_query("ROLLBACK");
 		return array(
 			'success' => false,
 			'message' => '요청 가능 크레딧이 부족합니다. (필요: ' . $creditAmount . ')',
@@ -85,8 +304,6 @@ function company_detail_trade_request_consume_credit($memberId, $trNo, $targetKe
 
 	$historyResult = sql_query($historySql, false);
 	if (!$historyResult) {
-		sql_query("ROLLBACK");
-
 		return array(
 			'success' => false,
 			'message' => '크레딧 이력 저장에 실패했습니다.',
@@ -96,7 +313,6 @@ function company_detail_trade_request_consume_credit($memberId, $trNo, $targetKe
 	// USE 1건을 FIFO LOT 차감으로 분해해 실제 사용 LOT를 기록한다.
 	$lotUse = credit_lot_allocate_use($memberId, $useHistoryId, $creditAmount);
 	if (empty($lotUse['ok'])) {
-		sql_query("ROLLBACK");
 		$lotMsg = isset($lotUse['message']) ? (string)$lotUse['message'] : '';
 		$isLotShortage = ($lotMsg === 'not enough lot remain');
 		$userMessage = $isLotShortage
@@ -112,8 +328,6 @@ function company_detail_trade_request_consume_credit($memberId, $trNo, $targetKe
 			'plan_required' => $isLotShortage,
 		);
 	}
-
-	sql_query("COMMIT");
 
 	return array(
 		'success' => true,
@@ -280,6 +494,13 @@ function company_detail_trade_request_send_receiver_mail($tradeRequestNo, $reque
 	while (count($messagePreviewLines) < 3) {
 		$messagePreviewLines[] = $messagePreviewLines[count($messagePreviewLines) - 1];
 	}
+	$messagePreviewFirstLine = isset($messagePreviewLines[0]) ? trim((string)$messagePreviewLines[0]) : '';
+	$messagePreviewBlurLines = array_values(array_filter(array_slice($messagePreviewLines, 1, 2), static function ($line) {
+		return trim((string)$line) !== '';
+	}));
+	if (empty($messagePreviewBlurLines) && $messagePreviewFirstLine !== '') {
+		$messagePreviewBlurLines = array($messagePreviewFirstLine);
+	}
 
 	$mailBaseUrl = function_exists('mail_preview_resolve_base_url')
 		? mail_preview_resolve_base_url('https://macomaex.com')
@@ -289,7 +510,7 @@ function company_detail_trade_request_send_receiver_mail($tradeRequestNo, $reque
 	$messagePreviewImageUrl = '';
 	if (function_exists('mail_preview_generate_trade_request_blur_image')) {
 		$generatedPreviewImage = mail_preview_generate_trade_request_blur_image(
-			$messagePreviewLines,
+			$messagePreviewBlurLines,
 			$mailBaseUrl,
 			array(
 				'style' => 'gradient_reveal',
@@ -297,6 +518,12 @@ function company_detail_trade_request_send_receiver_mail($tradeRequestNo, $reque
 		);
 		if (!empty($generatedPreviewImage['url'])) {
 			$messagePreviewImageUrl = (string)$generatedPreviewImage['url'];
+		} else {
+			company_detail_trade_request_log('mail_preview_generate_failed', array(
+				'error' => (string)($generatedPreviewImage['error'] ?? ''),
+				'path' => (string)($generatedPreviewImage['path'] ?? ''),
+				'line_count' => count($messagePreviewBlurLines),
+			));
 		}
 	}
 
@@ -343,19 +570,127 @@ function company_detail_trade_request_send_receiver_mail($tradeRequestNo, $reque
 	return $result;
 }
 
+function company_detail_trade_request_profile_state($member) {
+	$bzno = trade_request_normalize_bzno($member['mb_4'] ?? '');
+	$managerName = trim((string)($member['mb_6'] ?? ''));
+	$managerPhoneRaw = trade_request_normalize_phone($member['mb_8'] ?? '');
+	$managerPhone = $managerPhoneRaw;
+	if (strlen($managerPhoneRaw) === 11) {
+		$managerPhone = preg_replace('/(\d{3})(\d{4})(\d{4})/', '$1-$2-$3', $managerPhoneRaw);
+	}
+
+	$companyData = array();
+	if ($bzno !== '') {
+		$companyData = trade_request_member_company_data($bzno);
+	}
+
+	return array(
+		'bzno' => $bzno,
+		'has_bzno' => $bzno !== '',
+		'has_company' => !empty($companyData['company']),
+		'company' => $companyData,
+		'has_manager' => ($managerName !== '' && $managerPhoneRaw !== ''),
+		'manager_name' => $managerName,
+		'manager_phone' => $managerPhone,
+	);
+}
+
+function company_detail_should_overwrite_member_company_name($currentValue, $memberId) {
+	$currentValue = trim((string)$currentValue);
+	$memberId = trim((string)$memberId);
+	if ($currentValue === '') return true;
+	if ($memberId !== '' && $currentValue === $memberId) return true;
+	return false;
+}
+
+function company_detail_handle_trade_request_verify_bzno($member, $request) {
+	if (empty($member['mb_id'])) {
+		company_detail_trade_request_json_response(false, '로그인 후 이용해 주세요.');
+	}
+
+	$bzno = trade_request_normalize_bzno($request['bzno'] ?? '');
+	// 모달의 "사업자번호 확인"은 화면 표시용 확인만 수행하고 DB에는 저장하지 않는다.
+	$resolved = trade_request_resolve_company_data_by_bzno($bzno, array('persist' => false));
+	if (empty($resolved['success'])) {
+		company_detail_trade_request_json_response(false, $resolved['message'] ?? '사업자번호 확인에 실패했습니다.');
+	}
+
+	company_detail_trade_request_json_response(true, '기업 정보를 확인했습니다.', array(
+		'company' => $resolved['company'],
+		'bzno' => licenseNum($resolved['bzno']),
+	));
+}
+
 function company_detail_handle_trade_request_insert($member, $request) {
 	global $g5;
 	$defaultMessage = trade_request_default_message();
+	$requestId = date('YmdHis') . '-' . substr(md5(uniqid('', true)), 0, 8);
 
 	company_detail_trade_request_log('request_received', array(
+		'request_id' => $requestId,
 		'member_id' => $member['mb_id'] ?? '',
 		'post_keys' => array_keys($request),
 	));
 
 	if (empty($member['mb_id'])) {
-		company_detail_trade_request_log('validation_failed', array('reason' => 'member_not_logged_in'));
-		company_detail_trade_request_json_response(false, '로그인 후 이용해 주세요.');
+		company_detail_trade_request_fail_response('로그인 후 이용해 주세요.', 'member_not_logged_in', array(
+			'request_id' => $requestId,
+			'stage' => 'auth',
+		));
 	}
+
+	$memberBzno = trade_request_normalize_bzno($member['mb_4'] ?? '');
+	$inputBzno = trade_request_normalize_bzno($request['requester_bzno'] ?? '');
+	$requesterBzno = $memberBzno !== '' ? $memberBzno : $inputBzno;
+	if ($requesterBzno === '') {
+		company_detail_trade_request_fail_response('사업자번호를 먼저 확인해 주세요.', 'requester_bzno_empty', array(
+			'request_id' => $requestId,
+			'mb_id' => trim((string)($member['mb_id'] ?? '')),
+			'stage' => 'validation',
+		));
+	}
+
+	// 최종 제출 전 1차 검증: 기업정보를 조회하되 아직 DB에 확정 저장하지 않는다.
+	$resolvedCompany = trade_request_resolve_company_data_by_bzno($requesterBzno, array('persist' => false));
+	if (empty($resolvedCompany['success'])) {
+		company_detail_trade_request_fail_response($resolvedCompany['message'] ?? '기업 정보를 확인하지 못했습니다.', 'requester_company_unresolved', array(
+			'request_id' => $requestId,
+			'mb_id' => trim((string)($member['mb_id'] ?? '')),
+			'request_bzno' => $requesterBzno,
+			'stage' => 'resource',
+		));
+	}
+	$resolvedCompanyName = trim((string)($resolvedCompany['company']['company'] ?? ''));
+
+	$managerNameCurrent = trim((string)($member['mb_6'] ?? ''));
+	$managerPhoneCurrent = trade_request_normalize_phone($member['mb_8'] ?? '');
+	$memberNameCurrent = trim((string)($member['mb_name'] ?? ''));
+	$memberNickCurrent = trim((string)($member['mb_nick'] ?? ''));
+	$managerNameToSave = $managerNameCurrent;
+	$managerPhoneToSave = $managerPhoneCurrent;
+	if ($managerNameCurrent === '' || $managerPhoneCurrent === '') {
+		$managerName = trim((string)($request['manager_name'] ?? ''));
+		$managerPhone = trade_request_normalize_phone($request['manager_phone'] ?? '');
+		if ($managerName === '' || $managerPhone === '') {
+			company_detail_trade_request_fail_response('담당자 정보를 입력해 주세요.', 'manager_info_missing', array(
+				'request_id' => $requestId,
+				'mb_id' => trim((string)($member['mb_id'] ?? '')),
+				'request_bzno' => $requesterBzno,
+				'stage' => 'validation',
+			));
+		}
+		if (!preg_match('/^[0-9]{9,11}$/', $managerPhone)) {
+			company_detail_trade_request_fail_response('담당자 휴대폰 번호 형식을 확인해 주세요.', 'manager_phone_invalid', array(
+				'request_id' => $requestId,
+				'mb_id' => trim((string)($member['mb_id'] ?? '')),
+				'request_bzno' => $requesterBzno,
+				'stage' => 'validation',
+			));
+		}
+		$managerNameToSave = $managerName;
+		$managerPhoneToSave = $managerPhone;
+	}
+	$managerPhoneToSaveFormatted = company_detail_format_phone_hyphen($managerPhoneToSave);
 
 	$targetKedcd = isset($request['target_kedcd']) ? preg_replace('/[^0-9]/', '', (string)$request['target_kedcd']) : '';
 	$tradeDirectionRaw = isset($request['trade_direction']) ? trim((string)$request['trade_direction']) : '';
@@ -396,35 +731,51 @@ function company_detail_handle_trade_request_insert($member, $request) {
 	);
 
 	if (!preg_match('/^\d{10}$/', $targetKedcd)) {
-		company_detail_trade_request_log('validation_failed', array('reason' => 'invalid_target_kedcd', 'target_kedcd' => $targetKedcd));
-		company_detail_trade_request_json_response(false, '대상 기업 정보가 올바르지 않습니다.');
+		company_detail_trade_request_fail_response('대상 기업 정보가 올바르지 않습니다.', 'invalid_target_kedcd', array(
+			'request_id' => $requestId,
+			'target_kedcd' => $targetKedcd,
+			'stage' => 'validation',
+		));
 	}
 	if (!isset($directionMap[$tradeDirectionRaw])) {
-		company_detail_trade_request_log('validation_failed', array('reason' => 'invalid_trade_direction', 'trade_direction' => $tradeDirectionRaw));
-		company_detail_trade_request_json_response(false, '거래 방향을 다시 선택해 주세요.');
+		company_detail_trade_request_fail_response('거래 방향을 다시 선택해 주세요.', 'invalid_trade_direction', array(
+			'request_id' => $requestId,
+			'stage' => 'validation',
+		));
 	}
 	if (!is_array($tradePurposeRaw) || empty($tradePurposeRaw)) {
-		company_detail_trade_request_log('validation_failed', array('reason' => 'trade_purpose_empty'));
-		company_detail_trade_request_json_response(false, '거래 목적을 1개 이상 선택해 주세요.');
+		company_detail_trade_request_fail_response('거래 목적을 1개 이상 선택해 주세요.', 'trade_purpose_empty', array(
+			'request_id' => $requestId,
+			'stage' => 'validation',
+		));
 	}
 	if ($desiredItem === '') {
-		company_detail_trade_request_log('validation_failed', array('reason' => 'desired_item_empty'));
-		company_detail_trade_request_json_response(false, '거래 희망 품목을 입력해 주세요.');
+		company_detail_trade_request_fail_response('거래 희망 품목을 입력해 주세요.', 'desired_item_empty', array(
+			'request_id' => $requestId,
+			'stage' => 'validation',
+		));
 	}
 	if (mb_strlen($desiredItem, 'UTF-8') > 255) {
-		company_detail_trade_request_log('validation_failed', array('reason' => 'desired_item_too_long'));
-		company_detail_trade_request_json_response(false, '거래 희망 품목은 255자 이내로 입력해 주세요.');
+		company_detail_trade_request_fail_response('거래 희망 품목은 255자 이내로 입력해 주세요.', 'desired_item_too_long', array(
+			'request_id' => $requestId,
+			'stage' => 'validation',
+		));
 	}
 	if ($messageContent === '') {
 		$messageContent = $defaultMessage;
 	}
 	if (mb_strlen($messageContent, 'UTF-8') > 500) {
-		company_detail_trade_request_log('validation_failed', array('reason' => 'message_too_long'));
-		company_detail_trade_request_json_response(false, '추가 문의 사항은 500자 이내로 입력해 주세요.');
+		company_detail_trade_request_fail_response('추가 문의 사항은 500자 이내로 입력해 주세요.', 'message_too_long', array(
+			'request_id' => $requestId,
+			'stage' => 'validation',
+		));
 	}
 	if (!isset($tradeTypeMap[$tradeTypeRaw])) {
-		company_detail_trade_request_log('validation_failed', array('reason' => 'invalid_trade_type', 'trade_type' => $tradeTypeRaw));
-		company_detail_trade_request_json_response(false, '거래 타입을 다시 선택해 주세요.');
+		company_detail_trade_request_fail_response('거래 타입을 다시 선택해 주세요.', 'invalid_trade_type', array(
+			'request_id' => $requestId,
+			'trade_type' => $tradeTypeRaw,
+			'stage' => 'validation',
+		));
 	}
 
 	$targetCompany = sql_fetch("
@@ -434,28 +785,35 @@ function company_detail_handle_trade_request_insert($member, $request) {
 		LIMIT 1
 	");
 	if (empty($targetCompany['KEDCD']) || empty($targetCompany['BZNO'])) {
-		company_detail_trade_request_log('validation_failed', array('reason' => 'target_company_not_found', 'target_kedcd' => $targetKedcd));
-		company_detail_trade_request_json_response(false, '대상 기업 정보가 올바르지 않습니다.');
+		company_detail_trade_request_fail_response('대상 기업 정보가 올바르지 않습니다.', 'target_company_not_found', array(
+			'request_id' => $requestId,
+			'target_kedcd' => $targetKedcd,
+			'stage' => 'resource',
+		));
 	}
 
 	$requestMemberId = trim((string)($member['mb_id'] ?? ''));
-	$requestCompanyName = trim((string)($member['mb_name'] ?? ''));
-	$requestBzno = preg_replace('/[^0-9]/', '', (string)($member['mb_4'] ?? ''));
+	$requestCompanyName = $resolvedCompanyName !== '' ? $resolvedCompanyName : trim((string)($member['mb_name'] ?? ''));
+	// 최종 제출 단계에서는 사전 검증으로 확정한 사업자번호를 기준으로 처리한다.
+	$requestBzno = $requesterBzno;
 	$targetCompanyName = trim((string)($targetCompany['ENP_NM'] ?? ''));
 	$targetBzno = preg_replace('/[^0-9]/', '', (string)($targetCompany['BZNO'] ?? ''));
 
 	if ($requestMemberId === '' || $requestCompanyName === '' || $requestBzno === '') {
-		company_detail_trade_request_log('validation_failed', array(
-			'reason' => 'invalid_request_member_info',
-			'request_mb_id' => $requestMemberId,
-			'request_company_name' => $requestCompanyName,
+		company_detail_trade_request_fail_response('회원 정보가 올바르지 않습니다. 관리자에게 문의해 주세요.', 'invalid_request_member_info', array(
+			'request_id' => $requestId,
+			'mb_id' => $requestMemberId,
 			'request_bzno' => $requestBzno,
+			'stage' => 'resource',
 		));
-		company_detail_trade_request_json_response(false, '회원 정보가 올바르지 않습니다. 관리자에게 문의해 주세요.');
 	}
 	if ($requestBzno === $targetBzno) {
-		company_detail_trade_request_log('validation_failed', array('reason' => 'same_company_request'));
-		company_detail_trade_request_json_response(false, '자기 자신의 기업에는 거래 요청을 보낼 수 없습니다.');
+		company_detail_trade_request_fail_response('자기 자신의 기업에는 거래 요청을 보낼 수 없습니다.', 'same_company_request', array(
+			'request_id' => $requestId,
+			'request_bzno' => $requestBzno,
+			'target_bzno' => $targetBzno,
+			'stage' => 'validation',
+		));
 	}
 
 	$mappedPurposes = array();
@@ -466,19 +824,21 @@ function company_detail_handle_trade_request_insert($member, $request) {
 		$seenPurpose[$purposeId] = true;
 
 		if (!isset($purposeMap[$tradeDirectionRaw][$purposeId])) {
-			company_detail_trade_request_log('validation_failed', array(
-				'reason' => 'invalid_trade_purpose',
+			company_detail_trade_request_fail_response('거래 목적 데이터가 올바르지 않습니다.', 'invalid_trade_purpose', array(
+				'request_id' => $requestId,
 				'direction' => $tradeDirectionRaw,
 				'purpose_id' => $purposeId,
+				'stage' => 'validation',
 			));
-			company_detail_trade_request_json_response(false, '거래 목적 데이터가 올바르지 않습니다.');
 		}
 
 		$mappedPurposes[] = $purposeMap[$tradeDirectionRaw][$purposeId];
 	}
 	if (empty($mappedPurposes)) {
-		company_detail_trade_request_log('validation_failed', array('reason' => 'mapped_trade_purpose_empty'));
-		company_detail_trade_request_json_response(false, '거래 목적을 다시 선택해 주세요.');
+		company_detail_trade_request_fail_response('거래 목적을 다시 선택해 주세요.', 'mapped_trade_purpose_empty', array(
+			'request_id' => $requestId,
+			'stage' => 'validation',
+		));
 	}
 
 	$tradeDirection = $directionMap[$tradeDirectionRaw];
@@ -487,18 +847,25 @@ function company_detail_handle_trade_request_insert($member, $request) {
 	$tradePurposeJson = json_encode(array_values($mappedPurposes), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
 	if ($tradePurposeJson === false) {
-		company_detail_trade_request_log('validation_failed', array('reason' => 'trade_purpose_json_encode_failed'));
-		company_detail_trade_request_json_response(false, '거래 목적 처리 중 오류가 발생했습니다.');
+		company_detail_trade_request_fail_response('거래 목적 처리 중 오류가 발생했습니다.', 'trade_purpose_json_encode_failed', array(
+			'request_id' => $requestId,
+			'stage' => 'validation',
+		));
 	}
 
 	$remainCredit = credit_ledger_get_balance($requestMemberId);
 	if ($remainCredit < $creditAmount) {
-		company_detail_trade_request_log('validation_failed', array(
-			'reason' => 'credit_not_enough',
+		company_detail_trade_request_fail_response('매칭 가능 크레딧이 부족합니다. (필요: ' . $creditAmount . ')', 'credit_not_enough', array(
+			'request_id' => $requestId,
+			'mb_id' => $requestMemberId,
+			'request_bzno' => $requestBzno,
+			'target_kedcd' => $targetKedcd,
+			'trade_type' => $tradeTypeMap[$tradeTypeRaw]['type'] ?? '',
+			'credit_amount' => $creditAmount,
 			'remain_credit' => $remainCredit,
-			'required' => $creditAmount,
-		));
-		company_detail_trade_request_json_response(false, '매칭 가능 크레딧이 부족합니다. (필요: ' . $creditAmount . ')', array(
+			'stage' => 'credit_precheck',
+			'plan_required' => true,
+		), array(
 			'plan_required' => true,
 			'remain_credit' => $remainCredit,
 		));
@@ -522,42 +889,115 @@ function company_detail_handle_trade_request_insert($member, $request) {
 		adm_chk=0,
 		adm_memo=NULL";
 
+	sql_query("START TRANSACTION");
 	$insertResult = sql_query($insertSql, false);
 	if (!$insertResult) {
-		company_detail_trade_request_log('insert_failed', array(
+		sql_query("ROLLBACK");
+		company_detail_trade_request_fail_response('거래 요청서 저장 중 오류가 발생했습니다.', 'trade_request_insert_failed', array(
+			'request_id' => $requestId,
+			'mb_id' => $requestMemberId,
+			'request_bzno' => $requestBzno,
 			'member_id' => $requestMemberId,
 			'target_kedcd' => $targetKedcd,
 			'trade_type' => $tradeType,
+			'trade_direction' => $tradeDirection,
+			'stage' => 'insert',
 		));
-		company_detail_trade_request_json_response(false, '거래 요청서 저장 중 오류가 발생했습니다.');
 	}
 
 	$insertId = sql_insert_id();
 	$creditConsume = company_detail_trade_request_consume_credit($requestMemberId, $insertId, $targetKedcd, $tradeType, $creditAmount);
 	if (empty($creditConsume['success'])) {
-		sql_query("delete from trade_request where tr_no='" . (int)$insertId . "' and credit_used=0", false);
-		company_detail_trade_request_log('credit_consume_failed', array(
+		sql_query("ROLLBACK");
+		$planRequired = !empty($creditConsume['plan_required']);
+		company_detail_trade_request_fail_response($creditConsume['message'] ?? '크레딧 차감 중 오류가 발생했습니다.', 'credit_consume_failed', array(
+			'request_id' => $requestId,
+			'tr_no' => (int)$insertId,
+			'mb_id' => $requestMemberId,
+			'request_bzno' => $requestBzno,
+			'target_kedcd' => $targetKedcd,
+			'trade_type' => $tradeType,
+			'trade_direction' => $tradeDirection,
+			'credit_amount' => $creditAmount,
+			'stage' => 'credit_consume',
 			'tr_no' => $insertId,
 			'message' => $creditConsume['message'] ?? '',
 			'debug_stage' => $creditConsume['debug_stage'] ?? '',
 			'debug_reason' => $creditConsume['debug_reason'] ?? '',
 			'debug_allocated' => $creditConsume['debug_allocated'] ?? null,
 			'debug_missing' => $creditConsume['debug_missing'] ?? null,
-		));
-		company_detail_trade_request_json_response(false, $creditConsume['message'] ?? '크레딧 차감 중 오류가 발생했습니다.', array(
+			'plan_required' => $planRequired,
+		), array(
 			'tr_no' => $insertId,
-			'plan_required' => !empty($creditConsume['plan_required']),
+			'plan_required' => $planRequired,
 		));
 	}
 
 	$creditUsedUpdated = sql_query("update trade_request set credit_used=1 where tr_no='" . (int)$insertId . "'", false);
 	if (!$creditUsedUpdated) {
-		company_detail_trade_request_log('credit_used_update_failed', array(
+		sql_query("ROLLBACK");
+		company_detail_trade_request_fail_response('거래 요청 상태 갱신 중 오류가 발생했습니다.', 'credit_used_update_failed', array(
+			'request_id' => $requestId,
 			'tr_no' => $insertId,
 			'member_id' => $requestMemberId,
+			'mb_id' => $requestMemberId,
+			'request_bzno' => $requestBzno,
+			'target_kedcd' => $targetKedcd,
+			'trade_type' => $tradeType,
+			'trade_direction' => $tradeDirection,
+			'credit_amount' => $creditAmount,
+			'stage' => 'credit_mark_used',
 		));
-		company_detail_trade_request_json_response(false, '거래 요청 상태 갱신 중 오류가 발생했습니다.');
 	}
+
+	// 거래요청 insert + 크레딧 차감이 모두 성공한 이후에만 기업정보를 DB에 확정 저장한다.
+	$resolvedCompanyPersist = trade_request_resolve_company_data_by_bzno($requesterBzno, array('persist' => true));
+	if (empty($resolvedCompanyPersist['success'])) {
+		company_detail_trade_request_log('requester_company_persist_failed', array(
+			'tr_no' => $insertId,
+			'bzno' => $requesterBzno,
+			'message' => $resolvedCompanyPersist['message'] ?? '',
+		));
+	}
+
+	$needMemberUpdate = false;
+	$memberUpdateSet = array();
+	// 1) 사업자번호가 비어있는 회원만 최초 1회 저장
+	if ($memberBzno === '' && $requesterBzno !== '') {
+		$needMemberUpdate = true;
+		$memberUpdateSet[] = "mb_4='" . sql_escape_string($requesterBzno) . "'";
+	}
+	// 2) 회원명/닉네임이 비어 있거나 기본값(=mb_id)인 경우 기업명 저장
+	if ($requestCompanyName !== '' && company_detail_should_overwrite_member_company_name($memberNameCurrent, $requestMemberId)) {
+		$needMemberUpdate = true;
+		$memberUpdateSet[] = "mb_name='" . sql_escape_string($requestCompanyName) . "'";
+	}
+	if ($requestCompanyName !== '' && company_detail_should_overwrite_member_company_name($memberNickCurrent, $requestMemberId)) {
+		$needMemberUpdate = true;
+		$memberUpdateSet[] = "mb_nick='" . sql_escape_string($requestCompanyName) . "'";
+	}
+	// 3) 담당자 정보는 최종 제출 시점에 거래 요청 데이터와 함께 동기화한다.
+	if ($managerNameToSave !== '' || $managerPhoneToSaveFormatted !== '') {
+		$needMemberUpdate = true;
+		$memberUpdateSet[] = "mb_6='" . sql_escape_string($managerNameToSave) . "'";
+		$memberUpdateSet[] = "mb_8='" . sql_escape_string($managerPhoneToSaveFormatted) . "'";
+	}
+	if ($needMemberUpdate && !empty($memberUpdateSet)) {
+		$mbId = sql_escape_string((string)$member['mb_id']);
+		$memberUpdateSql = "UPDATE g5_member SET " . implode(', ', $memberUpdateSet) . " WHERE mb_id='{$mbId}'";
+		$memberUpdateResult = sql_query($memberUpdateSql, false);
+		if (!$memberUpdateResult) {
+			sql_query("ROLLBACK");
+			company_detail_trade_request_fail_response('회원 정보 저장 중 오류가 발생했습니다.', 'member_profile_update_failed', array(
+				'request_id' => $requestId,
+				'tr_no' => $insertId,
+				'member_id' => $member['mb_id'] ?? '',
+				'stage' => 'member_update',
+			));
+		}
+	}
+
+	sql_query("COMMIT");
 
 	company_detail_trade_request_log('request_created', array(
 		'tr_no' => $insertId,
@@ -653,10 +1093,38 @@ function company_detail_handle_trade_request_insert($member, $request) {
 		'reason' => $mailResult['reason'] ?? '',
 	));
 
-	company_detail_trade_request_json_response(true, '거래 요청서가 저장되었습니다.', array(
+	company_detail_trade_request_write_event_log('receiver_mail', !empty($mailResult['sent']) ? 'success' : 'fail', array(
+		'request_id' => $requestId,
+		'tr_no' => (int)$insertId,
+		'mb_id' => $requestMemberId,
+		'target_kedcd' => $targetKedcd,
+		'trade_type' => $tradeType,
+		'trade_direction' => $tradeDirection,
+		'mail_attempted' => !empty($mailResult['attempted']),
+		'mail_sent' => !empty($mailResult['sent']),
+		'mail_recipient_type' => $mailResult['recipient_type'] ?? '',
+		'mail_reason' => $mailResult['reason'] ?? '',
+	), $mailResult['reason'] ?? '');
+
+	company_detail_trade_request_success_response('거래 요청서가 저장되었습니다.', array(
+		'request_id' => $requestId,
+		'tr_no' => (int)$insertId,
+		'mb_id' => $requestMemberId,
+		'request_bzno' => $requestBzno,
+		'target_kedcd' => $targetKedcd,
+		'target_bzno' => $targetBzno,
+		'trade_type' => $tradeType,
+		'trade_direction' => $tradeDirection,
+		'credit_amount' => $creditAmount,
+		'credit_after' => (int)($creditConsume['credit_after'] ?? 0),
+		'remain_credit' => (int)($creditConsume['credit_after'] ?? 0),
+		'purpose_count' => count($mappedPurposes),
+		'stage' => 'completed',
+	), array(
 		'tr_no' => $insertId,
 		'credit_after' => $creditConsume['credit_after'] ?? null,
 		'credit_amount' => $creditAmount,
 		'unlock_detail' => true,
+		'request_id' => $requestId,
 	));
 }

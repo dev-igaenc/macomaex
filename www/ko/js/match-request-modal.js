@@ -19,6 +19,25 @@ var DEFAULT_NOTE = MATCH_REQUEST_CONTEXT.defaultRequestMessage
         ? String(window.COMPANY_DETAIL_DATA.defaultRequestMessage)
         : '');
 var REQUEST_ENDPOINT = MATCH_REQUEST_CONTEXT.endpoint || '/ko/company_detail.php';
+var requesterProfile = MATCH_REQUEST_CONTEXT.requesterProfile || {};
+
+function normalizeDigits(value) {
+    return String(value || '').replace(/\D/g, '');
+}
+
+function formatBizNo(value) {
+    var digits = normalizeDigits(value).slice(0, 10);
+    if (digits.length <= 3) return digits;
+    if (digits.length <= 5) return digits.slice(0, 3) + '-' + digits.slice(3);
+    return digits.slice(0, 3) + '-' + digits.slice(3, 5) + '-' + digits.slice(5);
+}
+
+function formatPhone(value) {
+    var digits = normalizeDigits(value).slice(0, 11);
+    if (digits.length < 4) return digits;
+    if (digits.length < 8) return digits.slice(0, 3) + '-' + digits.slice(3);
+    return digits.slice(0, 3) + '-' + digits.slice(3, 7) + '-' + digits.slice(7);
+}
 
 function setText(id, value) {
     var el = document.getElementById(id);
@@ -72,6 +91,21 @@ function setRequesterCompany(company) {
     homepageCell.innerHTML = '<a href="' + escapeHtml(homepageUrl) + '" target="_blank" rel="noopener noreferrer">' + escapeHtml(homepageText) + '</a>';
 }
 
+function updateRequesterProfileUi() {
+    var bznoBox = document.getElementById('reqBznoBox');
+    var managerBox = document.getElementById('reqManagerBox');
+    var companyInfoTable = document.getElementById('reqCompanyInfoTable');
+    var companyInfoCallout = document.getElementById('reqCompanyInfoCallout');
+    if (!bznoBox || !managerBox) return;
+
+    var hasCompany = !!(MATCH_REQUEST_CONTEXT.requesterCompany && MATCH_REQUEST_CONTEXT.requesterCompany.company);
+    var hasManager = !!(requesterProfile.manager_name && requesterProfile.manager_phone);
+    bznoBox.hidden = hasCompany;
+    managerBox.hidden = hasManager;
+    if (companyInfoTable) companyInfoTable.hidden = !hasCompany;
+    if (companyInfoCallout) companyInfoCallout.hidden = !hasCompany;
+}
+
 function setRequestTarget(target) {
     MATCH_REQUEST_CONTEXT.target = target || null;
     window.MATCH_REQUEST_CONTEXT = MATCH_REQUEST_CONTEXT;
@@ -103,21 +137,155 @@ document.querySelectorAll('[data-close]').forEach(function (btn) {
     btn.addEventListener('click', function () { closeModal(btn.getAttribute('data-close')); });
 });
 
+function getLoginReturnUrl() {
+    return (MATCH_REQUEST_CONTEXT && (MATCH_REQUEST_CONTEXT.tradeRequestLoginUrl || MATCH_REQUEST_CONTEXT.loginCheckUrl))
+        ? String(MATCH_REQUEST_CONTEXT.tradeRequestLoginUrl || MATCH_REQUEST_CONTEXT.loginCheckUrl)
+        : ('/bbs/login.php?url=' + encodeURIComponent(window.location.pathname + window.location.search));
+}
+
+function getSignupEntryUrl() {
+    var returnUrl = '';
+    if (MATCH_REQUEST_CONTEXT && MATCH_REQUEST_CONTEXT.tradeRequestReturnUrl) {
+        returnUrl = String(MATCH_REQUEST_CONTEXT.tradeRequestReturnUrl);
+    } else if (MATCH_REQUEST_CONTEXT && MATCH_REQUEST_CONTEXT.sourcePage && String(MATCH_REQUEST_CONTEXT.sourcePage).indexOf('company_detail') === 0) {
+        var fallback = new URL(window.location.href);
+        fallback.searchParams.set('trade_request_login', '1');
+        returnUrl = fallback.pathname + fallback.search;
+    } else {
+        returnUrl = window.location.pathname + window.location.search;
+    }
+    return '/bbs/register.php?url=' + encodeURIComponent(returnUrl);
+}
+
+function openLoginRequiredModal(descriptionHtml) {
+    var modalId = 'tradeRequestLoginRequiredModal';
+    var overlay = document.getElementById(modalId);
+
+    function closeLoginModal() {
+        if (!overlay) return;
+        overlay.classList.remove('is-open');
+        document.documentElement.classList.remove('hide-scroll');
+    }
+
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = modalId;
+        overlay.className = 'login-guard-modal';
+        overlay.innerHTML = ''
+            + '<div class="login-guard">'
+            + '  <div class="login-guard__overlay" aria-hidden="true"></div>'
+            + '  <div class="login-guard__modal" role="dialog" aria-modal="true" aria-labelledby="tradeRequestLoginModalTitle">'
+            + '    <button type="button" class="login-guard__close" aria-label="닫기">'
+            + '      <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>'
+            + '    </button>'
+            + '    <div class="login-guard__icon" aria-hidden="true">'
+            + '      <svg viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1s3.1 1.39 3.1 3.1v2z"/></svg>'
+            + '    </div>'
+            + '    <h3 class="login-guard__title" id="tradeRequestLoginModalTitle">로그인이 필요합니다</h3>'
+            + '    <p class="login-guard__desc" id="tradeRequestLoginModalDesc"></p>'
+            + '    <div class="login-guard__actions">'
+            + '      <a href="' + getSignupEntryUrl() + '" class="login-guard__btn login-guard__btn--ghost">회원가입</a>'
+            + '      <a href="' + getLoginReturnUrl() + '" class="login-guard__btn login-guard__btn--primary">로그인</a>'
+            + '    </div>'
+            + '  </div>'
+            + '</div>';
+        document.body.appendChild(overlay);
+
+        var dim = overlay.querySelector('.login-guard__overlay');
+        if (dim) dim.addEventListener('click', closeLoginModal);
+
+        var closeBtn = overlay.querySelector('.login-guard__close');
+        if (closeBtn) closeBtn.addEventListener('click', closeLoginModal);
+
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' && overlay.classList.contains('is-open')) closeLoginModal();
+        });
+    }
+
+    var descEl = overlay.querySelector('#tradeRequestLoginModalDesc');
+    if (descEl) descEl.innerHTML = descriptionHtml || '거래 요청은<br>로그인 후 이용하실 수 있습니다.';
+
+    var loginBtn = overlay.querySelector('.login-guard__btn--primary');
+    if (loginBtn) loginBtn.setAttribute('href', getLoginReturnUrl());
+    var signupBtn = overlay.querySelector('.login-guard__btn--ghost');
+    if (signupBtn) signupBtn.setAttribute('href', getSignupEntryUrl());
+
+    overlay.classList.add('is-open');
+    document.documentElement.classList.add('hide-scroll');
+}
+
 /* ---- 거래 요청하기 버튼 → 요청서 작성 먼저 ---- */
 var openMatchBtn = document.getElementById('openTypeModal2');
 if (openMatchBtn) {
     openMatchBtn.addEventListener('click', function () {
         // 비로그인 진입은 각 페이지가 내려준 로그인 유도 URL로만 처리한다.
         if (MATCH_REQUEST_CONTEXT.isLoggedIn === false) {
-            var tradeRequestLoginUrl = MATCH_REQUEST_CONTEXT.tradeRequestLoginUrl || MATCH_REQUEST_CONTEXT.loginCheckUrl;
-            if (tradeRequestLoginUrl) {
-                window.location.href = tradeRequestLoginUrl;
-            }
+            openLoginRequiredModal('거래 요청은<br>로그인 후 이용하실 수 있습니다.');
             return;
         }
         setRequesterCompany(MATCH_REQUEST_CONTEXT.requesterCompany || null);
         setRequestTarget(MATCH_REQUEST_CONTEXT.target || null);
         openModal('modalRequest');
+    });
+}
+
+var reqRequesterBzno = document.getElementById('reqRequesterBzno');
+var reqRequesterBznoVerifyBtn = document.getElementById('reqRequesterBznoVerifyBtn');
+var reqRequesterBznoVerifyBtnLabel = reqRequesterBznoVerifyBtn ? reqRequesterBznoVerifyBtn.innerHTML : '확인';
+if (reqRequesterBzno) {
+    reqRequesterBzno.value = formatBizNo(requesterProfile.bzno || '');
+    reqRequesterBzno.addEventListener('input', function () {
+        reqRequesterBzno.value = formatBizNo(reqRequesterBzno.value);
+    });
+}
+if (reqRequesterBznoVerifyBtn) {
+    reqRequesterBznoVerifyBtn.addEventListener('click', function () {
+        var bznoDigits = normalizeDigits(reqRequesterBzno ? reqRequesterBzno.value : '');
+        if (bznoDigits.length !== 10) {
+            showInlineOrToastWarning('사업자등록번호 10자리를 입력해 주세요.');
+            return;
+        }
+
+        reqRequesterBznoVerifyBtn.disabled = true;
+        reqRequesterBznoVerifyBtn.classList.add('is-loading');
+        reqRequesterBznoVerifyBtn.innerHTML = '<span class="req-btn-spinner" aria-hidden="true"></span><span>확인중</span>';
+        var formData = new URLSearchParams();
+        formData.set('action', 'trade_request_verify_bzno');
+        formData.set('bzno', bznoDigits);
+
+        fetch(REQUEST_ENDPOINT, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: formData.toString()
+        })
+        .then(function (response) {
+            if (!response.ok) throw new Error('HTTP_' + response.status);
+            return response.json();
+        })
+        .then(function (data) {
+            if (!data || !data.success) {
+                showInlineOrToastWarning(data && data.message ? data.message : '사업자번호 확인 중 오류가 발생했습니다.');
+                return;
+            }
+            requesterProfile.bzno = normalizeDigits(data.bzno || bznoDigits);
+            if (reqRequesterBzno) reqRequesterBzno.value = formatBizNo(data.bzno || bznoDigits);
+            setRequesterCompany(data.company || null);
+            updateRequesterProfileUi();
+            if (typeof window._showToast === 'function') {
+                window._showToast('✓', '사업자번호 확인이 완료되었습니다.', 'success');
+            }
+        })
+        .catch(function () {
+            showInlineOrToastWarning('서버 통신 중 오류가 발생했습니다.');
+        })
+        .finally(function () {
+            reqRequesterBznoVerifyBtn.disabled = false;
+            reqRequesterBznoVerifyBtn.classList.remove('is-loading');
+            reqRequesterBznoVerifyBtn.innerHTML = reqRequesterBznoVerifyBtnLabel;
+        });
     });
 }
 
@@ -148,6 +316,14 @@ function showReqWarning(msg) {
 function hideReqWarning() {
     var warn = document.getElementById('reqWarning');
     if (warn) warn.style.display = 'none';
+}
+
+function showInlineOrToastWarning(message) {
+    if (typeof window._showToast === 'function') {
+        window._showToast('!', message, 'warning');
+        return;
+    }
+    showReqWarning(message);
 }
 
 function showCreditShortageModal(message) {
@@ -181,6 +357,46 @@ function showCreditShortageModal(message) {
     alert(msg);
 }
 
+function resolveTradeRequestErrorView(data) {
+    var fallbackMessage = data && data.message ? data.message : '거래 요청서 저장 중 오류가 발생했습니다.';
+    var errorCode = data && data.error_code ? String(data.error_code) : '';
+    var errorCategory = data && data.error_category ? String(data.error_category) : '';
+
+    var codeMessageMap = {
+        member_not_logged_in: '로그인이 만료되었습니다. 다시 로그인 후 시도해 주세요.',
+        requester_bzno_empty: '사업자번호를 먼저 확인해 주세요.',
+        requester_company_unresolved: '사업자번호로 기업 정보를 확인하지 못했습니다. 번호를 다시 확인해 주세요.',
+        manager_info_missing: '담당자 이름과 연락처를 입력해 주세요.',
+        manager_phone_invalid: '담당자 연락처 형식이 올바르지 않습니다. 숫자만 입력해 주세요.',
+        invalid_target_kedcd: '대상 기업 정보가 올바르지 않습니다. 페이지를 새로고침 후 다시 시도해 주세요.',
+        target_company_not_found: '대상 기업 정보를 찾지 못했습니다. 잠시 후 다시 시도해 주세요.',
+        invalid_trade_direction: '거래 방향을 다시 선택해 주세요.',
+        trade_purpose_empty: '거래 목적을 1개 이상 선택해 주세요.',
+        invalid_trade_purpose: '선택한 거래 목적이 유효하지 않습니다. 다시 선택해 주세요.',
+        mapped_trade_purpose_empty: '거래 목적을 다시 선택해 주세요.',
+        desired_item_empty: '거래 희망 품목을 입력해 주세요.',
+        desired_item_too_long: '거래 희망 품목은 255자 이내로 입력해 주세요.',
+        message_too_long: '추가 문의 사항은 500자 이내로 입력해 주세요.',
+        invalid_trade_type: '거래 타입을 다시 선택해 주세요.',
+        same_company_request: '자기 자신의 기업에는 거래 요청을 보낼 수 없습니다.',
+        invalid_request_member_info: '회원 정보가 올바르지 않습니다. 관리자에게 문의해 주세요.',
+        credit_not_enough: '매칭 가능 크레딧이 부족합니다. 크레딧 충전 후 다시 시도해 주세요.',
+        credit_consume_failed: '크레딧 처리 중 문제가 발생했습니다. 잠시 후 다시 시도해 주세요.',
+        trade_request_insert_failed: '거래 요청서 저장 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.',
+        credit_used_update_failed: '거래 요청 상태 반영 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.'
+    };
+
+    var message = codeMessageMap[errorCode] || fallbackMessage;
+    var isCreditIssue = !!(data && data.plan_required) || errorCategory === 'credit' || errorCode === 'credit_not_enough';
+    var shouldRelogin = errorCode === 'member_not_logged_in';
+
+    return {
+        message: message,
+        isCreditIssue: isCreditIssue,
+        shouldRelogin: shouldRelogin
+    };
+}
+
 /* ---- 다음 버튼: 검증 → 거래 타입 선택 ---- */
 var goToTypeBtn = document.getElementById('goToTypeStep');
 if (goToTypeBtn) {
@@ -197,6 +413,20 @@ if (goToTypeBtn) {
             return;
         }
         if (itemField) itemField.style.borderColor = '';
+        var bznoBox = document.getElementById('reqBznoBox');
+        var managerBox = document.getElementById('reqManagerBox');
+        if (bznoBox && !bznoBox.hidden) {
+            showInlineOrToastWarning('사업자번호와 담당자 정보를 입력해 주세요.');
+            return;
+        }
+        if (managerBox && !managerBox.hidden) {
+            var managerNameField = document.getElementById('reqManagerName');
+            var managerPhoneField = document.getElementById('reqManagerPhone');
+            if (!managerNameField || !managerNameField.value.trim() || !managerPhoneField || normalizeDigits(managerPhoneField.value).length < 9) {
+                showInlineOrToastWarning('사업자번호와 담당자 정보를 입력해 주세요.');
+                return;
+            }
+        }
         hideReqWarning();
         closeModal('modalRequest');
         openModal('modalType');
@@ -267,6 +497,19 @@ dirChips.querySelectorAll('input[name="req_dir"]').forEach(function (r) {
 renderTypes('buy');
 setRequesterCompany(MATCH_REQUEST_CONTEXT.requesterCompany || null);
 setRequestTarget(MATCH_REQUEST_CONTEXT.target || null);
+updateRequesterProfileUi();
+
+var reqManagerPhone = document.getElementById('reqManagerPhone');
+if (reqManagerPhone) {
+    reqManagerPhone.value = requesterProfile.manager_phone || '';
+    reqManagerPhone.addEventListener('input', function () {
+        reqManagerPhone.value = formatPhone(reqManagerPhone.value);
+    });
+}
+var reqManagerName = document.getElementById('reqManagerName');
+if (reqManagerName && requesterProfile.manager_name) {
+    reqManagerName.value = requesterProfile.manager_name;
+}
 
 if (MATCH_REQUEST_CONTEXT.autoOpenOnLoad) {
     openModal('modalRequest');
@@ -335,6 +578,15 @@ if (confirmTypeBtn) {
         formData.set('desired_item', result.data.req_item);
         formData.set('message_content', extraNote && extraNote.value.trim() ? extraNote.value.trim() : DEFAULT_NOTE);
         formData.set('trade_type', matchType.value);
+        var requesterBznoDigits = normalizeDigits((reqRequesterBzno && reqRequesterBzno.value) || (requesterProfile.bzno || ''));
+        if (requesterBznoDigits) {
+            formData.set('requester_bzno', requesterBznoDigits);
+        }
+        var managerBox = document.getElementById('reqManagerBox');
+        if (managerBox && !managerBox.hidden) {
+            formData.set('manager_name', (document.getElementById('reqManagerName').value || '').trim());
+            formData.set('manager_phone', normalizeDigits(document.getElementById('reqManagerPhone').value || ''));
+        }
 
         confirmTypeBtn.disabled = true;
 
@@ -355,13 +607,24 @@ if (confirmTypeBtn) {
         })
         .then(function (data) {
             if (!data || !data.success) {
-                var errorMessage = data && data.message ? data.message : '거래 요청서 저장 중 오류가 발생했습니다.';
-                if (data && data.plan_required) {
-                    showCreditShortageModal(errorMessage);
+                var errorView = resolveTradeRequestErrorView(data || {});
+                if (errorView.isCreditIssue) {
+                    showCreditShortageModal(errorView.message);
                     return;
                 }
-                alert(errorMessage);
+                if (errorView.shouldRelogin && MATCH_REQUEST_CONTEXT && MATCH_REQUEST_CONTEXT.loginCheckUrl) {
+                    alert(errorView.message);
+                    window.location.href = MATCH_REQUEST_CONTEXT.loginCheckUrl;
+                    return;
+                }
+                alert(errorView.message);
                 return;
+            }
+
+            if (managerBox && !managerBox.hidden) {
+                requesterProfile.manager_name = (document.getElementById('reqManagerName').value || '').trim();
+                requesterProfile.manager_phone = formatPhone(document.getElementById('reqManagerPhone').value || '');
+                updateRequesterProfileUi();
             }
 
             closeModal('modalType');

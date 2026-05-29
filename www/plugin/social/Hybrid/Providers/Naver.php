@@ -142,6 +142,16 @@ class Hybrid_Providers_Naver extends Hybrid_Provider_Model_OAuth2
         $this->user->profile->gender        = (array_key_exists('gender',$data))?(($data['gender'] == "M")?"male":"female"):"";
         $this->user->profile->photoURL      = (array_key_exists('profile_image',$data))?$data['profile_image']:"";
 
+        // 네이버 응답별 편차를 고려해 휴대폰 후보 키를 순차 확인합니다.
+        $this->user->profile->phone = "";
+        if( array_key_exists('mobile', $data) && !empty($data['mobile']) ){
+            $this->user->profile->phone = $data['mobile'];
+        } else if( array_key_exists('mobile_e164', $data) && !empty($data['mobile_e164']) ){
+            $this->user->profile->phone = $data['mobile_e164'];
+        } else if( array_key_exists('phone', $data) && !empty($data['phone']) ){
+            $this->user->profile->phone = $data['phone'];
+        }
+
         $this->user->profile->sid         = get_social_convert_id( $this->user->profile->identifier, $this->providerId );
 
         return $this->user->profile;

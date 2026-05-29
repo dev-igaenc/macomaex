@@ -47,6 +47,9 @@ if($w == 'u'){
 if(!$mb_id)
     alert('회원아이디 값이 없습니다. 올바른 방법으로 이용해 주십시오.');
 
+$register_flow = isset($_POST['register_flow']) ? trim((string)$_POST['register_flow']) : '';
+$is_single_join_flow = ($register_flow === 'single_join_v1');
+
 $mb_password    = isset($_POST['mb_password']) ? trim($_POST['mb_password']) : '';
 $mb_name        = isset($_POST['mb_name']) ? trim($_POST['mb_name']) : '';
 $mb_nick        = isset($_POST['mb_name']) ? trim($_POST['mb_name']) : '';
@@ -69,18 +72,23 @@ $mb_mailling    = isset($_POST['mb_mailling'])      ? trim($_POST['mb_mailling']
 $mb_sms         = isset($_POST['mb_sms'])           ? trim($_POST['mb_sms'])         : "";
 $mb_1           = isset($_POST['mb_1'])             ? trim($_POST['mb_1'])           : "";
 $mb_2           = isset($_POST['mb_2'])             ? trim($_POST['mb_2'])           : "";
-$mb_3           = isset($_POST['mb_3'])             ? trim($_POST['mb_3'])           : "";
+// $mb_3           = isset($_POST['mb_3'])             ? trim($_POST['mb_3'])           : "";
+$mb_3           = "";
 $mb_4           = isset($_POST['mb_4'])             ? trim($_POST['mb_4'])           : "";
 $mb_open        = isset($_POST['mb_open'])          ? trim($_POST['mb_open'])        : "";
 $mb_open_default = isset($_POST['mb_open_default']) ? trim($_POST['mb_open_default']) : "";
 $mb_nick_default = isset($_POST['mb_nick_default']) ? trim($_POST['mb_nick_default']) : "";
 $mb_company     = isset($_POST['mb_company'])       ? trim($_POST['mb_company'])     : "";
-$mb_5           = isset($_POST['mb_5'])             ? trim($_POST['mb_5'])           : "";
-$mb_6           = isset($_POST['mb_6'])             ? trim($_POST['mb_6'])           : "";
-$mb_7           = isset($_POST['mb_7'])             ? trim($_POST['mb_7'])           : "";
+// $mb_5           = isset($_POST['mb_5'])             ? trim($_POST['mb_5'])           : "";
+// $mb_6           = isset($_POST['mb_6'])             ? trim($_POST['mb_6'])           : "";
+// $mb_7           = isset($_POST['mb_7'])             ? trim($_POST['mb_7'])           : "";
 $mb_8           = isset($_POST['mb_8'])             ? trim($_POST['mb_8'])           : "";
+$mb_5           = "";
+$mb_6           = "";
+$mb_7           = "";
 $mb_9_list      = (isset($_POST['mb_9']) && is_array($_POST['mb_9'])) ? $_POST['mb_9'] : array();
-$mb_10_list     = (isset($_POST['mb_10']) && is_array($_POST['mb_10'])) ? $_POST['mb_10'] : array();
+// $mb_10_list     = (isset($_POST['mb_10']) && is_array($_POST['mb_10'])) ? $_POST['mb_10'] : array();
+$mb_10_list     = array();
 
 $mb_9_list = array_map('trim', $mb_9_list);
 $mb_10_list = array_map('trim', $mb_10_list);
@@ -93,7 +101,8 @@ $mb_10_list = array_values(array_filter($mb_10_list, static function ($value) {
 }));
 
 $mb_9 = implode(":|:", $mb_9_list);
-$mb_10 = implode(":|:", $mb_10_list);
+// $mb_10 = implode(":|:", $mb_10_list);
+$mb_10 = "";
 $comnum = $mb_4;
 
 if (!isset($default) || !is_array($default)) {
@@ -101,9 +110,24 @@ if (!isset($default) || !is_array($default)) {
 }
 
 $mb_name        = clean_xss_tags($mb_name);
+if ($is_single_join_flow && $mb_name === '') {
+    $mb_name = $mb_id;
+}
 $mb_email       = get_email_address($mb_email);
 $mb_homepage    = clean_xss_tags($mb_homepage);
 $mb_tel         = clean_xss_tags($mb_tel);
+$mb_8_digits    = preg_replace('/[^0-9]/', '', $mb_8);
+if ($mb_8_digits !== '') {
+    if (strlen($mb_8_digits) >= 11) {
+        $mb_8 = substr($mb_8_digits, 0, 3) . '-' . substr($mb_8_digits, 3, 4) . '-' . substr($mb_8_digits, 7, 4);
+    } else if (strlen($mb_8_digits) >= 10) {
+        $mb_8 = substr($mb_8_digits, 0, 3) . '-' . substr($mb_8_digits, 3, 3) . '-' . substr($mb_8_digits, 6, 4);
+    } else {
+        $mb_8 = $mb_8_digits;
+    }
+} else {
+    $mb_8 = '';
+}
 $mb_zip1        = preg_replace('/[^0-9]/', '', $mb_zip1);
 $mb_zip2        = preg_replace('/[^0-9]/', '', $mb_zip2);
 $mb_addr1       = clean_xss_tags($mb_addr1);
@@ -121,9 +145,11 @@ if ($w == '') {
 
     // 이름, 닉네임에 utf-8 이외의 문자가 포함됐다면 오류
     // 서버환경에 따라 정상적으로 체크되지 않을 수 있음.
-    $tmp_mb_name = iconv('UTF-8', 'UTF-8//IGNORE', $mb_name);
-    if($tmp_mb_name != $mb_name) {
-        alert('이름을 올바르게 입력해 주십시오.');
+    if (!$is_single_join_flow) {
+        $tmp_mb_name = iconv('UTF-8', 'UTF-8//IGNORE', $mb_name);
+        if($tmp_mb_name != $mb_name) {
+            alert('이름을 올바르게 입력해 주십시오.');
+        }
     }
 	/*
     $tmp_mb_nick = iconv('UTF-8', 'UTF-8//IGNORE', $mb_nick);
@@ -138,7 +164,9 @@ if ($w == '') {
     if($w == '' && $mb_password != $mb_password_re)
         alert('비밀번호가 일치하지 않습니다.');
 	*/
-    if ($msg = empty_mb_name($mb_name))       alert($msg, "", true, true);
+    if (!$is_single_join_flow) {
+        if ($msg = empty_mb_name($mb_name))       alert($msg, "", true, true);
+    }
     if ($msg = empty_mb_email($mb_email))   alert($msg, "", true, true);
     if ($msg = reserve_mb_id($mb_id))       alert($msg, "", true, true);
     //if ($msg = reserve_mb_nick($mb_nick))   alert($msg, "", true, true);
@@ -149,8 +177,10 @@ if ($w == '') {
     if ($msg = prohibit_mb_email($mb_email))alert($msg, "", true, true);
 
     // 휴대폰 필수입력일 경우 휴대폰번호 유효성 체크
-    if ($config['cf_use_hp'] || ($config['cf_cert_hp'] || $config['cf_cert_simple']) && $config['cf_req_hp']) {
-        if ($msg = valid_mb_hp($mb_hp))     alert($msg, "", true, true);
+    if (!$is_single_join_flow) {
+        if ($config['cf_use_hp'] || ($config['cf_cert_hp'] || $config['cf_cert_simple']) && $config['cf_req_hp']) {
+            if ($msg = valid_mb_hp($mb_hp))     alert($msg, "", true, true);
+        }
     }
 
     if ($w=='') {
@@ -162,7 +192,7 @@ if ($w == '') {
         }
 
         // 본인확인 체크
-        if($config['cf_cert_use'] && $config['cf_cert_req']) {
+        if(!$is_single_join_flow && $config['cf_cert_use'] && $config['cf_cert_req']) {
             $post_cert_no = isset($_POST['cert_no']) ? trim($_POST['cert_no']) : '';
             if($post_cert_no !== get_session('ss_cert_no') || ! get_session('ss_cert_no'))
                 alert("회원가입을 위해서는 본인확인을 해주셔야 합니다.");
@@ -280,14 +310,14 @@ if ($w == '') {
 					 mb_company = '{$mb_company}',
                      mb_1 = '{$mb_1}',
                      mb_2 = '{$mb_2}',
-                     mb_3 = '{$mb_3}',
+                     /* mb_3 = '{$mb_3}', */
                      mb_4 = '{$mb_4}',
-                     mb_5 = '{$mb_5}',
-                     mb_6 = '{$mb_6}',
-                     mb_7 = '{$mb_7}',
+                     /* mb_5 = '{$mb_5}', */
+                     /* mb_6 = '{$mb_6}', */
+                     /* mb_7 = '{$mb_7}', */
                      mb_8 = '{$mb_8}',
-                     mb_9 = '{$mb_9}',
-                     mb_10 = '{$mb_10}'
+                     mb_9 = '{$mb_9}'
+                     /* mb_10 = '{$mb_10}' */
                      {$sql_certify} ";
 
     // 이메일 인증을 사용하지 않는다면 이메일 인증시간을 바로 넣는다
@@ -491,14 +521,14 @@ if($mb_profile) $sql .= "                    mb_profile = '{$mb_profile}',";
 $sql .= "                    mb_company = '{$mb_company}',";
 if($mb_1) $sql .= "                    mb_1 = '{$mb_1}',";
 if($mb_2) $sql .= "                    mb_2 = '{$mb_2}',";
-$sql .= "                    mb_3 = '{$mb_3}',";
+// $sql .= "                    mb_3 = '{$mb_3}',";
 $sql .= "                    mb_4 = '{$mb_4}',";
-if($mb_5) $sql .= "                    mb_5 = '{$mb_5}',";
-$sql .= "                    mb_6 = '{$mb_6}',";
-$sql .= "                    mb_7 = '{$mb_7}',";
-$sql .= "                    mb_8 = '{$mb_8}',";
+// if($mb_5) $sql .= "                    mb_5 = '{$mb_5}',";
+// $sql .= "                    mb_6 = '{$mb_6}',";
+// $sql .= "                    mb_7 = '{$mb_7}',";
+if($mb_8) $sql .= "                    mb_8 = '{$mb_8}',";
 if($mb_9) $sql .= "                    mb_9 = '{$mb_9}',";
-if($mb_10) $sql .= "                    mb_10 = '{$mb_10}'";
+// if($mb_10) $sql .= "                    mb_10 = '{$mb_10}'";
 if(substr($sql,-1)==",") $sql=substr($sql,0,-1);
 //$sql .= "                    {$sql_password}";
 //$sql .= "                    {$sql_nick_date}";
@@ -781,15 +811,9 @@ if ($w == '') {
 	}
 	alimtalk_write_event_log('signup', $signupAlimtalkStatus, $signupAlimtalkPayload);
 	//알림톡 발송 끝
-	if($url) {
-		if (preg_match('/%[0-9A-Fa-f]{2}/', $url)) {
-			// 2) 디코딩
-			$url = urldecode($url);
-		}
-		goto_url($url);
-	}else{
-		goto_url(G5_HTTP_BBS_URL.'/register_result.php');
-	}
+	// 회원가입 완료 후에는 항상 결과 페이지를 거치고,
+	// 이동 목적지는 register_result.skin.php의 버튼 분기에서 처리한다.
+	goto_url(G5_HTTP_BBS_URL.'/register_result.php');
 } else if ($w == 'u') {
     $row  = sql_fetch(" select mb_password from {$g5['member_table']} where mb_id = '{$member['mb_id']}' ");
     $tmp_password = $row['mb_password'];
