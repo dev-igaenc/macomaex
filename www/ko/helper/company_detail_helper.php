@@ -173,6 +173,7 @@ function company_detail_trade_request_classify_failure($errorCode) {
 		'trade_request_insert_failed' => 'system',
 		'credit_consume_failed' => 'credit',
 		'credit_used_update_failed' => 'system',
+		'member_profile_update_failed' => 'system',
 	);
 
 	return $map[$errorCode] ?? 'unknown';
@@ -224,6 +225,14 @@ function company_detail_trade_request_success_response($message, $payload = arra
 	company_detail_trade_request_json_response(true, $message, is_array($extra) ? $extra : array());
 }
 
+function company_detail_format_phone_hyphen($phoneDigits) {
+	$digits = preg_replace('/[^0-9]/', '', (string)$phoneDigits);
+	if (strlen($digits) === 11) {
+		return preg_replace('/(\d{3})(\d{4})(\d{4})/', '$1-$2-$3', $digits);
+	}
+	return $digits;
+}
+
 function company_detail_trade_request_consume_credit($memberId, $trNo, $targetKedcd, $tradeType, $creditAmount) {
 	$memberId = trim((string)$memberId);
 	$trNo = (int)$trNo;
@@ -247,11 +256,9 @@ function company_detail_trade_request_consume_credit($memberId, $trNo, $targetKe
 		);
 	}
 
-	sql_query("START TRANSACTION");
 	$ledgerLast = credit_ledger_get_latest_row($memberId, true);
 	$currentCredit = isset($ledgerLast['credit_after']) ? (int)$ledgerLast['credit_after'] : 0;
 	if ($currentCredit < $creditAmount) {
-		sql_query("ROLLBACK");
 		return array(
 			'success' => false,
 			'message' => '요청 가능 크레딧이 부족합니다. (필요: ' . $creditAmount . ')',
@@ -278,8 +285,6 @@ function company_detail_trade_request_consume_credit($memberId, $trNo, $targetKe
 
 	$historyResult = sql_query($historySql, false);
 	if (!$historyResult) {
-		sql_query("ROLLBACK");
-
 		return array(
 			'success' => false,
 			'message' => '크레딧 이력 저장에 실패했습니다.',
@@ -289,7 +294,6 @@ function company_detail_trade_request_consume_credit($memberId, $trNo, $targetKe
 	// USE 1건을 FIFO LOT 차감으로 분해해 실제 사용 LOT를 기록한다.
 	$lotUse = credit_lot_allocate_use($memberId, $useHistoryId, $creditAmount);
 	if (empty($lotUse['ok'])) {
-		sql_query("ROLLBACK");
 		$lotMsg = isset($lotUse['message']) ? (string)$lotUse['message'] : '';
 		$isLotShortage = ($lotMsg === 'not enough lot remain');
 		$userMessage = $isLotShortage
@@ -305,8 +309,6 @@ function company_detail_trade_request_consume_credit($memberId, $trNo, $targetKe
 			'plan_required' => $isLotShortage,
 		);
 	}
-
-	sql_query("COMMIT");
 
 	return array(
 		'success' => true,
@@ -574,6 +576,14 @@ function company_detail_trade_request_profile_state($member) {
 	);
 }
 
+function company_detail_should_overwrite_member_company_name($currentValue, $memberId) {
+	$currentValue = trim((string)$currentValue);
+	$memberId = trim((string)$memberId);
+	if ($currentValue === '') return true;
+	if ($memberId !== '' && $currentValue === $memberId) return true;
+	return false;
+}
+
 function company_detail_handle_trade_request_verify_bzno($member, $request) {
 	if (empty($member['mb_id'])) {
 		company_detail_trade_request_json_response(false, '로그인 후 이용해 주세요.');
@@ -660,6 +670,7 @@ function company_detail_handle_trade_request_insert($member, $request) {
 		$managerNameToSave = $managerName;
 		$managerPhoneToSave = $managerPhone;
 	}
+	$managerPhoneToSaveFormatted = company_detail_format_phone_hyphen($managerPhoneToSave);
 
 	$targetKedcd = isset($request['target_kedcd']) ? preg_replace('/[^0-9]/', '', (string)$request['target_kedcd']) : '';
 	$tradeDirectionRaw = isset($request['trade_direction']) ? trim((string)$request['trade_direction']) : '';
@@ -858,8 +869,10 @@ function company_detail_handle_trade_request_insert($member, $request) {
 		adm_chk=0,
 		adm_memo=NULL";
 
+	sql_query("START TRANSACTION");
 	$insertResult = sql_query($insertSql, false);
 	if (!$insertResult) {
+		sql_query("ROLLBACK");
 		company_detail_trade_request_fail_response('거래 요청서 저장 중 오류가 발생했습니다.', 'trade_request_insert_failed', array(
 			'request_id' => $requestId,
 			'mb_id' => $requestMemberId,
@@ -875,7 +888,7 @@ function company_detail_handle_trade_request_insert($member, $request) {
 	$insertId = sql_insert_id();
 	$creditConsume = company_detail_trade_request_consume_credit($requestMemberId, $insertId, $targetKedcd, $tradeType, $creditAmount);
 	if (empty($creditConsume['success'])) {
-		sql_query("delete from trade_request where tr_no='" . (int)$insertId . "' and credit_used=0", false);
+		sql_query("ROLLBACK");
 		$planRequired = !empty($creditConsume['plan_required']);
 		company_detail_trade_request_fail_response($creditConsume['message'] ?? '크레딧 차감 중 오류가 발생했습니다.', 'credit_consume_failed', array(
 			'request_id' => $requestId,
@@ -902,6 +915,7 @@ function company_detail_handle_trade_request_insert($member, $request) {
 
 	$creditUsedUpdated = sql_query("update trade_request set credit_used=1 where tr_no='" . (int)$insertId . "'", false);
 	if (!$creditUsedUpdated) {
+		sql_query("ROLLBACK");
 		company_detail_trade_request_fail_response('거래 요청 상태 갱신 중 오류가 발생했습니다.', 'credit_used_update_failed', array(
 			'request_id' => $requestId,
 			'tr_no' => $insertId,
@@ -933,32 +947,37 @@ function company_detail_handle_trade_request_insert($member, $request) {
 		$needMemberUpdate = true;
 		$memberUpdateSet[] = "mb_4='" . sql_escape_string($requesterBzno) . "'";
 	}
-	// 2) 회원명/닉네임이 비어있는 회원만 최초 1회 기업명 저장
-	if ($requestCompanyName !== '' && $memberNameCurrent === '') {
+	// 2) 회원명/닉네임이 비어 있거나 기본값(=mb_id)인 경우 기업명 저장
+	if ($requestCompanyName !== '' && company_detail_should_overwrite_member_company_name($memberNameCurrent, $requestMemberId)) {
 		$needMemberUpdate = true;
 		$memberUpdateSet[] = "mb_name='" . sql_escape_string($requestCompanyName) . "'";
 	}
-	if ($requestCompanyName !== '' && $memberNickCurrent === '') {
+	if ($requestCompanyName !== '' && company_detail_should_overwrite_member_company_name($memberNickCurrent, $requestMemberId)) {
 		$needMemberUpdate = true;
 		$memberUpdateSet[] = "mb_nick='" . sql_escape_string($requestCompanyName) . "'";
 	}
-	// 3) 담당자 정보도 비어있는 회원만 최초 1회 저장
-	if ($managerNameCurrent === '' || $managerPhoneCurrent === '') {
+	// 3) 담당자 정보는 최종 제출 시점에 거래 요청 데이터와 함께 동기화한다.
+	if ($managerNameToSave !== '' || $managerPhoneToSaveFormatted !== '') {
 		$needMemberUpdate = true;
 		$memberUpdateSet[] = "mb_6='" . sql_escape_string($managerNameToSave) . "'";
-		$memberUpdateSet[] = "mb_8='" . sql_escape_string($managerPhoneToSave) . "'";
+		$memberUpdateSet[] = "mb_8='" . sql_escape_string($managerPhoneToSaveFormatted) . "'";
 	}
 	if ($needMemberUpdate && !empty($memberUpdateSet)) {
 		$mbId = sql_escape_string((string)$member['mb_id']);
 		$memberUpdateSql = "UPDATE g5_member SET " . implode(', ', $memberUpdateSet) . " WHERE mb_id='{$mbId}'";
 		$memberUpdateResult = sql_query($memberUpdateSql, false);
 		if (!$memberUpdateResult) {
-			company_detail_trade_request_log('member_profile_update_failed', array(
+			sql_query("ROLLBACK");
+			company_detail_trade_request_fail_response('회원 정보 저장 중 오류가 발생했습니다.', 'member_profile_update_failed', array(
+				'request_id' => $requestId,
 				'tr_no' => $insertId,
 				'member_id' => $member['mb_id'] ?? '',
+				'stage' => 'member_update',
 			));
 		}
 	}
+
+	sql_query("COMMIT");
 
 	company_detail_trade_request_log('request_created', array(
 		'tr_no' => $insertId,
