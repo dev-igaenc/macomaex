@@ -5,6 +5,7 @@ $g5['title'] = "로그인 검사";
 
 $mb_id       = isset($_POST['mb_id']) ? trim($_POST['mb_id']) : '';
 $mb_password = isset($_POST['mb_password']) ? trim($_POST['mb_password']) : '';
+$auto_login  = isset($_POST['auto_login']) ? (int) $_POST['auto_login'] : 0;
 
 run_event('member_login_check_before', $mb_id);
 
@@ -75,7 +76,7 @@ if($config['cf_use_point']) {
 
 // 3.26
 // 아이디 쿠키에 한달간 저장
-if (isset($auto_login) && $auto_login) {
+if ($auto_login) {
     // 3.27
     // 자동로그인 ---------------------------
     // 쿠키 한달간 저장
