@@ -283,6 +283,46 @@ function showCreditShortageModal(message) {
     alert(msg);
 }
 
+function resolveTradeRequestErrorView(data) {
+    var fallbackMessage = data && data.message ? data.message : '거래 요청서 저장 중 오류가 발생했습니다.';
+    var errorCode = data && data.error_code ? String(data.error_code) : '';
+    var errorCategory = data && data.error_category ? String(data.error_category) : '';
+
+    var codeMessageMap = {
+        member_not_logged_in: '로그인이 만료되었습니다. 다시 로그인 후 시도해 주세요.',
+        requester_bzno_empty: '사업자번호를 먼저 확인해 주세요.',
+        requester_company_unresolved: '사업자번호로 기업 정보를 확인하지 못했습니다. 번호를 다시 확인해 주세요.',
+        manager_info_missing: '담당자 이름과 연락처를 입력해 주세요.',
+        manager_phone_invalid: '담당자 연락처 형식이 올바르지 않습니다. 숫자만 입력해 주세요.',
+        invalid_target_kedcd: '대상 기업 정보가 올바르지 않습니다. 페이지를 새로고침 후 다시 시도해 주세요.',
+        target_company_not_found: '대상 기업 정보를 찾지 못했습니다. 잠시 후 다시 시도해 주세요.',
+        invalid_trade_direction: '거래 방향을 다시 선택해 주세요.',
+        trade_purpose_empty: '거래 목적을 1개 이상 선택해 주세요.',
+        invalid_trade_purpose: '선택한 거래 목적이 유효하지 않습니다. 다시 선택해 주세요.',
+        mapped_trade_purpose_empty: '거래 목적을 다시 선택해 주세요.',
+        desired_item_empty: '거래 희망 품목을 입력해 주세요.',
+        desired_item_too_long: '거래 희망 품목은 255자 이내로 입력해 주세요.',
+        message_too_long: '추가 문의 사항은 500자 이내로 입력해 주세요.',
+        invalid_trade_type: '거래 타입을 다시 선택해 주세요.',
+        same_company_request: '자기 자신의 기업에는 거래 요청을 보낼 수 없습니다.',
+        invalid_request_member_info: '회원 정보가 올바르지 않습니다. 관리자에게 문의해 주세요.',
+        credit_not_enough: '매칭 가능 크레딧이 부족합니다. 크레딧 충전 후 다시 시도해 주세요.',
+        credit_consume_failed: '크레딧 처리 중 문제가 발생했습니다. 잠시 후 다시 시도해 주세요.',
+        trade_request_insert_failed: '거래 요청서 저장 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.',
+        credit_used_update_failed: '거래 요청 상태 반영 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.'
+    };
+
+    var message = codeMessageMap[errorCode] || fallbackMessage;
+    var isCreditIssue = !!(data && data.plan_required) || errorCategory === 'credit' || errorCode === 'credit_not_enough';
+    var shouldRelogin = errorCode === 'member_not_logged_in';
+
+    return {
+        message: message,
+        isCreditIssue: isCreditIssue,
+        shouldRelogin: shouldRelogin
+    };
+}
+
 /* ---- 다음 버튼: 검증 → 거래 타입 선택 ---- */
 var goToTypeBtn = document.getElementById('goToTypeStep');
 if (goToTypeBtn) {
@@ -493,12 +533,17 @@ if (confirmTypeBtn) {
         })
         .then(function (data) {
             if (!data || !data.success) {
-                var errorMessage = data && data.message ? data.message : '거래 요청서 저장 중 오류가 발생했습니다.';
-                if (data && data.plan_required) {
-                    showCreditShortageModal(errorMessage);
+                var errorView = resolveTradeRequestErrorView(data || {});
+                if (errorView.isCreditIssue) {
+                    showCreditShortageModal(errorView.message);
                     return;
                 }
-                alert(errorMessage);
+                if (errorView.shouldRelogin && MATCH_REQUEST_CONTEXT && MATCH_REQUEST_CONTEXT.loginCheckUrl) {
+                    alert(errorView.message);
+                    window.location.href = MATCH_REQUEST_CONTEXT.loginCheckUrl;
+                    return;
+                }
+                alert(errorView.message);
                 return;
             }
 
