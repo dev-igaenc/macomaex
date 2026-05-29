@@ -72,8 +72,13 @@ function resolve_keyword_tag_total_count_detail($keyword_count, $tags) {
 	return is_array($tags) ? count($tags) : 0;
 }
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'trade_request_insert') {
-	company_detail_handle_trade_request_insert($member, $_POST);
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
+	if ($_POST['action'] === 'trade_request_verify_bzno') {
+		company_detail_handle_trade_request_verify_bzno($member, $_POST);
+	}
+	if ($_POST['action'] === 'trade_request_insert') {
+		company_detail_handle_trade_request_insert($member, $_POST);
+	}
 }
 
 // 진입 시 암호화 기업코드 복호화 후 조회하기 위함
@@ -192,6 +197,9 @@ $companyProductLineText = implode(' · ', $companyKeywordTags);
 // 모달에서 쓰는 "우리 기업 정보"는 로그인 회원의 사업자번호 기준 회사 정보로 맞춘다.
 $requesterCompanyData = !empty($member['mb_id'])
 	? trade_request_member_company_data($member['mb_4'] ?? '')
+	: array();
+$requesterProfileState = !empty($member['mb_id'])
+	? company_detail_trade_request_profile_state($member)
 	: array();
 
 $tradeRequestLoginParams = $_GET;
@@ -342,6 +350,7 @@ window.MATCH_REQUEST_CONTEXT = {
 	autoOpenOnLoad: <?php echo $shouldOpenTradeRequestModal ? 'true' : 'false'; ?>,
 	defaultRequestMessage: <?php echo json_encode($defaultMessage, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>,
 	requesterCompany: <?php echo json_encode($requesterCompanyData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>,
+	requesterProfile: <?php echo json_encode($requesterProfileState, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>,
 	target: {
 		kedcd: <?php echo json_encode($company['KEDCD'] ?? '', JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>,
 		company: <?php echo json_encode($company['ENP_NM'] ?? '', JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>,

@@ -19,6 +19,25 @@ var DEFAULT_NOTE = MATCH_REQUEST_CONTEXT.defaultRequestMessage
         ? String(window.COMPANY_DETAIL_DATA.defaultRequestMessage)
         : '');
 var REQUEST_ENDPOINT = MATCH_REQUEST_CONTEXT.endpoint || '/ko/company_detail.php';
+var requesterProfile = MATCH_REQUEST_CONTEXT.requesterProfile || {};
+
+function normalizeDigits(value) {
+    return String(value || '').replace(/\D/g, '');
+}
+
+function formatBizNo(value) {
+    var digits = normalizeDigits(value).slice(0, 10);
+    if (digits.length <= 3) return digits;
+    if (digits.length <= 5) return digits.slice(0, 3) + '-' + digits.slice(3);
+    return digits.slice(0, 3) + '-' + digits.slice(3, 5) + '-' + digits.slice(5);
+}
+
+function formatPhone(value) {
+    var digits = normalizeDigits(value).slice(0, 11);
+    if (digits.length < 4) return digits;
+    if (digits.length < 8) return digits.slice(0, 3) + '-' + digits.slice(3);
+    return digits.slice(0, 3) + '-' + digits.slice(3, 7) + '-' + digits.slice(7);
+}
 
 function setText(id, value) {
     var el = document.getElementById(id);
@@ -72,6 +91,21 @@ function setRequesterCompany(company) {
     homepageCell.innerHTML = '<a href="' + escapeHtml(homepageUrl) + '" target="_blank" rel="noopener noreferrer">' + escapeHtml(homepageText) + '</a>';
 }
 
+function updateRequesterProfileUi() {
+    var bznoBox = document.getElementById('reqBznoBox');
+    var managerBox = document.getElementById('reqManagerBox');
+    var companyInfoTable = document.getElementById('reqCompanyInfoTable');
+    var companyInfoCallout = document.getElementById('reqCompanyInfoCallout');
+    if (!bznoBox || !managerBox) return;
+
+    var hasCompany = !!(MATCH_REQUEST_CONTEXT.requesterCompany && MATCH_REQUEST_CONTEXT.requesterCompany.company);
+    var hasManager = !!(requesterProfile.manager_name && requesterProfile.manager_phone);
+    bznoBox.hidden = hasCompany;
+    managerBox.hidden = hasManager;
+    if (companyInfoTable) companyInfoTable.hidden = !hasCompany;
+    if (companyInfoCallout) companyInfoCallout.hidden = !hasCompany;
+}
+
 function setRequestTarget(target) {
     MATCH_REQUEST_CONTEXT.target = target || null;
     window.MATCH_REQUEST_CONTEXT = MATCH_REQUEST_CONTEXT;
@@ -121,6 +155,66 @@ if (openMatchBtn) {
     });
 }
 
+var reqRequesterBzno = document.getElementById('reqRequesterBzno');
+var reqRequesterBznoVerifyBtn = document.getElementById('reqRequesterBznoVerifyBtn');
+var reqRequesterBznoVerifyBtnLabel = reqRequesterBznoVerifyBtn ? reqRequesterBznoVerifyBtn.innerHTML : '확인';
+if (reqRequesterBzno) {
+    reqRequesterBzno.value = formatBizNo(requesterProfile.bzno || '');
+    reqRequesterBzno.addEventListener('input', function () {
+        reqRequesterBzno.value = formatBizNo(reqRequesterBzno.value);
+    });
+}
+if (reqRequesterBznoVerifyBtn) {
+    reqRequesterBznoVerifyBtn.addEventListener('click', function () {
+        var bznoDigits = normalizeDigits(reqRequesterBzno ? reqRequesterBzno.value : '');
+        if (bznoDigits.length !== 10) {
+            showInlineOrToastWarning('사업자등록번호 10자리를 입력해 주세요.');
+            return;
+        }
+
+        reqRequesterBznoVerifyBtn.disabled = true;
+        reqRequesterBznoVerifyBtn.classList.add('is-loading');
+        reqRequesterBznoVerifyBtn.innerHTML = '<span class="req-btn-spinner" aria-hidden="true"></span><span>확인중</span>';
+        var formData = new URLSearchParams();
+        formData.set('action', 'trade_request_verify_bzno');
+        formData.set('bzno', bznoDigits);
+
+        fetch(REQUEST_ENDPOINT, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: formData.toString()
+        })
+        .then(function (response) {
+            if (!response.ok) throw new Error('HTTP_' + response.status);
+            return response.json();
+        })
+        .then(function (data) {
+            if (!data || !data.success) {
+                showInlineOrToastWarning(data && data.message ? data.message : '사업자번호 확인 중 오류가 발생했습니다.');
+                return;
+            }
+            requesterProfile.bzno = normalizeDigits(data.bzno || bznoDigits);
+            if (reqRequesterBzno) reqRequesterBzno.value = formatBizNo(data.bzno || bznoDigits);
+            setRequesterCompany(data.company || null);
+            updateRequesterProfileUi();
+            if (typeof window._showToast === 'function') {
+                window._showToast('✓', '사업자번호 확인이 완료되었습니다.', 'success');
+            }
+        })
+        .catch(function () {
+            showInlineOrToastWarning('서버 통신 중 오류가 발생했습니다.');
+        })
+        .finally(function () {
+            reqRequesterBznoVerifyBtn.disabled = false;
+            reqRequesterBznoVerifyBtn.classList.remove('is-loading');
+            reqRequesterBznoVerifyBtn.innerHTML = reqRequesterBznoVerifyBtnLabel;
+        });
+    });
+}
+
 /* ---- 거래 타입 카드 라디오 동기화 ---- */
 document.querySelectorAll('.trm-type-card').forEach(function (card) {
     card.addEventListener('click', function () {
@@ -148,6 +242,14 @@ function showReqWarning(msg) {
 function hideReqWarning() {
     var warn = document.getElementById('reqWarning');
     if (warn) warn.style.display = 'none';
+}
+
+function showInlineOrToastWarning(message) {
+    if (typeof window._showToast === 'function') {
+        window._showToast('!', message, 'warning');
+        return;
+    }
+    showReqWarning(message);
 }
 
 function showCreditShortageModal(message) {
@@ -197,6 +299,20 @@ if (goToTypeBtn) {
             return;
         }
         if (itemField) itemField.style.borderColor = '';
+        var bznoBox = document.getElementById('reqBznoBox');
+        var managerBox = document.getElementById('reqManagerBox');
+        if (bznoBox && !bznoBox.hidden) {
+            showInlineOrToastWarning('사업자번호와 담당자 정보를 입력해 주세요.');
+            return;
+        }
+        if (managerBox && !managerBox.hidden) {
+            var managerNameField = document.getElementById('reqManagerName');
+            var managerPhoneField = document.getElementById('reqManagerPhone');
+            if (!managerNameField || !managerNameField.value.trim() || !managerPhoneField || normalizeDigits(managerPhoneField.value).length < 9) {
+                showInlineOrToastWarning('사업자번호와 담당자 정보를 입력해 주세요.');
+                return;
+            }
+        }
         hideReqWarning();
         closeModal('modalRequest');
         openModal('modalType');
@@ -267,6 +383,19 @@ dirChips.querySelectorAll('input[name="req_dir"]').forEach(function (r) {
 renderTypes('buy');
 setRequesterCompany(MATCH_REQUEST_CONTEXT.requesterCompany || null);
 setRequestTarget(MATCH_REQUEST_CONTEXT.target || null);
+updateRequesterProfileUi();
+
+var reqManagerPhone = document.getElementById('reqManagerPhone');
+if (reqManagerPhone) {
+    reqManagerPhone.value = requesterProfile.manager_phone || '';
+    reqManagerPhone.addEventListener('input', function () {
+        reqManagerPhone.value = formatPhone(reqManagerPhone.value);
+    });
+}
+var reqManagerName = document.getElementById('reqManagerName');
+if (reqManagerName && requesterProfile.manager_name) {
+    reqManagerName.value = requesterProfile.manager_name;
+}
 
 if (MATCH_REQUEST_CONTEXT.autoOpenOnLoad) {
     openModal('modalRequest');
@@ -335,6 +464,15 @@ if (confirmTypeBtn) {
         formData.set('desired_item', result.data.req_item);
         formData.set('message_content', extraNote && extraNote.value.trim() ? extraNote.value.trim() : DEFAULT_NOTE);
         formData.set('trade_type', matchType.value);
+        var requesterBznoDigits = normalizeDigits((reqRequesterBzno && reqRequesterBzno.value) || (requesterProfile.bzno || ''));
+        if (requesterBznoDigits) {
+            formData.set('requester_bzno', requesterBznoDigits);
+        }
+        var managerBox = document.getElementById('reqManagerBox');
+        if (managerBox && !managerBox.hidden) {
+            formData.set('manager_name', (document.getElementById('reqManagerName').value || '').trim());
+            formData.set('manager_phone', normalizeDigits(document.getElementById('reqManagerPhone').value || ''));
+        }
 
         confirmTypeBtn.disabled = true;
 
@@ -362,6 +500,12 @@ if (confirmTypeBtn) {
                 }
                 alert(errorMessage);
                 return;
+            }
+
+            if (managerBox && !managerBox.hidden) {
+                requesterProfile.manager_name = (document.getElementById('reqManagerName').value || '').trim();
+                requesterProfile.manager_phone = formatPhone(document.getElementById('reqManagerPhone').value || '');
+                updateRequesterProfileUi();
             }
 
             closeModal('modalType');

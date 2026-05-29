@@ -9,8 +9,13 @@ if (isset($_GET['trade_request_login']) && $_GET['trade_request_login'] === '1')
     $should_open_trade_request_modal = !empty($member['mb_id']);
 }
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'trade_request_insert') {
-    company_detail_handle_trade_request_insert($member, $_POST);
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
+    if ($_POST['action'] === 'trade_request_verify_bzno') {
+        company_detail_handle_trade_request_verify_bzno($member, $_POST);
+    }
+    if ($_POST['action'] === 'trade_request_insert') {
+        company_detail_handle_trade_request_insert($member, $_POST);
+    }
 }
 
 // TOP 배지 퍼센트 표기를 화면용 문자열로 정규화
@@ -299,6 +304,9 @@ $trade_request_login_url = '/bbs/login.php?url=' . urlencode($trade_request_retu
 $requester_company_data = !empty($member['mb_id'])
     ? trade_request_member_company_data($member['mb_4'] ?? '')
     : array();
+$requester_profile_state = !empty($member['mb_id'])
+    ? company_detail_trade_request_profile_state($member)
+    : array();
 
 $hide_theme_svisual = true;
 $hide_theme_pagetop = true;
@@ -453,6 +461,7 @@ window.MATCH_REQUEST_CONTEXT = {
 	autoOpenOnLoad: <?php echo $should_open_trade_request_modal ? 'true' : 'false'; ?>,
 	defaultRequestMessage: <?php echo json_encode($default_message, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>,
 	requesterCompany: <?php echo json_encode($requester_company_data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>,
+	requesterProfile: <?php echo json_encode($requester_profile_state, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>,
 	target: {
 		kedcd: <?php echo json_encode($kedcd, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>,
 		company: <?php echo json_encode($company_name, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>,

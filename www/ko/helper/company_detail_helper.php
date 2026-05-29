@@ -355,6 +355,49 @@ function company_detail_trade_request_send_receiver_mail($tradeRequestNo, $reque
 	return $result;
 }
 
+function company_detail_trade_request_profile_state($member) {
+	$bzno = trade_request_normalize_bzno($member['mb_4'] ?? '');
+	$managerName = trim((string)($member['mb_6'] ?? ''));
+	$managerPhoneRaw = trade_request_normalize_phone($member['mb_8'] ?? '');
+	$managerPhone = $managerPhoneRaw;
+	if (strlen($managerPhoneRaw) === 11) {
+		$managerPhone = preg_replace('/(\d{3})(\d{4})(\d{4})/', '$1-$2-$3', $managerPhoneRaw);
+	}
+
+	$companyData = array();
+	if ($bzno !== '') {
+		$companyData = trade_request_member_company_data($bzno);
+	}
+
+	return array(
+		'bzno' => $bzno,
+		'has_bzno' => $bzno !== '',
+		'has_company' => !empty($companyData['company']),
+		'company' => $companyData,
+		'has_manager' => ($managerName !== '' && $managerPhoneRaw !== ''),
+		'manager_name' => $managerName,
+		'manager_phone' => $managerPhone,
+	);
+}
+
+function company_detail_handle_trade_request_verify_bzno($member, $request) {
+	if (empty($member['mb_id'])) {
+		company_detail_trade_request_json_response(false, '로그인 후 이용해 주세요.');
+	}
+
+	$bzno = trade_request_normalize_bzno($request['bzno'] ?? '');
+	// 모달의 "사업자번호 확인"은 화면 표시용 확인만 수행하고 DB에는 저장하지 않는다.
+	$resolved = trade_request_resolve_company_data_by_bzno($bzno, array('persist' => false));
+	if (empty($resolved['success'])) {
+		company_detail_trade_request_json_response(false, $resolved['message'] ?? '사업자번호 확인에 실패했습니다.');
+	}
+
+	company_detail_trade_request_json_response(true, '기업 정보를 확인했습니다.', array(
+		'company' => $resolved['company'],
+		'bzno' => licenseNum($resolved['bzno']),
+	));
+}
+
 function company_detail_handle_trade_request_insert($member, $request) {
 	$defaultMessage = trade_request_default_message();
 
@@ -366,6 +409,39 @@ function company_detail_handle_trade_request_insert($member, $request) {
 	if (empty($member['mb_id'])) {
 		company_detail_trade_request_log('validation_failed', array('reason' => 'member_not_logged_in'));
 		company_detail_trade_request_json_response(false, '로그인 후 이용해 주세요.');
+	}
+
+	$memberBzno = trade_request_normalize_bzno($member['mb_4'] ?? '');
+	$inputBzno = trade_request_normalize_bzno($request['requester_bzno'] ?? '');
+	$requesterBzno = $memberBzno !== '' ? $memberBzno : $inputBzno;
+	if ($requesterBzno === '') {
+		company_detail_trade_request_json_response(false, '사업자번호를 먼저 확인해 주세요.');
+	}
+
+	// 최종 제출 전 1차 검증: 기업정보를 조회하되 아직 DB에 확정 저장하지 않는다.
+	$resolvedCompany = trade_request_resolve_company_data_by_bzno($requesterBzno, array('persist' => false));
+	if (empty($resolvedCompany['success'])) {
+		company_detail_trade_request_json_response(false, $resolvedCompany['message'] ?? '기업 정보를 확인하지 못했습니다.');
+	}
+	$resolvedCompanyName = trim((string)($resolvedCompany['company']['company'] ?? ''));
+
+	$managerNameCurrent = trim((string)($member['mb_6'] ?? ''));
+	$managerPhoneCurrent = trade_request_normalize_phone($member['mb_8'] ?? '');
+	$memberNameCurrent = trim((string)($member['mb_name'] ?? ''));
+	$memberNickCurrent = trim((string)($member['mb_nick'] ?? ''));
+	$managerNameToSave = $managerNameCurrent;
+	$managerPhoneToSave = $managerPhoneCurrent;
+	if ($managerNameCurrent === '' || $managerPhoneCurrent === '') {
+		$managerName = trim((string)($request['manager_name'] ?? ''));
+		$managerPhone = trade_request_normalize_phone($request['manager_phone'] ?? '');
+		if ($managerName === '' || $managerPhone === '') {
+			company_detail_trade_request_json_response(false, '담당자 정보를 입력해 주세요.');
+		}
+		if (!preg_match('/^[0-9]{9,11}$/', $managerPhone)) {
+			company_detail_trade_request_json_response(false, '담당자 휴대폰 번호 형식을 확인해 주세요.');
+		}
+		$managerNameToSave = $managerName;
+		$managerPhoneToSave = $managerPhone;
 	}
 
 	$targetKedcd = isset($request['target_kedcd']) ? preg_replace('/[^0-9]/', '', (string)$request['target_kedcd']) : '';
@@ -450,8 +526,9 @@ function company_detail_handle_trade_request_insert($member, $request) {
 	}
 
 	$requestMemberId = trim((string)($member['mb_id'] ?? ''));
-	$requestCompanyName = trim((string)($member['mb_name'] ?? ''));
-	$requestBzno = preg_replace('/[^0-9]/', '', (string)($member['mb_4'] ?? ''));
+	$requestCompanyName = $resolvedCompanyName !== '' ? $resolvedCompanyName : trim((string)($member['mb_name'] ?? ''));
+	// 최종 제출 단계에서는 사전 검증으로 확정한 사업자번호를 기준으로 처리한다.
+	$requestBzno = $requesterBzno;
 	$targetCompanyName = trim((string)($targetCompany['ENP_NM'] ?? ''));
 	$targetBzno = preg_replace('/[^0-9]/', '', (string)($targetCompany['BZNO'] ?? ''));
 
@@ -568,6 +645,50 @@ function company_detail_handle_trade_request_insert($member, $request) {
 			'member_id' => $requestMemberId,
 		));
 		company_detail_trade_request_json_response(false, '거래 요청 상태 갱신 중 오류가 발생했습니다.');
+	}
+
+	// 거래요청 insert + 크레딧 차감이 모두 성공한 이후에만 기업정보를 DB에 확정 저장한다.
+	$resolvedCompanyPersist = trade_request_resolve_company_data_by_bzno($requesterBzno, array('persist' => true));
+	if (empty($resolvedCompanyPersist['success'])) {
+		company_detail_trade_request_log('requester_company_persist_failed', array(
+			'tr_no' => $insertId,
+			'bzno' => $requesterBzno,
+			'message' => $resolvedCompanyPersist['message'] ?? '',
+		));
+	}
+
+	$needMemberUpdate = false;
+	$memberUpdateSet = array();
+	// 1) 사업자번호가 비어있는 회원만 최초 1회 저장
+	if ($memberBzno === '' && $requesterBzno !== '') {
+		$needMemberUpdate = true;
+		$memberUpdateSet[] = "mb_4='" . sql_escape_string($requesterBzno) . "'";
+	}
+	// 2) 회원명/닉네임이 비어있는 회원만 최초 1회 기업명 저장
+	if ($requestCompanyName !== '' && $memberNameCurrent === '') {
+		$needMemberUpdate = true;
+		$memberUpdateSet[] = "mb_name='" . sql_escape_string($requestCompanyName) . "'";
+	}
+	if ($requestCompanyName !== '' && $memberNickCurrent === '') {
+		$needMemberUpdate = true;
+		$memberUpdateSet[] = "mb_nick='" . sql_escape_string($requestCompanyName) . "'";
+	}
+	// 3) 담당자 정보도 비어있는 회원만 최초 1회 저장
+	if ($managerNameCurrent === '' || $managerPhoneCurrent === '') {
+		$needMemberUpdate = true;
+		$memberUpdateSet[] = "mb_6='" . sql_escape_string($managerNameToSave) . "'";
+		$memberUpdateSet[] = "mb_8='" . sql_escape_string($managerPhoneToSave) . "'";
+	}
+	if ($needMemberUpdate && !empty($memberUpdateSet)) {
+		$mbId = sql_escape_string((string)$member['mb_id']);
+		$memberUpdateSql = "UPDATE g5_member SET " . implode(', ', $memberUpdateSet) . " WHERE mb_id='{$mbId}'";
+		$memberUpdateResult = sql_query($memberUpdateSql, false);
+		if (!$memberUpdateResult) {
+			company_detail_trade_request_log('member_profile_update_failed', array(
+				'tr_no' => $insertId,
+				'member_id' => $member['mb_id'] ?? '',
+			));
+		}
 	}
 
 	company_detail_trade_request_log('request_created', array(
