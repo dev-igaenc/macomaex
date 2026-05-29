@@ -6,6 +6,9 @@ if (!defined('_GNUBOARD_')) exit;
  * 받은 요청 승인/거절 처리와 보낸 요청 상태 조회를 페이지 밖으로 분리해 관리한다.
  */
 
+include_once(__DIR__ . '/trade_chat_helper.php');
+include_once(__DIR__ . '/alimtalk_log_helper.php');
+
 function my_matching_json_response($payload) {
 	header('Content-Type: application/json; charset=utf-8');
 	echo json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
@@ -95,7 +98,7 @@ function my_matching_handle_trade_request_approval($member, $request) {
 
 	$memberBznoSql = sql_escape_string($memberBzno);
 	$targetRequest = sql_fetch("
-		select tr_no, approval_status
+		select tr_no, approval_status, request_mb_id
 		from trade_request
 		where tr_no='{$idx}'
 		  and target_bzno='{$memberBznoSql}'
@@ -129,6 +132,50 @@ function my_matching_handle_trade_request_approval($member, $request) {
 	$updated = sql_query($updateSql, false);
 	if (!$updated) {
 		my_matching_text_response('500');
+	}
+
+	if ($nextStatus === '1' && (int)($targetRequest['approval_status'] ?? 0) !== 1) {
+		$requestMemberId = trim((string)($targetRequest['request_mb_id'] ?? ''));
+		$alimtalkLogPayload = array(
+			'template_code' => 'accmatching',
+			'tr_no' => $idx,
+			'mb_id' => $member['mb_id'] ?? '',
+			'reason' => '',
+			'to' => '',
+			'request_id' => '',
+			'provider_status' => '',
+			'error_code' => '',
+		);
+		$alimtalkLogStatus = 'skip';
+		if ($requestMemberId !== '') {
+			$requestMemberInfo = getUserInfo($requestMemberId);
+			$requestHp = trim((string)($requestMemberInfo['mb_8'] ?? ''));
+			if ($requestHp === '') {
+				$alimtalkLogPayload['reason'] = 'requester_hp_empty';
+			} elseif (!class_exists('NCP_SENS_AT')) {
+				$alimtalkLogPayload['reason'] = 'alimtalk_class_missing';
+			} else {
+				$alimtalkLogPayload['to'] = $requestHp;
+				$gw_msg = new NCP_SENS_AT();
+				$gw_msg->templateCode = 'accmatching';
+				$gw_msg->to = $requestHp;
+				$sendRes = $gw_msg->send();
+				$alimtalkLogStatus = 'fail';
+				if (is_array($sendRes)) {
+					$alimtalkLogPayload['request_id'] = trim((string)($sendRes['requestId'] ?? ''));
+					$alimtalkLogPayload['provider_status'] = trim((string)($sendRes['statusName'] ?? $sendRes['requestStatusName'] ?? ''));
+					$alimtalkLogPayload['error_code'] = trim((string)($sendRes['statusCode'] ?? $sendRes['errorCode'] ?? ''));
+				}
+				if (is_array($sendRes) && !empty($sendRes['requestId'])) {
+					$alimtalkLogStatus = 'success';
+				} else {
+					$alimtalkLogPayload['reason'] = 'send_failed';
+				}
+			}
+		} else {
+			$alimtalkLogPayload['reason'] = 'request_member_id_empty';
+		}
+		alimtalk_write_event_log('accmatching', $alimtalkLogStatus, $alimtalkLogPayload);
 	}
 
 	if ($nextStatus === '1') {
