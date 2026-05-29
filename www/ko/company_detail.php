@@ -204,7 +204,8 @@ $requesterProfileState = !empty($member['mb_id'])
 
 $tradeRequestLoginParams = $_GET;
 $tradeRequestLoginParams['trade_request_login'] = '1';
-$tradeRequestLoginUrl = '/ko/company_detail.php?' . http_build_query($tradeRequestLoginParams);
+$tradeRequestReturnUrl = '/ko/company_detail.php?' . http_build_query($tradeRequestLoginParams);
+$tradeRequestLoginUrl = '/bbs/login.php?url=' . urlencode($tradeRequestReturnUrl);
 
 // 프론트 렌더링과 마스킹 분기에 필요한 상세 페이지 데이터 구조를 한 번에 정리해 JS로 내려준다.
 $companyDetailData = array(
