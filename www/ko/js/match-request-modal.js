@@ -143,6 +143,20 @@ function getLoginReturnUrl() {
         : ('/bbs/login.php?url=' + encodeURIComponent(window.location.pathname + window.location.search));
 }
 
+function getSignupEntryUrl() {
+    var returnUrl = '';
+    if (MATCH_REQUEST_CONTEXT && MATCH_REQUEST_CONTEXT.tradeRequestReturnUrl) {
+        returnUrl = String(MATCH_REQUEST_CONTEXT.tradeRequestReturnUrl);
+    } else if (MATCH_REQUEST_CONTEXT && MATCH_REQUEST_CONTEXT.sourcePage && String(MATCH_REQUEST_CONTEXT.sourcePage).indexOf('company_detail') === 0) {
+        var fallback = new URL(window.location.href);
+        fallback.searchParams.set('trade_request_login', '1');
+        returnUrl = fallback.pathname + fallback.search;
+    } else {
+        returnUrl = window.location.pathname + window.location.search;
+    }
+    return '/bbs/register.php?url=' + encodeURIComponent(returnUrl);
+}
+
 function openLoginRequiredModal(descriptionHtml) {
     var modalId = 'tradeRequestLoginRequiredModal';
     var overlay = document.getElementById(modalId);
@@ -170,7 +184,7 @@ function openLoginRequiredModal(descriptionHtml) {
             + '    <h3 class="login-guard__title" id="tradeRequestLoginModalTitle">로그인이 필요합니다</h3>'
             + '    <p class="login-guard__desc" id="tradeRequestLoginModalDesc"></p>'
             + '    <div class="login-guard__actions">'
-            + '      <a href="/bbs/register.php" class="login-guard__btn login-guard__btn--ghost">회원가입</a>'
+            + '      <a href="' + getSignupEntryUrl() + '" class="login-guard__btn login-guard__btn--ghost">회원가입</a>'
             + '      <a href="' + getLoginReturnUrl() + '" class="login-guard__btn login-guard__btn--primary">로그인</a>'
             + '    </div>'
             + '  </div>'
@@ -193,6 +207,8 @@ function openLoginRequiredModal(descriptionHtml) {
 
     var loginBtn = overlay.querySelector('.login-guard__btn--primary');
     if (loginBtn) loginBtn.setAttribute('href', getLoginReturnUrl());
+    var signupBtn = overlay.querySelector('.login-guard__btn--ghost');
+    if (signupBtn) signupBtn.setAttribute('href', getSignupEntryUrl());
 
     overlay.classList.add('is-open');
     document.documentElement.classList.add('hide-scroll');

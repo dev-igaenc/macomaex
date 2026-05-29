@@ -348,6 +348,7 @@ window.MATCH_REQUEST_CONTEXT = {
 	sourcePage: "company_detail",
 	isLoggedIn: <?php echo !empty($member['mb_id']) ? 'true' : 'false'; ?>,
 	loginCheckUrl: <?php echo json_encode($tradeRequestLoginUrl, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>,
+	tradeRequestReturnUrl: <?php echo json_encode($tradeRequestReturnUrl, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>,
 	autoOpenOnLoad: <?php echo $shouldOpenTradeRequestModal ? 'true' : 'false'; ?>,
 	defaultRequestMessage: <?php echo json_encode($defaultMessage, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>,
 	requesterCompany: <?php echo json_encode($requesterCompanyData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>,

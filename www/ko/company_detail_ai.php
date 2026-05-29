@@ -458,6 +458,7 @@ window.MATCH_REQUEST_CONTEXT = {
 	isLoggedIn: <?php echo !empty($member['mb_id']) ? 'true' : 'false'; ?>,
 	loginCheckUrl: <?php echo json_encode($detail_login_url, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>,
 	tradeRequestLoginUrl: <?php echo json_encode($trade_request_login_url, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>,
+	tradeRequestReturnUrl: <?php echo json_encode($trade_request_return_url, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>,
 	autoOpenOnLoad: <?php echo $should_open_trade_request_modal ? 'true' : 'false'; ?>,
 	defaultRequestMessage: <?php echo json_encode($default_message, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>,
 	requesterCompany: <?php echo json_encode($requester_company_data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>,

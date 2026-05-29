@@ -781,15 +781,9 @@ if ($w == '') {
 		$gw_msg->send();
 	}
 	//알림톡 발송 끝
-	if($url) {
-		if (preg_match('/%[0-9A-Fa-f]{2}/', $url)) {
-			// 2) 디코딩
-			$url = urldecode($url);
-		}
-		goto_url($url);
-	}else{
-		goto_url(G5_HTTP_BBS_URL.'/register_result.php');
-	}
+	// 회원가입 완료 후에는 항상 결과 페이지를 거치고,
+	// 이동 목적지는 register_result.skin.php의 버튼 분기에서 처리한다.
+	goto_url(G5_HTTP_BBS_URL.'/register_result.php');
 } else if ($w == 'u') {
     $row  = sql_fetch(" select mb_password from {$g5['member_table']} where mb_id = '{$member['mb_id']}' ");
     $tmp_password = $row['mb_password'];

@@ -39,6 +39,7 @@ if (!function_exists('macomaex_normalize_return_url')) {
 set_session("ss_mb_reg", "");
 
 // 회원가입 완료 후 "이전 페이지로" 이동을 위한 진입 URL 저장
+set_session('ss_reg_trade_request_return_url', '');
 $return_candidate = '';
 if (isset($_REQUEST['url']) && $_REQUEST['url'] !== '') {
     $return_candidate = (string)$_REQUEST['url'];
@@ -48,6 +49,22 @@ if (isset($_REQUEST['url']) && $_REQUEST['url'] !== '') {
 $normalized_return_url = macomaex_normalize_return_url($return_candidate);
 if ($normalized_return_url !== '') {
     set_session('ss_reg_prev_url', $normalized_return_url);
+
+    // company_detail / company_detail_ai 거래요청 유도 모달 경유 회원가입은
+    // 완료 페이지에서 "추천기업 페이지로" 버튼을 노출할 수 있도록 별도 세션으로 보존한다.
+    $trade_request_return_url = '';
+    $parsed_return = @parse_url($normalized_return_url);
+    $return_path = isset($parsed_return['path']) ? (string)$parsed_return['path'] : '';
+    $return_query = isset($parsed_return['query']) ? (string)$parsed_return['query'] : '';
+    $return_query_params = array();
+    if ($return_query !== '') {
+        parse_str($return_query, $return_query_params);
+    }
+    $trade_login_flag = isset($return_query_params['trade_request_login']) ? (string)$return_query_params['trade_request_login'] : '';
+    if (($return_path === '/ko/company_detail.php' || $return_path === '/ko/company_detail_ai.php') && $trade_login_flag === '1') {
+        $trade_request_return_url = $normalized_return_url;
+    }
+    set_session('ss_reg_trade_request_return_url', $trade_request_return_url);
 }
 
 $board['bo_10']="10";
