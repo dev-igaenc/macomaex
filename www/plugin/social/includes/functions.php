@@ -305,6 +305,8 @@ function social_extends_get_keys($provider){
                         "id" => $config['cf_naver_clientid'],
                         "secret" => $config['cf_naver_secret'],
                     ),
+                    // 네이버 동의항목: 이메일/이름/휴대폰
+                    "scope" => "email name mobile",
                 );
 
         // Kakao

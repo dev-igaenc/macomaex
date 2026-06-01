@@ -32,24 +32,15 @@ if( !$email ){
 $mb_id = strtolower(trim((string)$email));
 $mb_5 = $mb_id;
 
-$mb_nick_seed = social_relace_nick($user_profile->displayName);
-if( !$mb_nick_seed ){
-    $tmp = explode('@', $email);
-    $mb_nick_seed = isset($tmp[0]) ? $tmp[0] : $mb_id;
-}
-$mb_nick = exist_mb_nick_recursive($mb_nick_seed);
+// 요청 정책: 자동가입 계정의 기본 id/name/nick은 동일한 이메일 값으로 저장합니다.
+$mb_nick = exist_mb_nick_recursive($mb_id);
+$mb_name = $mb_id;
 
-// 기존 가입 로직과 동일하게 mb_name은 필수이므로 소셜 이름/이메일 기반으로 채웁니다.
-$mb_name = '';
+$mb_6 = '';
 if( !empty($social_contact['name']) ){
-    $mb_name = clean_xss_tags(trim(strip_tags($social_contact['name'])));
+    $mb_6 = clean_xss_tags(trim(strip_tags($social_contact['name'])));
 }
-if( !$mb_name ){
-    $tmp = explode('@', $email);
-    $mb_name = isset($tmp[0]) ? $tmp[0] : $mb_nick;
-}
-
-$mb_6 = $mb_name;
+$mb_6 = $mb_6 ? $mb_6 : $mb_id;
 $mb_8 = !empty($social_contact['phone']) ? trim((string)$social_contact['phone']) : '';
 
 $mb_password = md5(pack('V*', rand(), rand(), rand(), rand()));

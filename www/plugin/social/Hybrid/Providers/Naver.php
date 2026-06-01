@@ -51,6 +51,11 @@ class Hybrid_Providers_Naver extends Hybrid_Provider_Model_OAuth2
             "state" => $token,
             );
 
+        // 설정된 scope가 있으면 동의항목을 명시적으로 요청합니다.
+        if (isset($this->config['scope']) && !empty($this->config['scope'])) {
+            $parameters["scope"] = $this->config['scope'];
+        }
+
         Hybrid_Auth::redirect($this->api->authorizeUrl($parameters));
     }
 
