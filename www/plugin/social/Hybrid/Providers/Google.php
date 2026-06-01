@@ -141,7 +141,25 @@ class Hybrid_Providers_Google extends Hybrid_Provider_Model_OAuth2 {
 			try {
 				$response = $this->api->api("https://people.googleapis.com/v1/people/me?personFields=names,phoneNumbers");
 				// TEMP DEBUG: Google People API 응답 원문 확인용 (확인 후 제거)
-				error_log('[social_google_people_api_response] ' . json_encode($response, JSON_UNESCAPED_UNICODE));
+				$debug_payload = json_encode(array(
+					'provider' => 'google',
+					'people_response' => $response,
+				), JSON_UNESCAPED_UNICODE);
+				error_log('[social_google_people_api_response] ' . $debug_payload);
+				if (defined('G5_PATH')) {
+					$debug_dir = G5_PATH . '/logs/social';
+					if (!is_dir($debug_dir)) {
+						@mkdir($debug_dir, G5_DIR_PERMISSION, true);
+						@chmod($debug_dir, G5_DIR_PERMISSION);
+					}
+					$debug_file = $debug_dir . '/social_login_log_' . date('Ymd') . '.php';
+					$debug_line = '[' . date('Y-m-d H:i:s') . '] ' . $debug_payload . PHP_EOL;
+					if (!file_exists($debug_file)) {
+						@file_put_contents($debug_file, "<?php if (!defined('G5_PATH')) exit; ?>\n", FILE_APPEND);
+					}
+					@file_put_contents($debug_file, $debug_line, FILE_APPEND);
+					@chmod($debug_file, G5_FILE_PERMISSION);
+				}
 				if (!$response || isset($response->error)) {
 					return array('name' => '', 'phone' => '');
 				}

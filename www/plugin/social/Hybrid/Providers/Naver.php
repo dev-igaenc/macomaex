@@ -119,6 +119,27 @@ class Hybrid_Providers_Naver extends Hybrid_Provider_Model_OAuth2
             throw new Exception("User profile request failed! {$this->providerId} returned an invalid response.", 6);
         }
 
+        // TEMP DEBUG: Naver 프로필 응답 원문 확인용 (확인 후 제거)
+        $debug_payload = json_encode(array(
+            'provider' => 'naver',
+            'data' => $data,
+        ), JSON_UNESCAPED_UNICODE);
+        error_log('[social_naver_profile_response] ' . $debug_payload);
+        if (defined('G5_PATH')) {
+            $debug_dir = G5_PATH . '/logs/social';
+            if (!is_dir($debug_dir)) {
+                @mkdir($debug_dir, G5_DIR_PERMISSION, true);
+                @chmod($debug_dir, G5_DIR_PERMISSION);
+            }
+            $debug_file = $debug_dir . '/social_login_log_' . date('Ymd') . '.php';
+            $debug_line = '[' . date('Y-m-d H:i:s') . '] ' . $debug_payload . PHP_EOL;
+            if (!file_exists($debug_file)) {
+                @file_put_contents($debug_file, "<?php if (!defined('G5_PATH')) exit; ?>\n", FILE_APPEND);
+            }
+            @file_put_contents($debug_file, $debug_line, FILE_APPEND);
+            @chmod($debug_file, G5_FILE_PERMISSION);
+        }
+
         # store the user profile.
         //$this->user->profile->identifier    = (array_key_exists('enc_id',$data))?$data['enc_id']:"";
         $this->user->profile->identifier    = (array_key_exists('id',$data))?$data['id']:"";
