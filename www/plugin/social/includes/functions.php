@@ -1053,6 +1053,11 @@ function social_normalize_phone_number($phone=''){
         return '';
     }
 
+    // 휴대폰 11자리 번호는 000-0000-0000 포맷으로 저장합니다.
+    if(preg_match('/^([0-9]{3})([0-9]{4})([0-9]{4})$/', $phone, $m)){
+        return $m[1].'-'.$m[2].'-'.$m[3];
+    }
+
     return $phone;
 }
 
