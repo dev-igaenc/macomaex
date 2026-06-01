@@ -643,7 +643,8 @@ function requestSentStatuses(url) {
         method: 'POST',
         credentials: 'same-origin',
         headers: {
-            'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
+            'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+            'X-Session-Activity': 'skip'
         },
         body: body.toString()
     }).then(function(res) {

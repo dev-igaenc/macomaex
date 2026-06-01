@@ -39,6 +39,22 @@ function formatPhone(value) {
     return digits.slice(0, 3) + '-' + digits.slice(3, 7) + '-' + digits.slice(7);
 }
 
+function isMemberFlagTrue(value) {
+    return value === true || value === 1 || value === '1' || value === 'true';
+}
+
+function isMemberFlagFalse(value) {
+    return value === false || value === 0 || value === '0' || value === 'false' || value === '';
+}
+
+function isUserLoggedInNow() {
+    var globalMemberFlag = window.g5_is_member;
+    if (isMemberFlagFalse(globalMemberFlag)) return false;
+    if (MATCH_REQUEST_CONTEXT.isLoggedIn === false) return false;
+    if (isMemberFlagTrue(globalMemberFlag)) return true;
+    return MATCH_REQUEST_CONTEXT.isLoggedIn !== false;
+}
+
 function setText(id, value) {
     var el = document.getElementById(id);
     if (!el) return;
@@ -219,8 +235,13 @@ var openMatchBtn = document.getElementById('openTypeModal2');
 if (openMatchBtn) {
     openMatchBtn.addEventListener('click', function () {
         // 비로그인 진입은 각 페이지가 내려준 로그인 유도 URL로만 처리한다.
-        if (MATCH_REQUEST_CONTEXT.isLoggedIn === false) {
-            openLoginRequiredModal('거래 요청은<br>로그인 후 이용하실 수 있습니다.');
+        if (!isUserLoggedInNow()) {
+            MATCH_REQUEST_CONTEXT.isLoggedIn = false;
+            window.MATCH_REQUEST_CONTEXT = MATCH_REQUEST_CONTEXT;
+            var tradeRequestLoginUrl = MATCH_REQUEST_CONTEXT.tradeRequestLoginUrl || MATCH_REQUEST_CONTEXT.loginCheckUrl;
+            if (tradeRequestLoginUrl) {
+                window.location.href = tradeRequestLoginUrl;
+            }
             return;
         }
         setRequesterCompany(MATCH_REQUEST_CONTEXT.requesterCompany || null);
@@ -288,6 +309,13 @@ if (reqRequesterBznoVerifyBtn) {
         });
     });
 }
+
+window.addEventListener('auth:logged-out', function () {
+    MATCH_REQUEST_CONTEXT.isLoggedIn = false;
+    window.MATCH_REQUEST_CONTEXT = MATCH_REQUEST_CONTEXT;
+    closeModal('modalType');
+    closeModal('modalRequest');
+});
 
 /* ---- 거래 타입 카드 라디오 동기화 ---- */
 document.querySelectorAll('.trm-type-card').forEach(function (card) {

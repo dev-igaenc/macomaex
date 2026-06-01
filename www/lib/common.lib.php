@@ -148,7 +148,27 @@ function set_cookie($cookie_name, $value, $expire)
 {
     global $g5;
 
-    setcookie(md5($cookie_name), base64_encode($value), G5_SERVER_TIME + $expire, '/', G5_COOKIE_DOMAIN);
+    $cookie_key = md5($cookie_name);
+    $cookie_value = base64_encode($value);
+    $cookie_expires = G5_SERVER_TIME + (int)$expire;
+    $cookie_domain = defined('G5_COOKIE_DOMAIN') ? (string)G5_COOKIE_DOMAIN : '';
+    $is_https = (!empty($_SERVER['HTTPS']) && strtolower((string)$_SERVER['HTTPS']) !== 'off')
+        || (isset($_SERVER['SERVER_PORT']) && (int)$_SERVER['SERVER_PORT'] === 443);
+
+    if (PHP_VERSION_ID >= 70300) {
+        setcookie($cookie_key, $cookie_value, array(
+            'expires' => $cookie_expires,
+            'path' => '/',
+            'domain' => $cookie_domain,
+            'secure' => $is_https,
+            'httponly' => true,
+            'samesite' => 'Lax',
+        ));
+        return;
+    }
+
+    // PHP 7.3 미만은 SameSite를 지원하지 않아 HttpOnly/Secure만 적용
+    setcookie($cookie_key, $cookie_value, $cookie_expires, '/', $cookie_domain, $is_https, true);
 }
 
 

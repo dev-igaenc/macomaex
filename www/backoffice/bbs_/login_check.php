@@ -5,6 +5,7 @@ $g5['title'] = "로그인 검사";
 
 $mb_id       = isset($_POST['mb_id']) ? trim($_POST['mb_id']) : '';
 $mb_password = isset($_POST['mb_password']) ? trim($_POST['mb_password']) : '';
+$auto_login  = !empty($_POST['auto_login']) ? 1 : 0;
 
 run_event('member_login_check_before', $mb_id);
 
@@ -59,6 +60,10 @@ if ( is_use_email_certify() && !preg_match("/[1-9]/", $mb['mb_email_certify'])) 
 run_event('login_session_before', $mb, $is_social_login);
 
 @include_once($member_skin_path.'/login_check.skin.php');
+
+if (function_exists('session_regenerate_id')) {
+    @session_regenerate_id(true);
+}
 
 // 회원아이디 세션 생성
 set_session('ss_mb_id', $mb['mb_id']);
