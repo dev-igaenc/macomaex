@@ -140,6 +140,8 @@ class Hybrid_Providers_Google extends Hybrid_Provider_Model_OAuth2 {
 		function getPeopleProfile() {
 			try {
 				$response = $this->api->api("https://people.googleapis.com/v1/people/me?personFields=names,phoneNumbers");
+				// TEMP DEBUG: Google People API 응답 원문 확인용 (확인 후 제거)
+				error_log('[social_google_people_api_response] ' . json_encode($response, JSON_UNESCAPED_UNICODE));
 				if (!$response || isset($response->error)) {
 					return array('name' => '', 'phone' => '');
 				}
@@ -161,17 +163,24 @@ class Hybrid_Providers_Google extends Hybrid_Provider_Model_OAuth2 {
 				if (property_exists($response, 'phoneNumbers') && is_array($response->phoneNumbers) && count($response->phoneNumbers) > 0) {
 					$firstValue = '';
 					foreach ($response->phoneNumbers as $phoneItem) {
-						if (property_exists($phoneItem, 'value') && !empty($phoneItem->value)) {
+						$phoneValue = '';
+						if (property_exists($phoneItem, 'canonicalForm') && !empty($phoneItem->canonicalForm)) {
+							$phoneValue = (string)$phoneItem->canonicalForm;
+						} else if (property_exists($phoneItem, 'value') && !empty($phoneItem->value)) {
+							$phoneValue = (string)$phoneItem->value;
+						}
+
+						if ($phoneValue !== '') {
 							if ($firstValue === '') {
-								$firstValue = (string)$phoneItem->value;
+								$firstValue = $phoneValue;
 							}
 							$type = property_exists($phoneItem, 'type') ? (string)$phoneItem->type : '';
 							if ($type === 'mobile') {
-								$phone = (string)$phoneItem->value;
+								$phone = $phoneValue;
 								break;
 							}
 							if ($phone === '' && $type === 'main') {
-								$phone = (string)$phoneItem->value;
+								$phone = $phoneValue;
 							}
 						}
 					}

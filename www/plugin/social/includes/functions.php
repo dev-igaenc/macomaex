@@ -338,6 +338,8 @@ function social_extends_get_keys($provider){
                     "redirect_uri" => get_social_callbackurl('google'),
                     // 구글 동의항목: 프로필/이메일/전화번호(People API)
                     "scope"   => "https://www.googleapis.com/auth/userinfo.profile "."https://www.googleapis.com/auth/userinfo.email "."https://www.googleapis.com/auth/user.phonenumbers.read",
+                    // 전화번호 스코프가 추가된 기존 계정에 재동의를 유도합니다.
+                    "approval_prompt" => "force",
                     /*
                     "scope"   => "https://www.googleapis.com/auth/plus.login ". // optional
                                     "https://www.googleapis.com/auth/plus.me ". // optional
@@ -1058,6 +1060,11 @@ function social_normalize_phone_number($phone=''){
         return $m[1].'-'.$m[2].'-'.$m[3];
     }
 
+    // 휴대폰 10자리 번호는 000-000-0000 포맷으로 저장합니다.
+    if(preg_match('/^([0-9]{3})([0-9]{3})([0-9]{4})$/', $phone, $m)){
+        return $m[1].'-'.$m[2].'-'.$m[3];
+    }
+
     return $phone;
 }
 
@@ -1121,7 +1128,7 @@ function social_sync_member_contact_fields($mb_id, $profile){
     }
 
     if( !empty($social_contact['phone']) && empty($mb['mb_8']) ){
-        $update_sets[] = "mb_8 = '".sql_real_escape_string(trim((string)$social_contact['phone']))."'";
+        $update_sets[] = "mb_8 = '".sql_real_escape_string(social_normalize_phone_number($social_contact['phone']))."'";
     }
 
     // mb_5가 비어 있고 mb_email이 있으면 동일하게 보강합니다.

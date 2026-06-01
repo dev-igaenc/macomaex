@@ -27,7 +27,7 @@ if (file_exists(G5_THEME_MSHOP_PATH.'/shop.head.php')) {
 				<a href="<?php echo G5_BBS_URL ?>/password_lost.php">아이디찾기 / 비밀번호 찾기</a>
 			</div>
 		</div>
-		<?php @include_once(get_social_skin_path().'/social_login.skin.php'); // 소셜로그인 임시 비활성화 ?>
+		<?php // @include_once(get_social_skin_path().'/social_login.skin.php'); // 소셜로그인 임시 비활성화 ?>
 
 		<div class="login-link">
 			<dl>
