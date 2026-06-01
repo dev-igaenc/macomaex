@@ -13,14 +13,13 @@ $auth_session_guard_js_ver = file_exists(G5_PATH . '/ko/js/auth-session-guard.js
     ? filemtime(G5_PATH . '/ko/js/auth-session-guard.js')
     : time();
 $auth_session_status_url = '/bbs/ajax.login_status.php';
-$auth_exempt_on_logged_out = defined('_INDEX_') && _INDEX_;
 ?>
 <script>
 window.__AUTH_SESSION_GUARD_CONFIG__ = {
     isMember: <?php echo $is_member ? 'true' : 'false'; ?>,
-    exemptOnLoggedOut: <?php echo $auth_exempt_on_logged_out ? 'true' : 'false'; ?>,
     authStatusUrl: <?php echo json_encode($auth_session_status_url, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>,
-    pollIntervalMs: 15000
+    pollIntervalMs: 15000,
+    redirectDelayMs: 500
 };
 </script>
 <script src="<?php echo G5_URL; ?>/ko/js/auth-session-guard.js?ver=<?php echo $auth_session_guard_js_ver; ?>"></script>

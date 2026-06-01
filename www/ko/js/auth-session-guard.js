@@ -8,6 +8,7 @@
   var LOGIN_PATH = '/bbs/login.php';
   var DEFAULT_STATUS_URL = '/bbs/ajax.login_status.php';
   var REDIRECTING_FLAG = '__AUTH_SESSION_REDIRECTING__';
+  var NOTICE_ID = 'auth-session-expired-notice';
   var pollingTimer = null;
 
   function toBoolean(value, fallback) {
@@ -18,12 +19,13 @@
   }
 
   var isMember = toBoolean(guardConfig.isMember, toBoolean(window.g5_is_member, false));
-  var exemptOnLoggedOut = toBoolean(guardConfig.exemptOnLoggedOut, false);
   var authStatusUrl = typeof guardConfig.authStatusUrl === 'string' && guardConfig.authStatusUrl
     ? guardConfig.authStatusUrl
     : DEFAULT_STATUS_URL;
   var pollIntervalMs = parseInt(guardConfig.pollIntervalMs, 10);
+  var redirectDelayMs = parseInt(guardConfig.redirectDelayMs, 10);
   if (!pollIntervalMs || pollIntervalMs < 5000) pollIntervalMs = 15000;
+  if (!redirectDelayMs || redirectDelayMs < 300) redirectDelayMs = 1200;
 
   function isLoginPage() {
     return window.location.pathname.indexOf(LOGIN_PATH) === 0;
@@ -32,6 +34,33 @@
   function buildLoginUrl() {
     var returnUrl = window.location.pathname + window.location.search + window.location.hash;
     return LOGIN_PATH + '?url=' + encodeURIComponent(returnUrl);
+  }
+
+  function showSessionExpiredNotice(done) {
+    var host = document.getElementById(NOTICE_ID);
+    if (!host) {
+      host = document.createElement('div');
+      host.id = NOTICE_ID;
+      host.setAttribute('style', [
+        'position:fixed',
+        'inset:0',
+        'z-index:2147483647',
+        'display:flex',
+        'align-items:center',
+        'justify-content:center',
+        'background:rgba(15,23,42,0.45)'
+      ].join(';'));
+      host.innerHTML = [
+        '<div role="alert" style="max-width:360px;width:calc(100% - 32px);padding:18px 20px;border-radius:12px;background:#fff;color:#0f172a;text-align:center;box-shadow:0 16px 32px rgba(0,0,0,0.2);font-size:15px;line-height:1.5;">',
+        '세션이 만료되어 로그인 페이지로 이동합니다.',
+        '</div>'
+      ].join('');
+      document.body.appendChild(host);
+    }
+
+    window.setTimeout(function () {
+      if (typeof done === 'function') done();
+    }, redirectDelayMs);
   }
 
   function redirectToLogin(reason) {
@@ -49,17 +78,9 @@
       }));
     } catch (e) {}
 
-    window.location.href = buildLoginUrl();
-  }
-
-  function handleLoggedOutNavigation(reason) {
-    if (exemptOnLoggedOut) {
-      if (window.__AUTH_SESSION_EXEMPT_RELOADING__) return;
-      window.__AUTH_SESSION_EXEMPT_RELOADING__ = true;
-      window.location.reload();
-      return;
-    }
-    redirectToLogin(reason || 'session_expired');
+    showSessionExpiredNotice(function () {
+      window.location.href = buildLoginUrl();
+    });
   }
 
   function onLoggedOut(reason) {
@@ -75,7 +96,7 @@
         }
       }));
     } catch (e) {}
-    handleLoggedOutNavigation(reason || 'session_expired');
+    redirectToLogin(reason || 'session_expired');
   }
 
   function handleAuthRequired(reason) {

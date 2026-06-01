@@ -389,6 +389,7 @@ $session_idle_timeout = (int) ini_get('session.gc_maxlifetime');
 if ($session_idle_timeout < 1) {
     $session_idle_timeout = 3600;
 }
+$session_idle_expired = false;
 $session_should_touch_last_activity = !(defined('G5_SKIP_SESSION_ACTIVITY_UPDATE') && G5_SKIP_SESSION_ACTIVITY_UPDATE);
 $session_activity_header = isset($_SERVER['HTTP_X_SESSION_ACTIVITY']) ? strtolower(trim((string)$_SERVER['HTTP_X_SESSION_ACTIVITY'])) : '';
 if ($session_activity_header === 'skip') {
@@ -399,7 +400,14 @@ if (isset($_SESSION['ss_mb_id']) && $_SESSION['ss_mb_id']) {
     $session_last_activity = isset($_SESSION['ss_last_activity']) ? (int) $_SESSION['ss_last_activity'] : 0;
 
     if ($session_last_activity > 0 && (G5_SERVER_TIME - $session_last_activity) >= $session_idle_timeout) {
+        $session_idle_expired = true;
         unset($_SESSION['ss_mb_id'], $_SESSION['ss_mb_key'], $_SESSION['ss_last_activity']);
+        // 유휴 만료 시 자동로그인 쿠키를 제거하고 같은 요청 내 복원도 차단한다.
+        if (function_exists('set_cookie')) {
+            set_cookie('ck_mb_id', '', 0);
+            set_cookie('ck_auto', '', 0);
+        }
+        unset($_COOKIE[md5('ck_mb_id')], $_COOKIE[md5('ck_auto')]);
     } else if ($session_should_touch_last_activity) {
         $_SESSION['ss_last_activity'] = G5_SERVER_TIME;
     }
@@ -554,7 +562,7 @@ if (isset($_SESSION['ss_mb_id']) && $_SESSION['ss_mb_id']) { // 로그인중이�
 } else {
     // 자동로그인 ---------------------------------------
     // 회원아이디가 쿠키에 저장되어 있다면 (3.27)
-    if ($tmp_mb_id = get_cookie('ck_mb_id')) {
+    if (!$session_idle_expired && ($tmp_mb_id = get_cookie('ck_mb_id'))) {
 
         $tmp_mb_id = substr(preg_replace("/[^a-zA-Z0-9_]*/", "", $tmp_mb_id), 0, 20);
         // 최고관리자는 자동로그인 금지
