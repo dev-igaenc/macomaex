@@ -383,6 +383,27 @@ if( $config['cf_cert_use'] || (defined('G5_YOUNGCART_VER') && G5_YOUNGCART_VER) 
 } else {
     @session_start();
 }
+
+// 세션 비활동 강제 만료: gc 수거 시점과 무관하게 마지막 활동시간을 기준으로 로그아웃 처리
+$session_idle_timeout = (int) ini_get('session.gc_maxlifetime');
+if ($session_idle_timeout < 1) {
+    $session_idle_timeout = 3600;
+}
+$session_should_touch_last_activity = !(defined('G5_SKIP_SESSION_ACTIVITY_UPDATE') && G5_SKIP_SESSION_ACTIVITY_UPDATE);
+$session_activity_header = isset($_SERVER['HTTP_X_SESSION_ACTIVITY']) ? strtolower(trim((string)$_SERVER['HTTP_X_SESSION_ACTIVITY'])) : '';
+if ($session_activity_header === 'skip') {
+    $session_should_touch_last_activity = false;
+}
+
+if (isset($_SESSION['ss_mb_id']) && $_SESSION['ss_mb_id']) {
+    $session_last_activity = isset($_SESSION['ss_last_activity']) ? (int) $_SESSION['ss_last_activity'] : 0;
+
+    if ($session_last_activity > 0 && (G5_SERVER_TIME - $session_last_activity) >= $session_idle_timeout) {
+        unset($_SESSION['ss_mb_id'], $_SESSION['ss_mb_key'], $_SESSION['ss_last_activity']);
+    } else if ($session_should_touch_last_activity) {
+        $_SESSION['ss_last_activity'] = G5_SERVER_TIME;
+    }
+}
 //==============================================================================
 
 define('G5_HTTP_BBS_URL',  https_url(G5_BBS_DIR, false));
