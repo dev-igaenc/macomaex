@@ -5,7 +5,7 @@ $g5['title'] = "로그인 검사";
 
 $mb_id       = isset($_POST['mb_id']) ? trim($_POST['mb_id']) : '';
 $mb_password = isset($_POST['mb_password']) ? trim($_POST['mb_password']) : '';
-$auto_login  = isset($_POST['auto_login']) ? (int) $_POST['auto_login'] : 0;
+$auto_login  = !empty($_POST['auto_login']) ? 1 : 0;
 
 run_event('member_login_check_before', $mb_id);
 
