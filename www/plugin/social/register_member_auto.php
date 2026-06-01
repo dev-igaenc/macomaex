@@ -29,8 +29,8 @@ if( !$email ){
     alert("소셜 계정 이메일을 확인할 수 없습니다.", G5_URL);
 }
 
-$mb_id_seed = $user_profile->sid ? preg_replace("/[^0-9a-z_]+/i", "", $user_profile->sid) : get_social_convert_id($user_profile->identifier, $provider_name);
-$mb_id = exist_mb_id_recursive($mb_id_seed);
+$mb_id = strtolower(trim((string)$email));
+$mb_5 = $mb_id;
 
 $mb_nick_seed = social_relace_nick($user_profile->displayName);
 if( !$mb_nick_seed ){
@@ -81,6 +81,7 @@ $sql = " insert into {$g5['member_table']}
                 mb_sms = '0',
                 mb_open = '0',
                 mb_open_date = '".G5_TIME_YMD."',
+                mb_5 = '".sql_real_escape_string($mb_5)."',
                 mb_6 = '".sql_real_escape_string($mb_6)."',
                 mb_8 = '".sql_real_escape_string($mb_8)."' ";
 $result = sql_query($sql, false);
@@ -105,4 +106,3 @@ if( $mb_email_certify ){
 }
 
 goto_url(G5_HTTP_BBS_URL.'/register_result.php');
-

@@ -537,6 +537,7 @@ function social_check_login_before($p_service=''){
             //데이터가 틀리면 데이터를 갱신 후 로그인 처리 합니다.
 
             $mb_id = $user_provider['mb_id'];
+            social_sync_member_contact_fields($mb_id, $user_profile);
             //이미 소셜로 가입된 데이터가 있다면 password를 필요하지 않으니, 패스워드를 무작위 생성하여 넘깁니다.
             $mb_password = sha1( str_shuffle( "0123456789abcdefghijklmnoABCDEFGHIJ" ) );
 
@@ -1089,6 +1090,46 @@ function social_get_profile_contact_data($profile){
     $result['phone'] = social_normalize_phone_number($phone);
 
     return $result;
+}
+
+// 소셜 프로필 연락처 값으로 회원 확장필드(mb_5/mb_6/mb_8)를 보강합니다.
+function social_sync_member_contact_fields($mb_id, $profile){
+    global $g5;
+
+    $mb_id = trim((string)$mb_id);
+    if($mb_id === ''){
+        return false;
+    }
+
+    $mb = get_member($mb_id);
+    if( !isset($mb['mb_id']) || !$mb['mb_id'] ){
+        return false;
+    }
+
+    $social_contact = social_get_profile_contact_data($profile);
+    $update_sets = array();
+
+    if( !empty($social_contact['name']) && empty($mb['mb_6']) ){
+        $update_sets[] = "mb_6 = '".sql_real_escape_string(clean_xss_tags(trim(strip_tags($social_contact['name']))))."'";
+    }
+
+    if( !empty($social_contact['phone']) && empty($mb['mb_8']) ){
+        $update_sets[] = "mb_8 = '".sql_real_escape_string(trim((string)$social_contact['phone']))."'";
+    }
+
+    // mb_5가 비어 있고 mb_email이 있으면 동일하게 보강합니다.
+    if( empty($mb['mb_5']) && !empty($mb['mb_email']) ){
+        $update_sets[] = "mb_5 = '".sql_real_escape_string(trim((string)$mb['mb_email']))."'";
+    }
+
+    if( empty($update_sets) ){
+        return false;
+    }
+
+    $sql = " update {$g5['member_table']} set ".implode(', ', $update_sets)." where mb_id = '".sql_real_escape_string($mb_id)."' ";
+    sql_query($sql, false);
+
+    return true;
 }
 
 function social_get_nonce($key=''){

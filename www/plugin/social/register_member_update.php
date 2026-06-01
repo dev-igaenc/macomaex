@@ -35,6 +35,7 @@ $mb_hp          = isset($_POST['mb_hp']) ? trim($_POST['mb_hp']) : '';
 $mb_6           = isset($_POST['mb_6']) ? trim($_POST['mb_6']) : '';
 $mb_8           = isset($_POST['mb_8']) ? trim($_POST['mb_8']) : '';
 $mb_email       = get_email_address($mb_email);
+$mb_5           = $mb_email;
 
 // 소셜 프로필에서 이름/휴대폰을 추출해 회원 확장필드 기본값으로 사용합니다.
 $social_contact = social_get_profile_contact_data($user_profile);
@@ -178,6 +179,7 @@ $sql = " insert into {$g5['member_table']}
                 mb_sms = '0',
                 mb_open = '{$mb_open}',
                 mb_open_date = '".G5_TIME_YMD."',
+                mb_5 = '".sql_real_escape_string($mb_5)."',
                 mb_6 = '".sql_real_escape_string($mb_6)."',
                 mb_8 = '".sql_real_escape_string($mb_8)."'
                 {$sql_certify} ";
