@@ -428,22 +428,58 @@ window.__AUTH_SESSION_GUARD_CONFIG__ = {
 			<div id="container">
 	<?php } ?>
 
-<!-- 사업자 확인 모달 (돋보기 클릭 후 표시) -->
+<!-- 사업자 확인 + 추천 키워드 선택 모달 -->
 <div class="modal_verify_overlay" id="modal_verify_overlay" aria-hidden="true">
-    <div class="modal_verify" role="dialog" aria-labelledby="modal_verify_company" aria-modal="true">
+    <div class="modal_verify modal_verify_wide" role="dialog" aria-labelledby="modal_verify_company" aria-modal="true">
         <button type="button" class="modal_verify_close" id="modal_verify_btn_close" aria-label="닫기">×</button>
-        <div class="modal_verify_icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"></path></svg>
+
+        <div class="modal_verify_compact">
+            <span class="modal_verify_check_sm" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"></path></svg>
+            </span>
+            <div class="modal_verify_compact_info">
+                <strong class="modal_verify_company_sm" id="modal_verify_company"></strong>
+                <span class="modal_verify_desc_sm">귀사는 <span id="modal_verify_bzc"></span> · <span id="modal_verify_type"></span>으로 확인되었습니다.</span>
+            </div>
         </div>
-        <h2 class="modal_verify_company" id="modal_verify_company"></h2>
-        <p class="modal_verify_text">귀사는 <strong id="modal_verify_bzc"></strong><br class="modal_verify_br_pc"><strong id="modal_verify_type"></strong>으로 확인되었습니다.</p>
-        <p class="modal_verify_text2">본 서비스는 귀사와 동일·유사 업종의<br class="modal_verify_br_pc">실제 거래 데이터를 분석해<br class="modal_verify_br_pc">적합한 거래처를 추천해드립니다.</p>
-        <hr class="modal_verify_hr">
-        <p class="modal_verify_guide">추천 결과를 확인해보세요.</p>
-        <button type="button" class="modal_verify_btn" id="modal_verify_btn_ai">
-            <span class="sparkle" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-magic-wand"></use></svg></span>
-            거래처 확인하기
-        </button>
+
+        <div id="modal_verify_pd_wrap">
+            <p class="modal_verify_pd_title">주요 취급 품목을 선택해주세요</p>
+            <div class="modal_pd_trade_toggle">
+                <button type="button" class="modal_pd_trade_btn active" id="modal_pd_trade_buy">
+                    <svg class="modal_pd_trade_icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                        <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                        <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                    </svg>
+                    구매처 찾기
+                </button>
+                <button type="button" class="modal_pd_trade_btn" id="modal_pd_trade_sell">
+                    <svg class="modal_pd_trade_icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <rect x="1" y="3" width="15" height="13" rx="1"></rect>
+                        <polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon>
+                        <circle cx="5.5" cy="18.5" r="2.5"></circle>
+                        <circle cx="18.5" cy="18.5" r="2.5"></circle>
+                    </svg>
+                    판매처 찾기
+                </button>
+            </div>
+            <p class="modal_pd_trade_desc" id="modal_pd_trade_desc">귀사가 구매하려는 품목을 선택하세요 <span class="modal_pd_multi_hint">복수 선택 가능</span></p>
+            <div class="modal_pd_grid" id="modal_pd_grid" aria-live="polite">
+                <span class="modal_pd_empty">추천 키워드를 불러올 준비 중입니다.</span>
+            </div>
+            <div class="modal_pd_bar">
+                <div class="modal_pd_bar_info">
+                    <span><b id="modal_pd_count">0</b>개 선택됨</span>
+                    <div id="modal_pd_preview"><span class="modal_pd_empty">품목을 선택하면 여기에 표시됩니다</span></div>
+                </div>
+                <button type="button" class="modal_pd_btn_confirm" id="modal_pd_btn_confirm" disabled>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M12 5l7 7-7 7"></path></svg>
+                    AI 거래처 추천받기
+                </button>
+            </div>
+            <button type="button" class="modal_pd_skip" id="modal_verify_btn_ai">건너뛰고 전체 추천받기</button>
+        </div>
     </div>
 </div>
 
@@ -722,6 +758,9 @@ function requestMainCompCheck(comnum, $form, opts) {
 	// 전역 변수로 현재 사용중인 input/form 정보 저장 (모달 버튼 클릭 시 사용)
 	window.currentSearchInput = $input;
 	window.currentSearchForm = $form;
+	window.currentSearchBizno = comnumDigits;
+	window.currentSearchBzcCd = "";
+	window.currentSearchKedcd = "";
 
 	// 1단계: DB에서 기업명 조회하여 모달 띄우기
 		$.post("<?php echo G5_URL; ?>/get_company_name.php", { comnum: comnumDigits }, function(res) {
@@ -730,9 +769,12 @@ function requestMainCompCheck(comnum, $form, opts) {
 				if (data.result === 'success') {
 					var overlay = document.getElementById("modal_verify_overlay");
 				var companyEl = document.getElementById("modal_verify_company");
-				var bzcEl = document.getElementById("modal_verify_bzc");
-				var typeEl = document.getElementById("modal_verify_type");
-				var cominfoVal = data.cominfo ? data.cominfo : "";
+					var bzcEl = document.getElementById("modal_verify_bzc");
+					var typeEl = document.getElementById("modal_verify_type");
+					var cominfoVal = data.cominfo ? data.cominfo : "";
+					window.currentSearchBizno = data.bizno || comnumDigits;
+					window.currentSearchBzcCd = data.bzc_cd || "";
+					window.currentSearchKedcd = data.kedcd || "";
 
 				if ($form && $form.length) {
 					$form.find("input[name='cominfo']").val(cominfoVal);
@@ -762,6 +804,13 @@ function requestMainCompCheck(comnum, $form, opts) {
 		}).fail(function() {
 			requestMainCompCheck(comnumDigits, $form);
 		});
+	});
+
+	$(document).on("click", "#modal_pd_trade_buy, #modal_pd_trade_sell", function() {
+		var isBuy = this.id === "modal_pd_trade_buy";
+		$("#modal_pd_trade_buy").toggleClass("active", isBuy);
+		$("#modal_pd_trade_sell").toggleClass("active", !isBuy);
+		$("#modal_pd_trade_desc").html((isBuy ? "귀사가 구매하려는 품목을 선택하세요" : "귀사가 판매하려는 품목을 선택하세요") + ' <span class="modal_pd_multi_hint">복수 선택 가능</span>');
 	});
 
 // 모달 내부 버튼 이벤트

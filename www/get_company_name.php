@@ -15,6 +15,7 @@ if (!preg_match('/^[0-9]{10}$/', $comnum)) {
 }
 
 $sql = "SELECT
+            A.KEDCD,
             A.ENP_NM,
             A.ENP_NM_TRD,
             A.BZC_CD,
@@ -40,6 +41,10 @@ if ($comp) {
         'name' => $company_name,
         'bzc_name' => $bzc_name,
         'enp_type' => $enp_type_text,
+        'enp_type_code' => $comp['ENP_TYP'],
+        'bzc_cd' => $comp['BZC_CD'],
+        'bizno' => $comnum,
+        'kedcd' => $comp['KEDCD'],
         'source' => 'db'
     ), JSON_UNESCAPED_UNICODE);
 } else {
@@ -114,6 +119,7 @@ if ($comp) {
         }
 
         $company_name = isset($node['enp_nm_trd']) ? $node['enp_nm_trd'] : (isset($node['enp_nm']) ? $node['enp_nm'] : '');
+        $kedcd = isset($node['kedcd']) ? $node['kedcd'] : '';
         $bzc_cd = isset($node['bzc_cd']) ? $node['bzc_cd'] : '';
         $bzc_name = isset($node['bzc_nm']) ? $node['bzc_nm'] : '';
         $enp_typ = isset($node['enp_typ']) ? $node['enp_typ'] : '';
@@ -136,6 +142,10 @@ if ($comp) {
                 'name' => $company_name,
                 'bzc_name' => $bzc_name ? $bzc_name : '기타 업종',
                 'enp_type' => $enp_type_text,
+                'enp_type_code' => $enp_typ,
+                'bzc_cd' => $bzc_cd,
+                'bizno' => $comnum,
+                'kedcd' => $kedcd,
                 'cominfo' => $cominfo_json,
                 'source' => 'api'
             ), JSON_UNESCAPED_UNICODE);
