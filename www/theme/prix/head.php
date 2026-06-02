@@ -632,13 +632,95 @@ function closeAiGuideModal() {
 	window._aiGuideModalState = null;
 }
 
-function closeVerifyModal() {
-	var overlay = document.getElementById("modal_verify_overlay");
-	if (overlay && overlay.classList.contains("is_open")) {
-		overlay.classList.remove("is_open");
-		overlay.setAttribute("aria-hidden", "true");
+	function closeVerifyModal() {
+		var overlay = document.getElementById("modal_verify_overlay");
+		if (overlay && overlay.classList.contains("is_open")) {
+			overlay.classList.remove("is_open");
+			overlay.setAttribute("aria-hidden", "true");
+		}
 	}
-}
+
+	window.currentSearchTradeType = 1;
+	window.currentPartnerBzcItems = [];
+	window.currentSelectedPartnerBzcItems = [];
+
+	function escapeModalText(text) {
+		var div = document.createElement("div");
+		div.textContent = (text == null) ? "" : String(text);
+		return div.innerHTML;
+	}
+
+	function resetPartnerKeywordSelection() {
+		window.currentSelectedPartnerBzcItems = [];
+		var countEl = document.getElementById("modal_pd_count");
+		var previewEl = document.getElementById("modal_pd_preview");
+		var confirmBtn = document.getElementById("modal_pd_btn_confirm");
+		if (countEl) countEl.textContent = "0";
+		if (previewEl) previewEl.innerHTML = '<span class="modal_pd_empty">품목을 선택하면 여기에 표시됩니다</span>';
+		if (confirmBtn) confirmBtn.disabled = true;
+	}
+
+	function updatePartnerKeywordSelection() {
+		var selected = window.currentSelectedPartnerBzcItems || [];
+		var countEl = document.getElementById("modal_pd_count");
+		var previewEl = document.getElementById("modal_pd_preview");
+		var confirmBtn = document.getElementById("modal_pd_btn_confirm");
+		if (countEl) countEl.textContent = String(selected.length);
+		if (previewEl) {
+			if (!selected.length) {
+				previewEl.innerHTML = '<span class="modal_pd_empty">품목을 선택하면 여기에 표시됩니다</span>';
+			} else {
+				var showItems = selected.slice(0, 4).map(function(item) {
+					return '<span class="modal_pd_preview_chip">' + escapeModalText(item.label || "") + '</span>';
+				}).join("");
+				if (selected.length > 4) {
+					showItems += '<span class="modal_pd_empty"> 외 ' + (selected.length - 4) + '개</span>';
+				}
+				previewEl.innerHTML = showItems;
+			}
+		}
+		if (confirmBtn) confirmBtn.disabled = selected.length === 0;
+	}
+
+	function renderPartnerKeywordChips(items) {
+		var grid = document.getElementById("modal_pd_grid");
+		if (!grid) return;
+		window.currentPartnerBzcItems = Array.isArray(items) ? items : [];
+		resetPartnerKeywordSelection();
+		if (!window.currentPartnerBzcItems.length) {
+			grid.innerHTML = '<span class="modal_pd_empty">추천 키워드가 없습니다. 건너뛰고 전체 추천받기를 이용해 주세요.</span>';
+			return;
+		}
+		grid.innerHTML = window.currentPartnerBzcItems.map(function(item, idx) {
+			var label = item.label || ((item.keywords || []).join(", "));
+			return '<button type="button" class="modal_pd_chip" data-idx="' + idx + '" data-partner-bzc="' + escapeModalText(item.partner_bzc || "") + '">' + escapeModalText(label) + '</button>';
+		}).join("");
+	}
+
+	function loadPartnerKeywordChips(tradeType) {
+		var grid = document.getElementById("modal_pd_grid");
+		var bzcCd = window.currentSearchBzcCd || "";
+		tradeType = (tradeType === 2) ? 2 : 1;
+		window.currentSearchTradeType = tradeType;
+		resetPartnerKeywordSelection();
+		if (grid) grid.innerHTML = '<span class="modal_pd_empty">추천 키워드를 불러오는 중입니다.</span>';
+		if (!bzcCd) {
+			if (grid) grid.innerHTML = '<span class="modal_pd_empty">업종코드가 없어 전체 추천만 이용할 수 있습니다.</span>';
+			return;
+		}
+		$.getJSON("<?php echo G5_URL; ?>/ko/bzc_trade_rec_keywords.php", {
+			bzc_cd: bzcCd,
+			trade_type: tradeType
+		}).done(function(data) {
+			if (data && data.ok) {
+				renderPartnerKeywordChips(data.items || []);
+				return;
+			}
+			if (grid) grid.innerHTML = '<span class="modal_pd_empty">추천 키워드를 불러오지 못했습니다. 전체 추천을 이용해 주세요.</span>';
+		}).fail(function() {
+			if (grid) grid.innerHTML = '<span class="modal_pd_empty">추천 키워드 조회 중 오류가 발생했습니다. 전체 추천을 이용해 주세요.</span>';
+		});
+	}
 
 function moveToAiRecommendByBizno(comnum) {
 	// 검색창 사업자번호 흐름은 AI 목록 페이지로 직접 이동
@@ -784,12 +866,11 @@ function requestMainCompCheck(comnum, $form, opts) {
 				if (bzcEl) bzcEl.textContent = data.bzc_name;
 				if (typeEl) typeEl.textContent = data.enp_type;
 
-				if (overlay) {
-					overlay.classList.add("is_open");
-					overlay.setAttribute("aria-hidden", "false");
-					var actionBtn = document.getElementById("modal_verify_btn_ai");
-					if (actionBtn) actionBtn.focus();
-				}
+					if (overlay) {
+						overlay.classList.add("is_open");
+						overlay.setAttribute("aria-hidden", "false");
+						loadPartnerKeywordChips(1);
+					}
 				} else {
 					if ($form && $form.length) {
 						$form.find("input[name='cominfo']").val("");
@@ -811,6 +892,63 @@ function requestMainCompCheck(comnum, $form, opts) {
 		$("#modal_pd_trade_buy").toggleClass("active", isBuy);
 		$("#modal_pd_trade_sell").toggleClass("active", !isBuy);
 		$("#modal_pd_trade_desc").html((isBuy ? "귀사가 구매하려는 품목을 선택하세요" : "귀사가 판매하려는 품목을 선택하세요") + ' <span class="modal_pd_multi_hint">복수 선택 가능</span>');
+		loadPartnerKeywordChips(isBuy ? 1 : 2);
+	});
+
+	$(document).on("click", ".modal_pd_chip", function() {
+		var idx = parseInt($(this).attr("data-idx"), 10);
+		var item = window.currentPartnerBzcItems && window.currentPartnerBzcItems[idx] ? window.currentPartnerBzcItems[idx] : null;
+		if (!item) return;
+
+		var selected = window.currentSelectedPartnerBzcItems || [];
+		var existingIdx = -1;
+		for (var i = 0; i < selected.length; i++) {
+			if (selected[i].partner_bzc === item.partner_bzc) {
+				existingIdx = i;
+				break;
+			}
+		}
+
+		if (existingIdx >= 0) {
+			selected.splice(existingIdx, 1);
+			$(this).removeClass("selected");
+		} else {
+			selected.push(item);
+			$(this).addClass("selected");
+		}
+
+		window.currentSelectedPartnerBzcItems = selected;
+		updatePartnerKeywordSelection();
+	});
+
+	$(document).on("click", "#modal_pd_btn_confirm", function() {
+		if (this.disabled) return;
+		var selected = window.currentSelectedPartnerBzcItems || [];
+		var partnerBzcs = [];
+		for (var i = 0; i < selected.length; i++) {
+			var partnerBzc = String(selected[i].partner_bzc || "").replace(/[^A-Za-z0-9]/g, "").toUpperCase();
+			if (partnerBzc && partnerBzcs.indexOf(partnerBzc) === -1) partnerBzcs.push(partnerBzc);
+		}
+		if (!partnerBzcs.length) return;
+
+		var bizno = String(window.currentSearchBizno || ((window.currentSearchInput && window.currentSearchInput.val()) || "")).replace(/[^0-9]/g, "");
+		if (bizno.length !== 10) {
+			openGuide("사업자번호 재확인", "입력하신 사업자번호 형식이 올바르지 않습니다.", "사업자번호를 다시 확인해 주세요.");
+			return;
+		}
+
+		closeVerifyModal();
+		var tradeType = (window.currentSearchTradeType === 2) ? 2 : 1;
+		var type = tradeType === 2 ? "seller" : "buyer";
+		var url = "/ko/company_list_ai.php?bizno=" + encodeURIComponent(bizno) +
+			"&type=" + encodeURIComponent(type) +
+			"&trade_type=" + encodeURIComponent(String(tradeType)) +
+			"&partner_bzc=" + encodeURIComponent(partnerBzcs.join(","));
+		if (typeof showAiLoading === "function") {
+			showAiLoading(url);
+		} else {
+			window.location.href = url;
+		}
 	});
 
 // 모달 내부 버튼 이벤트
