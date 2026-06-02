@@ -84,8 +84,8 @@ $mb_company     = isset($_POST['mb_company'])       ? trim($_POST['mb_company'])
 // $mb_6           = isset($_POST['mb_6'])             ? trim($_POST['mb_6'])           : "";
 // $mb_7           = isset($_POST['mb_7'])             ? trim($_POST['mb_7'])           : "";
 $mb_8           = isset($_POST['mb_8'])             ? trim($_POST['mb_8'])           : "";
-$mb_5           = "";
-$mb_6           = "";
+$mb_5           = $mb_email;
+$mb_6           = $cert_mb_name;
 $mb_7           = "";
 $mb_9_list      = (isset($_POST['mb_9']) && is_array($_POST['mb_9'])) ? $_POST['mb_9'] : array();
 // $mb_10_list     = (isset($_POST['mb_10']) && is_array($_POST['mb_10'])) ? $_POST['mb_10'] : array();
@@ -114,8 +114,10 @@ $cert_mb_name   = clean_xss_tags($cert_mb_name);
 $mb_name        = ($w == '') ? $mb_id : clean_xss_tags($mb_name);
 $mb_nick        = ($w == '') ? $mb_id : clean_xss_tags($mb_nick);
 $mb_email       = get_email_address($mb_email);
+$mb_5           = $mb_email;
 $mb_homepage    = clean_xss_tags($mb_homepage);
 $mb_tel         = clean_xss_tags($mb_tel);
+$mb_hp          = hyphen_hp_number($mb_hp);
 $mb_8_digits    = preg_replace('/[^0-9]/', '', $mb_8);
 if ($mb_8_digits !== '') {
     if (strlen($mb_8_digits) >= 11) {
@@ -173,6 +175,7 @@ if ($w == '') {
     if ($msg = prohibit_mb_email($mb_email))alert($msg, "", true, true);
 
     if ($msg = valid_mb_hp($mb_hp))     alert($msg, "", true, true);
+    if ($msg = exist_mb_hp($mb_hp, $mb_id)) alert($msg, "", true, true);
 
     if ($w=='') {
         if ($msg = exist_mb_id($mb_id))     alert($msg);
@@ -216,19 +219,9 @@ $cert_type = get_session('ss_cert_type');
 //  본인확인
 //---------------------------------------------------------------
 if ($w == '') {
-    $post_cert_no = isset($_POST['cert_no']) ? trim($_POST['cert_no']) : '';
-    $signup_cert = macomaex_signup_phone_certification($cert_mb_name, $mb_hp, $post_cert_no);
-    if (empty($signup_cert['ok'])) {
-        alert($signup_cert['message']);
-    }
-
-    $mb_hp = $signup_cert['mb_hp'];
-    $cert_type = $signup_cert['cert_type'];
-    $md5_cert_no = $signup_cert['cert_no'];
-    $sql_certify = $signup_cert['sql_certify'];
     $mb_6 = $cert_mb_name;
+    $mb_8 = $mb_hp;
 } else {
-    $mb_hp = hyphen_hp_number($mb_hp);
     if($config['cf_cert_use'] && get_session('ss_cert_type') && get_session('ss_cert_dupinfo')) {
         // 중복체크
         $sql = " select mb_id from {$g5['member_table']} where mb_id <> '{$member['mb_id']}' and mb_dupinfo = '".get_session('ss_cert_dupinfo')."' ";
@@ -287,6 +280,7 @@ if ($w == '') {
                      mb_email = '{$mb_email}',
                      mb_homepage = '{$mb_homepage}',
                      mb_tel = '{$mb_tel}',
+                     mb_hp = '{$mb_hp}',
                      mb_zip1 = '{$mb_zip1}',
                      mb_zip2 = '{$mb_zip2}',
                      mb_addr1 = '{$mb_addr1}',
@@ -311,8 +305,8 @@ if ($w == '') {
                      mb_2 = '{$mb_2}',
                      /* mb_3 = '{$mb_3}', */
                      mb_4 = '{$mb_4}',
-                     /* mb_5 = '{$mb_5}', */
-                     /* mb_6 = '{$mb_6}', */
+                     mb_5 = '{$mb_5}',
+                     mb_6 = '{$mb_6}',
                      /* mb_7 = '{$mb_7}', */
                      mb_8 = '{$mb_8}',
                      mb_9 = '{$mb_9}'

@@ -175,6 +175,8 @@ function company_detail_trade_request_classify_failure($errorCode) {
 		'requester_company_unresolved' => 'resource',
 		'manager_info_missing' => 'validation',
 		'manager_phone_invalid' => 'validation',
+		'member_verified_contact_missing' => 'validation',
+		'member_verified_phone_invalid' => 'validation',
 		'invalid_target_kedcd' => 'validation',
 		'invalid_trade_direction' => 'validation',
 		'trade_purpose_empty' => 'validation',
@@ -573,7 +575,7 @@ function company_detail_trade_request_send_receiver_mail($tradeRequestNo, $reque
 function company_detail_trade_request_profile_state($member) {
 	$bzno = trade_request_normalize_bzno($member['mb_4'] ?? '');
 	$managerName = trim((string)($member['mb_6'] ?? ''));
-	$managerPhoneRaw = trade_request_normalize_phone($member['mb_8'] ?? '');
+	$managerPhoneRaw = trade_request_normalize_phone($member['mb_hp'] ?? '');
 	$managerPhone = $managerPhoneRaw;
 	if (strlen($managerPhoneRaw) === 11) {
 		$managerPhone = preg_replace('/(\d{3})(\d{4})(\d{4})/', '$1-$2-$3', $managerPhoneRaw);
@@ -665,32 +667,28 @@ function company_detail_handle_trade_request_insert($member, $request) {
 	$resolvedCompanyName = trim((string)($resolvedCompany['company']['company'] ?? ''));
 
 	$managerNameCurrent = trim((string)($member['mb_6'] ?? ''));
-	$managerPhoneCurrent = trade_request_normalize_phone($member['mb_8'] ?? '');
+	$managerPhoneCurrent = trade_request_normalize_phone($member['mb_hp'] ?? '');
 	$memberNameCurrent = trim((string)($member['mb_name'] ?? ''));
 	$memberNickCurrent = trim((string)($member['mb_nick'] ?? ''));
 	$managerNameToSave = $managerNameCurrent;
 	$managerPhoneToSave = $managerPhoneCurrent;
 	if ($managerNameCurrent === '' || $managerPhoneCurrent === '') {
-		$managerName = trim((string)($request['manager_name'] ?? ''));
-		$managerPhone = trade_request_normalize_phone($request['manager_phone'] ?? '');
-		if ($managerName === '' || $managerPhone === '') {
-			company_detail_trade_request_fail_response('담당자 정보를 입력해 주세요.', 'manager_info_missing', array(
-				'request_id' => $requestId,
-				'mb_id' => trim((string)($member['mb_id'] ?? '')),
-				'request_bzno' => $requesterBzno,
-				'stage' => 'validation',
-			));
-		}
-		if (!preg_match('/^[0-9]{9,11}$/', $managerPhone)) {
-			company_detail_trade_request_fail_response('담당자 휴대폰 번호 형식을 확인해 주세요.', 'manager_phone_invalid', array(
-				'request_id' => $requestId,
-				'mb_id' => trim((string)($member['mb_id'] ?? '')),
-				'request_bzno' => $requesterBzno,
-				'stage' => 'validation',
-			));
-		}
-		$managerNameToSave = $managerName;
-		$managerPhoneToSave = $managerPhone;
+		company_detail_trade_request_fail_response('회원 인증 정보가 없습니다. 회원정보에서 이름과 휴대폰 인증 상태를 확인해 주세요.', 'member_verified_contact_missing', array(
+			'request_id' => $requestId,
+			'mb_id' => trim((string)($member['mb_id'] ?? '')),
+			'request_bzno' => $requesterBzno,
+			'has_manager_name' => $managerNameCurrent !== '',
+			'has_verified_phone' => $managerPhoneCurrent !== '',
+			'stage' => 'validation',
+		));
+	}
+	if (!preg_match('/^[0-9]{9,11}$/', $managerPhoneToSave)) {
+		company_detail_trade_request_fail_response('인증된 휴대폰 번호 형식을 확인해 주세요.', 'member_verified_phone_invalid', array(
+			'request_id' => $requestId,
+			'mb_id' => trim((string)($member['mb_id'] ?? '')),
+			'request_bzno' => $requesterBzno,
+			'stage' => 'validation',
+		));
 	}
 	$managerPhoneToSaveFormatted = company_detail_format_phone_hyphen($managerPhoneToSave);
 
