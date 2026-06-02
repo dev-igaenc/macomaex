@@ -32,7 +32,6 @@
 							</div>
 							<div class="form-section-callout" id="reqCompanyInfoCallout">
 								<div class="form-section-help">사업자번호는 최초 거래 요청 시에만 확인합니다.</div>
-								<div class="form-section-help">담당자 이름과 휴대폰 번호는 회원가입 시 인증된 정보로 자동 사용합니다.</div>
 								<div class="form-section-help">정보 변경 시 마이페이지 > 회원정보수정 이용 부탁드립니다.</div>
 								<div class="form-section-help">실제 기업 정보와 다른 경우 아래 메일로 문의 부탁드립니다.</div>
 								<a class="form-section-help-mail" href="mailto:admin@macomaex.com">admin@macomaex.com</a>

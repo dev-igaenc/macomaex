@@ -391,8 +391,8 @@ function resolveTradeRequestErrorView(data) {
         member_not_logged_in: '로그인이 만료되었습니다. 다시 로그인 후 시도해 주세요.',
         requester_bzno_empty: '사업자번호를 먼저 확인해 주세요.',
         requester_company_unresolved: '사업자번호로 기업 정보를 확인하지 못했습니다. 번호를 다시 확인해 주세요.',
-        member_verified_contact_missing: '회원 인증 정보가 없습니다. 회원정보에서 이름과 휴대폰 인증 상태를 확인해 주세요.',
-        member_verified_phone_invalid: '인증된 휴대폰 번호 형식이 올바르지 않습니다. 관리자에게 문의해 주세요.',
+        member_contact_missing: '회원 정보에 이름과 휴대폰 번호가 없습니다. 회원정보를 확인해 주세요.',
+        member_phone_invalid: '회원 휴대폰 번호 형식이 올바르지 않습니다. 관리자에게 문의해 주세요.',
         invalid_target_kedcd: '대상 기업 정보가 올바르지 않습니다. 페이지를 새로고침 후 다시 시도해 주세요.',
         target_company_not_found: '대상 기업 정보를 찾지 못했습니다. 잠시 후 다시 시도해 주세요.',
         invalid_trade_direction: '거래 방향을 다시 선택해 주세요.',
@@ -440,7 +440,7 @@ if (goToTypeBtn) {
         if (itemField) itemField.style.borderColor = '';
         var bznoBox = document.getElementById('reqBznoBox');
         if (bznoBox && !bznoBox.hidden) {
-            showInlineOrToastWarning('사업자번호를 입력해 주세요.');
+            showInlineOrToastWarning('사업자번호 확인을 완료해 주세요.');
             return;
         }
         hideReqWarning();

@@ -20,6 +20,7 @@ function trade_request_company_payload($companyRow, $industryName = '') {
 	}
 
 	return array(
+		'kedcd' => trim((string)($companyRow['KEDCD'] ?? '')),
 		'company' => trim((string)($companyRow['ENP_NM'] ?? '')),
 		'bzno' => !empty($companyRow['BZNO']) ? licenseNum($companyRow['BZNO']) : '',
 		'founded' => $founded,
@@ -54,6 +55,7 @@ function trade_request_company_payload_from_kodata_json($jsonText) {
 	}
 
 	return array(
+		'kedcd' => trim((string)($intr->kedcd ?? '')),
 		'company' => trim((string)($intr->enp_nm_trd ?? $intr->enp_nm ?? '')),
 		'bzno' => $bzno !== '' ? licenseNum($bzno) : '',
 		'founded' => $founded,
@@ -238,11 +240,14 @@ function trade_request_resolve_company_data_by_bzno($bzno, $options = array()) {
 
 	if ($persist) {
 		// 최종 저장 단계에서만 company 적재를 수행한다.
-		trade_request_upsert_company_from_kodata_json($bzno, $jsonText);
+		if (!trade_request_upsert_company_from_kodata_json($bzno, $jsonText)) {
+			return array('success' => false, 'message' => '기업 정보 저장에 실패했습니다. 잠시 후 다시 시도해 주세요.');
+		}
 		$payload = trade_request_member_company_data($bzno);
 		if (!empty($payload['company'])) {
 			return array('success' => true, 'company' => $payload, 'bzno' => $bzno);
 		}
+		return array('success' => false, 'message' => '저장된 기업 정보를 확인하지 못했습니다. 잠시 후 다시 시도해 주세요.');
 	}
 
 	// 저장 전 단계에서는 DB 반영 없이 모달 출력용 payload만 구성한다.

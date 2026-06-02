@@ -173,10 +173,11 @@ function company_detail_trade_request_classify_failure($errorCode) {
 		'member_not_logged_in' => 'auth',
 		'requester_bzno_empty' => 'validation',
 		'requester_company_unresolved' => 'resource',
+		'requester_company_persist_failed' => 'resource',
 		'manager_info_missing' => 'validation',
 		'manager_phone_invalid' => 'validation',
-		'member_verified_contact_missing' => 'validation',
-		'member_verified_phone_invalid' => 'validation',
+		'member_contact_missing' => 'validation',
+		'member_phone_invalid' => 'validation',
 		'invalid_target_kedcd' => 'validation',
 		'invalid_trade_direction' => 'validation',
 		'trade_purpose_empty' => 'validation',
@@ -644,6 +645,7 @@ function company_detail_handle_trade_request_insert($member, $request) {
 	}
 
 	$memberBzno = trade_request_normalize_bzno($member['mb_4'] ?? '');
+	$memberBznoStored = trim((string)($member['mb_4'] ?? ''));
 	$inputBzno = trade_request_normalize_bzno($request['requester_bzno'] ?? '');
 	$requesterBzno = $memberBzno !== '' ? $memberBzno : $inputBzno;
 	if ($requesterBzno === '') {
@@ -665,32 +667,30 @@ function company_detail_handle_trade_request_insert($member, $request) {
 		));
 	}
 	$resolvedCompanyName = trim((string)($resolvedCompany['company']['company'] ?? ''));
+	$resolvedCompanyKedcd = trim((string)($resolvedCompany['company']['kedcd'] ?? ''));
 
 	$managerNameCurrent = trim((string)($member['mb_6'] ?? ''));
 	$managerPhoneCurrent = trade_request_normalize_phone($member['mb_hp'] ?? '');
 	$memberNameCurrent = trim((string)($member['mb_name'] ?? ''));
 	$memberNickCurrent = trim((string)($member['mb_nick'] ?? ''));
-	$managerNameToSave = $managerNameCurrent;
-	$managerPhoneToSave = $managerPhoneCurrent;
 	if ($managerNameCurrent === '' || $managerPhoneCurrent === '') {
-		company_detail_trade_request_fail_response('회원 인증 정보가 없습니다. 회원정보에서 이름과 휴대폰 인증 상태를 확인해 주세요.', 'member_verified_contact_missing', array(
+		company_detail_trade_request_fail_response('회원 정보에 이름과 휴대폰 번호가 없습니다. 회원정보를 확인해 주세요.', 'member_contact_missing', array(
 			'request_id' => $requestId,
 			'mb_id' => trim((string)($member['mb_id'] ?? '')),
 			'request_bzno' => $requesterBzno,
 			'has_manager_name' => $managerNameCurrent !== '',
-			'has_verified_phone' => $managerPhoneCurrent !== '',
+			'has_phone' => $managerPhoneCurrent !== '',
 			'stage' => 'validation',
 		));
 	}
-	if (!preg_match('/^[0-9]{9,11}$/', $managerPhoneToSave)) {
-		company_detail_trade_request_fail_response('인증된 휴대폰 번호 형식을 확인해 주세요.', 'member_verified_phone_invalid', array(
+	if (!preg_match('/^[0-9]{9,11}$/', $managerPhoneCurrent)) {
+		company_detail_trade_request_fail_response('회원 휴대폰 번호 형식을 확인해 주세요.', 'member_phone_invalid', array(
 			'request_id' => $requestId,
 			'mb_id' => trim((string)($member['mb_id'] ?? '')),
 			'request_bzno' => $requesterBzno,
 			'stage' => 'validation',
 		));
 	}
-	$managerPhoneToSaveFormatted = company_detail_format_phone_hyphen($managerPhoneToSave);
 
 	$targetKedcd = isset($request['target_kedcd']) ? preg_replace('/[^0-9]/', '', (string)$request['target_kedcd']) : '';
 	$tradeDirectionRaw = isset($request['trade_direction']) ? trim((string)$request['trade_direction']) : '';
@@ -958,16 +958,35 @@ function company_detail_handle_trade_request_insert($member, $request) {
 			'bzno' => $requesterBzno,
 			'message' => $resolvedCompanyPersist['message'] ?? '',
 		));
+		sql_query("ROLLBACK");
+		company_detail_trade_request_fail_response($resolvedCompanyPersist['message'] ?? '기업 정보 저장 중 오류가 발생했습니다.', 'requester_company_persist_failed', array(
+			'request_id' => $requestId,
+			'tr_no' => $insertId,
+			'member_id' => $member['mb_id'] ?? '',
+			'bzno' => $requesterBzno,
+			'stage' => 'company_persist',
+		));
+	} else {
+		$persistedKedcd = trim((string)($resolvedCompanyPersist['company']['kedcd'] ?? ''));
+		if ($persistedKedcd !== '') {
+			$resolvedCompanyKedcd = $persistedKedcd;
+		}
 	}
 
 	$needMemberUpdate = false;
 	$memberUpdateSet = array();
-	// 1) 사업자번호가 비어있는 회원만 최초 1회 저장
-	if ($memberBzno === '' && $requesterBzno !== '') {
+	$requesterBznoFormatted = function_exists('licenseNum') ? licenseNum($requesterBzno) : $requesterBzno;
+	// 1) 사업자번호는 확정 저장 시 000-00-00000 포맷으로 동기화한다.
+	if ($requesterBzno !== '' && $memberBznoStored !== $requesterBznoFormatted) {
 		$needMemberUpdate = true;
-		$memberUpdateSet[] = "mb_4='" . sql_escape_string($requesterBzno) . "'";
+		$memberUpdateSet[] = "mb_4='" . sql_escape_string($requesterBznoFormatted) . "'";
 	}
-	// 2) 회원명/닉네임이 비어 있거나 기본값(=mb_id)인 경우 기업명 저장
+	// 2) 사업자번호 조회로 확정된 기업코드(KEDCD)를 회원 회사 코드로 저장한다.
+	if ($resolvedCompanyKedcd !== '' && trim((string)($member['mb_company'] ?? '')) !== $resolvedCompanyKedcd) {
+		$needMemberUpdate = true;
+		$memberUpdateSet[] = "mb_company='" . sql_escape_string($resolvedCompanyKedcd) . "'";
+	}
+	// 3) 회원명/닉네임이 비어 있거나 기본값(=mb_id)인 경우 기업명 저장
 	if ($requestCompanyName !== '' && company_detail_should_overwrite_member_company_name($memberNameCurrent, $requestMemberId)) {
 		$needMemberUpdate = true;
 		$memberUpdateSet[] = "mb_name='" . sql_escape_string($requestCompanyName) . "'";
@@ -975,12 +994,6 @@ function company_detail_handle_trade_request_insert($member, $request) {
 	if ($requestCompanyName !== '' && company_detail_should_overwrite_member_company_name($memberNickCurrent, $requestMemberId)) {
 		$needMemberUpdate = true;
 		$memberUpdateSet[] = "mb_nick='" . sql_escape_string($requestCompanyName) . "'";
-	}
-	// 3) 담당자 정보는 최종 제출 시점에 거래 요청 데이터와 함께 동기화한다.
-	if ($managerNameToSave !== '' || $managerPhoneToSaveFormatted !== '') {
-		$needMemberUpdate = true;
-		$memberUpdateSet[] = "mb_6='" . sql_escape_string($managerNameToSave) . "'";
-		$memberUpdateSet[] = "mb_8='" . sql_escape_string($managerPhoneToSaveFormatted) . "'";
 	}
 	if ($needMemberUpdate && !empty($memberUpdateSet)) {
 		$mbId = sql_escape_string((string)$member['mb_id']);
