@@ -15,6 +15,11 @@ include_once(G5_LIB_PATH.'/connect.lib.php');
 include_once(G5_LIB_PATH.'/popular.lib.php');
 //header (){Authorization: '[ ACCES TOKEN KEY ]'}
 
+$auth_session_guard_js_ver = file_exists(G5_PATH . '/ko/js/auth-session-guard.js')
+    ? filemtime(G5_PATH . '/ko/js/auth-session-guard.js')
+    : time();
+$auth_session_status_url = '/bbs/ajax.login_status.php';
+
 $header_display_name = '';
 $header_credit = 0;
 
@@ -43,6 +48,15 @@ if ($is_member) {
 <link rel="stylesheet" href="<?php echo G5_THEME_URL; ?>/css/common.ai-magic-wand.css?v=20260427">
 <link rel="stylesheet" href="<?php echo G5_THEME_URL; ?>/css/header-core.css?v=20260427">
 <link rel="stylesheet" href="<?php echo G5_THEME_URL; ?>/css/header-bridge.css?v=20260427">
+<script>
+window.__AUTH_SESSION_GUARD_CONFIG__ = {
+    isMember: <?php echo $is_member ? 'true' : 'false'; ?>,
+    authStatusUrl: <?php echo json_encode($auth_session_status_url, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>,
+    pollIntervalMs: 15000,
+    redirectDelayMs: 500
+};
+</script>
+<script src="<?php echo G5_URL; ?>/ko/js/auth-session-guard.js?ver=<?php echo $auth_session_guard_js_ver; ?>"></script>
 <?php if (!defined('_INDEX_')) { ?>
 <link rel="stylesheet" href="<?php echo G5_THEME_URL; ?>/css/header-search.css?v=20260427">
 <?php } ?>

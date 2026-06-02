@@ -238,6 +238,31 @@
 	.skin-member .skin-check input[type=checkbox]:checked+label,
 	.skin-member .skin-check input[type=radio]:checked+label{color: var(--skin_bg);}
 
+	/* 로그인 자동로그인 체크박스: 단일 박스로 정렬 */
+	.skin-member.login .skin-check input[type=checkbox] + label > .graphic{
+		width: 18px;
+		height: 18px;
+		border: 1px solid #cfd6e4;
+		border-radius: 3px;
+		background-color: #fff;
+		background-image: none;
+		background-repeat: no-repeat;
+		background-position: center center;
+		background-size: 12px 12px;
+		box-sizing: border-box;
+		flex-shrink: 0;
+		position: relative;
+		top: 0;
+	}
+	.skin-member.login .skin-check input[type=checkbox] + label > .graphic:before{
+		content: none;
+	}
+	.skin-member.login .skin-check input[type=checkbox]:checked + label > .graphic{
+		background-color: #1471f6;
+		border-color: #1471f6;
+		background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path fill='white' d='M21.03 5.72a.75.75 0 010 1.06l-11.5 11.5a.75.75 0 01-1.072-.012l-5.5-5.75a.75.75 0 111.084-1.036l4.97 5.195L19.97 5.72a.75.75 0 011.06 0z'/></svg>");
+	}
+
 @media only screen and (max-width : 840px){
 	.skin-member{width:100%;}
 
@@ -252,4 +277,3 @@
 	.skin-member .skin-check-new input[type=checkbox]+label{gap:5px;}
 
 }
-

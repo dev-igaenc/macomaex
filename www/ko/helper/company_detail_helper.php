@@ -636,6 +636,8 @@ function company_detail_handle_trade_request_insert($member, $request) {
 		company_detail_trade_request_fail_response('로그인 후 이용해 주세요.', 'member_not_logged_in', array(
 			'request_id' => $requestId,
 			'stage' => 'auth',
+		), array(
+			'login_required' => true,
 		));
 	}
 
