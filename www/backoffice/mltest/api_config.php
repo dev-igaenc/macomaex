@@ -1,66 +1,34 @@
 <?php
-// EC2 ML 서버 설정 (mltest 전용 — 운영 api_config.php와 별개)
-if (!function_exists('macomaex_env')) {
-    $common_path = __DIR__ . '/../../_common.php';
-    if (is_file($common_path)) {
-        include_once($common_path);
-    }
-}
-
-if (!function_exists('mltest_load_env_file')) {
-    function mltest_load_env_file($env_path)
-    {
-        static $loaded = [];
-        if (isset($loaded[$env_path])) {
-            return;
-        }
-        $loaded[$env_path] = true;
-
-        if (!is_file($env_path) || !is_readable($env_path)) {
-            return;
-        }
-
-        $scanner = defined('INI_SCANNER_RAW') ? INI_SCANNER_RAW : INI_SCANNER_NORMAL;
-        $values = @parse_ini_file($env_path, false, $scanner);
-        if (!is_array($values)) {
-            return;
-        }
-
-        foreach ($values as $name => $value) {
-            if (getenv($name) !== false) {
-                continue;
+// ── .env 로드 (웹루트 상위 디렉토리 — 웹 접근 불가 영역) ─
+if (!defined('MLTEST_PAGE_PASSWORD')) {
+    $_envFile = dirname($_SERVER['DOCUMENT_ROOT']) . '/.env';
+    $__e = [];
+    if (file_exists($_envFile)) {
+        foreach (file($_envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $_line) {
+            $_line = trim($_line);
+            if ($_line === '' || $_line[0] === '#') continue;
+            $__pos = strpos($_line, '=');
+            if ($__pos === false) continue;
+            $__k = trim(substr($_line, 0, $__pos));
+            $__v = trim(substr($_line, $__pos + 1));
+            // 따옴표 제거 ("value" 또는 'value')
+            if (strlen($__v) >= 2 && (($__v[0] === '"' && $__v[-1] === '"') || ($__v[0] === "'" && $__v[-1] === "'"))) {
+                $__v = substr($__v, 1, -1);
             }
-            $_ENV[$name] = $value;
-            $_SERVER[$name] = $value;
-            @putenv($name . '=' . $value);
+            $__e[$__k] = $__v;
         }
     }
+    define('GEMINI_API_KEY',      $__e['GEMINI_API_KEY']      ?? '');
+    define('EC2_BASE_URL',        $__e['ML_API_URL']          ?? '');
+    define('ML_API_KEY',          $__e['ML_API_KEY']          ?? '');
+    define('MLTEST_PAGE_PASSWORD',$__e['MLTEST_PAGE_PASSWORD']?? '');
+    define('GEMINI_MODEL',         $__e['GEMINI_MODEL']         ?? 'gemini-2.5-flash');
+    define('DEV_DB_HOST',         $__e['G5_DB_HOST']          ?? 'localhost');
+    define('DEV_DB_USER',         $__e['G5_DB_USER']          ?? '');
+    define('DEV_DB_PASS',         $__e['G5_DB_PASSWORD']      ?? '');
+    define('DEV_DB_NAME',         $__e['G5_DB_NAME']          ?? 'testmacomaex');
+    unset($_envFile, $__e, $_line, $__pos, $__k, $__v);
 }
-
-// _common.php 상대경로 이슈가 있어도 root/.env 를 직접 로드해서 값 확보
-mltest_load_env_file(dirname(dirname(dirname(__DIR__))) . '/.env');
-
-if (!function_exists('mltest_env')) {
-    function mltest_env($name, $default = '')
-    {
-        if (function_exists('macomaex_env')) {
-            return macomaex_env($name, $default);
-        }
-
-        $value = getenv($name);
-        if ($value !== false && $value !== '') {
-            return $value;
-        }
-
-        return $default;
-    }
-}
-
-$ml_base_url = mltest_env('MLTEST_API_URL', mltest_env('ML_API_URL', ''));
-$ml_api_key  = mltest_env('MLTEST_API_KEY', mltest_env('ML_API_KEY', ''));
-
-if (!defined('EC2_BASE_URL')) define('EC2_BASE_URL', rtrim((string)$ml_base_url, '/'));
-if (!defined('ML_API_KEY'))   define('ML_API_KEY',   (string)$ml_api_key);
 
 function ec2_post($endpoint, $json_payload, $timeout = 25) {
     $ch = curl_init(EC2_BASE_URL . $endpoint);
