@@ -562,18 +562,30 @@ if (isset($_SESSION['ss_mb_id']) && $_SESSION['ss_mb_id']) { // 로그인중이�
 } else {
     // 자동로그인 ---------------------------------------
     // 회원아이디가 쿠키에 저장되어 있다면 (3.27)
-    if (!$session_idle_expired && ($tmp_mb_id = get_cookie('ck_mb_id'))) {
+    $tmp_mb_id = get_cookie('ck_mb_id');
+    if (!$session_idle_expired && $tmp_mb_id) {
+        $tmp_mb_id = trim((string) $tmp_mb_id);
+        if (strlen($tmp_mb_id) > 255) {
+            $tmp_mb_id = substr($tmp_mb_id, 0, 255);
+        }
+        // 이메일 아이디를 사용하는 사이트를 위해 @ . - 등을 허용하되 제어문자는 차단
+        if (preg_match('/[\x00-\x1F\x7F]/', $tmp_mb_id)) {
+            $tmp_mb_id = '';
+        }
+    }
 
-        $tmp_mb_id = substr(preg_replace("/[^a-zA-Z0-9_]*/", "", $tmp_mb_id), 0, 20);
+    if (!$session_idle_expired && $tmp_mb_id) {
+        $tmp_mb_id_sql = sql_real_escape_string($tmp_mb_id);
         // 최고관리자는 자동로그인 금지
         if (strtolower($tmp_mb_id) !== strtolower($config['cf_admin'])) {
-            $sql = " select mb_password, mb_intercept_date, mb_leave_date, mb_email_certify from {$g5['member_table']} where mb_id = '{$tmp_mb_id}' ";
+            $sql = " select mb_password, mb_intercept_date, mb_leave_date, mb_email_certify from {$g5['member_table']} where mb_id = '{$tmp_mb_id_sql}' ";
             $row = sql_fetch($sql);
             if($row['mb_password']){
-                $key = md5($_SERVER['SERVER_ADDR'] . $_SERVER['SERVER_SOFTWARE'] . $_SERVER['HTTP_USER_AGENT'] . $row['mb_password']);
-                // 쿠키에 저장된 키와 같다면
+                $key = get_auto_login_key($tmp_mb_id, $row['mb_password']);
+                $legacy_key = get_auto_login_legacy_key($row['mb_password']);
+                // 쿠키에 저장된 키와 같다면 (구버전 키도 호환)
                 $tmp_key = get_cookie('ck_auto');
-                if ($tmp_key === $key && $tmp_key) {
+                if ($tmp_key && ($tmp_key === $key || $tmp_key === $legacy_key)) {
                     // 차단, 탈퇴가 아니고 메일인증이 사용이면서 인증을 받았다면
                     if ($row['mb_intercept_date'] == '' &&
                         $row['mb_leave_date'] == '' &&
