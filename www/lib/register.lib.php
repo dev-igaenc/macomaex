@@ -180,3 +180,138 @@ function exist_mb_hp($reg_mb_hp, $reg_mb_id)
     else
         return "";
 }
+
+function macomaex_signup_phone_certification($mb_name, $mb_hp, $post_cert_no = '')
+{
+    global $config, $g5, $member;
+
+    $mb_name = trim((string) $mb_name);
+    $mb_hp = hyphen_hp_number($mb_hp);
+    $post_cert_no = trim((string) $post_cert_no);
+
+    if (!$config['cf_cert_use']) {
+        return array('ok' => false, 'message' => '회원가입을 위해서는 휴대폰 본인확인 설정이 필요합니다.');
+    }
+
+    if ($msg = empty_mb_name($mb_name)) {
+        return array('ok' => false, 'message' => $msg);
+    }
+
+    if ($msg = valid_mb_hp($mb_hp)) {
+        return array('ok' => false, 'message' => $msg);
+    }
+
+    $md5_cert_no = get_session('ss_cert_no');
+    $cert_type = get_session('ss_cert_type');
+    $cert_birth = get_session('ss_cert_birth');
+    $cert_hash = get_session('ss_cert_hash');
+
+    if (!$md5_cert_no || !$cert_type || !$cert_birth || !$cert_hash) {
+        return array('ok' => false, 'message' => '회원가입을 위해서는 휴대폰 본인확인을 완료해 주셔야 합니다.');
+    }
+
+    if ($post_cert_no === '' || $post_cert_no !== $md5_cert_no) {
+        return array('ok' => false, 'message' => '회원가입을 위해서는 휴대폰 본인확인을 완료해 주셔야 합니다.');
+    }
+
+    if ($cert_type === 'ipin') {
+        return array('ok' => false, 'message' => '휴대폰 본인확인으로 인증을 완료해 주셔야 합니다.');
+    }
+
+    $expected_hash = md5($mb_name.$cert_type.$cert_birth.$mb_hp.$md5_cert_no);
+    if ($cert_hash !== $expected_hash) {
+        return array('ok' => false, 'message' => '본인인증된 정보와 입력된 회원정보가 일치하지 않습니다. 다시 시도해 주세요.');
+    }
+
+    $dupinfo = get_session('ss_cert_dupinfo');
+    if ($dupinfo) {
+        $exclude_mb_id = isset($member['mb_id']) ? $member['mb_id'] : '';
+        $sql = " select mb_id from {$g5['member_table']} where mb_id <> '".sql_real_escape_string($exclude_mb_id)."' and mb_dupinfo = '".sql_real_escape_string($dupinfo)."' ";
+        $row = sql_fetch($sql);
+        if (!empty($row['mb_id'])) {
+            return array('ok' => false, 'message' => '입력하신 본인확인 정보로 가입된 내역이 존재합니다.');
+        }
+    }
+
+    $sql_certify = " , mb_hp = '".sql_real_escape_string($mb_hp)."' ";
+    $sql_certify .= " , mb_certify = '".sql_real_escape_string($cert_type)."' ";
+    $sql_certify .= " , mb_adult = '".sql_real_escape_string(get_session('ss_cert_adult'))."' ";
+    $sql_certify .= " , mb_birth = '".sql_real_escape_string($cert_birth)."' ";
+    $sql_certify .= " , mb_sex = '".sql_real_escape_string(get_session('ss_cert_sex'))."' ";
+    $sql_certify .= " , mb_dupinfo = '".sql_real_escape_string($dupinfo)."' ";
+
+    return array(
+        'ok' => true,
+        'message' => '',
+        'mb_hp' => $mb_hp,
+        'cert_type' => $cert_type,
+        'cert_no' => $md5_cert_no,
+        'sql_certify' => $sql_certify,
+    );
+}
+
+function macomaex_grant_signup_credit_bonus($mb_id, $log_prefix = 'signup')
+{
+    $mb_id = trim((string) $mb_id);
+    if ($mb_id === '') {
+        return array('ok' => false, 'message' => 'empty_member_id');
+    }
+
+    $signup_bonus = (defined('_new_member_signup_credit') && (int) _new_member_signup_credit > 0)
+        ? (int) _new_member_signup_credit
+        : 30;
+
+    if ($signup_bonus <= 0) {
+        return array('ok' => true, 'skipped' => true, 'message' => 'bonus_disabled');
+    }
+
+    if (!function_exists('credit_ledger_get_latest_row') || !function_exists('credit_lot_register_charge')) {
+        return array('ok' => false, 'message' => 'credit_functions_missing');
+    }
+
+    $mb_id_sql = sql_real_escape_string($mb_id);
+    sql_query("START TRANSACTION");
+
+    $already = sql_fetch("select id from credit_history where uid='{$mb_id_sql}' and tx_type='BONUS' and service_code='SIGNUP_BONUS' limit 1 for update");
+    if (!empty($already['id'])) {
+        sql_query("COMMIT");
+        return array('ok' => true, 'skipped' => true, 'message' => 'already_granted', 'history_id' => (int) $already['id']);
+    }
+
+    $ledger_last = credit_ledger_get_latest_row($mb_id, true);
+    $current_credit = isset($ledger_last['credit_after']) ? (int) $ledger_last['credit_after'] : 0;
+    $signup_bonus_after = $current_credit + $signup_bonus;
+
+    $bonus_memo = addslashes('신규 가입 무료 크레딧 지급');
+    $bonus_history_ok = sql_query("insert into credit_history set
+        uid='{$mb_id_sql}',
+        tx_type='BONUS',
+        service_code='SIGNUP_BONUS',
+        credit_delta='{$signup_bonus}',
+        credit_after='{$signup_bonus_after}',
+        order_no=NULL,
+        tr_no='',
+        memo='{$bonus_memo}',
+        created_at=now()", false);
+
+    $bonus_lot_ok = false;
+    $bonus_history_id = 0;
+    if ($bonus_history_ok) {
+        $bonus_history_id = (int) sql_insert_id();
+        if ($bonus_history_id > 0) {
+            $bonus_lot_order_no = 'BNS_' . $bonus_history_id;
+            $bonus_lot = credit_lot_register_charge($mb_id, $bonus_history_id, $bonus_lot_order_no, $signup_bonus);
+            $bonus_lot_ok = !empty($bonus_lot['ok']);
+        }
+    }
+
+    if ($bonus_history_ok && $bonus_lot_ok) {
+        sql_query("COMMIT");
+        return array('ok' => true, 'skipped' => false, 'history_id' => $bonus_history_id, 'credit_delta' => $signup_bonus);
+    }
+
+    sql_query("ROLLBACK");
+    error_log('[credit_bonus] '.$log_prefix.' signup bonus rollback mb_id=' . $mb_id . ' history_ok=' . ($bonus_history_ok ? 'Y' : 'N') . ' lot_ok=' . ($bonus_lot_ok ? 'Y' : 'N') . ' history_id=' . $bonus_history_id);
+
+    return array('ok' => false, 'message' => 'bonus_insert_failed', 'history_id' => $bonus_history_id);
+}

@@ -3,6 +3,14 @@ include_once('./_common.php');
 include_once(G5_LIB_PATH.'/register.lib.php');
 include_once(G5_LIB_PATH.'/mailer.lib.php');
 
+if (!function_exists('macomaex_social_register_fail')) {
+    function macomaex_social_register_fail($message)
+    {
+        social_login_session_clear(1);
+        alert($message, G5_BBS_URL.'/login.php');
+    }
+}
+
 if (!($w == '' || $w == 'u')) {
     alert('w 값이 제대로 넘어오지 않았습니다.');
 }
@@ -30,11 +38,15 @@ $mb_password    = isset($_POST['mb_password']) ? trim($_POST['mb_password']) : '
 $mb_password_re = isset($_POST['mb_password_re']) ? trim($_POST['mb_password_re']) : '';
 $mb_nick        = isset($_POST['mb_nick']) ? trim(strip_tags($_POST['mb_nick'])) : '';
 $mb_email       = isset($_POST['mb_email']) ? trim($_POST['mb_email']) : '';
-$mb_name        = isset($_POST['mb_name']) ? clean_xss_tags(trim(strip_tags($_POST['mb_name']))) : '';
+$cert_mb_name   = isset($_POST['mb_name']) ? clean_xss_tags(trim(strip_tags($_POST['mb_name']))) : '';
 $mb_hp          = isset($_POST['mb_hp']) ? trim($_POST['mb_hp']) : '';
 $mb_6           = isset($_POST['mb_6']) ? trim($_POST['mb_6']) : '';
 $mb_8           = isset($_POST['mb_8']) ? trim($_POST['mb_8']) : '';
 $mb_email       = get_email_address($mb_email);
+$mb_5           = $mb_email;
+$mb_id          = $mb_email;
+$mb_name        = $mb_id;
+$mb_nick        = $mb_nick ? $mb_nick : $mb_id;
 
 // 소셜 프로필에서 이름/휴대폰을 추출해 회원 확장필드 기본값으로 사용합니다.
 $social_contact = social_get_profile_contact_data($user_profile);
@@ -42,24 +54,24 @@ if( !$mb_6 && !empty($social_contact['name']) ){
     $mb_6 = clean_xss_tags(trim(strip_tags($social_contact['name'])));
 }
 if( !$mb_8 && !empty($social_contact['phone']) ){
-    $mb_8 = trim((string)$social_contact['phone']);
+    $mb_8 = social_normalize_phone_number($social_contact['phone']);
 }
+$mb_8 = $mb_8 ? social_normalize_phone_number($mb_8) : '';
 
 // 이름, 닉네임에 utf-8 이외의 문자가 포함됐다면 오류
 // 서버환경에 따라 정상적으로 체크되지 않을 수 있음.
-$tmp_mb_name = iconv('UTF-8', 'UTF-8//IGNORE', $mb_name);
-if($tmp_mb_name != $mb_name) {
-    $mb_name = $tmp_mb_name;
+$tmp_mb_name = iconv('UTF-8', 'UTF-8//IGNORE', $cert_mb_name);
+if($tmp_mb_name != $cert_mb_name) {
+    $cert_mb_name = $tmp_mb_name;
 }
 $tmp_mb_nick = iconv('UTF-8', 'UTF-8//IGNORE', $mb_nick);
 if($tmp_mb_nick != $mb_nick) {
     $mb_nick = $tmp_mb_nick;
 }
 
-if( ! $mb_nick || ! $mb_name ){
+if( ! $mb_nick ){
     $tmp = explode('@', $mb_email);
     $mb_nick = $mb_nick ? $mb_nick : $tmp[0];
-    $mb_name = $mb_name ? $mb_name : $tmp[0];
     $mb_nick = exist_mb_nick_recursive($mb_nick, '');
 }
 
@@ -69,24 +81,24 @@ if( ! isset($mb_password) || ! $mb_password ){
 
 }
 
-if ($msg = valid_mb_id($mb_id))         alert($msg, "", true, true);
-if ($msg = empty_mb_name($mb_name))       alert($msg, "", true, true);
-if ($msg = empty_mb_nick($mb_nick))     alert($msg, "", true, true);
-if ($msg = empty_mb_email($mb_email))   alert($msg, "", true, true);
-if ($msg = reserve_mb_id($mb_id))       alert($msg, "", true, true);
-if ($msg = reserve_mb_nick($mb_nick))   alert($msg, "", true, true);
+if ($msg = empty_mb_name($cert_mb_name))       macomaex_social_register_fail($msg);
+if ($msg = empty_mb_nick($mb_nick))     macomaex_social_register_fail($msg);
+if ($msg = empty_mb_email($mb_email))   macomaex_social_register_fail($msg);
+if ($msg = reserve_mb_id($mb_id))       macomaex_social_register_fail($msg);
+if ($msg = reserve_mb_nick($mb_nick))   macomaex_social_register_fail($msg);
 // 이름에 한글명 체크를 하지 않는다.
 //if ($msg = valid_mb_name($mb_name))     alert($msg, "", true, true);
-if ($msg = valid_mb_nick($mb_nick))     alert($msg, "", true, true);
-if ($msg = valid_mb_email($mb_email))   alert($msg, "", true, true);
-if ($msg = prohibit_mb_email($mb_email))alert($msg, "", true, true);
+if ($msg = valid_mb_nick($mb_nick))     macomaex_social_register_fail($msg);
+if ($msg = valid_mb_email($mb_email))   macomaex_social_register_fail($msg);
+if ($msg = prohibit_mb_email($mb_email))macomaex_social_register_fail($msg);
+if ($msg = valid_mb_hp($mb_hp))         macomaex_social_register_fail($msg);
 
-if ($msg = exist_mb_id($mb_id))     alert($msg);
-if ($msg = exist_mb_nick($mb_nick, $mb_id))     alert($msg, "", true, true);
-if ($msg = exist_mb_email($mb_email, $mb_id))   alert($msg, "", true, true);
+if ($msg = exist_mb_id($mb_id))     macomaex_social_register_fail($msg);
+if ($msg = exist_mb_nick($mb_nick, $mb_id))     macomaex_social_register_fail($msg);
+if ($msg = exist_mb_email($mb_email, $mb_id))   macomaex_social_register_fail($msg);
 
 if( $mb = get_member($mb_id) ){
-    alert("이미 등록된 회원이 존재합니다.", G5_URL);
+    macomaex_social_register_fail("이미 등록된 회원이 존재합니다.");
 }
 
 $data = array(
@@ -112,54 +124,17 @@ $mb_open = (isset($_POST['mb_open']) && $_POST['mb_open']) ? 1 : 0;
 //===============================================================
 //  본인확인
 //---------------------------------------------------------------
-if($config['cf_cert_use']) {
-    $mb_hp = hyphen_hp_number($mb_hp);
-    if($config['cf_cert_use'] && get_session('ss_cert_type') && get_session('ss_cert_dupinfo')) {
-        // 중복체크
-        $sql = " select mb_id from {$g5['member_table']} where mb_id <> '{$member['mb_id']}' and mb_dupinfo = '".get_session('ss_cert_dupinfo')."' ";
-        $row = sql_fetch($sql);
-        if (!empty($row['mb_id'])) {
-            alert("입력하신 본인확인 정보로 가입된 내역이 존재합니다.");
-        }
-    }
-
-    $sql_certify = '';
-    $md5_cert_no = get_session('ss_cert_no');
-    $cert_type = get_session('ss_cert_type');
-    if ($config['cf_cert_use'] && $cert_type && $md5_cert_no) {
-        // 해시값이 같은 경우에만 본인확인 값을 저장한다.
-        if ($cert_type == 'ipin' && get_session('ss_cert_hash') == md5($mb_name.$cert_type.get_session('ss_cert_birth').$md5_cert_no)) { // 아이핀일때 hash 값 체크 hp미포함
-            $sql_certify .= " , mb_hp = '{$mb_hp}' ";
-            $sql_certify .= " , mb_certify  = '{$cert_type}' ";
-            $sql_certify .= " , mb_adult = '".get_session('ss_cert_adult')."' ";
-            $sql_certify .= " , mb_birth = '".get_session('ss_cert_birth')."' ";
-            $sql_certify .= " , mb_sex = '".get_session('ss_cert_sex')."' ";
-            $sql_certify .= " , mb_dupinfo = '".get_session('ss_cert_dupinfo')."' ";
-            if($w == 'u')
-                $sql_certify .= " , mb_name = '{$mb_name}' ";
-        } else if($cert_type != 'ipin' && get_session('ss_cert_hash') == md5($mb_name.$cert_type.get_session('ss_cert_birth').$mb_hp.$md5_cert_no)) { // 간편인증, 휴대폰일때 hash 값 체크 hp포함
-            $sql_certify .= " , mb_hp = '{$mb_hp}' ";
-            $sql_certify .= " , mb_certify  = '{$cert_type}' ";
-            $sql_certify .= " , mb_adult = '".get_session('ss_cert_adult')."' ";
-            $sql_certify .= " , mb_birth = '".get_session('ss_cert_birth')."' ";
-            $sql_certify .= " , mb_sex = '".get_session('ss_cert_sex')."' ";
-            $sql_certify .= " , mb_dupinfo = '".get_session('ss_cert_dupinfo')."' ";
-            if($w == 'u')
-                $sql_certify .= " , mb_name = '{$mb_name}' ";
-        }else {
-            alert('본인인증된 정보와 개인정보가 일치하지않습니다. 다시시도 해주세요');
-        }
-    } else {
-        if (get_session("ss_reg_mb_name") != $mb_name || get_session("ss_reg_mb_hp") != $mb_hp) {
-            $sql_certify .= " , mb_hp = '{$mb_hp}' ";
-            $sql_certify .= " , mb_certify = '' ";
-            $sql_certify .= " , mb_adult = 0 ";
-            $sql_certify .= " , mb_birth = '' ";
-            $sql_certify .= " , mb_sex = '' ";
-        }
-    }
-    //===============================================================
+$post_cert_no = isset($_POST['cert_no']) ? trim($_POST['cert_no']) : '';
+$signup_cert = macomaex_signup_phone_certification($cert_mb_name, $mb_hp, $post_cert_no);
+if (empty($signup_cert['ok'])) {
+    macomaex_social_register_fail($signup_cert['message']);
 }
+$mb_hp = $signup_cert['mb_hp'];
+$cert_type = $signup_cert['cert_type'];
+$md5_cert_no = $signup_cert['cert_no'];
+$sql_certify = $signup_cert['sql_certify'];
+$mb_6 = $cert_mb_name;
+//===============================================================
 // 회원정보 입력
 $sql = " insert into {$g5['member_table']}
             set mb_id = '{$mb_id}',
@@ -178,6 +153,7 @@ $sql = " insert into {$g5['member_table']}
                 mb_sms = '0',
                 mb_open = '{$mb_open}',
                 mb_open_date = '".G5_TIME_YMD."',
+                mb_5 = '".sql_real_escape_string($mb_5)."',
                 mb_6 = '".sql_real_escape_string($mb_6)."',
                 mb_8 = '".sql_real_escape_string($mb_8)."'
                 {$sql_certify} ";
@@ -185,13 +161,16 @@ $result = sql_query($sql, false);
 
 if($result) {
   
-    if($cert_type == 'ipin' && get_session('ss_cert_hash') == md5($mb_name.$cert_type.get_session('ss_cert_birth').$md5_cert_no)) { // 아이핀일때 hash 값 체크 hp미포함)
-        insert_member_cert_history($mb_id, $mb_name, $mb_hp, get_session('ss_cert_birth'), get_session('ss_cert_type') ); // 본인인증 후 정보 수정 시 내역 기록
-    }else if($cert_type != 'ipin' && get_session('ss_cert_hash') == md5($mb_name.$cert_type.get_session('ss_cert_birth').$mb_hp.$md5_cert_no)) { // 간편인증, 휴대폰일때 hash 값 체크 hp포함
-        insert_member_cert_history($mb_id, $mb_name, $mb_hp, get_session('ss_cert_birth'), get_session('ss_cert_type') ); // 본인인증 후 정보 수정 시 내역 기록
+    if($cert_type == 'ipin' && get_session('ss_cert_hash') == md5($cert_mb_name.$cert_type.get_session('ss_cert_birth').$md5_cert_no)) { // 아이핀일때 hash 값 체크 hp미포함)
+        insert_member_cert_history($mb_id, $cert_mb_name, $mb_hp, get_session('ss_cert_birth'), get_session('ss_cert_type') ); // 본인인증 후 정보 수정 시 내역 기록
+    }else if($cert_type != 'ipin' && get_session('ss_cert_hash') == md5($cert_mb_name.$cert_type.get_session('ss_cert_birth').$mb_hp.$md5_cert_no)) { // 간편인증, 휴대폰일때 hash 값 체크 hp포함
+        insert_member_cert_history($mb_id, $cert_mb_name, $mb_hp, get_session('ss_cert_birth'), get_session('ss_cert_type') ); // 본인인증 후 정보 수정 시 내역 기록
     }
     // 회원가입 포인트 부여
     insert_point($mb_id, $config['cf_register_point'], '회원가입 축하', '@member', $mb_id, '회원가입');
+
+    // 기본 가입 크레딧 지급 (일반 회원가입 경로와 동일 정책)
+    macomaex_grant_signup_credit_bonus($mb_id, 'social');
 
     // 최고관리자님께 메일 발송
     if ($config['cf_email_mb_super_admin']) {
@@ -309,6 +288,7 @@ if($result) {
 
 } else {
 
-    alert('회원 가입 오류!', G5_URL );
+    social_login_session_clear(1);
+    alert('회원가입 처리 중 오류가 발생했습니다. 다시 로그인해 주세요.', G5_BBS_URL.'/login.php');
 
 }

@@ -109,15 +109,12 @@ function setRequesterCompany(company) {
 
 function updateRequesterProfileUi() {
     var bznoBox = document.getElementById('reqBznoBox');
-    var managerBox = document.getElementById('reqManagerBox');
     var companyInfoTable = document.getElementById('reqCompanyInfoTable');
     var companyInfoCallout = document.getElementById('reqCompanyInfoCallout');
-    if (!bznoBox || !managerBox) return;
+    if (!bznoBox) return;
 
     var hasCompany = !!(MATCH_REQUEST_CONTEXT.requesterCompany && MATCH_REQUEST_CONTEXT.requesterCompany.company);
-    var hasManager = !!(requesterProfile.manager_name && requesterProfile.manager_phone);
     bznoBox.hidden = hasCompany;
-    managerBox.hidden = hasManager;
     if (companyInfoTable) companyInfoTable.hidden = !hasCompany;
     if (companyInfoCallout) companyInfoCallout.hidden = !hasCompany;
 }
@@ -394,8 +391,8 @@ function resolveTradeRequestErrorView(data) {
         member_not_logged_in: '로그인이 만료되었습니다. 다시 로그인 후 시도해 주세요.',
         requester_bzno_empty: '사업자번호를 먼저 확인해 주세요.',
         requester_company_unresolved: '사업자번호로 기업 정보를 확인하지 못했습니다. 번호를 다시 확인해 주세요.',
-        manager_info_missing: '담당자 이름과 연락처를 입력해 주세요.',
-        manager_phone_invalid: '담당자 연락처 형식이 올바르지 않습니다. 숫자만 입력해 주세요.',
+        member_contact_missing: '회원 정보에 이름과 휴대폰 번호가 없습니다. 회원정보를 확인해 주세요.',
+        member_phone_invalid: '회원 휴대폰 번호 형식이 올바르지 않습니다. 관리자에게 문의해 주세요.',
         invalid_target_kedcd: '대상 기업 정보가 올바르지 않습니다. 페이지를 새로고침 후 다시 시도해 주세요.',
         target_company_not_found: '대상 기업 정보를 찾지 못했습니다. 잠시 후 다시 시도해 주세요.',
         invalid_trade_direction: '거래 방향을 다시 선택해 주세요.',
@@ -442,18 +439,9 @@ if (goToTypeBtn) {
         }
         if (itemField) itemField.style.borderColor = '';
         var bznoBox = document.getElementById('reqBznoBox');
-        var managerBox = document.getElementById('reqManagerBox');
         if (bznoBox && !bznoBox.hidden) {
-            showInlineOrToastWarning('사업자번호와 담당자 정보를 입력해 주세요.');
+            showInlineOrToastWarning('사업자번호 확인을 완료해 주세요.');
             return;
-        }
-        if (managerBox && !managerBox.hidden) {
-            var managerNameField = document.getElementById('reqManagerName');
-            var managerPhoneField = document.getElementById('reqManagerPhone');
-            if (!managerNameField || !managerNameField.value.trim() || !managerPhoneField || normalizeDigits(managerPhoneField.value).length < 9) {
-                showInlineOrToastWarning('사업자번호와 담당자 정보를 입력해 주세요.');
-                return;
-            }
         }
         hideReqWarning();
         closeModal('modalRequest');
@@ -527,18 +515,6 @@ setRequesterCompany(MATCH_REQUEST_CONTEXT.requesterCompany || null);
 setRequestTarget(MATCH_REQUEST_CONTEXT.target || null);
 updateRequesterProfileUi();
 
-var reqManagerPhone = document.getElementById('reqManagerPhone');
-if (reqManagerPhone) {
-    reqManagerPhone.value = requesterProfile.manager_phone || '';
-    reqManagerPhone.addEventListener('input', function () {
-        reqManagerPhone.value = formatPhone(reqManagerPhone.value);
-    });
-}
-var reqManagerName = document.getElementById('reqManagerName');
-if (reqManagerName && requesterProfile.manager_name) {
-    reqManagerName.value = requesterProfile.manager_name;
-}
-
 if (MATCH_REQUEST_CONTEXT.autoOpenOnLoad) {
     openModal('modalRequest');
 
@@ -610,11 +586,6 @@ if (confirmTypeBtn) {
         if (requesterBznoDigits) {
             formData.set('requester_bzno', requesterBznoDigits);
         }
-        var managerBox = document.getElementById('reqManagerBox');
-        if (managerBox && !managerBox.hidden) {
-            formData.set('manager_name', (document.getElementById('reqManagerName').value || '').trim());
-            formData.set('manager_phone', normalizeDigits(document.getElementById('reqManagerPhone').value || ''));
-        }
 
         confirmTypeBtn.disabled = true;
 
@@ -647,12 +618,6 @@ if (confirmTypeBtn) {
                 }
                 alert(errorView.message);
                 return;
-            }
-
-            if (managerBox && !managerBox.hidden) {
-                requesterProfile.manager_name = (document.getElementById('reqManagerName').value || '').trim();
-                requesterProfile.manager_phone = formatPhone(document.getElementById('reqManagerPhone').value || '');
-                updateRequesterProfileUi();
             }
 
             closeModal('modalType');
