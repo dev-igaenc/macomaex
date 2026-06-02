@@ -51,8 +51,9 @@ $register_flow = isset($_POST['register_flow']) ? trim((string)$_POST['register_
 $is_single_join_flow = ($register_flow === 'single_join_v1');
 
 $mb_password    = isset($_POST['mb_password']) ? trim($_POST['mb_password']) : '';
-$mb_name        = isset($_POST['mb_name']) ? trim($_POST['mb_name']) : '';
-$mb_nick        = isset($_POST['mb_name']) ? trim($_POST['mb_name']) : '';
+$cert_mb_name   = isset($_POST['mb_name']) ? trim($_POST['mb_name']) : '';
+$mb_name        = $cert_mb_name;
+$mb_nick        = $cert_mb_name;
 
 $mb_sex         = isset($_POST['mb_sex'])           ? trim($_POST['mb_sex'])         : "";
 $mb_birth       = isset($_POST['mb_birth'])         ? trim($_POST['mb_birth'])       : "";
@@ -109,10 +110,9 @@ if (!isset($default) || !is_array($default)) {
     $default = array();
 }
 
-$mb_name        = clean_xss_tags($mb_name);
-if ($is_single_join_flow && $mb_name === '') {
-    $mb_name = $mb_id;
-}
+$cert_mb_name   = clean_xss_tags($cert_mb_name);
+$mb_name        = ($w == '') ? $mb_id : clean_xss_tags($mb_name);
+$mb_nick        = ($w == '') ? $mb_id : clean_xss_tags($mb_nick);
 $mb_email       = get_email_address($mb_email);
 $mb_homepage    = clean_xss_tags($mb_homepage);
 $mb_tel         = clean_xss_tags($mb_tel);
@@ -145,11 +145,9 @@ if ($w == '') {
 
     // 이름, 닉네임에 utf-8 이외의 문자가 포함됐다면 오류
     // 서버환경에 따라 정상적으로 체크되지 않을 수 있음.
-    if (!$is_single_join_flow) {
-        $tmp_mb_name = iconv('UTF-8', 'UTF-8//IGNORE', $mb_name);
-        if($tmp_mb_name != $mb_name) {
-            alert('이름을 올바르게 입력해 주십시오.');
-        }
+    $tmp_mb_name = iconv('UTF-8', 'UTF-8//IGNORE', $cert_mb_name);
+    if($tmp_mb_name != $cert_mb_name) {
+        alert('이름을 올바르게 입력해 주십시오.');
     }
 	/*
     $tmp_mb_nick = iconv('UTF-8', 'UTF-8//IGNORE', $mb_nick);
@@ -164,9 +162,7 @@ if ($w == '') {
     if($w == '' && $mb_password != $mb_password_re)
         alert('비밀번호가 일치하지 않습니다.');
 	*/
-    if (!$is_single_join_flow) {
-        if ($msg = empty_mb_name($mb_name))       alert($msg, "", true, true);
-    }
+    if ($msg = empty_mb_name($cert_mb_name))       alert($msg, "", true, true);
     if ($msg = empty_mb_email($mb_email))   alert($msg, "", true, true);
     if ($msg = reserve_mb_id($mb_id))       alert($msg, "", true, true);
     //if ($msg = reserve_mb_nick($mb_nick))   alert($msg, "", true, true);
@@ -176,12 +172,7 @@ if ($w == '') {
     if ($msg = valid_mb_email($mb_email))   alert($msg, "", true, true);
     if ($msg = prohibit_mb_email($mb_email))alert($msg, "", true, true);
 
-    // 휴대폰 필수입력일 경우 휴대폰번호 유효성 체크
-    if (!$is_single_join_flow) {
-        if ($config['cf_use_hp'] || ($config['cf_cert_hp'] || $config['cf_cert_simple']) && $config['cf_req_hp']) {
-            if ($msg = valid_mb_hp($mb_hp))     alert($msg, "", true, true);
-        }
-    }
+    if ($msg = valid_mb_hp($mb_hp))     alert($msg, "", true, true);
 
     if ($w=='') {
         if ($msg = exist_mb_id($mb_id))     alert($msg);
@@ -189,13 +180,6 @@ if ($w == '') {
         if (get_session('ss_check_mb_id') != urlencode($mb_id)) {
             set_session('ss_check_mb_id', '');
             alert('올바른 방법으로 이용해 주십시오.');
-        }
-
-        // 본인확인 체크
-        if(!$is_single_join_flow && $config['cf_cert_use'] && $config['cf_cert_req']) {
-            $post_cert_no = isset($_POST['cert_no']) ? trim($_POST['cert_no']) : '';
-            if($post_cert_no !== get_session('ss_cert_no') || ! get_session('ss_cert_no'))
-                alert("회원가입을 위해서는 본인확인을 해주셔야 합니다.");
         }
 
         if ($config['cf_use_recommend'] && $mb_recommend) {
@@ -224,23 +208,38 @@ if ($w == '') {
 // 사용자 코드 실행
 @include_once($member_skin_path.'/register_form_update.head.skin.php');
 
-//===============================================================
-//  본인확인
-//---------------------------------------------------------------
-$mb_hp = hyphen_hp_number($mb_hp);
-if($config['cf_cert_use'] && get_session('ss_cert_type') && get_session('ss_cert_dupinfo')) {
-    // 중복체크
-    $sql = " select mb_id from {$g5['member_table']} where mb_id <> '{$member['mb_id']}' and mb_dupinfo = '".get_session('ss_cert_dupinfo')."' ";
-    $row = sql_fetch($sql);
-    if (!empty($row['mb_id'])) {
-        alert("입력하신 본인확인 정보로 가입된 내역이 존재합니다.");
-    }
-}
-
 $sql_certify = '';
 $md5_cert_no = get_session('ss_cert_no');
 $cert_type = get_session('ss_cert_type');
-if ($config['cf_cert_use'] && $cert_type && $md5_cert_no) {
+
+//===============================================================
+//  본인확인
+//---------------------------------------------------------------
+if ($w == '') {
+    $post_cert_no = isset($_POST['cert_no']) ? trim($_POST['cert_no']) : '';
+    $signup_cert = macomaex_signup_phone_certification($cert_mb_name, $mb_hp, $post_cert_no);
+    if (empty($signup_cert['ok'])) {
+        alert($signup_cert['message']);
+    }
+
+    $mb_hp = $signup_cert['mb_hp'];
+    $cert_type = $signup_cert['cert_type'];
+    $md5_cert_no = $signup_cert['cert_no'];
+    $sql_certify = $signup_cert['sql_certify'];
+    $mb_6 = $cert_mb_name;
+} else {
+    $mb_hp = hyphen_hp_number($mb_hp);
+    if($config['cf_cert_use'] && get_session('ss_cert_type') && get_session('ss_cert_dupinfo')) {
+        // 중복체크
+        $sql = " select mb_id from {$g5['member_table']} where mb_id <> '{$member['mb_id']}' and mb_dupinfo = '".get_session('ss_cert_dupinfo')."' ";
+        $row = sql_fetch($sql);
+        if (!empty($row['mb_id'])) {
+            alert("입력하신 본인확인 정보로 가입된 내역이 존재합니다.");
+        }
+    }
+}
+
+if ($w != '' && $config['cf_cert_use'] && $cert_type && $md5_cert_no) {
     // 해시값이 같은 경우에만 본인확인 값을 저장한다.
     if ($cert_type == 'ipin' && get_session('ss_cert_hash') == md5($mb_name.$cert_type.get_session('ss_cert_birth').$md5_cert_no)) { // 아이핀일때 hash 값 체크 hp미포함
         $sql_certify .= " , mb_hp = '{$mb_hp}' ";
@@ -263,7 +262,7 @@ if ($config['cf_cert_use'] && $cert_type && $md5_cert_no) {
     }else {
         alert('본인인증된 정보와 입력된 회원정보가 일치하지않습니다. 다시시도 해주세요');
     }
-} else {
+} else if ($w != '') {
     if (get_session("ss_reg_mb_name") != $mb_name || get_session("ss_reg_mb_hp") != $mb_hp) {
         $sql_certify .= " , mb_hp = '{$mb_hp}' ";
         $sql_certify .= " , mb_certify = '' ";
@@ -345,48 +344,7 @@ if ($w == '') {
     insert_point($mb_id, $config['cf_register_point'], '회원가입 축하', '@member', $mb_id, '회원가입');
 
     // 기본 가입 크레딧 지급
-	$signup_bonus = (defined('_new_member_signup_credit') && (int)_new_member_signup_credit > 0)
-	    ? (int)_new_member_signup_credit
-	    : 30;
-	if ($signup_bonus > 0) {
-	    sql_query("START TRANSACTION");
-	    $ledger_last = credit_ledger_get_latest_row($mb_id, true);
-	    $current_credit = isset($ledger_last['credit_after']) ? (int)$ledger_last['credit_after'] : 0;
-	    $signup_bonus_after = $current_credit + $signup_bonus;
-
-	    $bonus_memo = addslashes('신규 가입 무료 크레딧 지급');
-	    $bonus_history_ok = sql_query("insert into credit_history set
-	        uid='{$mb_id}',
-	        tx_type='BONUS',
-	        service_code='SIGNUP_BONUS',
-	        credit_delta='{$signup_bonus}',
-	        credit_after='{$signup_bonus_after}',
-	        order_no=NULL,
-	        tr_no='',
-	        memo='{$bonus_memo}',
-	        created_at=now()", false);
-
-	    $bonus_lot_ok = false;
-	    $bonus_history_id = 0;
-	    if ($bonus_history_ok) {
-	        $bonus_history_id = (int)sql_insert_id();
-	        if ($bonus_history_id > 0) {
-	            // BONUS도 LOT로 생성해 FIFO 차감 대상에 포함한다.
-	            // order_no는 길이 제한(64) 이슈가 없도록 짧은 고정 포맷을 사용한다.
-	            // 환불은 CHARGE + 결제주문번호 기준으로만 열리므로 BONUS LOT는 환불 대상이 아니다.
-	            $bonus_lot_order_no = 'BNS_' . $bonus_history_id;
-	            $bonus_lot = credit_lot_register_charge($mb_id, $bonus_history_id, $bonus_lot_order_no, $signup_bonus);
-	            $bonus_lot_ok = !empty($bonus_lot['ok']);
-	        }
-	    }
-
-	    if ($bonus_history_ok && $bonus_lot_ok) {
-	        sql_query("COMMIT");
-	    } else {
-	        sql_query("ROLLBACK");
-	        error_log('[credit_bonus] signup bonus rollback mb_id=' . $mb_id . ' history_ok=' . ($bonus_history_ok ? 'Y' : 'N') . ' lot_ok=' . ($bonus_lot_ok ? 'Y' : 'N') . ' history_id=' . $bonus_history_id);
-	    }
-	}
+    macomaex_grant_signup_credit_bonus($mb_id, 'signup');
 
     // 추천인에게 포인트 부여
     if ($config['cf_use_recommend'] && $mb_recommend)

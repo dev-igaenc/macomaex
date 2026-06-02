@@ -2,6 +2,9 @@
 if (!defined('_GNUBOARD_')) exit; // 개별 페이지 접근 불가
 ?>
 <script src="<?php echo G5_JS_URL ?>/jquery.register_form.js"></script>
+<?php if ($config['cf_cert_use'] && ($config['cf_cert_simple'] || $config['cf_cert_hp'])) { ?>
+<script src="<?php echo G5_JS_URL ?>/certify.js?v=<?php echo G5_JS_VER; ?>"></script>
+<?php } ?>
 
 <style>
     #sVisual,
@@ -42,11 +45,19 @@ if (!defined('_GNUBOARD_')) exit; // 개별 페이지 접근 불가
         text-underline-offset: 0.2rem;
     }
     #join_single .formBox.terms_box .consent_text a:hover{color: #444;}
+    #join_single .cert_input_group{display:flex; gap:0.8rem; align-items:center;}
+    #join_single .cert_input_group .inputBox{flex:1; min-width:0;}
+    #join_single .cert_btn{height:4.8rem; padding:0 1.8rem; border:0; border-radius:0.4rem; background:#111; color:#fff; font-size:1.5rem; font-weight:700; white-space:nowrap; cursor:pointer;}
+    #join_single .cert_btn.secondary{background:#2563eb;}
+    @media (max-width: 640px){
+        #join_single .cert_input_group{display:block;}
+        #join_single .cert_btn{width:100%; margin-top:0.8rem;}
+    }
 </style>
 
 <div id="join_single">
     <div class="member_sign_layout">
-        <form action="<?= $register_action_url ?? '' ?>" method="post" id="join_form" autocomplete="off">
+        <form action="<?= $register_action_url ?? '' ?>" method="post" id="join_form" name="fregisterform" autocomplete="off">
             <input type="hidden" name="url" value="<?= $url ?? '' ?>">
             <input type="hidden" name="w" value="">
             <input type="hidden" name="mb_id" id="mb_id" value="">
@@ -55,13 +66,15 @@ if (!defined('_GNUBOARD_')) exit; // 개별 페이지 접근 불가
             <input type="hidden" name="agree_chk" id="agree_chk" value="">
             <!-- 사업자번호/법인명 자동조회 기능 이관 전 임시 유지값 -->
             <input type="hidden" name="com_chk" id="com_chk" class="com_chk" value="true">
-            <input type="hidden" name="mb_name" id="mb_name" value="">
             <input type="hidden" name="mb_company" id="mb_company" value="">
             <input type="hidden" name="register_flow" value="single_join_v1">
             <input type="hidden" name="provider" value="<?php echo $provider ?? ''; ?>">
             <input type="hidden" name="cert_type" value="<?php echo $cert_type ?? ''; ?>">
             <input type="hidden" name="cert_no" value="<?php echo $cert_no ?? ''; ?>">
             <input type="hidden" name="id" value="<?php echo $mb_id ?? ''; ?>">
+            <input type="hidden" name="mb_6" id="mb_6" value="">
+            <input type="hidden" name="mb_8" id="mb_8" value="">
+            <input type="hidden" name="old_mb_hp" value="">
 
             <h4 class="member_sign_title">회원가입</h4>
 
@@ -104,12 +117,28 @@ if (!defined('_GNUBOARD_')) exit; // 개별 페이지 접근 불가
                         <p class="formBox_errorM"></p>
                     </div>
 
-                    <div class="formBox mobile">
-                        <p class="formBox_title">휴대폰 번호(선택)</p>
+                    <div class="formBox real_name">
+                        <p class="formBox_title required_mark">이름</p>
                         <div class="inputBox">
-                            <input type="text" name="mb_8" id="mb_8" class="normal" maxlength="13" placeholder="010-1234-5678">
+                            <input type="text" name="mb_name" id="reg_mb_name" class="normal" maxlength="40" placeholder="이름을 입력해 주세요">
                         </div>
-                        <p class="formBox_supM">휴대폰 번호 미입력 시 알림톡이 발송되지 않습니다.</p>
+                        <p class="formBox_errorM"></p>
+                    </div>
+
+                    <div class="formBox mobile">
+                        <p class="formBox_title required_mark">휴대폰 번호</p>
+                        <div class="cert_input_group">
+                            <div class="inputBox">
+                                <input type="text" name="mb_hp" id="reg_mb_hp" class="normal" maxlength="13" placeholder="010-1234-5678">
+                            </div>
+                            <?php if ($config['cf_cert_use'] && $config['cf_cert_simple']) { ?>
+                                <button type="button" id="win_sa_kakao_cert" class="cert_btn secondary win_sa_cert" data-type="">간편인증</button>
+                            <?php } ?>
+                            <?php if ($config['cf_cert_use'] && $config['cf_cert_hp']) { ?>
+                                <button type="button" id="win_hp_cert" class="cert_btn">휴대폰 인증</button>
+                            <?php } ?>
+                        </div>
+                        <p class="formBox_errorM"></p>
                     </div>
 
                     <!--
@@ -310,14 +339,14 @@ function validateString(event){
     return !/[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(event) && pattern.test(event);
 }
 
-function validateOptionalMobileAndMark() {
-    var $input = $("#mb_8");
+function validateRequiredMobileAndMark() {
+    var $input = $("#reg_mb_hp");
     if (!$input.length) return true;
 
     var value = $.trim($input.val());
     if (value === "") {
-        $input.parents(".formBox").find(".formBox_errorM").text("");
-        return true;
+        $input.parents(".formBox").find(".formBox_errorM").text("휴대폰 번호를 입력해 주세요.");
+        return false;
     }
 
     var mobilePattern = /^01[0-9]-?[0-9]{3,4}-?[0-9]{4}$/;
@@ -369,10 +398,54 @@ $("#password_re").keyup(function(){
     }
 });
 
-$("#mb_8").on("input blur change", function(){
+$("#reg_mb_hp").on("input blur change", function(){
     $(this).val(formatMobileNumber($(this).val()));
-    validateOptionalMobileAndMark();
+    $("#mb_8").val($(this).val());
+    $("input[name=old_mb_hp]").val($(this).val());
+    validateRequiredMobileAndMark();
 });
+
+$("#reg_mb_name").on("input blur change", function(){
+    $("#mb_6").val($.trim($(this).val()));
+});
+
+<?php if ($config['cf_cert_use'] && $config['cf_cert_simple']) { ?>
+var saUrl = "<?php echo G5_INICERT_URL; ?>/ini_request.php";
+$(".win_sa_cert").click(function() {
+    if (!cert_confirm()) return false;
+    var type = $(this).data("type");
+    var params = "?directAgency=" + type + "&pageType=register";
+    call_sa(saUrl + params);
+});
+<?php } ?>
+
+<?php if ($config['cf_cert_use'] && $config['cf_cert_hp']) { ?>
+$("#win_hp_cert").click(function(e) {
+    if (!cert_confirm()) return false;
+    var params = "?pageType=register";
+    <?php
+    switch ($config['cf_cert_hp']) {
+        case 'kcb':
+            $cert_url = G5_OKNAME_URL.'/hpcert1.php';
+            $cert_type = 'kcb-hp';
+            break;
+        case 'kcp':
+            $cert_url = G5_KCPCERT_URL.'/kcpcert_form.php';
+            $cert_type = 'kcp-hp';
+            break;
+        case 'lg':
+            $cert_url = G5_LGXPAY_URL.'/AuthOnlyReq.php';
+            $cert_type = 'lg-hp';
+            break;
+        default:
+            echo 'alert("기본환경설정에서 휴대폰 본인확인 설정을 해주십시오");';
+            echo 'return false;';
+            break;
+    }
+    ?>
+    certify_win_open("<?php echo $cert_type; ?>", "<?php echo $cert_url; ?>" + params, e);
+});
+<?php } ?>
 
 $("#agreeAll").click(function(){
     var chk = $(this).is(":checked");
@@ -531,9 +604,21 @@ $("#join_submit").on("click", function(){
         return false;
     }
 
-    if(!validateOptionalMobileAndMark()) {
+    var realName = $.trim($("#reg_mb_name").val());
+    if(!realName) {
+        alert("이름을 입력해 주세요.");
+        $("#reg_mb_name").focus();
+        return false;
+    }
+
+    if(!validateRequiredMobileAndMark()) {
         alert("휴대폰 번호 형식을 확인해 주세요.");
-        $("#mb_8").focus();
+        $("#reg_mb_hp").focus();
+        return false;
+    }
+
+    if(!$("input[name=cert_no]").val()) {
+        alert("회원가입을 위해서는 휴대폰 본인확인을 완료해 주세요.");
         return false;
     }
 
@@ -551,8 +636,8 @@ $("#join_submit").on("click", function(){
 
     $("#agree_chk").val("#terms#privacy");
     $("#mb_id").val(email);
-    // 서버의 mb_name 필수검증 유지 대응: 별도 입력필드가 없으므로 이메일을 기본값으로 전달
-    $("#mb_name").val(email);
+    $("#mb_6").val(realName);
+    $("#mb_8").val($.trim($("#reg_mb_hp").val()));
     $("#mb_password_hidden").val($("#password").val());
     $("#join_form").off("submit").on("submit", function(){ return true; });
     $("#join_form").submit();

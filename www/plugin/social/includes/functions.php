@@ -610,8 +610,8 @@ function social_check_login_before($p_service=''){
             /*
              * 회원이 아닌 경우에만 아래 실행
             */
-            // 소셜 인증 완료 시 추가 입력 폼 없이 자동가입 엔드포인트로 이동합니다.
-            $register_url = G5_SOCIAL_LOGIN_URL.'/register_member_auto.php?provider='.$provider_name;
+            // 소셜 신규 가입은 이름/휴대폰 본인확인 보완 페이지를 거쳐 확정합니다.
+            $register_url = G5_SOCIAL_LOGIN_URL.'/register_member.php?provider='.$provider_name;
 
             if( $url ){
                 $register_url .= '&url='.urlencode($url);

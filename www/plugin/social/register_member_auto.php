@@ -3,6 +3,9 @@ include_once('./_common.php');
 include_once(G5_LIB_PATH.'/register.lib.php');
 include_once(G5_LIB_PATH.'/mailer.lib.php');
 
+$provider_name = social_get_request_provider();
+goto_url(G5_SOCIAL_LOGIN_URL.'/register_member.php?provider='.$provider_name);
+
 if( ! $config['cf_social_login_use'] ){
     alert('소셜 로그인을 사용하지 않습니다.', G5_URL);
 }
