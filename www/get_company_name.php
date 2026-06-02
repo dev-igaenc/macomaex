@@ -60,6 +60,9 @@ if ($comp) {
         }
     }
 
+    $fail_code = '';
+    $fail_message = '';
+
     // 캐시 miss 시 main_comp_chk와 동일한 직접 cURL 호출
     if (empty($cominfo_json)) {
         $TOKEN_URL = "https://218.55.37.214:6059/enpinfo?userid=igaenconl&process=S&bzno={$comnum}&pidagryn=Y&jmno=ig001&format=XML&Length=10000";
@@ -75,7 +78,8 @@ if ($comp) {
         curl_setopt($ch, CURLOPT_COOKIEJAR, $cookie_nm);
         curl_setopt($ch, CURLOPT_COOKIEFILE, $cookie_nm);
         curl_setopt($ch, CURLOPT_USERAGENT, $agent);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 3);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 8);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
         $html_ori = curl_exec($ch);
         $curl_error = curl_error($ch);
@@ -89,6 +93,10 @@ if ($comp) {
                 'curl_errno' => $curl_errno,
                 'curl_error' => $curl_error,
             ));
+            $fail_code = ($curl_errno === 28) ? 'timeout' : 'curl_error';
+            $fail_message = ($curl_errno === 28)
+                ? '기업 정보 조회 시간이 초과되었습니다.'
+                : '기업 정보 조회 중 통신 오류가 발생했습니다.';
         } else {
             $parsed = macomaex_parse_kodata_xml($html_ori, array(
                 'context' => 'get_company_name',
@@ -153,6 +161,15 @@ if ($comp) {
         }
     }
 
-    echo json_encode(array('result' => 'fail', 'message' => '등록된 기업 정보가 없습니다.'), JSON_UNESCAPED_UNICODE);
+    if ($fail_message !== '') {
+        echo json_encode(array(
+            'result' => 'fail',
+            'code' => $fail_code,
+            'message' => $fail_message,
+        ), JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    echo json_encode(array('result' => 'fail', 'code' => 'not_found', 'message' => '등록된 기업 정보가 없습니다.'), JSON_UNESCAPED_UNICODE);
 }
 ?>

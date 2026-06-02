@@ -601,13 +601,27 @@ function openCreditShortageGuide(opts) {
 	return true;
 }
 
-function openGuide(title, text, text2) {
-	openAiGuideModal({
-		title: title || "AI 추천 안내",
-		text: text || "사업자 번호를 입력하고 AI 추천받기를 눌러주세요.",
-		text2: text2 || "AI 분석을 통해 업종/거래 데이터를 기반으로 적합한 거래처 판매처를 추천해드립니다."
-	});
-}
+	function openGuide(title, text, text2) {
+		openAiGuideModal({
+			title: title || "AI 추천 안내",
+			text: text || "사업자 번호를 입력하고 AI 추천받기를 눌러주세요.",
+			text2: text2 || "AI 분석을 통해 업종/거래 데이터를 기반으로 적합한 거래처 판매처를 추천해드립니다."
+		});
+	}
+
+	function openCompanyLookupFailGuide(data) {
+		var code = data && data.code ? String(data.code) : "";
+		var message = data && data.message ? String(data.message) : "";
+		if (code === "timeout" || message.indexOf("초과") !== -1) {
+			openGuide("기업 정보 조회 지연", "기업 정보 조회가 예상보다 오래 걸리고 있습니다.", "잠시 후 다시 시도해 주세요. 계속 반복되면 사업자번호를 확인해 주세요.");
+			return;
+		}
+		if (code === "not_found") {
+			openGuide("사업자번호 재확인", "입력하신 사업자번호로 기업 정보를 찾지 못했습니다.", "사업자번호를 다시 확인한 뒤 AI 추천받기를 눌러주세요.");
+			return;
+		}
+		openGuide("기업 정보 조회 안내", message || "기업 정보를 불러오지 못했습니다.", "잠시 후 다시 시도해 주세요.");
+	}
 
 // 구버전/중복 스크립트가 alert를 호출해도 안내 모달로 통일한다.
 (function() {
@@ -871,20 +885,19 @@ function requestMainCompCheck(comnum, $form, opts) {
 						overlay.setAttribute("aria-hidden", "false");
 						loadPartnerKeywordChips(1);
 					}
-				} else {
-					if ($form && $form.length) {
-						$form.find("input[name='cominfo']").val("");
-					}
-					// DB/캐시 miss 시 main_comp_chk로 실시간 재조회
-					requestMainCompCheck(comnumDigits, $form);
-					}
-				} catch(e) {
-				console.error("Lookup error:", e);
-				requestMainCompCheck(comnumDigits, $form);
-			}
-		}).fail(function() {
-			requestMainCompCheck(comnumDigits, $form);
-		});
+					} else {
+						if ($form && $form.length) {
+							$form.find("input[name='cominfo']").val("");
+						}
+						openCompanyLookupFailGuide(data);
+						}
+					} catch(e) {
+					console.error("Lookup error:", e);
+					openGuide("조회 오류 안내", "응답 처리 중 오류가 발생했습니다.", "잠시 후 다시 시도해 주세요.");
+				}
+			}).fail(function() {
+				openGuide("조회 오류 안내", "서버 통신 중 일시적인 오류가 발생했습니다.", "잠시 후 다시 시도해 주세요.");
+			});
 	});
 
 	$(document).on("click", "#modal_pd_trade_buy, #modal_pd_trade_sell", function() {
