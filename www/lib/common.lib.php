@@ -156,14 +156,19 @@ function set_cookie($cookie_name, $value, $expire)
         || (isset($_SERVER['SERVER_PORT']) && (int)$_SERVER['SERVER_PORT'] === 443);
 
     if (PHP_VERSION_ID >= 70300) {
-        setcookie($cookie_key, $cookie_value, array(
+        $cookie_options = array(
             'expires' => $cookie_expires,
             'path' => '/',
-            'domain' => $cookie_domain,
             'secure' => $is_https,
             'httponly' => true,
             'samesite' => 'Lax',
-        ));
+        );
+        // domain 값이 비어있으면 속성을 생략해 host-only 쿠키로 저장한다.
+        if ($cookie_domain !== '') {
+            $cookie_options['domain'] = $cookie_domain;
+        }
+
+        setcookie($cookie_key, $cookie_value, $cookie_options);
         return;
     }
 
@@ -180,6 +185,34 @@ function get_cookie($cookie_name)
         return base64_decode($_COOKIE[$cookie]);
     else
         return "";
+}
+
+// 자동로그인 키 생성 (환경변수 변화에 덜 민감한 방식)
+function get_auto_login_key($mb_id, $mb_password)
+{
+    $mb_id = (string) $mb_id;
+    $mb_password = (string) $mb_password;
+    $user_agent = isset($_SERVER['HTTP_USER_AGENT']) ? (string) $_SERVER['HTTP_USER_AGENT'] : '';
+    $cookie_domain = defined('G5_COOKIE_DOMAIN') ? (string) G5_COOKIE_DOMAIN : '';
+    $table_prefix = defined('G5_TABLE_PREFIX') ? (string) G5_TABLE_PREFIX : 'g5_';
+    $salt = $cookie_domain.'|'.$table_prefix.'|auto_login_v2';
+    $payload = $mb_id.'|'.$mb_password.'|'.$user_agent;
+
+    if (function_exists('hash_hmac')) {
+        return hash_hmac('sha256', $payload, $salt);
+    }
+
+    return sha1($salt.'|'.$payload);
+}
+
+// 구버전 자동로그인 키(호환용)
+function get_auto_login_legacy_key($mb_password)
+{
+    $server_addr = isset($_SERVER['SERVER_ADDR']) ? (string) $_SERVER['SERVER_ADDR'] : '';
+    $server_software = isset($_SERVER['SERVER_SOFTWARE']) ? (string) $_SERVER['SERVER_SOFTWARE'] : '';
+    $user_agent = isset($_SERVER['HTTP_USER_AGENT']) ? (string) $_SERVER['HTTP_USER_AGENT'] : '';
+
+    return md5($server_addr . $server_software . $user_agent . (string) $mb_password);
 }
 
 

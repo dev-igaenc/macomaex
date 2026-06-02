@@ -21,7 +21,7 @@ add_stylesheet('<link rel="stylesheet" href="'.$member_skin_url.'/style.css">', 
 		<input type="password" name="mb_password" id="login_pw" required class="frm_input required" size="20" maxLength="32" placeholder="비밀번호">
 
 		<p class="checkIn save_id">
-			<input type="checkbox" id="login_auto_login" name="auto_login" />
+			<input type="checkbox" id="login_auto_login" name="auto_login" value="1" />
 			<label for="login_auto_login">아이디 저장</label>
 		</p>
 
