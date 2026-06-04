@@ -538,7 +538,7 @@ switch ($type) {
 						$t_uinfo= getUserInfo($minfo['request_id']);
 						if($t_uinfo['mb_8']){
 							$gw_msg = new NCP_SENS_AT();
-							$gw_msg->templateCode	= 'accmatching'; // 템플릿 코드 매칭수락
+							$gw_msg->templateCode	= 'accmatching2'; // 템플릿 코드 매칭수락
 							$gw_msg->to				= $t_uinfo['mb_8']; // 수신자 휴대폰번호
 							$gw_msg->send();
 						}
