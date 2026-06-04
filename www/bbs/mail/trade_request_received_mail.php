@@ -189,16 +189,12 @@ $e = static function ($value) {
           <img src="<?php echo $mailBaseUrl; ?>/bbs/mail/icon/topic.png" width="13" height="13" alt="" style="display:inline-block;vertical-align:middle;margin-right:8px;border:0;outline:none;text-decoration:none;">
           <span style="font-size:11px;color:#9ca3af;font-weight:600;">추가 문의 사항</span>
         </div>
-        <div style="background:#f6f8fb;border-radius:10px;border:1px solid #e5e7eb;padding:10px 12px 12px;margin-bottom:16px;">
-          <div style="font-size:13px;line-height:1.6;color:#4b5563;margin:0 0 8px;"><?php echo $e($messagePreviewFirstLine !== '' ? $messagePreviewFirstLine : '문의 내용이 접수되었습니다.'); ?></div>
-          <?php if ($messagePreviewImageUrl !== '') { ?>
-          <img src="<?php echo $e($messagePreviewImageUrl); ?>" width="460" alt="문의 내용 미리보기" style="display:block;width:100%;max-width:460px;height:auto;border:0;outline:none;text-decoration:none;border-radius:8px;">
-          <?php } else { ?>
-          <div style="border-radius:8px;overflow:hidden;background:#f3f4f6;">
-            <div style="height:30px;background:linear-gradient(to bottom, rgba(156,163,175,0.22), rgba(156,163,175,0.14));border-radius:8px;margin:0 0 6px;"></div>
-            <div style="height:24px;background:linear-gradient(to bottom, rgba(156,163,175,0.18), rgba(156,163,175,0.10));border-radius:8px;"></div>
+        <div style="background:#f9fafb;border-radius:10px;border:1px solid #e5e7eb;padding:12px 14px;margin-bottom:16px;">
+          <div style="line-height:1.8;font-size:13px;color:#374151;">
+            <div style="filter:blur(1px);opacity:0.85;user-select:none;">담당자님, 안녕하세요. 귀사를 확인하고 연락드립니다.</div>
+            <div style="filter:blur(2.5px);opacity:0.6;user-select:none;">신규 거래처를 검토 중이며, 귀사와 적합할 경우 거래를 희망합니다.</div>
+            <div style="filter:blur(4px);opacity:0.35;user-select:none;">상세 조건은 협의를 통해 논의하고자 합니다.</div>
           </div>
-          <?php } ?>
         </div>
       </div>
 
