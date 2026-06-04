@@ -250,7 +250,8 @@ switch ($type) {
 				 curl_setopt ($ch, CURLOPT_COOKIEJAR, $cookie_nm);
 				 curl_setopt ($ch, CURLOPT_COOKIEFILE, $cookie_nm); 
 				 curl_setopt ($ch, CURLOPT_USERAGENT, $agent); 
-				 curl_setopt ($ch, CURLOPT_TIMEOUT, 30); 
+					 curl_setopt ($ch, CURLOPT_CONNECTTIMEOUT, 3);
+					 curl_setopt ($ch, CURLOPT_TIMEOUT, 8);
 				 curl_setopt ($ch, CURLOPT_RETURNTRANSFER, 1);
 
 				//----------curl 실행----------
@@ -266,7 +267,8 @@ switch ($type) {
 				 		'curl_errno' => $curl_errno,
 				 		'curl_error' => $curl_error,
 				 	));
-				 	echo "500|CURL_ERROR|기업 정보 조회 중 통신 오류가 발생했습니다.";
+						$curl_message = ((int)$curl_errno === 28) ? "기업 정보 조회 시간이 초과되었습니다." : "기업 정보 조회 중 통신 오류가 발생했습니다.";
+						echo "500|CURL_ERROR|".$curl_message;
 				 	exit;
 				 }
 
@@ -380,7 +382,8 @@ switch ($type) {
 								curl_setopt($ch, CURLOPT_COOKIEJAR, $cookie_nm);
 								curl_setopt($ch, CURLOPT_COOKIEFILE, $cookie_nm);
 								curl_setopt($ch, CURLOPT_USERAGENT, $agent);
-								curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+									curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 3);
+									curl_setopt($ch, CURLOPT_TIMEOUT, 8);
 								curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
 								$html_ori = curl_exec($ch);
 								$curl_error = curl_error($ch);

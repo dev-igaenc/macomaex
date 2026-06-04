@@ -428,22 +428,58 @@ window.__AUTH_SESSION_GUARD_CONFIG__ = {
 			<div id="container">
 	<?php } ?>
 
-<!-- 사업자 확인 모달 (돋보기 클릭 후 표시) -->
+<!-- 사업자 확인 + 추천 키워드 선택 모달 -->
 <div class="modal_verify_overlay" id="modal_verify_overlay" aria-hidden="true">
-    <div class="modal_verify" role="dialog" aria-labelledby="modal_verify_company" aria-modal="true">
+    <div class="modal_verify modal_verify_wide" role="dialog" aria-labelledby="modal_verify_company" aria-modal="true">
         <button type="button" class="modal_verify_close" id="modal_verify_btn_close" aria-label="닫기">×</button>
-        <div class="modal_verify_icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"></path></svg>
+
+        <div class="modal_verify_compact">
+            <span class="modal_verify_check_sm" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"></path></svg>
+            </span>
+            <div class="modal_verify_compact_info">
+                <strong class="modal_verify_company_sm" id="modal_verify_company"></strong>
+                <span class="modal_verify_desc_sm">귀사는 <span id="modal_verify_bzc"></span> · <span id="modal_verify_type"></span>으로 확인되었습니다.</span>
+            </div>
         </div>
-        <h2 class="modal_verify_company" id="modal_verify_company"></h2>
-        <p class="modal_verify_text">귀사는 <strong id="modal_verify_bzc"></strong><br class="modal_verify_br_pc"><strong id="modal_verify_type"></strong>으로 확인되었습니다.</p>
-        <p class="modal_verify_text2">본 서비스는 귀사와 동일·유사 업종의<br class="modal_verify_br_pc">실제 거래 데이터를 분석해<br class="modal_verify_br_pc">적합한 거래처를 추천해드립니다.</p>
-        <hr class="modal_verify_hr">
-        <p class="modal_verify_guide">추천 결과를 확인해보세요.</p>
-        <button type="button" class="modal_verify_btn" id="modal_verify_btn_ai">
-            <span class="sparkle" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-magic-wand"></use></svg></span>
-            거래처 확인하기
-        </button>
+
+        <div id="modal_verify_pd_wrap">
+            <p class="modal_verify_pd_title">주요 취급 품목을 선택해주세요</p>
+            <div class="modal_pd_trade_toggle">
+                <button type="button" class="modal_pd_trade_btn active" id="modal_pd_trade_buy">
+                    <svg class="modal_pd_trade_icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                        <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                        <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                    </svg>
+                    구매처 찾기
+                </button>
+                <button type="button" class="modal_pd_trade_btn" id="modal_pd_trade_sell">
+                    <svg class="modal_pd_trade_icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <rect x="1" y="3" width="15" height="13" rx="1"></rect>
+                        <polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon>
+                        <circle cx="5.5" cy="18.5" r="2.5"></circle>
+                        <circle cx="18.5" cy="18.5" r="2.5"></circle>
+                    </svg>
+                    판매처 찾기
+                </button>
+            </div>
+            <p class="modal_pd_trade_desc" id="modal_pd_trade_desc">귀사가 구매하려는 품목을 선택하세요 <span class="modal_pd_multi_hint">복수 선택 가능</span></p>
+            <div class="modal_pd_grid" id="modal_pd_grid" aria-live="polite">
+                <span class="modal_pd_empty">추천 키워드를 불러올 준비 중입니다.</span>
+            </div>
+            <div class="modal_pd_bar">
+                <div class="modal_pd_bar_info">
+                    <span><b id="modal_pd_count">0</b>개 선택됨</span>
+                    <div id="modal_pd_preview"><span class="modal_pd_empty">품목을 선택하면 여기에 표시됩니다</span></div>
+                </div>
+                <button type="button" class="modal_pd_btn_confirm" id="modal_pd_btn_confirm" disabled>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M12 5l7 7-7 7"></path></svg>
+                    AI 거래처 추천받기
+                </button>
+            </div>
+            <button type="button" class="modal_pd_skip" id="modal_verify_btn_ai">건너뛰고 전체 추천받기</button>
+        </div>
     </div>
 </div>
 
@@ -565,13 +601,27 @@ function openCreditShortageGuide(opts) {
 	return true;
 }
 
-function openGuide(title, text, text2) {
-	openAiGuideModal({
-		title: title || "AI 추천 안내",
-		text: text || "사업자 번호를 입력하고 AI 추천받기를 눌러주세요.",
-		text2: text2 || "AI 분석을 통해 업종/거래 데이터를 기반으로 적합한 거래처 판매처를 추천해드립니다."
-	});
-}
+	function openGuide(title, text, text2) {
+		openAiGuideModal({
+			title: title || "AI 추천 안내",
+			text: text || "사업자 번호를 입력하고 AI 추천받기를 눌러주세요.",
+			text2: text2 || "AI 분석을 통해 업종/거래 데이터를 기반으로 적합한 거래처 판매처를 추천해드립니다."
+		});
+	}
+
+	function openCompanyLookupFailGuide(data) {
+		var code = data && data.code ? String(data.code) : "";
+		var message = data && data.message ? String(data.message) : "";
+		if (code === "timeout" || message.indexOf("초과") !== -1) {
+			openGuide("기업 정보 조회 지연", "기업 정보 조회가 예상보다 오래 걸리고 있습니다.", "잠시 후 다시 시도해 주세요. 계속 반복되면 사업자번호를 확인해 주세요.");
+			return;
+		}
+		if (code === "not_found") {
+			openGuide("사업자번호 재확인", "입력하신 사업자번호로 기업 정보를 찾지 못했습니다.", "사업자번호를 다시 확인한 뒤 AI 추천받기를 눌러주세요.");
+			return;
+		}
+		openGuide("기업 정보 조회 안내", message || "기업 정보를 불러오지 못했습니다.", "잠시 후 다시 시도해 주세요.");
+	}
 
 // 구버전/중복 스크립트가 alert를 호출해도 안내 모달로 통일한다.
 (function() {
@@ -596,21 +646,108 @@ function closeAiGuideModal() {
 	window._aiGuideModalState = null;
 }
 
-function closeVerifyModal() {
-	var overlay = document.getElementById("modal_verify_overlay");
-	if (overlay && overlay.classList.contains("is_open")) {
-		overlay.classList.remove("is_open");
-		overlay.setAttribute("aria-hidden", "true");
+	function closeVerifyModal() {
+		var overlay = document.getElementById("modal_verify_overlay");
+		if (overlay && overlay.classList.contains("is_open")) {
+			overlay.classList.remove("is_open");
+			overlay.setAttribute("aria-hidden", "true");
+		}
 	}
-}
 
-function moveToAiRecommendByBizno(comnum) {
-	// 검색창 사업자번호 흐름은 AI 목록 페이지로 직접 이동
-	var digits = (comnum || "").replace(/[^0-9]/g, "");
-	if (digits.length !== 10) return false;
-	window.location.href = "/ko/company_list_ai.php?bizno=" + encodeURIComponent(digits) + "&type=buyer";
-	return true;
-}
+	window.currentSearchTradeType = 1;
+	window.currentPartnerBzcItems = [];
+	window.currentSelectedPartnerBzcItems = [];
+
+	function escapeModalText(text) {
+		var div = document.createElement("div");
+		div.textContent = (text == null) ? "" : String(text);
+		return div.innerHTML;
+	}
+
+	function resetPartnerKeywordSelection() {
+		window.currentSelectedPartnerBzcItems = [];
+		var countEl = document.getElementById("modal_pd_count");
+		var previewEl = document.getElementById("modal_pd_preview");
+		var confirmBtn = document.getElementById("modal_pd_btn_confirm");
+		if (countEl) countEl.textContent = "0";
+		if (previewEl) previewEl.innerHTML = '<span class="modal_pd_empty">품목을 선택하면 여기에 표시됩니다</span>';
+		if (confirmBtn) confirmBtn.disabled = true;
+	}
+
+	function updatePartnerKeywordSelection() {
+		var selected = window.currentSelectedPartnerBzcItems || [];
+		var countEl = document.getElementById("modal_pd_count");
+		var previewEl = document.getElementById("modal_pd_preview");
+		var confirmBtn = document.getElementById("modal_pd_btn_confirm");
+		if (countEl) countEl.textContent = String(selected.length);
+		if (previewEl) {
+			if (!selected.length) {
+				previewEl.innerHTML = '<span class="modal_pd_empty">품목을 선택하면 여기에 표시됩니다</span>';
+			} else {
+				var showItems = selected.slice(0, 4).map(function(item) {
+					return '<span class="modal_pd_preview_chip">' + escapeModalText(item.label || "") + '</span>';
+				}).join("");
+				if (selected.length > 4) {
+					showItems += '<span class="modal_pd_empty"> 외 ' + (selected.length - 4) + '개</span>';
+				}
+				previewEl.innerHTML = showItems;
+			}
+		}
+		if (confirmBtn) confirmBtn.disabled = selected.length === 0;
+	}
+
+	function renderPartnerKeywordChips(items) {
+		var grid = document.getElementById("modal_pd_grid");
+		if (!grid) return;
+		window.currentPartnerBzcItems = Array.isArray(items) ? items : [];
+		resetPartnerKeywordSelection();
+		if (!window.currentPartnerBzcItems.length) {
+			grid.innerHTML = '<span class="modal_pd_empty">추천 키워드가 없습니다. 건너뛰고 전체 추천받기를 이용해 주세요.</span>';
+			return;
+		}
+		grid.innerHTML = window.currentPartnerBzcItems.map(function(item, idx) {
+			var label = item.label || ((item.keywords || []).join(", "));
+			return '<button type="button" class="modal_pd_chip" data-idx="' + idx + '" data-partner-bzc="' + escapeModalText(item.partner_bzc || "") + '">' + escapeModalText(label) + '</button>';
+		}).join("");
+	}
+
+	function loadPartnerKeywordChips(tradeType) {
+		var grid = document.getElementById("modal_pd_grid");
+		var bzcCd = window.currentSearchBzcCd || "";
+		tradeType = (tradeType === 2) ? 2 : 1;
+		window.currentSearchTradeType = tradeType;
+		resetPartnerKeywordSelection();
+		if (grid) grid.innerHTML = '<span class="modal_pd_empty">추천 키워드를 불러오는 중입니다.</span>';
+		if (!bzcCd) {
+			if (grid) grid.innerHTML = '<span class="modal_pd_empty">업종코드가 없어 전체 추천만 이용할 수 있습니다.</span>';
+			return;
+		}
+		$.getJSON("<?php echo G5_URL; ?>/ko/bzc_trade_rec_keywords.php", {
+			bzc_cd: bzcCd,
+			trade_type: tradeType
+		}).done(function(data) {
+			if (data && data.ok) {
+				renderPartnerKeywordChips(data.items || []);
+				return;
+			}
+			if (grid) grid.innerHTML = '<span class="modal_pd_empty">추천 키워드를 불러오지 못했습니다. 전체 추천을 이용해 주세요.</span>';
+		}).fail(function() {
+			if (grid) grid.innerHTML = '<span class="modal_pd_empty">추천 키워드 조회 중 오류가 발생했습니다. 전체 추천을 이용해 주세요.</span>';
+		});
+	}
+
+	function moveToAiRecommendByBizno(comnum) {
+		// 검색창 사업자번호 흐름은 AI 목록 페이지로 직접 이동
+		var digits = (comnum || "").replace(/[^0-9]/g, "");
+		if (digits.length !== 10) return false;
+		var biznoToken = String(window.currentSearchBiznoToken || "");
+		if (!biznoToken) {
+			openGuide("추천 진입 오류", "사업자번호 보안 토큰을 생성하지 못했습니다.", "새로고침 후 다시 시도해 주세요.");
+			return false;
+		}
+		window.location.href = "/ko/company_list_ai.php?bizno=" + encodeURIComponent(biznoToken) + "&type=buyer";
+		return true;
+	}
 
 function requestMainCompCheck(comnum, $form, opts) {
 	opts = opts || {};
@@ -722,6 +859,10 @@ function requestMainCompCheck(comnum, $form, opts) {
 	// 전역 변수로 현재 사용중인 input/form 정보 저장 (모달 버튼 클릭 시 사용)
 	window.currentSearchInput = $input;
 	window.currentSearchForm = $form;
+	window.currentSearchBizno = comnumDigits;
+	window.currentSearchBiznoToken = "";
+	window.currentSearchBzcCd = "";
+	window.currentSearchKedcd = "";
 
 	// 1단계: DB에서 기업명 조회하여 모달 띄우기
 		$.post("<?php echo G5_URL; ?>/get_company_name.php", { comnum: comnumDigits }, function(res) {
@@ -730,9 +871,13 @@ function requestMainCompCheck(comnum, $form, opts) {
 				if (data.result === 'success') {
 					var overlay = document.getElementById("modal_verify_overlay");
 				var companyEl = document.getElementById("modal_verify_company");
-				var bzcEl = document.getElementById("modal_verify_bzc");
-				var typeEl = document.getElementById("modal_verify_type");
-				var cominfoVal = data.cominfo ? data.cominfo : "";
+					var bzcEl = document.getElementById("modal_verify_bzc");
+					var typeEl = document.getElementById("modal_verify_type");
+						var cominfoVal = data.cominfo ? data.cominfo : "";
+						window.currentSearchBizno = data.bizno || comnumDigits;
+						window.currentSearchBiznoToken = data.bizno_token || "";
+						window.currentSearchBzcCd = data.bzc_cd || "";
+						window.currentSearchKedcd = data.kedcd || "";
 
 				if ($form && $form.length) {
 					$form.find("input[name='cominfo']").val(cominfoVal);
@@ -742,26 +887,93 @@ function requestMainCompCheck(comnum, $form, opts) {
 				if (bzcEl) bzcEl.textContent = data.bzc_name;
 				if (typeEl) typeEl.textContent = data.enp_type;
 
-				if (overlay) {
-					overlay.classList.add("is_open");
-					overlay.setAttribute("aria-hidden", "false");
-					var actionBtn = document.getElementById("modal_verify_btn_ai");
-					if (actionBtn) actionBtn.focus();
+					if (overlay) {
+						overlay.classList.add("is_open");
+						overlay.setAttribute("aria-hidden", "false");
+						loadPartnerKeywordChips(1);
+					}
+					} else {
+						if ($form && $form.length) {
+							$form.find("input[name='cominfo']").val("");
+						}
+						openCompanyLookupFailGuide(data);
+						}
+					} catch(e) {
+					console.error("Lookup error:", e);
+					openGuide("조회 오류 안내", "응답 처리 중 오류가 발생했습니다.", "잠시 후 다시 시도해 주세요.");
 				}
-				} else {
-					if ($form && $form.length) {
-						$form.find("input[name='cominfo']").val("");
-					}
-					// DB/캐시 miss 시 main_comp_chk로 실시간 재조회
-					requestMainCompCheck(comnumDigits, $form);
-					}
-				} catch(e) {
-				console.error("Lookup error:", e);
-				requestMainCompCheck(comnumDigits, $form);
+			}).fail(function() {
+				openGuide("조회 오류 안내", "서버 통신 중 일시적인 오류가 발생했습니다.", "잠시 후 다시 시도해 주세요.");
+			});
+	});
+
+	$(document).on("click", "#modal_pd_trade_buy, #modal_pd_trade_sell", function() {
+		var isBuy = this.id === "modal_pd_trade_buy";
+		$("#modal_pd_trade_buy").toggleClass("active", isBuy);
+		$("#modal_pd_trade_sell").toggleClass("active", !isBuy);
+		$("#modal_pd_trade_desc").html((isBuy ? "귀사가 구매하려는 품목을 선택하세요" : "귀사가 판매하려는 품목을 선택하세요") + ' <span class="modal_pd_multi_hint">복수 선택 가능</span>');
+		loadPartnerKeywordChips(isBuy ? 1 : 2);
+	});
+
+	$(document).on("click", ".modal_pd_chip", function() {
+		var idx = parseInt($(this).attr("data-idx"), 10);
+		var item = window.currentPartnerBzcItems && window.currentPartnerBzcItems[idx] ? window.currentPartnerBzcItems[idx] : null;
+		if (!item) return;
+
+		var selected = window.currentSelectedPartnerBzcItems || [];
+		var existingIdx = -1;
+		for (var i = 0; i < selected.length; i++) {
+			if (selected[i].partner_bzc === item.partner_bzc) {
+				existingIdx = i;
+				break;
 			}
-		}).fail(function() {
-			requestMainCompCheck(comnumDigits, $form);
-		});
+		}
+
+		if (existingIdx >= 0) {
+			selected.splice(existingIdx, 1);
+			$(this).removeClass("selected");
+		} else {
+			selected.push(item);
+			$(this).addClass("selected");
+		}
+
+		window.currentSelectedPartnerBzcItems = selected;
+		updatePartnerKeywordSelection();
+	});
+
+	$(document).on("click", "#modal_pd_btn_confirm", function() {
+		if (this.disabled) return;
+		var selected = window.currentSelectedPartnerBzcItems || [];
+		var partnerCodes = [];
+		for (var i = 0; i < selected.length; i++) {
+			var partnerCode = String(selected[i].partner_cd || "");
+			if (partnerCode && partnerCodes.indexOf(partnerCode) === -1) partnerCodes.push(partnerCode);
+		}
+		if (!partnerCodes.length) return;
+
+		var bizno = String(window.currentSearchBizno || ((window.currentSearchInput && window.currentSearchInput.val()) || "")).replace(/[^0-9]/g, "");
+		if (bizno.length !== 10) {
+			openGuide("사업자번호 재확인", "입력하신 사업자번호 형식이 올바르지 않습니다.", "사업자번호를 다시 확인해 주세요.");
+			return;
+		}
+
+		closeVerifyModal();
+		var tradeType = (window.currentSearchTradeType === 2) ? 2 : 1;
+		var type = tradeType === 2 ? "seller" : "buyer";
+		var biznoToken = String(window.currentSearchBiznoToken || "");
+		if (!biznoToken) {
+			openGuide("추천 진입 오류", "사업자번호 보안 토큰을 생성하지 못했습니다.", "새로고침 후 다시 시도해 주세요.");
+			return;
+		}
+		var url = "/ko/company_list_ai.php?bizno=" + encodeURIComponent(biznoToken) +
+			"&type=" + encodeURIComponent(type) +
+			"&trade_type=" + encodeURIComponent(String(tradeType)) +
+			"&partner_cd=" + encodeURIComponent(partnerCodes.join(","));
+		if (typeof showAiLoading === "function") {
+			showAiLoading(url);
+		} else {
+			window.location.href = url;
+		}
 	});
 
 // 모달 내부 버튼 이벤트

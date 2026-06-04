@@ -27,6 +27,7 @@ if ($action === 'analyze') {
 }
 
 $kedcd = str_pad(preg_replace('/\D/', '', $_GET['kedcd'] ?? ''), 10, '0', STR_PAD_LEFT);
+$bizno = substr(preg_replace('/\D/', '', $_GET['bizno'] ?? ''), 0, 10);
 if (strlen($kedcd) !== 10 || preg_match('/^0+$/', $kedcd)) {
     http_response_code(400); echo json_encode(['error' => 'kedcd 오류']); exit;
 }
@@ -52,7 +53,29 @@ $cust_names = array_slice(array_values(array_filter(array_map('trim', explode('|
 $supp_names = array_slice(array_values(array_filter(array_map('trim', explode('|', $_GET['supp_names'] ?? '')), '_is_real_company')), 0, 10);
 
 $base = ['kedcd' => $kedcd, 'top_n' => 100];
+if ($bizno && $bizno !== $kedcd) $base['bizno'] = $bizno;
 if ($bzc_cd)     $base['bzc_cd']     = $bzc_cd;
+
+// 선택된 partner 업종코드 + 가중치 (키워드 선택 수 기반)
+$filter_bzc_raw     = trim($_GET['filter_bzc_cds']     ?? '');
+$filter_weight_raw  = trim($_GET['filter_bzc_weights'] ?? '');
+if ($filter_bzc_raw) {
+    $fbzcs = array_slice(array_values(array_filter(array_map(
+        fn($v) => substr(preg_replace('/[^A-Za-z0-9]/', '', trim($v)), 0, 10),
+        explode(',', $filter_bzc_raw)
+    ))), 0, 50);
+    if ($fbzcs) {
+        $fweights = array_map('intval', explode(',', $filter_weight_raw));
+        $fweights = array_slice($fweights, 0, count($fbzcs));
+        while (count($fweights) < count($fbzcs)) $fweights[] = 1;
+        $bzc_weighted = [];
+        foreach ($fbzcs as $i => $bzc) {
+            $bzc_weighted[] = ['bzc' => $bzc, 'weight' => max(1, $fweights[$i])];
+        }
+        $base['filter_bzc_cds']     = $fbzcs;
+        $base['filter_bzc_weights'] = array_column($bzc_weighted, 'weight');
+    }
+}
 if ($sido)       $base['sido']       = $sido;
 if ($sze)        $base['sze']        = $sze;
 if ($mpd)        $base['mpd']        = $mpd;
@@ -115,7 +138,8 @@ $out = json_encode([
     'sell' => ['top3' => array_slice($sell_all, 0, 3), 'list' => _shuffle_slice($sell_all, 45), 'total' => count($sell_all), 'refresh_remaining' => 5],
     'buy_elapsed_ms'  => $buy_data['elapsed_ms']  ?? 0,
     'sell_elapsed_ms' => $sell_data['elapsed_ms'] ?? 0,
-    'coldstart' => $buy_data['coldstart'] ?? false,
+    'coldstart'    => $buy_data['coldstart'] ?? false,
+    'src_keywords' => $buy_data['src_keywords'] ?? $sell_data['src_keywords'] ?? [],
 ], JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE);
 if ($out === false) {
     http_response_code(500);

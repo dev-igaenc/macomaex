@@ -80,8 +80,10 @@
     function resolveLoadingSourceKey() {
         try {
             var params = new URLSearchParams(window.location.search);
-            var bizno = normalizeDigits(params.get('bizno') || params.get('comnum'), 10);
+            var rawBizno = params.get('bizno') || params.get('comnum') || '';
+            var bizno = normalizeDigits(rawBizno, 10);
             if (bizno) return 'bizno:' + bizno;
+            if (rawBizno) return 'bizno_token:' + rawBizno;
 
             var srcKedcd = normalizeDigits(params.get('src_kedcd'), 10);
             if (srcKedcd) return 'src_kedcd:' + srcKedcd;
@@ -92,18 +94,18 @@
         return '';
     }
 
+    function isBackForwardNavigation() {
+        try {
+            var nav = performance.getEntriesByType && performance.getEntriesByType('navigation')[0];
+            return !!(nav && nav.type === 'back_forward');
+        } catch (e) {}
+        return false;
+    }
+
     function shouldShowLoadingOverlay() {
         loadingSourceKey = resolveLoadingSourceKey();
-        if (!loadingSourceKey) return true;
-
-        var storageKey = loadingSessionKeyPrefix + loadingSourceKey;
-        try {
-            if (sessionStorage.getItem(storageKey) === '1') {
-                return false;
-            }
-
-            sessionStorage.setItem(storageKey, '1');
-        } catch (e) {}
+        if (!loadingSourceKey) return false;
+        if (isBackForwardNavigation()) return false;
         return true;
     }
 

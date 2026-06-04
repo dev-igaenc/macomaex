@@ -825,6 +825,66 @@ function company_list_ai_build_slide_sets($cards, $trade_type = 1, $src_kedcd = 
     return array('top3' => $top3, 'rest' => $rest);
 }
 
+function company_list_ai_parse_partner_bzc_filters($value)
+{
+    $filters = array();
+    $parts = preg_split('/\s*,\s*/', (string)$value);
+    foreach ($parts as $part) {
+        $code = strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', (string)$part), 0, 10));
+        if ($code === '' || in_array($code, $filters, true)) continue;
+        $filters[] = $code;
+    }
+    return $filters;
+}
+
+function company_list_ai_parse_partner_cd_filters($value)
+{
+    $filters = array();
+    $parts = preg_split('/\s*,\s*/', (string)$value);
+    foreach ($parts as $part) {
+        $token = trim((string)$part);
+        if ($token === '') continue;
+        $decoded = simple_crypt($token, 'd');
+        if (!is_string($decoded) || $decoded === '') continue;
+        $code = strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', $decoded), 0, 10));
+        if ($code === '' || in_array($code, $filters, true)) continue;
+        $filters[] = $code;
+    }
+    return $filters;
+}
+
+function company_list_ai_parse_bizno_query($value)
+{
+    $raw = trim((string)$value);
+    if ($raw === '') return '';
+
+    if (preg_match('/^[0-9]{10}$/', $raw)) return $raw;
+
+    $decoded = simple_crypt($raw, 'd');
+    if (!is_string($decoded) || $decoded === '') return '';
+
+    $decoded_digits = preg_replace('/\D/', '', $decoded);
+    return strlen($decoded_digits) === 10 ? $decoded_digits : '';
+}
+
+function company_list_ai_filter_results_by_partner_bzc($results, $partner_bzc_filters)
+{
+    if (!is_array($results)) return array();
+    if (empty($partner_bzc_filters)) return $results;
+
+    $filtered = array();
+    foreach ($results as $item) {
+        if (!is_array($item)) continue;
+        $bzc_cd = strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', (string)($item['bzc_cd'] ?? ($item['bzcCd'] ?? ''))), 0, 10));
+        if ($bzc_cd === '') continue;
+        if (in_array($bzc_cd, $partner_bzc_filters, true)) {
+            $filtered[] = $item;
+        }
+    }
+
+    return $filtered;
+}
+
 $cards = company_list_ai_cards();
 $buyer_cards = isset($cards['buyer']) && is_array($cards['buyer']) ? $cards['buyer'] : array();
 $seller_cards = isset($cards['seller']) && is_array($cards['seller']) ? $cards['seller'] : array();
@@ -840,11 +900,15 @@ $kedcd_query = str_pad(preg_replace('/\D/', '', (string)($_GET['kedcd'] ?? '')),
 $has_kedcd_query = isset($_GET['kedcd']) && trim((string)$_GET['kedcd']) !== '';
 $has_kedcd_query_invalid = $has_kedcd_query && (strlen($kedcd_query) !== 10 || preg_match('/^0+$/', $kedcd_query));
 $bizno_query_raw = trim((string)($_GET['bizno'] ?? ($_GET['comnum'] ?? '')));
-$bizno_query = preg_replace('/\D/', '', (string)($_GET['bizno'] ?? ($_GET['comnum'] ?? '')));
+$bizno_query = company_list_ai_parse_bizno_query($bizno_query_raw);
 $has_bizno_query = ($bizno_query_raw !== '');
 $has_valid_bizno_query = (strlen($bizno_query) === 10);
 $has_bizno_query_invalid = $has_bizno_query && !$has_valid_bizno_query;
 $has_valid_source_input = (($has_kedcd_query && !$has_kedcd_query_invalid) || $has_valid_bizno_query);
+$partner_bzc_filters = company_list_ai_parse_partner_cd_filters($_GET['partner_cd'] ?? '');
+if (empty($partner_bzc_filters)) {
+    $partner_bzc_filters = company_list_ai_parse_partner_bzc_filters($_GET['partner_bzc'] ?? '');
+}
 $resolved_base_payload = array();
 $input_error_notice = '';
 $resolve_error_notice = '';
@@ -925,7 +989,8 @@ if (!empty($resolved_base_payload['kedcd'])) {
 
     if (!empty($buy_call['ok']) && !empty($buy_call['data']['results']) && is_array($buy_call['data']['results'])) {
         $buy_live_ok = true;
-        $buy_bucket = company_list_ai_build_bucket($buy_call['data']['results'], 45);
+        $buy_results = company_list_ai_filter_results_by_partner_bzc($buy_call['data']['results'], $partner_bzc_filters);
+        $buy_bucket = company_list_ai_build_bucket($buy_results, 45);
         $buy_items = array_merge($buy_bucket['top3'], $buy_bucket['list']);
         $buy_keyword_map = company_list_ai_fetch_company_keyword_map(array_column($buy_items, 'kedcd'));
         $buy_badge_map = company_list_ai_fetch_company_badge_map(array_column($buy_items, 'kedcd'));
@@ -958,7 +1023,8 @@ if (!empty($resolved_base_payload['kedcd'])) {
 
     if (!empty($sell_call['ok']) && !empty($sell_call['data']['results']) && is_array($sell_call['data']['results'])) {
         $sell_live_ok = true;
-        $sell_bucket = company_list_ai_build_bucket($sell_call['data']['results'], 45);
+        $sell_results = company_list_ai_filter_results_by_partner_bzc($sell_call['data']['results'], $partner_bzc_filters);
+        $sell_bucket = company_list_ai_build_bucket($sell_results, 45);
         $sell_items = array_merge($sell_bucket['top3'], $sell_bucket['list']);
         $sell_keyword_map = company_list_ai_fetch_company_keyword_map(array_column($sell_items, 'kedcd'));
         $sell_badge_map = company_list_ai_fetch_company_badge_map(array_column($sell_items, 'kedcd'));
