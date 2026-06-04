@@ -80,8 +80,10 @@
     function resolveLoadingSourceKey() {
         try {
             var params = new URLSearchParams(window.location.search);
-            var bizno = normalizeDigits(params.get('bizno') || params.get('comnum'), 10);
+            var rawBizno = params.get('bizno') || params.get('comnum') || '';
+            var bizno = normalizeDigits(rawBizno, 10);
             if (bizno) return 'bizno:' + bizno;
+            if (rawBizno) return 'bizno_token:' + rawBizno;
 
             var srcKedcd = normalizeDigits(params.get('src_kedcd'), 10);
             if (srcKedcd) return 'src_kedcd:' + srcKedcd;

@@ -736,13 +736,18 @@ function closeAiGuideModal() {
 		});
 	}
 
-function moveToAiRecommendByBizno(comnum) {
-	// 검색창 사업자번호 흐름은 AI 목록 페이지로 직접 이동
-	var digits = (comnum || "").replace(/[^0-9]/g, "");
-	if (digits.length !== 10) return false;
-	window.location.href = "/ko/company_list_ai.php?bizno=" + encodeURIComponent(digits) + "&type=buyer";
-	return true;
-}
+	function moveToAiRecommendByBizno(comnum) {
+		// 검색창 사업자번호 흐름은 AI 목록 페이지로 직접 이동
+		var digits = (comnum || "").replace(/[^0-9]/g, "");
+		if (digits.length !== 10) return false;
+		var biznoToken = String(window.currentSearchBiznoToken || "");
+		if (!biznoToken) {
+			openGuide("추천 진입 오류", "사업자번호 보안 토큰을 생성하지 못했습니다.", "새로고침 후 다시 시도해 주세요.");
+			return false;
+		}
+		window.location.href = "/ko/company_list_ai.php?bizno=" + encodeURIComponent(biznoToken) + "&type=buyer";
+		return true;
+	}
 
 function requestMainCompCheck(comnum, $form, opts) {
 	opts = opts || {};
@@ -855,6 +860,7 @@ function requestMainCompCheck(comnum, $form, opts) {
 	window.currentSearchInput = $input;
 	window.currentSearchForm = $form;
 	window.currentSearchBizno = comnumDigits;
+	window.currentSearchBiznoToken = "";
 	window.currentSearchBzcCd = "";
 	window.currentSearchKedcd = "";
 
@@ -867,10 +873,11 @@ function requestMainCompCheck(comnum, $form, opts) {
 				var companyEl = document.getElementById("modal_verify_company");
 					var bzcEl = document.getElementById("modal_verify_bzc");
 					var typeEl = document.getElementById("modal_verify_type");
-					var cominfoVal = data.cominfo ? data.cominfo : "";
-					window.currentSearchBizno = data.bizno || comnumDigits;
-					window.currentSearchBzcCd = data.bzc_cd || "";
-					window.currentSearchKedcd = data.kedcd || "";
+						var cominfoVal = data.cominfo ? data.cominfo : "";
+						window.currentSearchBizno = data.bizno || comnumDigits;
+						window.currentSearchBiznoToken = data.bizno_token || "";
+						window.currentSearchBzcCd = data.bzc_cd || "";
+						window.currentSearchKedcd = data.kedcd || "";
 
 				if ($form && $form.length) {
 					$form.find("input[name='cominfo']").val(cominfoVal);
@@ -937,12 +944,12 @@ function requestMainCompCheck(comnum, $form, opts) {
 	$(document).on("click", "#modal_pd_btn_confirm", function() {
 		if (this.disabled) return;
 		var selected = window.currentSelectedPartnerBzcItems || [];
-		var partnerBzcs = [];
+		var partnerCodes = [];
 		for (var i = 0; i < selected.length; i++) {
-			var partnerBzc = String(selected[i].partner_bzc || "").replace(/[^A-Za-z0-9]/g, "").toUpperCase();
-			if (partnerBzc && partnerBzcs.indexOf(partnerBzc) === -1) partnerBzcs.push(partnerBzc);
+			var partnerCode = String(selected[i].partner_cd || "");
+			if (partnerCode && partnerCodes.indexOf(partnerCode) === -1) partnerCodes.push(partnerCode);
 		}
-		if (!partnerBzcs.length) return;
+		if (!partnerCodes.length) return;
 
 		var bizno = String(window.currentSearchBizno || ((window.currentSearchInput && window.currentSearchInput.val()) || "")).replace(/[^0-9]/g, "");
 		if (bizno.length !== 10) {
@@ -953,10 +960,15 @@ function requestMainCompCheck(comnum, $form, opts) {
 		closeVerifyModal();
 		var tradeType = (window.currentSearchTradeType === 2) ? 2 : 1;
 		var type = tradeType === 2 ? "seller" : "buyer";
-		var url = "/ko/company_list_ai.php?bizno=" + encodeURIComponent(bizno) +
+		var biznoToken = String(window.currentSearchBiznoToken || "");
+		if (!biznoToken) {
+			openGuide("추천 진입 오류", "사업자번호 보안 토큰을 생성하지 못했습니다.", "새로고침 후 다시 시도해 주세요.");
+			return;
+		}
+		var url = "/ko/company_list_ai.php?bizno=" + encodeURIComponent(biznoToken) +
 			"&type=" + encodeURIComponent(type) +
 			"&trade_type=" + encodeURIComponent(String(tradeType)) +
-			"&partner_bzc=" + encodeURIComponent(partnerBzcs.join(","));
+			"&partner_cd=" + encodeURIComponent(partnerCodes.join(","));
 		if (typeof showAiLoading === "function") {
 			showAiLoading(url);
 		} else {

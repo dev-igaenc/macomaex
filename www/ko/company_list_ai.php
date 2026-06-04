@@ -837,6 +837,36 @@ function company_list_ai_parse_partner_bzc_filters($value)
     return $filters;
 }
 
+function company_list_ai_parse_partner_cd_filters($value)
+{
+    $filters = array();
+    $parts = preg_split('/\s*,\s*/', (string)$value);
+    foreach ($parts as $part) {
+        $token = trim((string)$part);
+        if ($token === '') continue;
+        $decoded = simple_crypt($token, 'd');
+        if (!is_string($decoded) || $decoded === '') continue;
+        $code = strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', $decoded), 0, 10));
+        if ($code === '' || in_array($code, $filters, true)) continue;
+        $filters[] = $code;
+    }
+    return $filters;
+}
+
+function company_list_ai_parse_bizno_query($value)
+{
+    $raw = trim((string)$value);
+    if ($raw === '') return '';
+
+    if (preg_match('/^[0-9]{10}$/', $raw)) return $raw;
+
+    $decoded = simple_crypt($raw, 'd');
+    if (!is_string($decoded) || $decoded === '') return '';
+
+    $decoded_digits = preg_replace('/\D/', '', $decoded);
+    return strlen($decoded_digits) === 10 ? $decoded_digits : '';
+}
+
 function company_list_ai_filter_results_by_partner_bzc($results, $partner_bzc_filters)
 {
     if (!is_array($results)) return array();
@@ -870,12 +900,15 @@ $kedcd_query = str_pad(preg_replace('/\D/', '', (string)($_GET['kedcd'] ?? '')),
 $has_kedcd_query = isset($_GET['kedcd']) && trim((string)$_GET['kedcd']) !== '';
 $has_kedcd_query_invalid = $has_kedcd_query && (strlen($kedcd_query) !== 10 || preg_match('/^0+$/', $kedcd_query));
 $bizno_query_raw = trim((string)($_GET['bizno'] ?? ($_GET['comnum'] ?? '')));
-$bizno_query = preg_replace('/\D/', '', (string)($_GET['bizno'] ?? ($_GET['comnum'] ?? '')));
+$bizno_query = company_list_ai_parse_bizno_query($bizno_query_raw);
 $has_bizno_query = ($bizno_query_raw !== '');
 $has_valid_bizno_query = (strlen($bizno_query) === 10);
 $has_bizno_query_invalid = $has_bizno_query && !$has_valid_bizno_query;
 $has_valid_source_input = (($has_kedcd_query && !$has_kedcd_query_invalid) || $has_valid_bizno_query);
-$partner_bzc_filters = company_list_ai_parse_partner_bzc_filters($_GET['partner_bzc'] ?? '');
+$partner_bzc_filters = company_list_ai_parse_partner_cd_filters($_GET['partner_cd'] ?? '');
+if (empty($partner_bzc_filters)) {
+    $partner_bzc_filters = company_list_ai_parse_partner_bzc_filters($_GET['partner_bzc'] ?? '');
+}
 $resolved_base_payload = array();
 $input_error_notice = '';
 $resolve_error_notice = '';

@@ -72,6 +72,7 @@ while ($row = sql_fetch_array($result)) {
 
     $items[] = array(
         'partner_bzc' => $partner_bzc,
+        'partner_cd' => simple_crypt($partner_bzc, 'e'),
         'keywords' => $keywords,
         'label' => implode(', ', $keywords),
         'trade_cnt' => (int)($row['c_trade_cnt'] ?? 0),

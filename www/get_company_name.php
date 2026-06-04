@@ -44,6 +44,7 @@ if ($comp) {
         'enp_type_code' => $comp['ENP_TYP'],
         'bzc_cd' => $comp['BZC_CD'],
         'bizno' => $comnum,
+        'bizno_token' => simple_crypt($comnum, 'e'),
         'kedcd' => $comp['KEDCD'],
         'source' => 'db'
     ), JSON_UNESCAPED_UNICODE);
@@ -153,6 +154,7 @@ if ($comp) {
                 'enp_type_code' => $enp_typ,
                 'bzc_cd' => $bzc_cd,
                 'bizno' => $comnum,
+                'bizno_token' => simple_crypt($comnum, 'e'),
                 'kedcd' => $kedcd,
                 'cominfo' => $cominfo_json,
                 'source' => 'api'
