@@ -821,6 +821,10 @@ function requestMainCompCheck(comnum, $form, opts) {
 				var data = JSON.parse(res);
 				if (openCompanyVerifyModalFromData(data, $form)) {
 					restoreButton();
+					if (opts.mode === "recommend") {
+						closeVerifyModal();
+						moveToAiRecommendByBizno(comnum);
+					}
 					return;
 				}
 				openCompanyLookupFailGuide(data);
@@ -1053,10 +1057,9 @@ $(document).on("click", "#modal_verify_btn_ai", function() {
 	if (!$input || !$form) return;
 
 	var comnum = $input.val();
-	var existingCominfo = ($form && $form.length) ? $form.find("input[name='cominfo']").val() : "";
 
 	if (comnum.replace(/[^0-9]/g, "").length === 10) {
-		if (existingCominfo) {
+		if (window.currentSearchBiznoToken) {
 			if (overlay) {
 				overlay.classList.remove("is_open");
 				overlay.setAttribute("aria-hidden", "true");
@@ -1072,7 +1075,8 @@ $(document).on("click", "#modal_verify_btn_ai", function() {
 			requestMainCompCheck(comnum, $form, {
 				overlay: overlay,
 				button: btn,
-				originalHtml: originalHtml
+				originalHtml: originalHtml,
+				mode: "recommend"
 			});
 			} else {
 				openGuide("사업자번호 재확인", "입력하신 사업자번호 형식이 올바르지 않습니다.", "사업자번호를 다시 확인해 주세요.");
