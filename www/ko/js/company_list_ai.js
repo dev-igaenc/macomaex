@@ -92,18 +92,18 @@
         return '';
     }
 
+    function isBackForwardNavigation() {
+        try {
+            var nav = performance.getEntriesByType && performance.getEntriesByType('navigation')[0];
+            return !!(nav && nav.type === 'back_forward');
+        } catch (e) {}
+        return false;
+    }
+
     function shouldShowLoadingOverlay() {
         loadingSourceKey = resolveLoadingSourceKey();
-        if (!loadingSourceKey) return true;
-
-        var storageKey = loadingSessionKeyPrefix + loadingSourceKey;
-        try {
-            if (sessionStorage.getItem(storageKey) === '1') {
-                return false;
-            }
-
-            sessionStorage.setItem(storageKey, '1');
-        } catch (e) {}
+        if (!loadingSourceKey) return false;
+        if (isBackForwardNavigation()) return false;
         return true;
     }
 
