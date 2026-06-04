@@ -137,7 +137,7 @@ function my_matching_handle_trade_request_approval($member, $request) {
 	if ($nextStatus === '1' && (int)($targetRequest['approval_status'] ?? 0) !== 1) {
 		$requestMemberId = trim((string)($targetRequest['request_mb_id'] ?? ''));
 		$alimtalkLogPayload = array(
-			'template_code' => 'accmatching',
+			'template_code' => 'accmatching2',
 			'tr_no' => $idx,
 			'mb_id' => $member['mb_id'] ?? '',
 			'reason' => '',
@@ -157,7 +157,7 @@ function my_matching_handle_trade_request_approval($member, $request) {
 			} else {
 				$alimtalkLogPayload['to'] = $requestHp;
 				$gw_msg = new NCP_SENS_AT();
-				$gw_msg->templateCode = 'accmatching';
+				$gw_msg->templateCode = 'accmatching2';
 				$gw_msg->to = $requestHp;
 				$sendRes = $gw_msg->send();
 				$alimtalkLogStatus = 'fail';
@@ -175,7 +175,7 @@ function my_matching_handle_trade_request_approval($member, $request) {
 		} else {
 			$alimtalkLogPayload['reason'] = 'request_member_id_empty';
 		}
-		alimtalk_write_event_log('accmatching', $alimtalkLogStatus, $alimtalkLogPayload);
+		alimtalk_write_event_log('accmatching2', $alimtalkLogStatus, $alimtalkLogPayload);
 	}
 
 	if ($nextStatus === '1') {

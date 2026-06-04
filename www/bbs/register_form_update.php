@@ -728,7 +728,7 @@ run_event('register_form_update_after', $mb_id, $w);
 if ($w == '') {
 	//회원가입 알림톡 발송
 	$signupAlimtalkPayload = array(
-		'template_code' => 'signup',
+		'template_code' => 'signup2',
 		'mb_id' => $mb_id,
 		'to' => '',
 		'request_id' => '',
@@ -744,7 +744,7 @@ if ($w == '') {
 		} else {
 			$signupAlimtalkStatus = 'fail';
 			$gw_msg = new NCP_SENS_AT();
-			$gw_msg->templateCode	= 'signup'; // 템플릿 코드 매칭요청
+			$gw_msg->templateCode	= 'signup2'; // 템플릿 코드 회원가입
 			$gw_msg->to				= $mb_8; // 수신자 휴대폰번호
 			$sendRes = $gw_msg->send();
 			if (is_array($sendRes)) {
@@ -761,7 +761,7 @@ if ($w == '') {
 	} else {
 		$signupAlimtalkPayload['reason'] = 'receiver_hp_empty';
 	}
-	alimtalk_write_event_log('signup', $signupAlimtalkStatus, $signupAlimtalkPayload);
+	alimtalk_write_event_log('signup2', $signupAlimtalkStatus, $signupAlimtalkPayload);
 	//알림톡 발송 끝
 	// 회원가입 완료 후에는 항상 결과 페이지를 거치고,
 	// 이동 목적지는 register_result.skin.php의 버튼 분기에서 처리한다.
