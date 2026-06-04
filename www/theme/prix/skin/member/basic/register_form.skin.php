@@ -68,7 +68,7 @@ include_once(G5_THEME_PATH.'/head.php');
 	                        <input type="text" name="mb_8" id="mb_8" value="<?=$member['mb_8']?>" class="tel_chk" maxlength="13">
 	                    </div>
 	                    <div class="section_divider"></div>
-	                    <div class="inputBox requied type2">
+	                    <div class="inputBox type2">
 	                        <p class="title">사업자등록번호</p>
 	                        <input type="text" name="mb_4" id="mb_4" value="<?=$member['mb_4']?>" class="readonly comnum_chk" maxlength="12" readonly>
 	                    </div>
@@ -256,13 +256,9 @@ function fregisterform_submit()
 		return false;
 	}
 
-	if(!$("#mb_4").val().trim()) {
-		jAlert("사업자등록번호를 확인해 주세요.","알림",function(){$("#mb_4").focus();});
-		return false;
-	}
-	if(!$("#mb_6").val().trim()) {
-		jAlert("담당자 이름을 확인해 주세요.","알림",function(){$("#mb_6").focus();});
-		return false;
+		if(!$("#mb_6").val().trim()) {
+			jAlert("담당자 이름을 확인해 주세요.","알림",function(){$("#mb_6").focus();});
+			return false;
 	}
 	if(!$("#mb_8").val().trim()) {
 		jAlert("휴대폰 번호를 확인해 주세요.","알림",function(){$("#mb_8").focus();});
