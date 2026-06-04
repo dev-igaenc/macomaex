@@ -11,6 +11,14 @@ include_once(G5_THEME_PATH.'/head.php');
 <?php if($config['cf_cert_use'] && ($config['cf_cert_ipin'] || $config['cf_cert_hp'])) { ?>
 <script src="<?php echo G5_JS_URL ?>/certify.js?v=<?php echo G5_JS_VER; ?>"></script>
 <?php } ?>
+<style>
+#fregisterform .section_divider {
+	width: 100%;
+	height: 1px;
+	margin: 2.4rem 0;
+	background: #ddd;
+}
+</style>
 
 <form id="fregisterform" name="fregisterform" action="<?php echo $register_action_url ?>" onsubmit="return fregisterform_submit(this);" method="post" enctype="multipart/form-data" autocomplete="off">
 	<input type="hidden" name="w" value="<?php echo $w ?>">
@@ -19,9 +27,11 @@ include_once(G5_THEME_PATH.'/head.php');
 	<input type="hidden" name="agree2" value="<?php echo $agree2 ?>">
 	<input type="hidden" name="cert_type" value="<?php echo $member['mb_certify']; ?>">
 	<input type="hidden" name="cert_no" value="">
-	<?if($w=='u'){?>
-	<input type="hidden" name="mb_nick" value="<?=$member['name']?>">
-	<?}?>
+	<input type="hidden" name="mb_3" value="<?php echo $member['mb_3'] ?>">
+	<input type="hidden" name="mb_7" value="<?php echo $member['mb_7'] ?>">
+		<?if($w=='u'){?>
+		<input type="hidden" name="mb_nick" value="<?=$member['name']?>">
+		<?}?>
 	<?php if (isset($member['mb_sex'])) {  ?><input type="hidden" name="mb_sex" value="<?php echo $member['mb_sex'] ?>"><?php }  ?>
 	<!--
 	<?php if (isset($member['mb_nick_date']) && $member['mb_nick_date'] > date("Y-m-d", G5_SERVER_TIME - ($config['cf_nick_modify'] * 86400))) { // 닉네임수정일이 지나지 않았다면  ?>
@@ -41,11 +51,6 @@ include_once(G5_THEME_PATH.'/head.php');
                         <p class="title">아이디</p>
                         <input type="text" name="mb_id" id="mb_id" class="readonly" readonly value="<?=$member['mb_id']?>">
                     </div>
-                    <div class="inputBox type2">
-                        <p class="title">법인명</p>
-                        <input type="text" name="mb_name" id="mb_name" class="readonly" readonly value="<?=$member['mb_name']?>">
-						<input type="hidden" name="mb_company" id="mb_company" class="readonly" readonly value="<?=$member['mb_company']?>">
-                    </div>
                     <div class="inputBox type2 password myPage_password">
                         <p class="title">비밀번호</p>
                         <div class="my_password">
@@ -54,82 +59,26 @@ include_once(G5_THEME_PATH.'/head.php');
                             <button type="button" id="change_pwd">변경하기</button>
                         </div>
                     </div>
-                    <div class="inputBox type2">
-                        <p class="title">담당자 이메일</p>
-                        <input class="" name="mb_5" type="text" value="<?php echo $member['mb_5'] ?>">
-                    </div>
-					<div class="inputBox requied type2">
-                        <p class="title">회사 유형</p>
-                        <ul class="radioBox">
-                            <li>
-                                <input type="radio" name="mb_3" value="제조사"  id="type1">
-                                <label for="type1">제조사</label>
-                            </li>
-                            <li>
-                                <input type="radio" name="mb_3" value="유통사"  id="type2">
-                                <label for="type2">유통사</label>
-                            </li>
-                            <li>
-                                <input type="radio" name="mb_3" value="기타" id="type3">
-                                <label for="type3">기타</label>
-                            </li>
-							<?if($member['mb_3']){?>
-							<script>$("input[name='mb_3'][value='<?=$member['mb_3']?>']").prop("checked",true);</script>
-							<?}?>
-                        </ul>
-                    </div>
-                    <div class="inputBox requied type2">
-                        <p class="title">회원사 가입유무</p>
-						<span class="checkIn">
-							<input type="checkbox" id="mb_10_1" name="mb_10[]"  class="selec_chk" value="벤처기업" ><label for="mb_10_1">벤처기업</label>
-							<input type="checkbox" id="mb_10_2" name="mb_10[]"  class="selec_chk" value="메인비즈" ><label for="mb_10_2">메인비즈</label><br>
-							<input type="checkbox" id="mb_10_3" name="mb_10[]"  class="selec_chk" value="이노비즈" ><label for="mb_10_3">이노비즈</label>
-							<input type="checkbox" id="mb_10_4" name="mb_10[]"  class="selec_chk" value="해당사항없음" ><label for="mb_10_4">해당사항없음</label>
-						</span>
-							<?if($member['mb_10']){?>
-							<script>
-								var mb10="<?=$member['mb_10']?>";
-								mb10=mb10.split(":|:");
-								$.each(mb10, function(index, item){
-									$("input[name='mb_10[]'][value='"+item+"'").prop("checked",true);
-								})
-							</script>
-							<?}?>
-                    </div>
-                    <div class="inputBox requied type2">
-                        <p class="title">사업자등록번호</p>
-                        <input type="text" name="mb_4" id="mb_4" value="<?=$member['mb_4']?>" class="readonly comnum_chk" maxlength="12" readonly>
-                    </div>
-                    <div class="inputBox requied type2">
-                        <p class="title">담당자 이름</p>
-                        <input type="text" name="mb_6" id="mb_6" value="<?=$member['mb_6']?>" maxlength="32">
-                    </div>
-                    <div class="inputBox requied type2">
-                        <p class="title">담당자 직위</p>
-                        <input type="text" name="mb_7" id="mb_7" value="<?=$member['mb_7']?>" maxlength="32">
-                    </div>
-                    <div class="inputBox requied type2">
-                        <p class="title">휴대폰 번호</p>
-                        <input type="text" name="mb_8" id="mb_8" value="<?=$member['mb_8']?>" class="tel_chk" maxlength="13">
-                    </div>
-                    <div class="inputBox type2 type3 majors">
-                        <p class="title">주요 서비스/제품</p>
-						<?$mb_9=explode(":|:",$member['mb_9']);?>
-						<?foreach($mb_9 as $value){?>
-                        <div class="products">
-                            <input type="text" name="mb_9[]" id="mb_9" value="<?=$value?>" maxlength="32">
-                            <a href="javascript:;" class="minus">-</a>
-                        </div>
-						<?}?>
-                        <div class="products">
-                            <input type="text" name="mb_9[]" id="mb_9" value="" maxlength="32">
-                            <a href="javascript:;" class="add">+</a>
-                            <a href="javascript:;" class="minus">-</a>
-                        </div>
-                        <!-- 구조 개선을 원하시면 말씀해주세요 -->
-                    </div>
+	                    <div class="inputBox requied type2">
+	                        <p class="title">담당자 이름</p>
+	                        <input type="text" name="mb_6" id="mb_6" value="<?=$member['mb_6']?>" maxlength="32">
+	                    </div>
+	                    <div class="inputBox requied type2">
+	                        <p class="title">휴대폰 번호</p>
+	                        <input type="text" name="mb_8" id="mb_8" value="<?=$member['mb_8']?>" class="tel_chk" maxlength="13">
+	                    </div>
+	                    <div class="section_divider"></div>
+	                    <div class="inputBox requied type2">
+	                        <p class="title">사업자등록번호</p>
+	                        <input type="text" name="mb_4" id="mb_4" value="<?=$member['mb_4']?>" class="readonly comnum_chk" maxlength="12" readonly>
+	                    </div>
+	                    <div class="inputBox type2">
+	                        <p class="title">법인명</p>
+	                        <input type="text" name="mb_name" id="mb_name" class="readonly" readonly value="<?=$member['mb_name']?>">
+							<input type="hidden" name="mb_company" id="mb_company" class="readonly" readonly value="<?=$member['mb_company']?>">
+	                    </div>
 
-                </div>
+	                </div>
             </div>
         </div>
 
@@ -278,15 +227,6 @@ $(".tel_chk").keyup(function(){
 			if(a) location.href='/';
 		})
 	}
-	//서비스 추가
-	$add='<div class="products">'+$(".majors .products:last").html()+"</div>";
-	$("body").on("click",".products .add",function(){
-		$(".majors").append($add);
-	})
-	//서비스 삭제
-	$("body").on("click",".products .minus",function(){
-		$(this).parents(".products").remove();
-	})
     const inputPasswordBoxes = document.querySelectorAll(".formBox.password");
 
     inputPasswordBoxes.forEach((inputPassword) => {
@@ -307,30 +247,12 @@ $(".tel_chk").keyup(function(){
         });
     });
 
-$("input[name='mb_10[]']").click(function(){
-	$this=$(this);
-	if($this.is(":checked")){
-		if($this.val()=="해당사항없음") $("input[name='mb_10[]'][value!='해당사항없음']").prop("checked",false);
-		else $("input[name='mb_10[]'][value='해당사항없음']").prop("checked",false);
-	}
-})
-
 function fregisterform_submit()
 {
 
 
 	if(!$("#mb_name").val().trim()) {
 		jAlert("법인명을 확인해 주세요.","알림",function(){$("#mb_name").focus();});
-		return false;
-	}
-
-	if($("input[name='mb_3']:checked").length==0){
-		jAlert("회사 유형을 선택해 주세요.","알림",function(){$("input[name='mb_3']").focus();});
-		return false;
-	}
-
-	if($("input[name='mb_10[]']:checked").length==0){
-		jAlert("회원사 가입유무 선택해 주세요.","알림",function(){$("input[name='mb_10[]']").focus();});
 		return false;
 	}
 
@@ -342,37 +264,10 @@ function fregisterform_submit()
 		jAlert("담당자 이름을 확인해 주세요.","알림",function(){$("#mb_6").focus();});
 		return false;
 	}
-	if(!$("#mb_7").val().trim()) {
-		jAlert("담당자 직위를 확인해 주세요.","알림",function(){$("#mb_7").focus();});
-		return false;
-	}
 	if(!$("#mb_8").val().trim()) {
 		jAlert("휴대폰 번호를 확인해 주세요.","알림",function(){$("#mb_8").focus();});
 		return false;
 	}
-
-	if(!$("#mb_5").val().trim()) {
-		jAlert("담당자 이메일을 확인해 주세요.","알림",function(){$("#mb_5").focus();});
-		return false;
-	}else{
-		let checkEmail = RegExp(/^([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})$/);
-		if(!checkEmail.test($("#mb_5").val().trim())) {
-			jAlert("이메일을 확인해 주세요.","알림",function(){$("#mb_5").focus();});
-			return false;
-		}
-	}
-
-	/*
-	mb_9_chk="false";
-	$("input[name='mb_9[]']").each(function(){
-		if($(this).val().length>0) mb_9_chk="true";
-	})
-	if(mb_9_chk=="false") {
-		mb_9_t=$(".Product .title").text();
-		jAlert(mb_9_t+"을 하나이상 입력해 주세요.","알림",function(){$("input[name='mb_9[]']:eq(0)").focus();});
-		return false;
-	}
-*/
 	if($("#coupon").val().length>0 && $("#coupon").val().length<6) {
 		jAlert("쿠폰번호를 확인해 주세요.","알림");
 		return false;
