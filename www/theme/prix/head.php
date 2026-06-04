@@ -569,7 +569,8 @@ function openAiGuideModal(opts) {
 	window._aiGuideModalState = {
 		onOk: (typeof opts.onOk === "function") ? opts.onOk : null,
 		onSecondary: (typeof opts.onSecondary === "function") ? opts.onSecondary : null,
-		secondaryHref: opts.secondaryHref || ""
+		secondaryHref: opts.secondaryHref || "",
+		kind: opts.kind || ""
 	};
 	overlay.classList.add("is_open");
 	overlay.setAttribute("aria-hidden", "false");
@@ -621,6 +622,23 @@ function openCreditShortageGuide(opts) {
 			return;
 		}
 		openGuide("기업 정보 조회 안내", message || "기업 정보를 불러오지 못했습니다.", "잠시 후 다시 시도해 주세요.");
+	}
+
+	function openCompanyLookupPendingGuide() {
+		openAiGuideModal({
+			title: "기업 정보 조회 중",
+			text: "KODATA 기업 정보를 확인하고 있습니다.",
+			text2: "외부 기관 응답이 지연될 수 있어 잠시만 기다려 주세요.",
+			okText: "계속 기다리기",
+			okVariant: "outline",
+			kind: "company_lookup_pending"
+		});
+	}
+
+	function closeCompanyLookupPendingGuide() {
+		var state = window._aiGuideModalState || null;
+		if (!state || state.kind !== "company_lookup_pending") return;
+		closeAiGuideModal();
 	}
 
 // 구버전/중복 스크립트가 alert를 호출해도 안내 모달로 통일한다.
@@ -865,10 +883,21 @@ function requestMainCompCheck(comnum, $form, opts) {
 	window.currentSearchKedcd = "";
 
 	// 1단계: DB에서 기업명 조회하여 모달 띄우기
-		$.post("<?php echo G5_URL; ?>/get_company_name.php", { comnum: comnumDigits }, function(res) {
+	var companyLookupRequestId = Date.now() + ":" + Math.random();
+	window.currentCompanyLookupRequestId = companyLookupRequestId;
+	var companyLookupPendingTimer = setTimeout(function() {
+		if (window.currentCompanyLookupRequestId !== companyLookupRequestId) return;
+		openCompanyLookupPendingGuide();
+	}, 3000);
+
+	$.post("<?php echo G5_URL; ?>/get_company_name.php", { comnum: comnumDigits })
+		.done(function(res) {
+			clearTimeout(companyLookupPendingTimer);
+			if (window.currentCompanyLookupRequestId !== companyLookupRequestId) return;
 			try {
 				var data = JSON.parse(res);
 				if (data.result === 'success') {
+					closeCompanyLookupPendingGuide();
 					var overlay = document.getElementById("modal_verify_overlay");
 				var companyEl = document.getElementById("modal_verify_company");
 					var bzcEl = document.getElementById("modal_verify_bzc");
@@ -900,9 +929,14 @@ function requestMainCompCheck(comnum, $form, opts) {
 						}
 					} catch(e) {
 					console.error("Lookup error:", e);
+					closeCompanyLookupPendingGuide();
 					openGuide("조회 오류 안내", "응답 처리 중 오류가 발생했습니다.", "잠시 후 다시 시도해 주세요.");
 				}
-			}).fail(function() {
+			})
+			.fail(function() {
+				clearTimeout(companyLookupPendingTimer);
+				if (window.currentCompanyLookupRequestId !== companyLookupRequestId) return;
+				closeCompanyLookupPendingGuide();
 				openGuide("조회 오류 안내", "서버 통신 중 일시적인 오류가 발생했습니다.", "잠시 후 다시 시도해 주세요.");
 			});
 	});

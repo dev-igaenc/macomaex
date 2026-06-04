@@ -250,7 +250,7 @@ switch ($type) {
 				 curl_setopt ($ch, CURLOPT_COOKIEJAR, $cookie_nm);
 				 curl_setopt ($ch, CURLOPT_COOKIEFILE, $cookie_nm); 
 				 curl_setopt ($ch, CURLOPT_USERAGENT, $agent); 
-					 curl_setopt ($ch, CURLOPT_CONNECTTIMEOUT, 3);
+					 curl_setopt ($ch, CURLOPT_CONNECTTIMEOUT, 8);
 					 curl_setopt ($ch, CURLOPT_TIMEOUT, 8);
 				 curl_setopt ($ch, CURLOPT_RETURNTRANSFER, 1);
 
@@ -382,7 +382,7 @@ switch ($type) {
 								curl_setopt($ch, CURLOPT_COOKIEJAR, $cookie_nm);
 								curl_setopt($ch, CURLOPT_COOKIEFILE, $cookie_nm);
 								curl_setopt($ch, CURLOPT_USERAGENT, $agent);
-									curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 3);
+									curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 8);
 									curl_setopt($ch, CURLOPT_TIMEOUT, 8);
 								curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
 								$html_ori = curl_exec($ch);
