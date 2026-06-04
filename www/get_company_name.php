@@ -79,8 +79,7 @@ if ($comp) {
         curl_setopt($ch, CURLOPT_COOKIEJAR, $cookie_nm);
         curl_setopt($ch, CURLOPT_COOKIEFILE, $cookie_nm);
         curl_setopt($ch, CURLOPT_USERAGENT, $agent);
-        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 8);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 8);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
         $html_ori = curl_exec($ch);
         $curl_error = curl_error($ch);

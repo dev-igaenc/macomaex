@@ -641,6 +641,37 @@ function openCreditShortageGuide(opts) {
 		closeAiGuideModal();
 	}
 
+	function openCompanyVerifyModalFromData(data, $form) {
+		if (!data || data.result !== "success") return false;
+		closeCompanyLookupPendingGuide();
+
+		var overlay = document.getElementById("modal_verify_overlay");
+		var companyEl = document.getElementById("modal_verify_company");
+		var bzcEl = document.getElementById("modal_verify_bzc");
+		var typeEl = document.getElementById("modal_verify_type");
+		var cominfoVal = data.cominfo ? data.cominfo : "";
+
+		window.currentSearchBizno = data.bizno || window.currentSearchBizno || "";
+		window.currentSearchBiznoToken = data.bizno_token || window.currentSearchBiznoToken || "";
+		window.currentSearchBzcCd = data.bzc_cd || "";
+		window.currentSearchKedcd = data.kedcd || "";
+
+		if ($form && $form.length) {
+			$form.find("input[name='cominfo']").val(cominfoVal);
+		}
+
+		if (companyEl) companyEl.textContent = data.name || "";
+		if (bzcEl) bzcEl.textContent = data.bzc_name || "";
+		if (typeEl) typeEl.textContent = data.enp_type || "";
+
+		if (overlay) {
+			overlay.classList.add("is_open");
+			overlay.setAttribute("aria-hidden", "false");
+			loadPartnerKeywordChips(1);
+		}
+		return true;
+	}
+
 // 구버전/중복 스크립트가 alert를 호출해도 안내 모달로 통일한다.
 (function() {
 	var nativeAlert = window.alert;
@@ -780,19 +811,45 @@ function requestMainCompCheck(comnum, $form, opts) {
 		if (originalHtml) btn.innerHTML = originalHtml;
 	}
 
+	var mainCompCheckPendingTimer = setTimeout(function() {
+		openCompanyLookupPendingGuide();
+	}, 3000);
+
+	function refreshCompanyLookupFromCache() {
+		$.post("<?php echo G5_URL; ?>/get_company_name.php", { comnum: comnum }, function(res) {
+			try {
+				var data = JSON.parse(res);
+				if (openCompanyVerifyModalFromData(data, $form)) {
+					restoreButton();
+					return;
+				}
+				openCompanyLookupFailGuide(data);
+				restoreButton();
+			} catch (e) {
+				console.error("company lookup refresh parse error:", e);
+				openGuide("조회 오류 안내", "응답 처리 중 오류가 발생했습니다.", "잠시 후 다시 시도해 주세요.");
+				restoreButton();
+			}
+		}).fail(function() {
+			openGuide("조회 오류 안내", "서버 통신 중 일시적인 오류가 발생했습니다.", "잠시 후 다시 시도해 주세요.");
+			restoreButton();
+		});
+	}
+
 	// cominfo 보정 후 최종 진입 URL은 company_list_ai.php(bizno)로 통일
 	$.post("<?php echo G5_URL; ?>/get_set.php", { type: "main_comp_chk", comnum: comnum }, function(res) {
+		clearTimeout(mainCompCheckPendingTimer);
 		try {
-			var parts = (res + "").split("|");
-			if (parts[0] === "1000") {
-				if (overlay) {
-					overlay.classList.remove("is_open");
-					overlay.setAttribute("aria-hidden", "true");
-				}
+			var raw = res + "";
+			var sepIdx = raw.indexOf("|");
+			var status = sepIdx >= 0 ? raw.substring(0, sepIdx) : raw;
+			var body = sepIdx >= 0 ? raw.substring(sepIdx + 1) : "";
+			var parts = raw.split("|");
+			if (status === "1000") {
 				if ($form && $form.length) {
-					$form.find("input[name='cominfo']").val(parts[1] || "");
-					moveToAiRecommendByBizno(comnum);
+					$form.find("input[name='cominfo']").val(body || "");
 				}
+				refreshCompanyLookupFromCache();
 				} else {
 					if (parts[1] === "02") {
 						openGuide("사업자번호 재확인", "입력하신 사업자번호로 기업 정보를 찾지 못했습니다.", "사업자번호를 다시 확인해 주세요.");
@@ -809,6 +866,7 @@ function requestMainCompCheck(comnum, $form, opts) {
 				restoreButton();
 			}
 		}).fail(function() {
+			clearTimeout(mainCompCheckPendingTimer);
 			openGuide("조회 오류 안내", "서버 통신 중 일시적인 오류가 발생했습니다.", "잠시 후 다시 시도해 주세요.");
 			restoreButton();
 		});
@@ -897,47 +955,22 @@ function requestMainCompCheck(comnum, $form, opts) {
 			try {
 				var data = JSON.parse(res);
 				if (data.result === 'success') {
-					closeCompanyLookupPendingGuide();
-					var overlay = document.getElementById("modal_verify_overlay");
-				var companyEl = document.getElementById("modal_verify_company");
-					var bzcEl = document.getElementById("modal_verify_bzc");
-					var typeEl = document.getElementById("modal_verify_type");
-						var cominfoVal = data.cominfo ? data.cominfo : "";
-						window.currentSearchBizno = data.bizno || comnumDigits;
-						window.currentSearchBiznoToken = data.bizno_token || "";
-						window.currentSearchBzcCd = data.bzc_cd || "";
-						window.currentSearchKedcd = data.kedcd || "";
-
-				if ($form && $form.length) {
-					$form.find("input[name='cominfo']").val(cominfoVal);
-				}
-
-				if (companyEl) companyEl.textContent = data.name;
-				if (bzcEl) bzcEl.textContent = data.bzc_name;
-				if (typeEl) typeEl.textContent = data.enp_type;
-
-					if (overlay) {
-						overlay.classList.add("is_open");
-						overlay.setAttribute("aria-hidden", "false");
-						loadPartnerKeywordChips(1);
-					}
+					openCompanyVerifyModalFromData(data, $form);
 					} else {
 						if ($form && $form.length) {
 							$form.find("input[name='cominfo']").val("");
 						}
-						openCompanyLookupFailGuide(data);
-						}
-					} catch(e) {
+						requestMainCompCheck(comnumDigits, $form);
+				}
+			} catch(e) {
 					console.error("Lookup error:", e);
-					closeCompanyLookupPendingGuide();
-					openGuide("조회 오류 안내", "응답 처리 중 오류가 발생했습니다.", "잠시 후 다시 시도해 주세요.");
+					requestMainCompCheck(comnumDigits, $form);
 				}
 			})
 			.fail(function() {
 				clearTimeout(companyLookupPendingTimer);
 				if (window.currentCompanyLookupRequestId !== companyLookupRequestId) return;
-				closeCompanyLookupPendingGuide();
-				openGuide("조회 오류 안내", "서버 통신 중 일시적인 오류가 발생했습니다.", "잠시 후 다시 시도해 주세요.");
+				requestMainCompCheck(comnumDigits, $form);
 			});
 	});
 
