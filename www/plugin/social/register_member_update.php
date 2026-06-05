@@ -36,7 +36,6 @@ $sm_id = $user_profile->sid;
 $mb_id = isset($_POST['mb_id']) ? trim($_POST['mb_id']) : '';
 $mb_password    = isset($_POST['mb_password']) ? trim($_POST['mb_password']) : '';
 $mb_password_re = isset($_POST['mb_password_re']) ? trim($_POST['mb_password_re']) : '';
-$mb_nick        = isset($_POST['mb_nick']) ? trim(strip_tags($_POST['mb_nick'])) : '';
 $mb_email       = isset($_POST['mb_email']) ? trim($_POST['mb_email']) : '';
 $cert_mb_name   = isset($_POST['mb_name']) ? clean_xss_tags(trim(strip_tags($_POST['mb_name']))) : '';
 $mb_hp          = isset($_POST['mb_hp']) ? trim($_POST['mb_hp']) : '';
@@ -46,7 +45,7 @@ $mb_email       = get_email_address($mb_email);
 $mb_5           = $mb_email;
 $mb_id          = $mb_email;
 $mb_name        = $mb_id;
-$mb_nick        = $mb_nick ? $mb_nick : $mb_id;
+$mb_nick        = $mb_id;
 
 // 소셜 프로필에서 이름/휴대폰을 추출해 회원 확장필드 기본값으로 사용합니다.
 $social_contact = social_get_profile_contact_data($user_profile);
@@ -59,23 +58,12 @@ if( !$mb_8 && !empty($social_contact['phone']) ){
 $mb_hp = $mb_hp ? social_normalize_phone_number($mb_hp) : $mb_8;
 $mb_8 = $mb_hp ? social_normalize_phone_number($mb_hp) : social_normalize_phone_number($mb_8);
 
-// 이름, 닉네임에 utf-8 이외의 문자가 포함됐다면 오류
+// 이름에 utf-8 이외의 문자가 포함됐다면 정리
 // 서버환경에 따라 정상적으로 체크되지 않을 수 있음.
 $tmp_mb_name = iconv('UTF-8', 'UTF-8//IGNORE', $cert_mb_name);
 if($tmp_mb_name != $cert_mb_name) {
     $cert_mb_name = $tmp_mb_name;
 }
-$tmp_mb_nick = iconv('UTF-8', 'UTF-8//IGNORE', $mb_nick);
-if($tmp_mb_nick != $mb_nick) {
-    $mb_nick = $tmp_mb_nick;
-}
-
-if( ! $mb_nick ){
-    $tmp = explode('@', $mb_email);
-    $mb_nick = $mb_nick ? $mb_nick : $tmp[0];
-    $mb_nick = exist_mb_nick_recursive($mb_nick, '');
-}
-
 if( ! isset($mb_password) || ! $mb_password ){
 
     $mb_password = md5(pack('V*', rand(), rand(), rand(), rand()));
@@ -83,20 +71,16 @@ if( ! isset($mb_password) || ! $mb_password ){
 }
 
 if ($msg = empty_mb_name($cert_mb_name))       macomaex_social_register_fail($msg);
-if ($msg = empty_mb_nick($mb_nick))     macomaex_social_register_fail($msg);
 if ($msg = empty_mb_email($mb_email))   macomaex_social_register_fail($msg);
 if ($msg = reserve_mb_id($mb_id))       macomaex_social_register_fail($msg);
-if ($msg = reserve_mb_nick($mb_nick))   macomaex_social_register_fail($msg);
 // 이름에 한글명 체크를 하지 않는다.
 //if ($msg = valid_mb_name($mb_name))     alert($msg, "", true, true);
-if ($msg = valid_mb_nick($mb_nick))     macomaex_social_register_fail($msg);
 if ($msg = valid_mb_email($mb_email))   macomaex_social_register_fail($msg);
 if ($msg = prohibit_mb_email($mb_email))macomaex_social_register_fail($msg);
 if ($msg = valid_mb_hp($mb_hp))         macomaex_social_register_fail($msg);
 if (!macomaex_signup_phone_otp_is_verified($mb_hp)) macomaex_social_register_fail('휴대폰 인증을 완료해 주세요.');
 
 if ($msg = exist_mb_id($mb_id))     macomaex_social_register_fail($msg);
-if ($msg = exist_mb_nick($mb_nick, $mb_id))     macomaex_social_register_fail($msg);
 if ($msg = exist_mb_email($mb_email, $mb_id))   macomaex_social_register_fail($msg);
 
 if( $mb = get_member($mb_id) ){
