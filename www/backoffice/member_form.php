@@ -31,6 +31,7 @@ $mb = array(
 'mb_profile' => null,
 'mb_memo' => null,
 'mb_leave_date' => null,
+'mb_company' => null,
 'mb_1' => null,
 'mb_2' => null,
 'mb_3' => null,
@@ -250,14 +251,14 @@ input:read-only {background-color:#eeee;}
 	<tr>
         <th scope="row"><label for="">사업자등록번호</label></th>
         <td>
-			<input type="hidden" name="com_chk" id="com_chk" class="com_chk" value="<?if($mb['mb_company']){?>true<?}else{?>false<?}?>">
-			<input type="text" name="mb_4" value="<?php echo $mb['mb_4'] ?>" id="mb_4" required class="required frm_input comnum_chk" size="15"  maxlength="12"> <button type="button" class="btn btn-sm btn-info" id="bz_sch">조회</button>
+			<input type="hidden" name="com_chk" id="com_chk" class="com_chk" value="<?php echo !empty($mb['mb_company']) ? 'true' : 'false'; ?>">
+			<input type="text" name="mb_4" value="<?php echo $mb['mb_4'] ?>" id="mb_4" class="frm_input comnum_chk" size="15"  maxlength="12"> <button type="button" class="btn btn-sm btn-info" id="bz_sch">조회</button>
 		</td>
 	</tr>
     <tr>
-        <th scope="row"><label for="mb_name">법인명<strong class="sound_only">필수</strong></label></th>
+        <th scope="row"><label for="mb_name">법인명</label></th>
         <td>
-		<input type="text" name="mb_name" value="<?php echo $mb['mb_name'] ?>" id="mb_name" readonly required class="frm_input" size="15"  maxlength="20">
+		<input type="text" name="mb_name" value="<?php echo $mb['mb_name'] ?>" id="mb_name" readonly class="frm_input" size="15"  maxlength="20">
 		<input type="hidden" name="mb_nick" value="<?php echo $mb['mb_nick'] ?>" id="mb_nick" >
 		</td> 
     </tr>
@@ -268,39 +269,7 @@ input:read-only {background-color:#eeee;}
 		</td>
 	</tr>
 		<input type="hidden" name="mb_email" value="<?php echo $mb['mb_email'] ?>">
-		<input type="hidden" name="mb_level" value="<?=$mb['mb_level']?>">
-    <tr>
-        <th scope="row"><label for="mb_3">회사유형</label></th>
-        <td>
-            <input type="radio" name="mb_3" value="제조사" id="mb_3_1">
-            <label for="mb_3_1">제조사</label>
-            <input type="radio" name="mb_3" value="유통사" id="mb_3_2">
-            <label for="mb_3_2">유통사</label>
-			<input type="radio" name="mb_3" value="기타" id="mb_3_3">
-            <label for="mb_3_3">기타</label>
-			<?if($mb['mb_3']){?><script>$("input[name='mb_3'][value='<?=$mb['mb_3']?>']").prop("checked",true);</script><?}?>
-		</td>
-    </tr>
-	<tr>
-        <th scope="row"><label for="">회원사 가입유무</label></th>
-        <td>
-			<span class="checkIn">
-				<input type="checkbox" id="mb_10_1" name="mb_10[]"  class="selec_chk" value="벤처기업" ><label for="mb_10_1">벤처기업</label>&ensp;
-				<input type="checkbox" id="mb_10_2" name="mb_10[]"  class="selec_chk" value="메인비즈" ><label for="mb_10_2">메인비즈</label>&ensp;
-				<input type="checkbox" id="mb_10_3" name="mb_10[]"  class="selec_chk" value="이노비즈" ><label for="mb_10_3">이노비즈</label>&ensp;
-				<input type="checkbox" id="mb_10_4" name="mb_10[]"  class="selec_chk" value="해당사항없음" ><label for="mb_10_4">해당사항없음</label>
-			</span>
-			<?if($mb['mb_10']){?>
-			<script>
-				var mb10="<?=$mb['mb_10']?>";
-				mb10=mb10.split(":|:");
-				$.each(mb10, function(index, item){
-					$("input[name='mb_10[]'][value='"+item+"'").prop("checked",true);
-				})
-			</script>
-			<?}?>
-		</td>
-	</tr>
+		<input type="hidden" name="mb_level" value="<?php echo $mb['mb_level']; ?>">
 	<tr>
         <th scope="row"><label for="">담당자 이름</label></th>
         <td>
@@ -308,38 +277,9 @@ input:read-only {background-color:#eeee;}
 		</td>
 	</tr>
 	<tr>
-        <th scope="row"><label for="">담당자 직위</label></th>
-        <td>
-			<input type="text" name="mb_7" value="<?php echo $mb['mb_7'] ?>" id="mb_7" required class="required frm_input" size="15">
-		</td>
-	</tr>
-		<tr>
-        <th scope="row"><label for="">담당자 이메일</label></th>
-        <td>
-			<input type="text" name="mb_5" value="<?php echo $mb['mb_5'] ?>" id="mb_5"  class=" frm_input" size="15">
-		</td>
-	</tr>
-	<tr>
         <th scope="row"><label for="">휴대폰 번호</label></th>
         <td>
 			<input type="text" name="mb_8" value="<?php echo $mb['mb_8'] ?>" id="mb_8"  class=" frm_input tel_chk" size="15" maxlength="13">
-		</td>
-	</tr>
-	<tr>
-        <th scope="row"><label for="">주요 서비스/제품</label></th>
-        <td class="majors">
-			<?$mb_9=explode(":|:",$mb['mb_9']);?>
-			<?foreach($mb_9 as $value){?>
-			<p class="products">
-				<input type="text" name="mb_9[]" value="<?=$value?>" id="mb_9" class="frm_input" size="15">
-				<a href="javascript:;" class="minus">-</a>
-			</p>
-			<?}?>
-			<p class="products">
-				<input type="text" name="mb_9[]" value="" id="mb_9" class="frm_input" size="15">
-				<a href="javascript:;" class="add">+</a>
-				<a href="javascript:;" class="minus">-</a>
-			</p>
 		</td>
 	</tr>
     <tr>
@@ -374,7 +314,7 @@ this.form.mb_intercept_date.value=this.form.mb_intercept_date.defaultValue; }">
         <th scope="row">IP</th>
         <td><?php echo $mb['mb_ip'] ?></td>
     </tr>
-<?}?>
+<?php } ?>
     </tbody>
     </table>
 </div>
@@ -425,11 +365,11 @@ $("#bz_sch").click(function(){
 		});
 })
 
-$("input[name='mb_10[]']").click(function(){
-	$this=$(this);
-	if($this.is(":checked")){
-		if($this.val()=="해당사항없음") $("input[name='mb_10[]'][value!='해당사항없음']").prop("checked",false);
-		else $("input[name='mb_10[]'][value='해당사항없음']").prop("checked",false);
+$("#mb_4").on("input", function(){
+	if(!$(this).val().trim()) {
+		$("#com_chk").val("false");
+		$("#mb_name").val("").attr('readonly', true);
+		$("#mb_company").val("").attr('readonly', true);
 	}
 })
 
@@ -476,25 +416,25 @@ $(".tel_chk").keyup(function(){
 	phone=phone.replace(/[^0-9]/g, '').replace(/^(\d{2,3})(\d{3,4})(\d{4})$/, `$1-$2-$3`);
 	$(this).val(phone);
 })
-	//서비스 추가
-	$add='<p class="products">'+$(".majors .products:last").html()+"</p>";
-	$("body").on("click",".products .add",function(){
-		$(".majors").append($add);
-	})
-	//서비스 삭제
-	$("body").on("click",".products .minus",function(){
-		$(this).parents(".products").remove();
-	})
 
 </script>
 
 <script>
 function fmember_submit(f)
 {
-	if($("#com_chk").val()!="true") {
-		alert("사업등록번호를 검색해주세요.");
-		$("#mb_4").focus();
-		return false;
+	var currentBizNo = $("#mb_4").val().trim();
+
+	if(currentBizNo) {
+		if($("#com_chk").val()!="true") {
+			alert("사업등록번호를 검색해주세요.");
+			$("#mb_4").focus();
+			return false;
+		}
+		if(!$("#mb_name").val().trim()) {
+			alert("법인명을 확인해 주세요.");
+			$("#mb_name").focus();
+			return false;
+		}
 	}
 
     if (!f.mb_icon.value.match(/\.(gif|jpe?g|png)$/i) && f.mb_icon.value) {
