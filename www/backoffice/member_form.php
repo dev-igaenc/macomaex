@@ -252,13 +252,13 @@ input:read-only {background-color:#eeee;}
         <th scope="row"><label for="">사업자등록번호</label></th>
         <td>
 			<input type="hidden" name="com_chk" id="com_chk" class="com_chk" value="<?php echo !empty($mb['mb_company']) ? 'true' : 'false'; ?>">
-			<input type="text" name="mb_4" value="<?php echo $mb['mb_4'] ?>" id="mb_4" required class="required frm_input comnum_chk" size="15"  maxlength="12"> <button type="button" class="btn btn-sm btn-info" id="bz_sch">조회</button>
+			<input type="text" name="mb_4" value="<?php echo $mb['mb_4'] ?>" id="mb_4" class="frm_input comnum_chk" size="15"  maxlength="12"> <button type="button" class="btn btn-sm btn-info" id="bz_sch">조회</button>
 		</td>
 	</tr>
     <tr>
-        <th scope="row"><label for="mb_name">법인명<strong class="sound_only">필수</strong></label></th>
+        <th scope="row"><label for="mb_name">법인명</label></th>
         <td>
-		<input type="text" name="mb_name" value="<?php echo $mb['mb_name'] ?>" id="mb_name" readonly required class="frm_input" size="15"  maxlength="20">
+		<input type="text" name="mb_name" value="<?php echo $mb['mb_name'] ?>" id="mb_name" readonly class="frm_input" size="15"  maxlength="20">
 		<input type="hidden" name="mb_nick" value="<?php echo $mb['mb_nick'] ?>" id="mb_nick" >
 		</td> 
     </tr>
@@ -365,6 +365,14 @@ $("#bz_sch").click(function(){
 		});
 })
 
+$("#mb_4").on("input", function(){
+	if(!$(this).val().trim()) {
+		$("#com_chk").val("false");
+		$("#mb_name").val("").attr('readonly', true);
+		$("#mb_company").val("").attr('readonly', true);
+	}
+})
+
 //사업자번호
 	$('.comnum_chk').on('keyup', function(){
         var num = $(this).val();
@@ -414,10 +422,19 @@ $(".tel_chk").keyup(function(){
 <script>
 function fmember_submit(f)
 {
-	if($("#com_chk").val()!="true") {
-		alert("사업등록번호를 검색해주세요.");
-		$("#mb_4").focus();
-		return false;
+	var currentBizNo = $("#mb_4").val().trim();
+
+	if(currentBizNo) {
+		if($("#com_chk").val()!="true") {
+			alert("사업등록번호를 검색해주세요.");
+			$("#mb_4").focus();
+			return false;
+		}
+		if(!$("#mb_name").val().trim()) {
+			alert("법인명을 확인해 주세요.");
+			$("#mb_name").focus();
+			return false;
+		}
 	}
 
     if (!f.mb_icon.value.match(/\.(gif|jpe?g|png)$/i) && f.mb_icon.value) {

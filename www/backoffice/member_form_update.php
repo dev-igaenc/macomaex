@@ -17,7 +17,10 @@ $mb_certify = isset($_POST['mb_certify']) ? preg_replace('/[^0-9a-z_]/i', '', $_
 $mb_zip = isset($_POST['mb_zip']) ? preg_replace('/[^0-9a-z_]/i', '', $_POST['mb_zip']) : '';
 
 // 휴대폰번호 체크
-$mb_hp = hyphen_hp_number($_POST['mb_hp']);
+$mb_hp_source = isset($_POST['mb_hp']) && trim((string) $_POST['mb_hp']) !== ''
+    ? $_POST['mb_hp']
+    : (isset($_POST['mb_8']) ? $_POST['mb_8'] : '');
+$mb_hp = hyphen_hp_number($mb_hp_source);
 if($mb_hp) {
     $result = exist_mb_hp($mb_hp, $mb_id);
     if ($result)
@@ -67,7 +70,22 @@ for($i=1;$i<=10;$i++){
 foreach( $check_keys as $key ){
     $posts[$key] = isset($_POST[$key]) ? clean_xss_tags($_POST[$key], 1, 1) : '';
 }
-$mb_nick =$mb_name;
+$mb_name = trim((string) $posts['mb_name']);
+$mb_nick = $mb_name;
+$mb_company = trim((string) (isset($_POST['mb_company']) ? $_POST['mb_company'] : ''));
+$mb_3 = trim((string) $posts['mb_3']);
+$comnum = preg_replace('/[^0-9]/', '', (string) $posts['mb_4']);
+
+if ($w == '' && $mb_company === '') {
+    $mb_name = $mb_id;
+    $mb_nick = $mb_id;
+}
+
+$posts['mb_name'] = $mb_name;
+$posts['mb_5'] = trim((string) $posts['mb_5']);
+if ($posts['mb_5'] === '') {
+    $posts['mb_5'] = $mb_email;
+}
 $mb_9_values = (isset($_POST['mb_9']) && is_array($_POST['mb_9'])) ? array_filter($_POST['mb_9']) : null;
 if ($mb_9_values !== null && $mb_9_values) {
     $posts['mb_9'] = implode(":|:", $mb_9_values);
@@ -78,7 +96,7 @@ if ($mb_10_values !== null && $mb_10_values) {
     $posts['mb_10'] = implode(":|:", $mb_10_values);
 }
 
-$posts['mb_company']=$_POST['mb_company'];
+$posts['mb_company'] = $mb_company;
 
 if ($w == 'u') {
     $existing_mb = get_member($mb_id);
@@ -158,6 +176,7 @@ if ($w == '')
         alert('이미 존재하는 이메일입니다.\\nＩＤ : '.$row['mb_id'].'\\n이름 : '.$row['mb_name'].'\\n메일 : '.$row['mb_email']);
 
     sql_query(" insert into {$g5['member_table']} set mb_id = '{$mb_id}', mb_password = '".get_encrypt_string($mb_password)."', mb_datetime = '".G5_TIME_YMDHIS."', mb_ip = '{$_SERVER['REMOTE_ADDR']}', mb_email_certify = '".G5_TIME_YMDHIS."', {$sql_common} ");
+    macomaex_grant_signup_credit_bonus($mb_id, 'admin');
 }
 else if ($w == 'u')
 {
@@ -241,7 +260,9 @@ if( $w == '' || $w == 'u' ){
 			$mb_company=$kedcd;
 	}
 	//M:제조사 D:유통사 C:기타 $mb_3
-	sql_query("update g5_matching set receive_id='{$mb_id}', rc_kind='{$kind_cd[$mb_3]}' where KEDCD='{$mb_company}'");
+	if($mb_company){
+		sql_query("update g5_matching set receive_id='{$mb_id}', rc_kind='{$kind_cd[$mb_3]}' where KEDCD='{$mb_company}'");
+	}
 
 	$mb_dir = substr($mb_id,0,2);
     $mb_icon_img = get_mb_icon_name($mb_id).'.gif';
