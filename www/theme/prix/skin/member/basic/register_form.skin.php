@@ -4,6 +4,13 @@ $board['bo_10']="6"; // 1뎁스
 $board['bo_9']="3"; // 2뎁스
 
 include_once(G5_THEME_PATH.'/head.php');
+
+$member_business_number = trim((string) $member['mb_4']);
+$member_company_name = trim((string) $member['mb_name']);
+$member_company_code = trim((string) $member['mb_company']);
+$has_business_number = $member_business_number !== '';
+$has_verified_company = ($member_business_number !== '' && $member_company_name !== '' && $member_company_code !== '');
+$display_company_name = $has_business_number ? $member_company_name : '';
 ?>
 
 <!-- 회원정보 입력/수정 시작 { -->
@@ -29,9 +36,10 @@ include_once(G5_THEME_PATH.'/head.php');
 	<input type="hidden" name="cert_no" value="">
 	<input type="hidden" name="mb_3" value="<?php echo $member['mb_3'] ?>">
 	<input type="hidden" name="mb_7" value="<?php echo $member['mb_7'] ?>">
-		<?if($w=='u'){?>
-		<input type="hidden" name="mb_nick" value="<?=$member['name']?>">
-		<?}?>
+	<input type="hidden" name="com_chk" id="com_chk" value="<?php echo $has_verified_company ? 'true' : 'false'; ?>">
+	<input type="hidden" name="origin_mb_4" id="origin_mb_4" value="<?php echo get_text($member_business_number); ?>">
+	<input type="hidden" name="origin_mb_name" id="origin_mb_name" value="<?php echo get_text($member_company_name); ?>">
+	<input type="hidden" name="origin_mb_company" id="origin_mb_company" value="<?php echo get_text($member_company_code); ?>">
 	<?php if (isset($member['mb_sex'])) {  ?><input type="hidden" name="mb_sex" value="<?php echo $member['mb_sex'] ?>"><?php }  ?>
 	<!--
 	<?php if (isset($member['mb_nick_date']) && $member['mb_nick_date'] > date("Y-m-d", G5_SERVER_TIME - ($config['cf_nick_modify'] * 86400))) { // 닉네임수정일이 지나지 않았다면  ?>
@@ -70,14 +78,15 @@ include_once(G5_THEME_PATH.'/head.php');
 	                    <div class="section_divider"></div>
 	                    <div class="inputBox type2">
 	                        <p class="title">사업자등록번호</p>
-	                        <input type="text" name="mb_4" id="mb_4" value="<?=$member['mb_4']?>" class="readonly comnum_chk" maxlength="12" readonly>
+	                        <input type="text" name="mb_4" id="mb_4" value="<?php echo get_text($member_business_number); ?>" class="comnum_chk" maxlength="12">
+							<button type="button" class="btn srh">확인</button>
 	                    </div>
 	                    <div class="inputBox type2">
 	                        <p class="title">법인명</p>
-	                        <input type="text" name="mb_name" id="mb_name" class="readonly" readonly value="<?=$member['mb_name']?>">
-							<input type="hidden" name="mb_company" id="mb_company" class="readonly" readonly value="<?=$member['mb_company']?>">
+	                        <input type="hidden" name="mb_name" id="mb_name_value" value="<?php echo get_text($member_company_name); ?>">
+	                        <input type="text" id="mb_name" class="readonly" readonly value="<?php echo get_text($display_company_name); ?>">
+							<input type="hidden" name="mb_company" id="mb_company" value="<?php echo get_text($member_company_code); ?>">
 	                    </div>
-
 	                </div>
             </div>
         </div>
@@ -167,6 +176,66 @@ function AutoHypen(companyNum){
         return tempNum;
       }
     }
+	var originBizNo = $("#origin_mb_4").val().trim();
+	var originCompanyName = $("#origin_mb_name").val();
+	var originCompanyCode = $("#origin_mb_company").val();
+
+	function resetCompanyFields(currentBizNo) {
+		if (currentBizNo === originBizNo) {
+			$("#com_chk").val(originBizNo && originCompanyName && originCompanyCode ? "true" : "false");
+			$("#mb_name_value").val(originCompanyName);
+			$("#mb_name").val(originBizNo ? originCompanyName : "");
+			$("#mb_company").val(originCompanyCode);
+			return;
+		}
+
+		$("#com_chk").val("false");
+		$("#mb_name_value").val("");
+		$("#mb_name").val("");
+		$("#mb_company").val("");
+	}
+
+	$("#mb_4").on("input", function() {
+		resetCompanyFields($(this).val().trim());
+	});
+
+	$(".srh").click(function(){
+		var comnum = $("#mb_4").val().trim();
+
+		if(comnum.length < 12) {
+			$("#com_chk").val("false");
+			jAlert("사업자등록번호를 확인하세요.","알림",function(){
+				$("#mb_4").focus();
+			});
+			return false;
+		}
+
+		$.post("../get_set.php", {
+			type: "join_comp_chk",
+			comnum: comnum
+		})
+			.done(function(jqXHR) {
+			jqXHR = jqXHR.split("|");
+			if(jqXHR[0] == 1000){
+				$("#com_chk").val("true");
+				$("#mb_name_value").val(jqXHR[1]);
+				$("#mb_name").val(jqXHR[1]);
+				$("#mb_company").val(jqXHR[2]);
+			}else if(jqXHR[0] == 501){
+				$("#com_chk").val("false");
+				jAlert("해당 사업자 번호로는 등록할 수 없습니다.","알림",function(){
+					$("#mb_4").focus();
+				});
+			}else{
+				$("#com_chk").val("false");
+				jAlert("처리에 오류가 있습니다.","알림");
+			}
+		})
+		.fail(function() {
+			$("#com_chk").val("false");
+			jAlert("처리에 오류가 있습니다.","알림");
+		});
+	});
 //전화번호 자동입력
 $(".tel_chk").keyup(function(){
 	phone=$(this).val();
@@ -249,11 +318,17 @@ $(".tel_chk").keyup(function(){
 
 function fregisterform_submit()
 {
+	var currentBizNo = $("#mb_4").val().trim();
 
-
-	if(!$("#mb_name").val().trim()) {
-		jAlert("법인명을 확인해 주세요.","알림",function(){$("#mb_name").focus();});
-		return false;
+	if(currentBizNo) {
+		if($("#com_chk").val() != "true") {
+			jAlert("사업자등록번호를 먼저 확인해 주세요.","알림",function(){$("#mb_4").focus();});
+			return false;
+		}
+		if(!$("#mb_name_value").val().trim()) {
+			jAlert("법인명을 확인해 주세요.","알림",function(){$("#mb_4").focus();});
+			return false;
+		}
 	}
 
 		if(!$("#mb_6").val().trim()) {

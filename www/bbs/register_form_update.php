@@ -20,6 +20,28 @@ if (!function_exists('register_mail_log_failure')) {
     }
 }
 
+if (!function_exists('register_form_find_verified_company')) {
+    function register_form_find_verified_company($bizno, $kedcd)
+    {
+        $normalized_bizno = preg_replace('/[^0-9]/', '', (string) $bizno);
+        $normalized_kedcd = trim((string) $kedcd);
+
+        if ($normalized_bizno === '' || $normalized_kedcd === '') {
+            return array();
+        }
+
+        $sql = " select KEDCD, ENP_NM, ENP_NM_TRD, BZNO
+                    from company
+                   where BZNO = '" . sql_escape_string($normalized_bizno) . "'
+                     and KEDCD = '" . sql_escape_string($normalized_kedcd) . "'
+                   limit 1 ";
+
+        $row = sql_fetch($sql);
+
+        return is_array($row) ? $row : array();
+    }
+}
+
 // 리퍼러 체크
 referer_check();
 
@@ -108,6 +130,11 @@ $comnum = $mb_4;
 if (!isset($default) || !is_array($default)) {
     $default = array();
 }
+
+$member_mb_4 = trim((string) $member['mb_4']);
+$member_mb_name = trim((string) $member['mb_name']);
+$member_mb_nick = trim((string) $member['mb_nick']);
+$member_mb_company = trim((string) $member['mb_company']);
 
 $cert_mb_name   = clean_xss_tags($cert_mb_name);
 $mb_name        = ($w == '') ? $mb_id : clean_xss_tags($mb_name);
@@ -453,8 +480,40 @@ if ($w == '') {
     if ($old_email != $mb_email && $config['cf_use_email_certify'])
         $sql_email_certify = " , mb_email_certify = '' ";
 
+    $submitted_mb_4 = $mb_4;
+    $submitted_mb_name = $mb_name;
+    $submitted_mb_company = $mb_company;
+    $company_change_requested = (
+        preg_replace('/[^0-9]/', '', (string) $submitted_mb_4) !== preg_replace('/[^0-9]/', '', (string) $member_mb_4)
+    );
+    $verified_company = array();
+
+    if ($company_change_requested) {
+        $verified_company = register_form_find_verified_company($submitted_mb_4, $submitted_mb_company);
+    }
+
+    $should_sync_company_identity = (
+        $company_change_requested &&
+        !empty($verified_company['KEDCD']) &&
+        trim((string) $submitted_mb_name) !== '' &&
+        trim((string) ($verified_company['ENP_NM_TRD'] ?: $verified_company['ENP_NM'])) === trim((string) $submitted_mb_name)
+    );
+
+    if ($should_sync_company_identity) {
+        $mb_4 = $submitted_mb_4;
+        $mb_company = trim((string) $verified_company['KEDCD']);
+        $mb_name = trim((string) ($verified_company['ENP_NM_TRD'] ?: $verified_company['ENP_NM']));
+        $mb_nick = $mb_name;
+    } else {
+        $mb_4 = $member_mb_4;
+        $mb_company = $member_mb_company;
+        $mb_name = $member_mb_name;
+        $mb_nick = $member_mb_nick;
+    }
+
     $sql = " update {$g5['member_table']} set ";
-if($mb_nick) $sql .= "					mb_nick = '{$mb_nick}',";
+if($should_sync_company_identity && $mb_name) $sql .= "                    mb_name = '{$mb_name}',";
+if($should_sync_company_identity && $mb_nick) $sql .= "					mb_nick = '{$mb_nick}',";
 if($mb_mailling) $sql .= "                    mb_mailling = '{$mb_mailling}',";
 if($mb_sms) $sql .= "                    mb_sms = '{$mb_sms}',";
 if($mb_open) $sql .= "                    mb_open = '{$mb_open}',";
