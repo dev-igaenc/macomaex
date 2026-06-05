@@ -14,6 +14,7 @@ $social_phone = isset($user_phone) ? get_text($user_phone) : '';
 $social_provider_label = social_get_provider_service_name($provider_name);
 $social_phone_digits = preg_replace('/[^0-9]/', '', $social_phone);
 
+// 소셜 프로필에서 받은 값을 신규 가입 폼의 기본값으로 사용합니다.
 if ($social_email) {
     $mem_chk = sql_fetch("select mb_id, mb_leave_date, mb_intercept_date from g5_member where mb_id='".sql_real_escape_string($social_email)."'");
 } else {
@@ -26,11 +27,12 @@ if ($social_email) {
     #pageTop{display:none}
     .social-join-wrap{max-width:720px;margin:72px auto 96px;padding:0 20px}
     .social-join-card{background:#fff}
-    .social-join-provider{display:inline-flex;align-items:center;height:28px;padding:0 10px;border-radius:4px;background:#f4f6f8;color:#667085;font-size:13px;font-weight:700}
+    .social-join-provider{display:flex;align-items:center;width:max-content;max-width:100%;height:28px;margin:0 auto;padding:0 10px;border-radius:4px;background:#f4f6f8;color:#667085;font-size:13px;font-weight:700;box-sizing:border-box}
     .social-join-title{margin:18px 0 8px;color:#111827;font-size:28px;line-height:1.35;font-weight:800;letter-spacing:0}
     .social-join-desc{margin:0 0 28px;color:#667085;font-size:15px;line-height:1.65}
     .social-join-form{display:flex;flex-direction:column;gap:18px}
     .social-join-field label{display:block;margin-bottom:8px;color:#344054;font-size:14px;font-weight:700}
+    .social-join-field label.social-required::after{content:'*';padding-left:3px;color:#ff0000}
     .social-join-input{width:100%;height:52px;border:1px solid #d0d5dd;border-radius:6px;padding:0 15px;color:#101828;font-size:16px;background:#fff;box-sizing:border-box}
     .social-join-input:read-only{background:#f9fafb;color:#667085}
     .social-join-cert{display:flex;gap:8px;align-items:center}
@@ -44,18 +46,16 @@ if ($social_email) {
     .social-join-status{margin:8px 0 0;color:#667085;font-size:13px;line-height:1.5}
     .social-join-status.success{color:#2563eb}
     .social-join-status.error{color:#d92d20}
-    .social-join-actions{display:flex;gap:10px;margin-top:10px}
-    .social-join-submit,.social-join-cancel{display:inline-flex;align-items:center;justify-content:center;height:54px;border-radius:6px;font-size:15px;font-weight:800;text-decoration:none;box-sizing:border-box}
-    .social-join-submit{flex:1;border:0;background:#111827;color:#fff;cursor:pointer}
-    .social-join-cancel{width:120px;border:1px solid #d0d5dd;background:#fff;color:#344054}
+    .social-join-actions{display:flex;gap:10px;margin-top:12px}
+    .social-join-submit,.social-join-cancel{display:flex;align-items:center;justify-content:center;flex:1;width:100%;height:60px;border:0;border-radius:5px;color:#fff;font-size:17px;line-height:20px;font-weight:550;text-decoration:none;box-sizing:border-box}
+    .social-join-submit{background:var(--point);cursor:pointer}
+    .social-join-cancel{background:#999}
     .member_connect{margin-top:22px;text-align:center}
     .member_connect .strong{margin:0 0 8px;color:#667085;font-size:14px}
     .member_connect .btn-txt{border:0;background:transparent;color:#2563eb;font-weight:800;cursor:pointer}
     @media (max-width:640px){
         .social-join-wrap{margin:36px auto 64px;padding:0 16px}
         .social-join-title{font-size:24px}
-        .social-join-actions{flex-direction:column}
-        .social-join-cancel{width:100%}
         .social-join-cert{display:block}
         .social-join-cert-code{display:none}
         .social-join-cert-btn{width:100%;margin-top:8px}
@@ -93,18 +93,19 @@ if ($social_email) {
                 <input type="hidden" name="old_mb_hp" value="<?php echo $social_phone; ?>">
 
                 <div class="social-join-field">
-                    <label for="social_email_view">이메일</label>
+                    <label for="social_email_view" class="social-required">이메일</label>
                     <input type="text" id="social_email_view" class="social-join-input" value="<?php echo get_text($social_email); ?>" readonly>
                 </div>
 
                 <div class="social-join-field">
-                    <label for="reg_mb_name">이름</label>
+                    <label for="reg_mb_name" class="social-required">이름</label>
                     <input type="text" id="reg_mb_name" name="mb_name" class="social-join-input" value="<?php echo $social_name; ?>" maxlength="40" placeholder="이름을 입력해 주세요" required>
                     <p class="social-join-help">소셜 계정에서 이름이 내려오면 자동으로 채워집니다.</p>
                 </div>
 
                 <div class="social-join-field">
-                    <label for="reg_mb_hp">휴대폰 번호</label>
+                    <label for="reg_mb_hp" class="social-required">휴대폰 번호</label>
+                    <!-- 일반 회원가입과 동일한 알리고 OTP 인증 흐름을 사용합니다. -->
                     <div class="social-join-cert">
                         <input type="text" id="reg_mb_hp" name="mb_hp" class="social-join-input" value="<?php echo $social_phone; ?>" maxlength="13" placeholder="010-0000-0000" required>
                         <button type="button" id="signup_phone_send" class="social-join-cert-btn">인증</button>
@@ -118,8 +119,8 @@ if ($social_email) {
                 </div>
 
                 <div class="social-join-actions">
-                    <a href="<?php echo G5_BBS_URL; ?>/login.php" class="social-join-cancel">취소</a>
-                    <button type="submit" id="btn_submit" class="social-join-submit">가입 완료</button>
+                    <button type="submit" id="btn_submit" class="social-join-submit">가입하기</button>
+                    <a href="<?php echo G5_BBS_URL; ?>/login.php" class="social-join-cancel">취소하기</a>
                 </div>
             </form>
         <?php } ?>
@@ -164,6 +165,7 @@ $(function() {
         $status.text(message || "");
     }
 
+    // 휴대폰 번호가 변경되면 기존 인증 완료 상태를 무효화합니다.
     function resetSignupPhoneVerification() {
         signupPhoneVerified = false;
         signupPhoneVerifiedValue = "";
@@ -201,6 +203,7 @@ $(function() {
         $("input[name=mb_6]").val($.trim($(this).val()));
     });
 
+    // 입력한 휴대폰 번호로 알리고 인증번호 발송을 요청합니다.
     $("#signup_phone_send").on("click", function() {
         var phone = $.trim($("#reg_mb_hp").val());
         if (phone === "") {
@@ -235,6 +238,7 @@ $(function() {
             });
     });
 
+    // 사용자가 입력한 6자리 인증번호를 서버 세션과 비교합니다.
     $("#signup_phone_verify").on("click", function() {
         var phone = $.trim($("#reg_mb_hp").val());
         var code = $.trim($("#signup_phone_code").val()).replace(/[^0-9]/g, "");
@@ -292,6 +296,7 @@ function fregisterform_submit(f) {
         return false;
     }
 
+    // OTP 인증이 완료된 휴대폰 번호만 소셜 회원 insert를 허용합니다.
     if (typeof window.macomaexSocialPhoneVerified !== "function" || !window.macomaexSocialPhoneVerified()) {
         alert("휴대폰 인증을 완료해 주세요.");
         f.mb_hp.focus();

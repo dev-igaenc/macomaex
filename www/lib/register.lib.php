@@ -181,6 +181,7 @@ function exist_mb_hp($reg_mb_hp, $reg_mb_id)
         return "";
 }
 
+// .env의 알리고 계정/키/발신번호를 읽어 공통 설정으로 반환합니다.
 function macomaex_aligo_config()
 {
     $user_id = function_exists('macomaex_env') ? trim((string) macomaex_env('ALIGO_USER_ID', '')) : '';
@@ -196,6 +197,7 @@ function macomaex_aligo_config()
     );
 }
 
+// 알리고 SMS 발송 API를 호출하고 성공 여부 및 진단 정보를 반환합니다.
 function macomaex_aligo_send_sms($receiver, $message)
 {
     $config = macomaex_aligo_config();
@@ -280,6 +282,7 @@ function macomaex_aligo_send_sms($receiver, $message)
     );
 }
 
+// 알리고 인증 상태와 문자 잔여건수를 확인하는 진단용 API입니다.
 function macomaex_aligo_remain()
 {
     $config = macomaex_aligo_config();
@@ -345,16 +348,19 @@ function macomaex_aligo_remain()
     );
 }
 
+// 입력된 휴대폰 번호를 회원 DB 저장 형식으로 통일합니다.
 function macomaex_signup_phone_otp_normalize($phone)
 {
     return hyphen_hp_number($phone);
 }
 
+// 인증번호 원문 대신 세션별 해시값을 만들어 저장합니다.
 function macomaex_signup_phone_otp_hash($phone, $code)
 {
     return hash('sha256', macomaex_signup_phone_otp_normalize($phone).'|'.trim((string) $code).'|'.session_id());
 }
 
+// 가입 완료 또는 인증 실패 시 휴대폰 OTP 세션을 초기화합니다.
 function macomaex_signup_phone_otp_clear()
 {
     set_session('ss_signup_phone_otp_hp', '');
@@ -364,6 +370,7 @@ function macomaex_signup_phone_otp_clear()
     set_session('ss_signup_phone_otp_verified_hp', '');
 }
 
+// 6자리 인증번호를 생성해 SMS로 발송하고 5분간 세션에 보관합니다.
 function macomaex_signup_phone_otp_send($phone)
 {
     $phone = macomaex_signup_phone_otp_normalize($phone);
@@ -403,6 +410,7 @@ function macomaex_signup_phone_otp_send($phone)
     );
 }
 
+// 사용자가 입력한 인증번호와 세션의 해시값을 비교해 인증 완료 처리합니다.
 function macomaex_signup_phone_otp_verify($phone, $code)
 {
     $phone = macomaex_signup_phone_otp_normalize($phone);
@@ -446,6 +454,7 @@ function macomaex_signup_phone_otp_verify($phone, $code)
     return array('ok' => true, 'message' => '휴대폰 인증이 완료되었습니다.');
 }
 
+// 최종 회원가입 전에 현재 휴대폰 번호의 인증 완료 여부를 확인합니다.
 function macomaex_signup_phone_otp_is_verified($phone)
 {
     $phone = macomaex_signup_phone_otp_normalize($phone);
@@ -455,6 +464,7 @@ function macomaex_signup_phone_otp_is_verified($phone)
     return ($verified === '1' && $phone !== '' && $verified_phone === $phone);
 }
 
+// 테스트 IP에서만 알리고 상세 오류를 응답에 포함하도록 제한합니다.
 function macomaex_signup_sms_debug_allowed()
 {
     $ip = isset($_SERVER['REMOTE_ADDR']) ? trim((string) $_SERVER['REMOTE_ADDR']) : '';

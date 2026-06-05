@@ -25,6 +25,7 @@ $is_exists_social_account = social_before_join_check($url);
 $user_nick = social_relace_nick($user_profile->displayName);
 $user_email = isset($user_profile->emailVerified) ? $user_profile->emailVerified : $user_profile->email;
 $user_id = $user_email ? strtolower(trim((string)$user_email)) : ($user_profile->sid ? preg_replace("/[^0-9a-z_]+/i", "", $user_profile->sid) : get_social_convert_id($user_profile->identifier, $provider_name));
+// 소셜 제공자에서 받은 이름/휴대폰을 가입 정보 입력 페이지에 자동 채움합니다.
 $social_contact = social_get_profile_contact_data($user_profile);
 $user_name = !empty($social_contact['name']) ? clean_xss_tags(trim(strip_tags($social_contact['name']))) : '';
 $user_phone = !empty($social_contact['phone']) ? social_normalize_phone_number($social_contact['phone']) : '';
