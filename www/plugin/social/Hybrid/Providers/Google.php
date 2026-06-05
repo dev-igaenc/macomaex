@@ -140,6 +140,26 @@ class Hybrid_Providers_Google extends Hybrid_Provider_Model_OAuth2 {
 		function getPeopleProfile() {
 			try {
 				$response = $this->api->api("https://people.googleapis.com/v1/people/me?personFields=names,phoneNumbers");
+				// TEMP DEBUG: Google People API 응답 원문 확인용 (확인 후 제거)
+				$debug_payload = json_encode(array(
+					'provider' => 'google',
+					'people_response' => $response,
+				), JSON_UNESCAPED_UNICODE);
+				error_log('[social_google_people_api_response] ' . $debug_payload);
+				if (defined('G5_PATH')) {
+					$debug_dir = G5_PATH . '/logs/social';
+					if (!is_dir($debug_dir)) {
+						@mkdir($debug_dir, G5_DIR_PERMISSION, true);
+						@chmod($debug_dir, G5_DIR_PERMISSION);
+					}
+					$debug_file = $debug_dir . '/social_login_log_' . date('Ymd') . '.php';
+					$debug_line = '[' . date('Y-m-d H:i:s') . '] ' . $debug_payload . PHP_EOL;
+					if (!file_exists($debug_file)) {
+						@file_put_contents($debug_file, "<?php if (!defined('G5_PATH')) exit; ?>\n", FILE_APPEND);
+					}
+					@file_put_contents($debug_file, $debug_line, FILE_APPEND);
+					@chmod($debug_file, G5_FILE_PERMISSION);
+				}
 				if (!$response || isset($response->error)) {
 					return array('name' => '', 'phone' => '');
 				}
@@ -161,17 +181,24 @@ class Hybrid_Providers_Google extends Hybrid_Provider_Model_OAuth2 {
 				if (property_exists($response, 'phoneNumbers') && is_array($response->phoneNumbers) && count($response->phoneNumbers) > 0) {
 					$firstValue = '';
 					foreach ($response->phoneNumbers as $phoneItem) {
-						if (property_exists($phoneItem, 'value') && !empty($phoneItem->value)) {
+						$phoneValue = '';
+						if (property_exists($phoneItem, 'canonicalForm') && !empty($phoneItem->canonicalForm)) {
+							$phoneValue = (string)$phoneItem->canonicalForm;
+						} else if (property_exists($phoneItem, 'value') && !empty($phoneItem->value)) {
+							$phoneValue = (string)$phoneItem->value;
+						}
+
+						if ($phoneValue !== '') {
 							if ($firstValue === '') {
-								$firstValue = (string)$phoneItem->value;
+								$firstValue = $phoneValue;
 							}
 							$type = property_exists($phoneItem, 'type') ? (string)$phoneItem->type : '';
 							if ($type === 'mobile') {
-								$phone = (string)$phoneItem->value;
+								$phone = $phoneValue;
 								break;
 							}
 							if ($phone === '' && $type === 'main') {
-								$phone = (string)$phoneItem->value;
+								$phone = $phoneValue;
 							}
 						}
 					}

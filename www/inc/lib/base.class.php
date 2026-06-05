@@ -139,7 +139,7 @@ session_start_samesite();
 session_cache_limiter("private"); 
 ini_set("session.cookie_lifetime", 86400); 
 ini_set("session.cache_expire", 86400); 
-ini_set("session.gc_maxlifetime", 86400);
+ini_set("session.gc_maxlifetime", 3600);
 
 header("Pragma: no-cache");
 header("Content-Type: text/html; charset=utf-8");

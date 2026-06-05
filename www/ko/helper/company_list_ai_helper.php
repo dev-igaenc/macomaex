@@ -118,6 +118,7 @@ if (!function_exists('company_list_ai_log_default_message')) {
         $source = trim((string)($payload['source'] ?? ''));
 
         if ($status === 'success') {
+            if ($event_type === 'recommend_entry') return 'AI 추천 목록 진입 완료';
             if ($event_type === 'bizno_resolve') return '사업자번호 기준 기업정보 해석 완료';
             if ($event_type === 'recommend_call') return 'EC2 추천 API 호출 완료';
             if ($event_type === 'ml_cache_restore') return 'ML 캐시 복원 완료';
@@ -126,6 +127,7 @@ if (!function_exists('company_list_ai_log_default_message')) {
         }
 
         if ($status === 'skip') {
+            if ($event_type === 'ml_cache_lookup' && $source === 'company_ml_log') return '키워드 추천 요청으로 ML 캐시 조회를 건너뛰었습니다.';
             if ($event_type === 'recommend_call' && $source === 'company_ml_log') return '당일 ML 캐시를 사용했습니다.';
             return 'AI 추천 작업을 건너뛰었습니다.';
         }
@@ -164,9 +166,19 @@ if (!function_exists('company_list_ai_write_event_log')) {
             'action' => trim((string)($payload['action'] ?? '')),
             'reason' => trim((string)($payload['reason'] ?? '')),
             'source' => trim((string)($payload['source'] ?? '')),
+            'recommendation_mode' => trim((string)($payload['recommendation_mode'] ?? '')),
+            'requested_type' => trim((string)($payload['requested_type'] ?? '')),
             'bizno' => preg_replace('/\D/', '', (string)($payload['bizno'] ?? '')),
             'kedcd' => preg_replace('/\D/', '', (string)($payload['kedcd'] ?? '')),
             'trade_type' => (int)($payload['trade_type'] ?? 0),
+            'selected_trade_type' => (int)($payload['selected_trade_type'] ?? 0),
+            'source_bzc_cd' => strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', (string)($payload['source_bzc_cd'] ?? '')), 0, 10)),
+            'partner_bzc_count' => (int)($payload['partner_bzc_count'] ?? 0),
+            'partner_bzc_cds' => strtoupper(substr(preg_replace('/[^A-Za-z0-9,]/', '', (string)($payload['partner_bzc_cds'] ?? '')), 0, 500)),
+            'filter_bzc_count' => (int)($payload['filter_bzc_count'] ?? 0),
+            'filter_bzc_cds' => strtoupper(substr(preg_replace('/[^A-Za-z0-9,]/', '', (string)($payload['filter_bzc_cds'] ?? '')), 0, 500)),
+            'filter_bzc_weights' => substr(preg_replace('/[^0-9,]/', '', (string)($payload['filter_bzc_weights'] ?? '')), 0, 500),
+            'cache_policy' => trim((string)($payload['cache_policy'] ?? '')),
             'http_code' => (int)($payload['http_code'] ?? 0),
             'elapsed_ms' => (int)($payload['elapsed_ms'] ?? 0),
             'result_count' => (int)($payload['result_count'] ?? 0),
@@ -185,6 +197,9 @@ if (!function_exists('company_list_ai_write_event_log')) {
 
         $allow_zero_keys = array(
             'trade_type',
+            'selected_trade_type',
+            'partner_bzc_count',
+            'filter_bzc_count',
             'http_code',
             'elapsed_ms',
             'result_count',
@@ -676,6 +691,7 @@ if (!function_exists('company_list_ai_save_ml_log')) {
             'kedcd' => $kedcd,
             'trade_type' => $trade_type,
             'source' => 'company_ml_log',
+            'recommendation_mode' => 'full',
             'reason' => $ok ? 'saved' : 'insert_failed',
             'error_code' => $ok ? '' : 'insert_failed',
         ), $ok ? 'ML 결과 DB 저장 완료' : 'ML 결과 DB 저장 실패');
@@ -751,6 +767,7 @@ if (!function_exists('company_list_ai_restore_call_from_ml_log')) {
             'kedcd' => (string)($row['c_kedcd'] ?? ''),
             'trade_type' => (int)($row['c_trade_type'] ?? 0),
             'source' => 'company_ml_log',
+            'recommendation_mode' => 'full',
             'cache_scope' => 'db',
             'cache_datetime' => (string)($row['c_datetime'] ?? ''),
             'from_cache' => 1,
@@ -783,12 +800,31 @@ if (!function_exists('company_list_ai_call_recommend')) {
         $bizno_for_log = preg_replace('/\D/', '', (string)($payload['bizno'] ?? ($payload['bzno'] ?? '')));
         if (strlen($bizno_for_log) !== 10) $bizno_for_log = '';
         $trade_type_for_log = ((int)($payload['trade_type'] ?? 1) === 2) ? 2 : 1;
+        $filter_bzc_cds_for_log = array();
+        if (isset($payload['filter_bzc_cds']) && is_array($payload['filter_bzc_cds'])) {
+            foreach ($payload['filter_bzc_cds'] as $code) {
+                $normalized_code = strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', (string)$code), 0, 10));
+                if ($normalized_code === '' || in_array($normalized_code, $filter_bzc_cds_for_log, true)) continue;
+                $filter_bzc_cds_for_log[] = $normalized_code;
+            }
+        }
+        $filter_bzc_weights_for_log = array();
+        if (isset($payload['filter_bzc_weights']) && is_array($payload['filter_bzc_weights'])) {
+            foreach ($payload['filter_bzc_weights'] as $weight) {
+                $filter_bzc_weights_for_log[] = max(1, (int)$weight);
+            }
+        }
         $log_payload = array(
             'action' => 'recommend',
             'source' => 'ec2',
+            'recommendation_mode' => !empty($filter_bzc_cds_for_log) ? 'keyword' : 'full',
             'kedcd' => $kedcd_for_log,
             'bizno' => $bizno_for_log,
             'trade_type' => $trade_type_for_log,
+            'source_bzc_cd' => strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', (string)($payload['bzc_cd'] ?? '')), 0, 10)),
+            'filter_bzc_count' => count($filter_bzc_cds_for_log),
+            'filter_bzc_cds' => implode(',', $filter_bzc_cds_for_log),
+            'filter_bzc_weights' => implode(',', $filter_bzc_weights_for_log),
             'top_n' => (int)($payload['top_n'] ?? 0),
             'cust_name_count' => (isset($payload['cust_names']) && is_array($payload['cust_names'])) ? count($payload['cust_names']) : 0,
             'supp_name_count' => (isset($payload['supp_names']) && is_array($payload['supp_names'])) ? count($payload['supp_names']) : 0,

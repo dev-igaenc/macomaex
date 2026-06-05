@@ -20,8 +20,8 @@ include_once(G5_THEME_MSHOP_PATH.'/shop.head.php');
 
 			<div class="login-option">
 				<p class="skin-check save_id">
-					<input type="checkbox" name="" id="login-save" />
-					<label for="login-save"><span class="graphic"></span>자동로그인</label>
+					<input type="checkbox" name="auto_login" value="1" id="login_auto_login" />
+					<label for="login_auto_login"><span class="graphic"></span>자동로그인</label>
 				</p>
 				<a href="<?php echo G5_BBS_URL ?>/password_lost.php">아이디찾기 / 비밀번호 찾기</a>
 			</div>
@@ -113,14 +113,6 @@ include_once(G5_THEME_MSHOP_PATH.'/shop.head.php');
 </div>
 
 <script>
-$(function(){
-    $("#login_auto_login").click(function(){
-        if (this.checked) {
-            this.checked = confirm("자동로그인을 사용하시면 다음부터 회원아이디와 비밀번호를 입력하실 필요가 없습니다.\n\n공공장소에서는 개인정보가 유출될 수 있으니 사용을 자제하여 주십시오.\n\n자동로그인을 사용하시겠습니까?");
-        }
-    });
-});
-
 function flogin_submit(f)
 {
     return true;

@@ -5,6 +5,7 @@ $g5['title'] = "로그인 검사";
 
 $mb_id       = isset($_POST['mb_id']) ? trim($_POST['mb_id']) : '';
 $mb_password = isset($_POST['mb_password']) ? trim($_POST['mb_password']) : '';
+$auto_login  = !empty($_POST['auto_login']) ? 1 : 0;
 
 run_event('member_login_check_before', $mb_id);
 
@@ -60,6 +61,10 @@ run_event('login_session_before', $mb, $is_social_login);
 
 @include_once($member_skin_path.'/login_check.skin.php');
 
+if (function_exists('session_regenerate_id')) {
+    @session_regenerate_id(true);
+}
+
 // 회원아이디 세션 생성
 set_session('ss_mb_id', $mb['mb_id']);
 // FLASH XSS 공격에 대응하기 위하여 회원의 고유키를 생성해 놓는다. 관리자에서 검사함 - 110106
@@ -75,11 +80,11 @@ if($config['cf_use_point']) {
 
 // 3.26
 // 아이디 쿠키에 한달간 저장
-if (isset($auto_login) && $auto_login) {
+if ($auto_login) {
     // 3.27
     // 자동로그인 ---------------------------
     // 쿠키 한달간 저장
-    $key = md5($_SERVER['SERVER_ADDR'] . $_SERVER['SERVER_SOFTWARE'] . $_SERVER['HTTP_USER_AGENT'] . $mb['mb_password']);
+    $key = get_auto_login_key($mb['mb_id'], $mb['mb_password']);
     set_cookie('ck_mb_id', $mb['mb_id'], 86400 * 31);
     set_cookie('ck_auto', $key, 86400 * 31);
     // 자동로그인 end ---------------------------

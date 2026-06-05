@@ -52,9 +52,9 @@ if (!function_exists('alimtalk_log_default_message')) {
 		$status = trim((string)$status);
 
 		if ($status === 'success') {
-			if ($eventType === 'signup') return '회원가입 알림톡 발송 성공';
+			if ($eventType === 'signup2') return '회원가입 알림톡 발송 성공';
 			if ($eventType === 'reqmatching2') return '거래요청 수신 알림톡 발송 성공';
-			if ($eventType === 'accmatching') return '거래수락 알림톡 발송 성공';
+			if ($eventType === 'accmatching2') return '거래수락 알림톡 발송 성공';
 			return '알림톡 발송 성공';
 		}
 		if ($status === 'skip') {

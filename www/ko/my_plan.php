@@ -5,7 +5,7 @@ $board['bo_10']="6"; // 1뎁스
 $board['bo_9']="5"; // 2뎁스
 
 //로그인 체크
-if(!$member['mb_id']) ALERT("로그인 후 이용하세요.","/bbs/login.php");
+login_chk();
 
 $my_plan_css_ver = file_exists(__DIR__ . '/css/my_plan.css') ? filemtime(__DIR__ . '/css/my_plan.css') : time();
 $my_plan_js_ver = file_exists(__DIR__ . '/js/my_plan.js') ? filemtime(__DIR__ . '/js/my_plan.js') : time();

@@ -15,6 +15,7 @@ if (!preg_match('/^[0-9]{10}$/', $comnum)) {
 }
 
 $sql = "SELECT
+            A.KEDCD,
             A.ENP_NM,
             A.ENP_NM_TRD,
             A.BZC_CD,
@@ -40,6 +41,11 @@ if ($comp) {
         'name' => $company_name,
         'bzc_name' => $bzc_name,
         'enp_type' => $enp_type_text,
+        'enp_type_code' => $comp['ENP_TYP'],
+        'bzc_cd' => $comp['BZC_CD'],
+        'bizno' => $comnum,
+        'bizno_token' => simple_crypt($comnum, 'e'),
+        'kedcd' => $comp['KEDCD'],
         'source' => 'db'
     ), JSON_UNESCAPED_UNICODE);
 } else {
@@ -54,6 +60,9 @@ if ($comp) {
             $cominfo_json = $latest_log['c_content'];
         }
     }
+
+    $fail_code = '';
+    $fail_message = '';
 
     // 캐시 miss 시 main_comp_chk와 동일한 직접 cURL 호출
     if (empty($cominfo_json)) {
@@ -84,6 +93,10 @@ if ($comp) {
                 'curl_errno' => $curl_errno,
                 'curl_error' => $curl_error,
             ));
+            $fail_code = ($curl_errno === 28) ? 'timeout' : 'curl_error';
+            $fail_message = ($curl_errno === 28)
+                ? '기업 정보 조회 시간이 초과되었습니다.'
+                : '기업 정보 조회 중 통신 오류가 발생했습니다.';
         } else {
             $parsed = macomaex_parse_kodata_xml($html_ori, array(
                 'context' => 'get_company_name',
@@ -114,6 +127,7 @@ if ($comp) {
         }
 
         $company_name = isset($node['enp_nm_trd']) ? $node['enp_nm_trd'] : (isset($node['enp_nm']) ? $node['enp_nm'] : '');
+        $kedcd = isset($node['kedcd']) ? $node['kedcd'] : '';
         $bzc_cd = isset($node['bzc_cd']) ? $node['bzc_cd'] : '';
         $bzc_name = isset($node['bzc_nm']) ? $node['bzc_nm'] : '';
         $enp_typ = isset($node['enp_typ']) ? $node['enp_typ'] : '';
@@ -136,6 +150,11 @@ if ($comp) {
                 'name' => $company_name,
                 'bzc_name' => $bzc_name ? $bzc_name : '기타 업종',
                 'enp_type' => $enp_type_text,
+                'enp_type_code' => $enp_typ,
+                'bzc_cd' => $bzc_cd,
+                'bizno' => $comnum,
+                'bizno_token' => simple_crypt($comnum, 'e'),
+                'kedcd' => $kedcd,
                 'cominfo' => $cominfo_json,
                 'source' => 'api'
             ), JSON_UNESCAPED_UNICODE);
@@ -143,6 +162,15 @@ if ($comp) {
         }
     }
 
-    echo json_encode(array('result' => 'fail', 'message' => '등록된 기업 정보가 없습니다.'), JSON_UNESCAPED_UNICODE);
+    if ($fail_message !== '') {
+        echo json_encode(array(
+            'result' => 'fail',
+            'code' => $fail_code,
+            'message' => $fail_message,
+        ), JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    echo json_encode(array('result' => 'fail', 'code' => 'not_found', 'message' => '등록된 기업 정보가 없습니다.'), JSON_UNESCAPED_UNICODE);
 }
 ?>
