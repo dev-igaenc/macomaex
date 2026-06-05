@@ -84,7 +84,7 @@ if ($w == 'u') {
     $existing_mb = get_member($mb_id);
 
     if (isset($existing_mb['mb_id']) && $existing_mb['mb_id']) {
-        foreach (array('mb_3', 'mb_7') as $preserve_key) {
+        foreach (array('mb_3', 'mb_5', 'mb_7') as $preserve_key) {
             if (!isset($_POST[$preserve_key])) {
                 $posts[$preserve_key] = $existing_mb[$preserve_key];
             }

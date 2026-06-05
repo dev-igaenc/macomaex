@@ -276,12 +276,6 @@ input:read-only {background-color:#eeee;}
 			<input type="text" name="mb_6" value="<?php echo $mb['mb_6'] ?>" id="mb_6" required class="required frm_input" size="15">
 		</td>
 	</tr>
-		<tr>
-        <th scope="row"><label for="">담당자 이메일</label></th>
-        <td>
-			<input type="text" name="mb_5" value="<?php echo $mb['mb_5'] ?>" id="mb_5"  class=" frm_input" size="15">
-		</td>
-	</tr>
 	<tr>
         <th scope="row"><label for="">휴대폰 번호</label></th>
         <td>
