@@ -31,6 +31,7 @@ $mb = array(
 'mb_profile' => null,
 'mb_memo' => null,
 'mb_leave_date' => null,
+'mb_company' => null,
 'mb_1' => null,
 'mb_2' => null,
 'mb_3' => null,
@@ -250,7 +251,7 @@ input:read-only {background-color:#eeee;}
 	<tr>
         <th scope="row"><label for="">사업자등록번호</label></th>
         <td>
-			<input type="hidden" name="com_chk" id="com_chk" class="com_chk" value="<?if($mb['mb_company']){?>true<?}else{?>false<?}?>">
+			<input type="hidden" name="com_chk" id="com_chk" class="com_chk" value="<?php echo !empty($mb['mb_company']) ? 'true' : 'false'; ?>">
 			<input type="text" name="mb_4" value="<?php echo $mb['mb_4'] ?>" id="mb_4" required class="required frm_input comnum_chk" size="15"  maxlength="12"> <button type="button" class="btn btn-sm btn-info" id="bz_sch">조회</button>
 		</td>
 	</tr>
@@ -268,7 +269,7 @@ input:read-only {background-color:#eeee;}
 		</td>
 	</tr>
 		<input type="hidden" name="mb_email" value="<?php echo $mb['mb_email'] ?>">
-		<input type="hidden" name="mb_level" value="<?=$mb['mb_level']?>">
+		<input type="hidden" name="mb_level" value="<?php echo $mb['mb_level']; ?>">
 	<tr>
         <th scope="row"><label for="">담당자 이름</label></th>
         <td>
@@ -319,7 +320,7 @@ this.form.mb_intercept_date.value=this.form.mb_intercept_date.defaultValue; }">
         <th scope="row">IP</th>
         <td><?php echo $mb['mb_ip'] ?></td>
     </tr>
-<?}?>
+<?php } ?>
     </tbody>
     </table>
 </div>
