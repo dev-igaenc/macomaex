@@ -28,6 +28,7 @@ if (file_exists(G5_THEME_MSHOP_PATH.'/shop.head.php')) {
 			</div>
 		</div>
 		<?php
+		// 운영 테스트 기간에는 지정된 IP에서만 소셜 로그인 버튼을 노출합니다.
 		$allowed_social_login_ips = array('222.107.227.177');
 		$client_ip = isset($_SERVER['REMOTE_ADDR']) ? trim((string) $_SERVER['REMOTE_ADDR']) : '';
 		if (in_array($client_ip, $allowed_social_login_ips, true)) {

@@ -14,6 +14,7 @@ $social_phone = isset($user_phone) ? get_text($user_phone) : '';
 $social_provider_label = social_get_provider_service_name($provider_name);
 $social_phone_digits = preg_replace('/[^0-9]/', '', $social_phone);
 
+// 소셜 프로필에서 받은 값을 신규 가입 폼의 기본값으로 사용합니다.
 if ($social_email) {
     $mem_chk = sql_fetch("select mb_id, mb_leave_date, mb_intercept_date from g5_member where mb_id='".sql_real_escape_string($social_email)."'");
 } else {
@@ -104,6 +105,7 @@ if ($social_email) {
 
                 <div class="social-join-field">
                     <label for="reg_mb_hp" class="social-required">휴대폰 번호</label>
+                    <!-- 일반 회원가입과 동일한 알리고 OTP 인증 흐름을 사용합니다. -->
                     <div class="social-join-cert">
                         <input type="text" id="reg_mb_hp" name="mb_hp" class="social-join-input" value="<?php echo $social_phone; ?>" maxlength="13" placeholder="010-0000-0000" required>
                         <button type="button" id="signup_phone_send" class="social-join-cert-btn">인증</button>
@@ -163,6 +165,7 @@ $(function() {
         $status.text(message || "");
     }
 
+    // 휴대폰 번호가 변경되면 기존 인증 완료 상태를 무효화합니다.
     function resetSignupPhoneVerification() {
         signupPhoneVerified = false;
         signupPhoneVerifiedValue = "";
@@ -200,6 +203,7 @@ $(function() {
         $("input[name=mb_6]").val($.trim($(this).val()));
     });
 
+    // 입력한 휴대폰 번호로 알리고 인증번호 발송을 요청합니다.
     $("#signup_phone_send").on("click", function() {
         var phone = $.trim($("#reg_mb_hp").val());
         if (phone === "") {
@@ -234,6 +238,7 @@ $(function() {
             });
     });
 
+    // 사용자가 입력한 6자리 인증번호를 서버 세션과 비교합니다.
     $("#signup_phone_verify").on("click", function() {
         var phone = $.trim($("#reg_mb_hp").val());
         var code = $.trim($("#signup_phone_code").val()).replace(/[^0-9]/g, "");
@@ -291,6 +296,7 @@ function fregisterform_submit(f) {
         return false;
     }
 
+    // OTP 인증이 완료된 휴대폰 번호만 소셜 회원 insert를 허용합니다.
     if (typeof window.macomaexSocialPhoneVerified !== "function" || !window.macomaexSocialPhoneVerified()) {
         alert("휴대폰 인증을 완료해 주세요.");
         f.mb_hp.focus();

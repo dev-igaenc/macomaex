@@ -176,6 +176,7 @@ if ($w == '') {
 
     if ($msg = valid_mb_hp($mb_hp))     alert($msg, "", true, true);
     if ($msg = exist_mb_hp($mb_hp, $mb_id)) alert($msg, "", true, true);
+    // 클라이언트 검증 우회를 막기 위해 신규 가입 insert 전에 OTP 인증 세션을 확인합니다.
     if (!macomaex_signup_phone_otp_is_verified($mb_hp)) alert('휴대폰 인증을 완료해 주세요.', "", true, true);
 
     if ($w=='') {
@@ -424,6 +425,7 @@ if ($w == '') {
         set_session('ss_mb_id', $mb_id);
 
     set_session('ss_mb_reg', $mb_id);
+    // 가입 완료 후 동일 인증 세션이 재사용되지 않도록 초기화합니다.
     macomaex_signup_phone_otp_clear();
 
     if($cert_type == 'ipin' && get_session('ss_cert_hash') == md5($mb_name.$cert_type.get_session('ss_cert_birth').$md5_cert_no)) { // 아이핀일때 hash 값 체크 hp미포함)

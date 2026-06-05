@@ -128,6 +128,7 @@ if (!defined('_GNUBOARD_')) exit; // 개별 페이지 접근 불가
 
                     <div class="formBox mobile">
                         <p class="formBox_title required_mark">휴대폰 번호</p>
+                        <!-- 인증번호 발송 성공 후 하단 인증번호 입력 영역을 노출합니다. -->
                         <div class="cert_input_group">
                             <div class="inputBox">
                                 <input type="text" name="mb_hp" id="reg_mb_hp" class="normal" maxlength="13" placeholder="010-1234-5678">
@@ -380,6 +381,7 @@ function setSignupPhoneStatus(message, type) {
     $status.text(message || "");
 }
 
+// 휴대폰 번호가 변경되면 기존 인증 완료 상태를 무효화합니다.
 function resetSignupPhoneVerification() {
     signupPhoneVerified = false;
     signupPhoneVerifiedValue = "";
@@ -441,6 +443,7 @@ $("#reg_mb_hp").on("input blur change", function(){
     validateRequiredMobileAndMark();
 });
 
+// 입력한 휴대폰 번호로 알리고 인증번호 발송을 요청합니다.
 $("#signup_phone_send").on("click", function(){
     if(!validateRequiredMobileAndMark()) {
         $("#reg_mb_hp").focus();
@@ -474,6 +477,7 @@ $("#signup_phone_send").on("click", function(){
         });
 });
 
+// 사용자가 입력한 6자리 인증번호를 서버 세션과 비교합니다.
 $("#signup_phone_verify").on("click", function(){
     var phone = $.trim($("#reg_mb_hp").val());
     var code = $.trim($("#signup_phone_code").val()).replace(/[^0-9]/g, "");
@@ -687,6 +691,7 @@ $("#join_submit").on("click", function(){
         return false;
     }
 
+    // 인증 완료된 번호와 현재 입력값이 같아야 최종 회원가입을 허용합니다.
     if(!signupPhoneVerified || signupPhoneVerifiedValue !== $.trim($("#reg_mb_hp").val())) {
         alert("휴대폰 인증을 완료해 주세요.");
         $("#reg_mb_hp").focus();
