@@ -280,6 +280,71 @@ function macomaex_aligo_send_sms($receiver, $message)
     );
 }
 
+function macomaex_aligo_remain()
+{
+    $config = macomaex_aligo_config();
+
+    if (!$config['ready']) {
+        return array(
+            'ok' => false,
+            'message' => '알리고 설정값이 누락되었습니다.',
+            'debug' => array('reason' => 'missing_config'),
+        );
+    }
+
+    if (!function_exists('curl_init')) {
+        return array(
+            'ok' => false,
+            'message' => '문자 발송 모듈을 사용할 수 없습니다.',
+            'debug' => array('reason' => 'curl_missing'),
+        );
+    }
+
+    $data = array(
+        'key' => $config['api_key'],
+        'user_id' => $config['user_id'],
+    );
+
+    $ch = curl_init('https://apis.aligo.in/remain/');
+    curl_setopt_array($ch, array(
+        CURLOPT_POST => true,
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_POSTFIELDS => http_build_query($data),
+        CURLOPT_TIMEOUT => 10,
+    ));
+
+    $response_body = curl_exec($ch);
+    $curl_error = curl_error($ch);
+    $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    $decoded = json_decode((string) $response_body, true);
+    $result_code = isset($decoded['result_code']) ? (int) $decoded['result_code'] : 0;
+    $ok = ($curl_error === '' && $http_code >= 200 && $http_code < 300 && $result_code > 0);
+
+    $debug = array(
+        'http_code' => $http_code,
+        'curl_error' => $curl_error,
+        'result_code' => isset($decoded['result_code']) ? $decoded['result_code'] : null,
+        'aligo_message' => isset($decoded['message']) ? $decoded['message'] : '',
+        'SMS_CNT' => isset($decoded['SMS_CNT']) ? $decoded['SMS_CNT'] : null,
+        'LMS_CNT' => isset($decoded['LMS_CNT']) ? $decoded['LMS_CNT'] : null,
+        'MMS_CNT' => isset($decoded['MMS_CNT']) ? $decoded['MMS_CNT'] : null,
+    );
+
+    if (!$ok) {
+        $log_debug = $debug;
+        $log_debug['raw'] = $response_body;
+        error_log('[aligo_sms] remain failed ' . json_encode($log_debug, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+    }
+
+    return array(
+        'ok' => $ok,
+        'message' => $ok ? '알리고 잔여건수 조회에 성공했습니다.' : '알리고 잔여건수 조회에 실패했습니다.',
+        'debug' => $debug,
+    );
+}
+
 function macomaex_signup_phone_otp_normalize($phone)
 {
     return hyphen_hp_number($phone);

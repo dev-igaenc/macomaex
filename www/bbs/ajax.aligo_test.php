@@ -58,6 +58,16 @@ if ($mode === 'config') {
     ));
 }
 
+if ($mode === 'remain') {
+    $result = macomaex_aligo_remain();
+    macomaex_aligo_test_response(array(
+        'ok' => !empty($result['ok']),
+        'message' => isset($result['message']) ? $result['message'] : '',
+        'debug' => isset($result['debug']) ? $result['debug'] : array(),
+        'client_ip' => $client_ip,
+    ));
+}
+
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     macomaex_aligo_test_response(array(
         'ok' => false,
