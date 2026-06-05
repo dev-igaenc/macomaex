@@ -57,6 +57,7 @@ if ($social_email) {
         .social-join-actions{flex-direction:column}
         .social-join-cancel{width:100%}
         .social-join-cert{display:block}
+        .social-join-cert-code{display:none}
         .social-join-cert-btn{width:100%;margin-top:8px}
     }
 </style>
@@ -171,6 +172,18 @@ $(function() {
         setSignupPhoneStatus("", "");
     }
 
+    function getSignupPhoneErrorMessage(resp, fallbackMessage) {
+        var message = (resp && resp.message) ? resp.message : fallbackMessage;
+        if (resp && resp.debug && resp.debug.aligo_message) {
+            message += " (" + resp.debug.aligo_message;
+            if (resp.debug.result_code !== undefined && resp.debug.result_code !== null) {
+                message += " / " + resp.debug.result_code;
+            }
+            message += ")";
+        }
+        return message;
+    }
+
     $("#reg_mb_hp").on("keyup blur", function() {
         var phone = $(this).val().replace(/[^0-9]/g, "");
         if (phone.length > 11) phone = phone.substr(0, 11);
@@ -206,11 +219,11 @@ $(function() {
                     try { resp = JSON.parse(resp); } catch(e) { resp = {}; }
                 }
                 if (resp.ok) {
-                    $("#signup_phone_code_wrap").show();
+                    $("#signup_phone_code_wrap").css("display", window.matchMedia("(max-width: 640px)").matches ? "block" : "flex");
                     setSignupPhoneStatus(resp.message || "인증번호를 발송했습니다.", "success");
                     $("#signup_phone_code").focus();
                 } else {
-                    setSignupPhoneStatus(resp.message || "인증번호 발송에 실패했습니다.", "error");
+                    setSignupPhoneStatus(getSignupPhoneErrorMessage(resp, "인증번호 발송에 실패했습니다."), "error");
                     if (resp.debug) console.log("signup_phone_send", resp.debug);
                 }
             })

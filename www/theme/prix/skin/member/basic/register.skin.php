@@ -42,9 +42,9 @@ if (!defined('_GNUBOARD_')) exit; // 개별 페이지 접근 불가
         text-underline-offset: 0.2rem;
     }
     #join_single .formBox.terms_box .consent_text a:hover{color: #444;}
-    #join_single .cert_input_group{display:flex; gap:0.8rem; align-items:center;}
+    #join_single .cert_input_group{display:flex; gap:0.8rem; align-items:stretch;}
     #join_single .cert_input_group .inputBox{flex:1; min-width:0;}
-    #join_single .cert_btn{height:4.8rem; padding:0 1.8rem; border:0; border-radius:0.4rem; background:#111; color:#fff; font-size:1.5rem; font-weight:700; white-space:nowrap; cursor:pointer;}
+    #join_single .cert_btn{min-height:4.8rem; padding:0 1.8rem; margin-bottom:10px; border:0; border-radius:0.4rem; background:#111; color:#fff; font-size:1.5rem; font-weight:700; white-space:nowrap; cursor:pointer;}
     #join_single .cert_btn.secondary{background:#2563eb;}
     #join_single .cert_btn:disabled{background:#9ca3af; cursor:not-allowed;}
     #join_single .phone_cert_code{display:none; margin-top:0.8rem;}
@@ -53,6 +53,7 @@ if (!defined('_GNUBOARD_')) exit; // 개별 페이지 접근 불가
     #join_single .phone_cert_status.error{color:#d92d20;}
     @media (max-width: 640px){
         #join_single .cert_input_group{display:block;}
+        #join_single .phone_cert_code{display:none;}
         #join_single .cert_btn{width:100%; margin-top:0.8rem;}
     }
 </style>
@@ -387,6 +388,18 @@ function resetSignupPhoneVerification() {
     setSignupPhoneStatus("", "");
 }
 
+function getSignupPhoneErrorMessage(resp, fallbackMessage) {
+    var message = (resp && resp.message) ? resp.message : fallbackMessage;
+    if (resp && resp.debug && resp.debug.aligo_message) {
+        message += " (" + resp.debug.aligo_message;
+        if (resp.debug.result_code !== undefined && resp.debug.result_code !== null) {
+            message += " / " + resp.debug.result_code;
+        }
+        message += ")";
+    }
+    return message;
+}
+
 var errorM = "first";
 $(".pass_chk").keyup(function(){
     var $this = $(this);
@@ -445,11 +458,11 @@ $("#signup_phone_send").on("click", function(){
                 try { resp = JSON.parse(resp); } catch(e) { resp = {}; }
             }
             if (resp.ok) {
-                $("#signup_phone_code_wrap").show();
+                $("#signup_phone_code_wrap").css("display", window.matchMedia("(max-width: 640px)").matches ? "block" : "flex");
                 setSignupPhoneStatus(resp.message || "인증번호를 발송했습니다.", "success");
                 $("#signup_phone_code").focus();
             } else {
-                setSignupPhoneStatus(resp.message || "인증번호 발송에 실패했습니다.", "error");
+                setSignupPhoneStatus(getSignupPhoneErrorMessage(resp, "인증번호 발송에 실패했습니다."), "error");
                 if (resp.debug) console.log("signup_phone_send", resp.debug);
             }
         })
