@@ -20,6 +20,28 @@ if (!function_exists('register_mail_log_failure')) {
     }
 }
 
+if (!function_exists('register_form_find_verified_company')) {
+    function register_form_find_verified_company($bizno, $kedcd)
+    {
+        $normalized_bizno = preg_replace('/[^0-9]/', '', (string) $bizno);
+        $normalized_kedcd = trim((string) $kedcd);
+
+        if ($normalized_bizno === '' || $normalized_kedcd === '') {
+            return array();
+        }
+
+        $sql = " select KEDCD, ENP_NM, ENP_NM_TRD, BZNO
+                    from company
+                   where BZNO = '" . sql_escape_string($normalized_bizno) . "'
+                     and KEDCD = '" . sql_escape_string($normalized_kedcd) . "'
+                   limit 1 ";
+
+        $row = sql_fetch($sql);
+
+        return is_array($row) ? $row : array();
+    }
+}
+
 // 리퍼러 체크
 referer_check();
 
@@ -81,11 +103,10 @@ $mb_open_default = isset($_POST['mb_open_default']) ? trim($_POST['mb_open_defau
 $mb_nick_default = isset($_POST['mb_nick_default']) ? trim($_POST['mb_nick_default']) : "";
 $mb_company     = isset($_POST['mb_company'])       ? trim($_POST['mb_company'])     : "";
 // $mb_5           = isset($_POST['mb_5'])             ? trim($_POST['mb_5'])           : "";
-// $mb_6           = isset($_POST['mb_6'])             ? trim($_POST['mb_6'])           : "";
+$mb_6           = isset($_POST['mb_6'])             ? trim($_POST['mb_6'])           : "";
 // $mb_7           = isset($_POST['mb_7'])             ? trim($_POST['mb_7'])           : "";
 $mb_8           = isset($_POST['mb_8'])             ? trim($_POST['mb_8'])           : "";
 $mb_5           = $mb_email;
-$mb_6           = $cert_mb_name;
 $mb_7           = "";
 $mb_9_list      = (isset($_POST['mb_9']) && is_array($_POST['mb_9'])) ? $_POST['mb_9'] : array();
 // $mb_10_list     = (isset($_POST['mb_10']) && is_array($_POST['mb_10'])) ? $_POST['mb_10'] : array();
@@ -109,6 +130,11 @@ $comnum = $mb_4;
 if (!isset($default) || !is_array($default)) {
     $default = array();
 }
+
+$member_mb_4 = trim((string) $member['mb_4']);
+$member_mb_name = trim((string) $member['mb_name']);
+$member_mb_nick = trim((string) $member['mb_nick']);
+$member_mb_company = trim((string) $member['mb_company']);
 
 $cert_mb_name   = clean_xss_tags($cert_mb_name);
 $mb_name        = ($w == '') ? $mb_id : clean_xss_tags($mb_name);
@@ -176,6 +202,7 @@ if ($w == '') {
 
     if ($msg = valid_mb_hp($mb_hp))     alert($msg, "", true, true);
     if ($msg = exist_mb_hp($mb_hp, $mb_id)) alert($msg, "", true, true);
+    // 클라이언트 검증 우회를 막기 위해 신규 가입 insert 전에 OTP 인증 세션을 확인합니다.
     if (!macomaex_signup_phone_otp_is_verified($mb_hp)) alert('휴대폰 인증을 완료해 주세요.', "", true, true);
 
     if ($w=='') {
@@ -424,6 +451,7 @@ if ($w == '') {
         set_session('ss_mb_id', $mb_id);
 
     set_session('ss_mb_reg', $mb_id);
+    // 가입 완료 후 동일 인증 세션이 재사용되지 않도록 초기화합니다.
     macomaex_signup_phone_otp_clear();
 
     if($cert_type == 'ipin' && get_session('ss_cert_hash') == md5($mb_name.$cert_type.get_session('ss_cert_birth').$md5_cert_no)) { // 아이핀일때 hash 값 체크 hp미포함)
@@ -456,8 +484,40 @@ if ($w == '') {
     if ($old_email != $mb_email && $config['cf_use_email_certify'])
         $sql_email_certify = " , mb_email_certify = '' ";
 
+    $submitted_mb_4 = $mb_4;
+    $submitted_mb_name = $mb_name;
+    $submitted_mb_company = $mb_company;
+    $company_change_requested = (
+        preg_replace('/[^0-9]/', '', (string) $submitted_mb_4) !== preg_replace('/[^0-9]/', '', (string) $member_mb_4)
+    );
+    $verified_company = array();
+
+    if ($company_change_requested) {
+        $verified_company = register_form_find_verified_company($submitted_mb_4, $submitted_mb_company);
+    }
+
+    $should_sync_company_identity = (
+        $company_change_requested &&
+        !empty($verified_company['KEDCD']) &&
+        trim((string) $submitted_mb_name) !== '' &&
+        trim((string) ($verified_company['ENP_NM_TRD'] ?: $verified_company['ENP_NM'])) === trim((string) $submitted_mb_name)
+    );
+
+    if ($should_sync_company_identity) {
+        $mb_4 = $submitted_mb_4;
+        $mb_company = trim((string) $verified_company['KEDCD']);
+        $mb_name = trim((string) ($verified_company['ENP_NM_TRD'] ?: $verified_company['ENP_NM']));
+        $mb_nick = $mb_name;
+    } else {
+        $mb_4 = $member_mb_4;
+        $mb_company = $member_mb_company;
+        $mb_name = $member_mb_name;
+        $mb_nick = $member_mb_nick;
+    }
+
     $sql = " update {$g5['member_table']} set ";
-if($mb_nick) $sql .= "					mb_nick = '{$mb_nick}',";
+if($should_sync_company_identity && $mb_name) $sql .= "                    mb_name = '{$mb_name}',";
+if($should_sync_company_identity && $mb_nick) $sql .= "					mb_nick = '{$mb_nick}',";
 if($mb_mailling) $sql .= "                    mb_mailling = '{$mb_mailling}',";
 if($mb_sms) $sql .= "                    mb_sms = '{$mb_sms}',";
 if($mb_open) $sql .= "                    mb_open = '{$mb_open}',";
@@ -478,9 +538,10 @@ if($mb_2) $sql .= "                    mb_2 = '{$mb_2}',";
 // $sql .= "                    mb_3 = '{$mb_3}',";
 $sql .= "                    mb_4 = '{$mb_4}',";
 // if($mb_5) $sql .= "                    mb_5 = '{$mb_5}',";
-// $sql .= "                    mb_6 = '{$mb_6}',";
+	$sql .= "                    mb_6 = '{$mb_6}',";
 // $sql .= "                    mb_7 = '{$mb_7}',";
-if($mb_8) $sql .= "                    mb_8 = '{$mb_8}',";
+	if($mb_8) $sql .= "                    mb_hp = '{$mb_8}',";
+	if($mb_8) $sql .= "                    mb_8 = '{$mb_8}',";
 if($mb_9) $sql .= "                    mb_9 = '{$mb_9}',";
 // if($mb_10) $sql .= "                    mb_10 = '{$mb_10}'";
 if(substr($sql,-1)==",") $sql=substr($sql,0,-1);

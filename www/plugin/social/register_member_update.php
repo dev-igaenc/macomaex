@@ -11,6 +11,30 @@ if (!function_exists('macomaex_social_register_fail')) {
     }
 }
 
+if (!function_exists('macomaex_social_create_internal_nick')) {
+    // 소셜 폼에 닉네임 입력란이 없으므로 검증 가능한 고유 내부 닉네임을 생성합니다.
+    function macomaex_social_create_internal_nick($email)
+    {
+        $email = strtolower(trim((string) $email));
+        $hash = substr(sha1($email), 0, 12);
+
+        for ($index = 0; $index < 100; $index++) {
+            $suffix = $index > 0 ? (string) $index : '';
+            $candidate = 'social'.$hash.$suffix;
+
+            if (empty_mb_nick($candidate)) continue;
+            if (valid_mb_nick($candidate)) continue;
+            if (count_mb_nick($candidate)) continue;
+            if (reserve_mb_nick($candidate)) continue;
+            if (exist_mb_nick($candidate, '')) continue;
+
+            return $candidate;
+        }
+
+        return '';
+    }
+}
+
 if (!($w == '' || $w == 'u')) {
     alert('w 값이 제대로 넘어오지 않았습니다.');
 }
@@ -36,7 +60,6 @@ $sm_id = $user_profile->sid;
 $mb_id = isset($_POST['mb_id']) ? trim($_POST['mb_id']) : '';
 $mb_password    = isset($_POST['mb_password']) ? trim($_POST['mb_password']) : '';
 $mb_password_re = isset($_POST['mb_password_re']) ? trim($_POST['mb_password_re']) : '';
-$mb_nick        = isset($_POST['mb_nick']) ? trim(strip_tags($_POST['mb_nick'])) : '';
 $mb_email       = isset($_POST['mb_email']) ? trim($_POST['mb_email']) : '';
 $cert_mb_name   = isset($_POST['mb_name']) ? clean_xss_tags(trim(strip_tags($_POST['mb_name']))) : '';
 $mb_hp          = isset($_POST['mb_hp']) ? trim($_POST['mb_hp']) : '';
@@ -46,9 +69,10 @@ $mb_email       = get_email_address($mb_email);
 $mb_5           = $mb_email;
 $mb_id          = $mb_email;
 $mb_name        = $mb_id;
-$mb_nick        = $mb_nick ? $mb_nick : $mb_id;
+// 사용자 입력 필드와 분리된 DB 필수 내부 닉네임을 생성합니다.
+$mb_nick        = macomaex_social_create_internal_nick($mb_email);
 
-// 소셜 프로필에서 이름/휴대폰을 추출해 회원 확장필드 기본값으로 사용합니다.
+// 소셜 프로필에 값이 있으면 이름/휴대폰 입력란의 기본값으로 사용합니다.
 $social_contact = social_get_profile_contact_data($user_profile);
 if( !$mb_6 && !empty($social_contact['name']) ){
     $mb_6 = clean_xss_tags(trim(strip_tags($social_contact['name'])));
@@ -59,23 +83,12 @@ if( !$mb_8 && !empty($social_contact['phone']) ){
 $mb_hp = $mb_hp ? social_normalize_phone_number($mb_hp) : $mb_8;
 $mb_8 = $mb_hp ? social_normalize_phone_number($mb_hp) : social_normalize_phone_number($mb_8);
 
-// 이름, 닉네임에 utf-8 이외의 문자가 포함됐다면 오류
+// 이름에 utf-8 이외의 문자가 포함됐다면 정리
 // 서버환경에 따라 정상적으로 체크되지 않을 수 있음.
 $tmp_mb_name = iconv('UTF-8', 'UTF-8//IGNORE', $cert_mb_name);
 if($tmp_mb_name != $cert_mb_name) {
     $cert_mb_name = $tmp_mb_name;
 }
-$tmp_mb_nick = iconv('UTF-8', 'UTF-8//IGNORE', $mb_nick);
-if($tmp_mb_nick != $mb_nick) {
-    $mb_nick = $tmp_mb_nick;
-}
-
-if( ! $mb_nick ){
-    $tmp = explode('@', $mb_email);
-    $mb_nick = $mb_nick ? $mb_nick : $tmp[0];
-    $mb_nick = exist_mb_nick_recursive($mb_nick, '');
-}
-
 if( ! isset($mb_password) || ! $mb_password ){
 
     $mb_password = md5(pack('V*', rand(), rand(), rand(), rand()));
@@ -83,33 +96,27 @@ if( ! isset($mb_password) || ! $mb_password ){
 }
 
 if ($msg = empty_mb_name($cert_mb_name))       macomaex_social_register_fail($msg);
-if ($msg = empty_mb_nick($mb_nick))     macomaex_social_register_fail($msg);
 if ($msg = empty_mb_email($mb_email))   macomaex_social_register_fail($msg);
 if ($msg = reserve_mb_id($mb_id))       macomaex_social_register_fail($msg);
-if ($msg = reserve_mb_nick($mb_nick))   macomaex_social_register_fail($msg);
+if ($msg = empty_mb_nick($mb_nick))     macomaex_social_register_fail('회원 내부정보 생성에 실패했습니다. 다시 시도해 주세요.');
+if ($msg = valid_mb_nick($mb_nick))     macomaex_social_register_fail('회원 내부정보 생성에 실패했습니다. 다시 시도해 주세요.');
+if ($msg = count_mb_nick($mb_nick))     macomaex_social_register_fail('회원 내부정보 생성에 실패했습니다. 다시 시도해 주세요.');
+if ($msg = reserve_mb_nick($mb_nick))   macomaex_social_register_fail('회원 내부정보 생성에 실패했습니다. 다시 시도해 주세요.');
 // 이름에 한글명 체크를 하지 않는다.
 //if ($msg = valid_mb_name($mb_name))     alert($msg, "", true, true);
-if ($msg = valid_mb_nick($mb_nick))     macomaex_social_register_fail($msg);
 if ($msg = valid_mb_email($mb_email))   macomaex_social_register_fail($msg);
 if ($msg = prohibit_mb_email($mb_email))macomaex_social_register_fail($msg);
 if ($msg = valid_mb_hp($mb_hp))         macomaex_social_register_fail($msg);
+// 소셜 가입도 일반 가입과 동일하게 최종 insert 전에 OTP 인증을 강제합니다.
 if (!macomaex_signup_phone_otp_is_verified($mb_hp)) macomaex_social_register_fail('휴대폰 인증을 완료해 주세요.');
 
 if ($msg = exist_mb_id($mb_id))     macomaex_social_register_fail($msg);
-if ($msg = exist_mb_nick($mb_nick, $mb_id))     macomaex_social_register_fail($msg);
+if ($msg = exist_mb_nick($mb_nick, $mb_id)) macomaex_social_register_fail('회원 내부정보 생성에 실패했습니다. 다시 시도해 주세요.');
 if ($msg = exist_mb_email($mb_email, $mb_id))   macomaex_social_register_fail($msg);
 
 if( $mb = get_member($mb_id) ){
     macomaex_social_register_fail("이미 등록된 회원이 존재합니다.");
 }
-
-$data = array(
-'mb_id' =>  $mb_id,
-'mb_password'   =>  get_encrypt_string($mb_password),
-'mb_nick'   =>  $mb_nick,
-'mb_email'  =>  $mb_email,
-'mb_name'   =>  $mb_name,
-);
 
 $mb_email_certify = G5_TIME_YMDHIS;
 
@@ -123,15 +130,20 @@ $mb_mailling = (isset($_POST['mb_mailling']) && $_POST['mb_mailling']) ? 1 : 0;
 //회원 정보 공개
 $mb_open = (isset($_POST['mb_open']) && $_POST['mb_open']) ? 1 : 0;
 $mb_6 = $cert_mb_name;
+// 소셜 가입 저장 기준: 이메일은 mb_id/mb_email/mb_5, 이름은 mb_6, 휴대폰은 mb_hp/mb_8입니다.
+$mb_id_sql = sql_real_escape_string($mb_id);
+$mb_name_sql = sql_real_escape_string($mb_name);
+$mb_nick_sql = sql_real_escape_string($mb_nick);
+$mb_email_sql = sql_real_escape_string($mb_email);
 
 // 회원정보 입력
 $sql = " insert into {$g5['member_table']}
-            set mb_id = '{$mb_id}',
+            set mb_id = '{$mb_id_sql}',
                 mb_password = '".get_encrypt_string($mb_password)."',
-                mb_name = '{$mb_name}',
-                mb_nick = '{$mb_nick}',
+                mb_name = '{$mb_name_sql}',
+                mb_nick = '{$mb_nick_sql}',
                 mb_nick_date = '".G5_TIME_YMD."',
-                mb_email = '{$mb_email}',
+                mb_email = '{$mb_email_sql}',
                 mb_hp = '".sql_real_escape_string($mb_hp)."',
                 mb_email_certify = '".$mb_email_certify."',
                 mb_today_login = '".G5_TIME_YMDHIS."',
@@ -176,6 +188,7 @@ if($result) {
     }
 
     set_session('ss_mb_reg', $mb['mb_id']);
+    // 가입 완료 후 동일 인증 세션이 재사용되지 않도록 초기화합니다.
     macomaex_signup_phone_otp_clear();
 
     if( !empty($user_profile->photoURL) && ($config['cf_register_level'] >= $config['cf_icon_level']) ){  //회원 프로필 사진이 있고, 회원 아이콘를 올릴수 있는 조건이면

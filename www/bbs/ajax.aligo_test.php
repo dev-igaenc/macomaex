@@ -4,6 +4,7 @@ include_once(G5_LIB_PATH.'/register.lib.php');
 
 header('Content-Type: application/json; charset=utf-8');
 
+// 알리고 연동 상태를 확인하기 위한 테스트 전용 JSON 엔드포인트입니다.
 function macomaex_aligo_test_response($payload)
 {
     echo json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
@@ -45,6 +46,7 @@ if (!in_array($client_ip, $allowed_ips, true)) {
 $mode = isset($_REQUEST['mode']) ? trim((string) $_REQUEST['mode']) : '';
 $config = macomaex_aligo_config();
 
+// .env 설정값의 존재 여부만 마스킹하여 확인합니다.
 if ($mode === 'config') {
     macomaex_aligo_test_response(array(
         'ok' => $config['ready'],
@@ -58,6 +60,7 @@ if ($mode === 'config') {
     ));
 }
 
+// key/user_id 인증과 문자 잔여건수를 실제 알리고 API로 확인합니다.
 if ($mode === 'remain') {
     $result = macomaex_aligo_remain();
     macomaex_aligo_test_response(array(
@@ -79,6 +82,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 $receiver = isset($_POST['receiver']) ? trim((string) $_POST['receiver']) : '';
 $message = isset($_POST['message']) ? trim((string) $_POST['message']) : '[매커멕스] 문자 발송 테스트입니다.';
 
+// 테스트 번호로 실제 SMS를 발송하고 알리고 응답을 반환합니다.
 $result = macomaex_aligo_send_sms($receiver, $message);
 
 macomaex_aligo_test_response(array(

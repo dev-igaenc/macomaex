@@ -27,6 +27,7 @@ if ($code === '' && isset($_POST['cert_code'])) {
     $code = trim((string) $_POST['cert_code']);
 }
 
+// 발송된 휴대폰 번호와 6자리 인증번호를 세션 기준으로 검증합니다.
 $result = macomaex_signup_phone_otp_verify($phone, $code);
 
 macomaex_signup_phone_verify_response(array(

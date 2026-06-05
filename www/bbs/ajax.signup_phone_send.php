@@ -22,6 +22,7 @@ if ($phone === '' && isset($_POST['phone'])) {
     $phone = trim((string) $_POST['phone']);
 }
 
+// 일반/소셜 회원가입에서 공통으로 사용하는 인증번호 발송 처리입니다.
 $result = macomaex_signup_phone_otp_send($phone);
 
 $payload = array(
@@ -29,6 +30,7 @@ $payload = array(
     'message' => isset($result['message']) ? $result['message'] : '',
 );
 
+// 상세 알리고 오류는 허용된 테스트 IP에서만 노출합니다.
 if (function_exists('macomaex_signup_sms_debug_allowed') && macomaex_signup_sms_debug_allowed()) {
     $payload['debug'] = isset($result['debug']) ? $result['debug'] : array();
 }
