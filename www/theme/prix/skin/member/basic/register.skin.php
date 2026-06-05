@@ -42,12 +42,18 @@ if (!defined('_GNUBOARD_')) exit; // 개별 페이지 접근 불가
         text-underline-offset: 0.2rem;
     }
     #join_single .formBox.terms_box .consent_text a:hover{color: #444;}
-    #join_single .cert_input_group{display:flex; gap:0.8rem; align-items:center;}
+    #join_single .cert_input_group{display:flex; gap:0.8rem; align-items:stretch;}
     #join_single .cert_input_group .inputBox{flex:1; min-width:0;}
-    #join_single .cert_btn{height:4.8rem; padding:0 1.8rem; border:0; border-radius:0.4rem; background:#111; color:#fff; font-size:1.5rem; font-weight:700; white-space:nowrap; cursor:pointer;}
+    #join_single .cert_btn{min-height:4.8rem; padding:0 1.8rem; margin-bottom:10px; border:0; border-radius:0.4rem; background:#111; color:#fff; font-size:1.5rem; font-weight:700; white-space:nowrap; cursor:pointer;}
     #join_single .cert_btn.secondary{background:#2563eb;}
+    #join_single .cert_btn:disabled{background:#9ca3af; cursor:not-allowed;}
+    #join_single .phone_cert_code{display:none; margin-top:0.8rem;}
+    #join_single .phone_cert_status{margin-top:0.8rem; color:#666; font-size:1.4rem; line-height:1.5;}
+    #join_single .phone_cert_status.success{color:#2563eb;}
+    #join_single .phone_cert_status.error{color:#d92d20;}
     @media (max-width: 640px){
         #join_single .cert_input_group{display:block;}
+        #join_single .phone_cert_code{display:none;}
         #join_single .cert_btn{width:100%; margin-top:0.8rem;}
     }
 </style>
@@ -126,7 +132,15 @@ if (!defined('_GNUBOARD_')) exit; // 개별 페이지 접근 불가
                             <div class="inputBox">
                                 <input type="text" name="mb_hp" id="reg_mb_hp" class="normal" maxlength="13" placeholder="010-1234-5678">
                             </div>
+                            <button type="button" id="signup_phone_send" class="cert_btn">인증</button>
                         </div>
+                        <div id="signup_phone_code_wrap" class="cert_input_group phone_cert_code">
+                            <div class="inputBox">
+                                <input type="text" id="signup_phone_code" class="normal" maxlength="6" inputmode="numeric" placeholder="인증번호 6자리">
+                            </div>
+                            <button type="button" id="signup_phone_verify" class="cert_btn secondary">확인</button>
+                        </div>
+                        <p id="signup_phone_status" class="phone_cert_status"></p>
                         <p class="formBox_errorM"></p>
                     </div>
 
@@ -356,6 +370,36 @@ function formatMobileNumber(value) {
     return digits.substring(0, 3) + "-" + digits.substring(3, 7) + "-" + digits.substring(7);
 }
 
+var signupPhoneVerified = false;
+var signupPhoneVerifiedValue = "";
+
+function setSignupPhoneStatus(message, type) {
+    var $status = $("#signup_phone_status");
+    $status.removeClass("success error");
+    if (type) $status.addClass(type);
+    $status.text(message || "");
+}
+
+function resetSignupPhoneVerification() {
+    signupPhoneVerified = false;
+    signupPhoneVerifiedValue = "";
+    $("#signup_phone_code").val("");
+    $("#signup_phone_code_wrap").hide();
+    setSignupPhoneStatus("", "");
+}
+
+function getSignupPhoneErrorMessage(resp, fallbackMessage) {
+    var message = (resp && resp.message) ? resp.message : fallbackMessage;
+    if (resp && resp.debug && resp.debug.aligo_message) {
+        message += " (" + resp.debug.aligo_message;
+        if (resp.debug.result_code !== undefined && resp.debug.result_code !== null) {
+            message += " / " + resp.debug.result_code;
+        }
+        message += ")";
+    }
+    return message;
+}
+
 var errorM = "first";
 $(".pass_chk").keyup(function(){
     var $this = $(this);
@@ -391,7 +435,82 @@ $("#reg_mb_hp").on("input blur change", function(){
     $(this).val(formatMobileNumber($(this).val()));
     $("#mb_8").val($(this).val());
     $("input[name=old_mb_hp]").val($(this).val());
+    if (signupPhoneVerifiedValue !== $(this).val()) {
+        resetSignupPhoneVerification();
+    }
     validateRequiredMobileAndMark();
+});
+
+$("#signup_phone_send").on("click", function(){
+    if(!validateRequiredMobileAndMark()) {
+        $("#reg_mb_hp").focus();
+        return false;
+    }
+
+    var $button = $(this);
+    var phone = $.trim($("#reg_mb_hp").val());
+    resetSignupPhoneVerification();
+    $button.prop("disabled", true).text("발송중");
+
+    $.post("<?php echo G5_BBS_URL; ?>/ajax.signup_phone_send.php", { mb_hp: phone })
+        .done(function(resp) {
+            if (typeof resp === "string") {
+                try { resp = JSON.parse(resp); } catch(e) { resp = {}; }
+            }
+            if (resp.ok) {
+                $("#signup_phone_code_wrap").css("display", window.matchMedia("(max-width: 640px)").matches ? "block" : "flex");
+                setSignupPhoneStatus(resp.message || "인증번호를 발송했습니다.", "success");
+                $("#signup_phone_code").focus();
+            } else {
+                setSignupPhoneStatus(getSignupPhoneErrorMessage(resp, "인증번호 발송에 실패했습니다."), "error");
+                if (resp.debug) console.log("signup_phone_send", resp.debug);
+            }
+        })
+        .fail(function() {
+            setSignupPhoneStatus("인증번호 발송 중 오류가 발생했습니다.", "error");
+        })
+        .always(function() {
+            $button.prop("disabled", false).text("인증");
+        });
+});
+
+$("#signup_phone_verify").on("click", function(){
+    var phone = $.trim($("#reg_mb_hp").val());
+    var code = $.trim($("#signup_phone_code").val()).replace(/[^0-9]/g, "");
+    if (code.length !== 6) {
+        setSignupPhoneStatus("인증번호 6자리를 입력해 주세요.", "error");
+        $("#signup_phone_code").focus();
+        return false;
+    }
+
+    var $button = $(this);
+    $button.prop("disabled", true).text("확인중");
+
+    $.post("<?php echo G5_BBS_URL; ?>/ajax.signup_phone_verify.php", { mb_hp: phone, code: code })
+        .done(function(resp) {
+            if (typeof resp === "string") {
+                try { resp = JSON.parse(resp); } catch(e) { resp = {}; }
+            }
+            if (resp.ok) {
+                signupPhoneVerified = true;
+                signupPhoneVerifiedValue = phone;
+                setSignupPhoneStatus(resp.message || "휴대폰 인증이 완료되었습니다.", "success");
+            } else {
+                signupPhoneVerified = false;
+                setSignupPhoneStatus(resp.message || "인증번호를 확인해 주세요.", "error");
+            }
+        })
+        .fail(function() {
+            signupPhoneVerified = false;
+            setSignupPhoneStatus("인증 확인 중 오류가 발생했습니다.", "error");
+        })
+        .always(function() {
+            $button.prop("disabled", false).text("확인");
+        });
+});
+
+$("#signup_phone_code").on("input", function(){
+    $(this).val($(this).val().replace(/[^0-9]/g, "").substring(0, 6));
 });
 
 $("#reg_mb_name").on("input blur change", function(){
@@ -564,6 +683,12 @@ $("#join_submit").on("click", function(){
 
     if(!validateRequiredMobileAndMark()) {
         alert("휴대폰 번호 형식을 확인해 주세요.");
+        $("#reg_mb_hp").focus();
+        return false;
+    }
+
+    if(!signupPhoneVerified || signupPhoneVerifiedValue !== $.trim($("#reg_mb_hp").val())) {
+        alert("휴대폰 인증을 완료해 주세요.");
         $("#reg_mb_hp").focus();
         return false;
     }

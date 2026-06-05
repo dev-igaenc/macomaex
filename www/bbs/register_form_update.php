@@ -176,6 +176,7 @@ if ($w == '') {
 
     if ($msg = valid_mb_hp($mb_hp))     alert($msg, "", true, true);
     if ($msg = exist_mb_hp($mb_hp, $mb_id)) alert($msg, "", true, true);
+    if (!macomaex_signup_phone_otp_is_verified($mb_hp)) alert('휴대폰 인증을 완료해 주세요.', "", true, true);
 
     if ($w=='') {
         if ($msg = exist_mb_id($mb_id))     alert($msg);
@@ -423,6 +424,7 @@ if ($w == '') {
         set_session('ss_mb_id', $mb_id);
 
     set_session('ss_mb_reg', $mb_id);
+    macomaex_signup_phone_otp_clear();
 
     if($cert_type == 'ipin' && get_session('ss_cert_hash') == md5($mb_name.$cert_type.get_session('ss_cert_birth').$md5_cert_no)) { // 아이핀일때 hash 값 체크 hp미포함)
         insert_member_cert_history($mb_id, $mb_name, $mb_hp, get_session('ss_cert_birth'), get_session('ss_cert_type') ); // 본인인증 후 정보 수정 시 내역 기록

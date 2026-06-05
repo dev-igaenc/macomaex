@@ -885,6 +885,25 @@ function company_list_ai_filter_results_by_partner_bzc($results, $partner_bzc_fi
     return $filtered;
 }
 
+function company_list_ai_add_partner_bzc_filter_payload($payload, $partner_bzc_filters)
+{
+    if (!is_array($payload) || empty($partner_bzc_filters)) return $payload;
+
+    $filter_bzc_cds = array();
+    foreach ($partner_bzc_filters as $code) {
+        $normalized = strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', (string)$code), 0, 10));
+        if ($normalized === '' || in_array($normalized, $filter_bzc_cds, true)) continue;
+        $filter_bzc_cds[] = $normalized;
+    }
+
+    if (!empty($filter_bzc_cds)) {
+        $payload['filter_bzc_cds'] = $filter_bzc_cds;
+        $payload['filter_bzc_weights'] = array_fill(0, count($filter_bzc_cds), 1);
+    }
+
+    return $payload;
+}
+
 $cards = company_list_ai_cards();
 $buyer_cards = isset($cards['buyer']) && is_array($cards['buyer']) ? $cards['buyer'] : array();
 $seller_cards = isset($cards['seller']) && is_array($cards['seller']) ? $cards['seller'] : array();
@@ -909,6 +928,11 @@ $partner_bzc_filters = company_list_ai_parse_partner_cd_filters($_GET['partner_c
 if (empty($partner_bzc_filters)) {
     $partner_bzc_filters = company_list_ai_parse_partner_bzc_filters($_GET['partner_bzc'] ?? '');
 }
+$partner_filter_trade_type = (int)($_GET['trade_type'] ?? 0);
+if (!in_array($partner_filter_trade_type, array(1, 2), true)) $partner_filter_trade_type = 0;
+$has_partner_bzc_filters = !empty($partner_bzc_filters);
+$use_buy_partner_filter = $has_partner_bzc_filters && ($partner_filter_trade_type === 0 || $partner_filter_trade_type === 1);
+$use_sell_partner_filter = $has_partner_bzc_filters && ($partner_filter_trade_type === 0 || $partner_filter_trade_type === 2);
 $resolved_base_payload = array();
 $input_error_notice = '';
 $resolve_error_notice = '';
@@ -953,17 +977,64 @@ if (!empty($resolved_base_payload['kedcd'])) {
     $base_payload = $resolved_base_payload;
     $buy_payload = $base_payload;
     $buy_payload['trade_type'] = 1;
+    if ($use_buy_partner_filter) {
+        $buy_payload = company_list_ai_add_partner_bzc_filter_payload($buy_payload, $partner_bzc_filters);
+    }
 
     $sell_payload = $base_payload;
     $sell_payload['trade_type'] = 2;
+    if ($use_sell_partner_filter) {
+        $sell_payload = company_list_ai_add_partner_bzc_filter_payload($sell_payload, $partner_bzc_filters);
+    }
 
     // company_api_log와 동일하게 당일 company_ml_log 캐시 우선 사용
     $ml_log_bizno = $has_valid_bizno_query ? $bizno_query : '';
     $ml_log_kedcd = isset($resolved_base_payload['kedcd']) ? (string)$resolved_base_payload['kedcd'] : '';
+    $recommendation_mode = $has_partner_bzc_filters ? 'keyword' : 'full';
+    $partner_bzc_cds_for_log = implode(',', $partner_bzc_filters);
+    $cache_policy_for_log = $has_partner_bzc_filters ? 'keyword_filter_bypass_ml_log' : 'full_allow_today_ml_log';
+
+    company_list_ai_write_event_log('recommend_entry', 'success', array(
+        'action' => 'list_enter',
+        'source' => 'company_list_ai',
+        'recommendation_mode' => $recommendation_mode,
+        'requested_type' => trim((string)($_GET['type'] ?? '')),
+        'bizno' => $ml_log_bizno,
+        'kedcd' => $ml_log_kedcd,
+        'selected_trade_type' => $partner_filter_trade_type,
+        'source_bzc_cd' => (string)($resolved_base_payload['bzc_cd'] ?? ''),
+        'partner_bzc_count' => count($partner_bzc_filters),
+        'partner_bzc_cds' => $partner_bzc_cds_for_log,
+        'filter_bzc_count' => count($partner_bzc_filters),
+        'filter_bzc_cds' => $partner_bzc_cds_for_log,
+        'filter_bzc_weights' => $has_partner_bzc_filters ? implode(',', array_fill(0, count($partner_bzc_filters), 1)) : '',
+        'cache_policy' => $cache_policy_for_log,
+    ));
 
     $buy_call = null;
-    $buy_cached_row = company_list_ai_pick_ml_log($ml_log_bizno, $ml_log_kedcd, 1, true);
-    $buy_cached_call = company_list_ai_restore_call_from_ml_log($buy_cached_row);
+    $buy_cached_call = null;
+    if (!$use_buy_partner_filter) {
+        $buy_cached_row = company_list_ai_pick_ml_log($ml_log_bizno, $ml_log_kedcd, 1, true);
+        $buy_cached_call = company_list_ai_restore_call_from_ml_log($buy_cached_row);
+    } else {
+        company_list_ai_write_event_log('ml_cache_lookup', 'skip', array(
+            'action' => 'cache_lookup',
+            'source' => 'company_ml_log',
+            'recommendation_mode' => 'keyword',
+            'bizno' => $ml_log_bizno,
+            'kedcd' => $ml_log_kedcd,
+            'trade_type' => 1,
+            'selected_trade_type' => $partner_filter_trade_type,
+            'source_bzc_cd' => (string)($resolved_base_payload['bzc_cd'] ?? ''),
+            'partner_bzc_count' => count($partner_bzc_filters),
+            'partner_bzc_cds' => $partner_bzc_cds_for_log,
+            'filter_bzc_count' => count($partner_bzc_filters),
+            'filter_bzc_cds' => $partner_bzc_cds_for_log,
+            'filter_bzc_weights' => implode(',', array_fill(0, count($partner_bzc_filters), 1)),
+            'cache_policy' => 'keyword_filter_bypass_ml_log',
+            'reason' => 'keyword_filter_request',
+        ));
+    }
     if (is_array($buy_cached_call)) {
         $buy_call = $buy_cached_call;
     } else {
@@ -971,8 +1042,29 @@ if (!empty($resolved_base_payload['kedcd'])) {
     }
 
     $sell_call = null;
-    $sell_cached_row = company_list_ai_pick_ml_log($ml_log_bizno, $ml_log_kedcd, 2, true);
-    $sell_cached_call = company_list_ai_restore_call_from_ml_log($sell_cached_row);
+    $sell_cached_call = null;
+    if (!$use_sell_partner_filter) {
+        $sell_cached_row = company_list_ai_pick_ml_log($ml_log_bizno, $ml_log_kedcd, 2, true);
+        $sell_cached_call = company_list_ai_restore_call_from_ml_log($sell_cached_row);
+    } else {
+        company_list_ai_write_event_log('ml_cache_lookup', 'skip', array(
+            'action' => 'cache_lookup',
+            'source' => 'company_ml_log',
+            'recommendation_mode' => 'keyword',
+            'bizno' => $ml_log_bizno,
+            'kedcd' => $ml_log_kedcd,
+            'trade_type' => 2,
+            'selected_trade_type' => $partner_filter_trade_type,
+            'source_bzc_cd' => (string)($resolved_base_payload['bzc_cd'] ?? ''),
+            'partner_bzc_count' => count($partner_bzc_filters),
+            'partner_bzc_cds' => $partner_bzc_cds_for_log,
+            'filter_bzc_count' => count($partner_bzc_filters),
+            'filter_bzc_cds' => $partner_bzc_cds_for_log,
+            'filter_bzc_weights' => implode(',', array_fill(0, count($partner_bzc_filters), 1)),
+            'cache_policy' => 'keyword_filter_bypass_ml_log',
+            'reason' => 'keyword_filter_request',
+        ));
+    }
     if (is_array($sell_cached_call)) {
         $sell_call = $sell_cached_call;
     } else {
@@ -980,16 +1072,16 @@ if (!empty($resolved_base_payload['kedcd'])) {
     }
 
     // 캐시 미스 후 EC2 실호출 성공 건만 적재
-    if (!empty($buy_call['ok']) && empty($buy_call['from_cache'])) {
+    if (!$use_buy_partner_filter && !empty($buy_call['ok']) && empty($buy_call['from_cache'])) {
         company_list_ai_save_ml_log($ml_log_bizno, $ml_log_kedcd, 1, $buy_call);
     }
-    if (!empty($sell_call['ok']) && empty($sell_call['from_cache'])) {
+    if (!$use_sell_partner_filter && !empty($sell_call['ok']) && empty($sell_call['from_cache'])) {
         company_list_ai_save_ml_log($ml_log_bizno, $ml_log_kedcd, 2, $sell_call);
     }
 
     if (!empty($buy_call['ok']) && !empty($buy_call['data']['results']) && is_array($buy_call['data']['results'])) {
         $buy_live_ok = true;
-        $buy_results = company_list_ai_filter_results_by_partner_bzc($buy_call['data']['results'], $partner_bzc_filters);
+        $buy_results = company_list_ai_filter_results_by_partner_bzc($buy_call['data']['results'], $use_buy_partner_filter ? $partner_bzc_filters : array());
         $buy_bucket = company_list_ai_build_bucket($buy_results, 45);
         $buy_items = array_merge($buy_bucket['top3'], $buy_bucket['list']);
         $buy_keyword_map = company_list_ai_fetch_company_keyword_map(array_column($buy_items, 'kedcd'));
@@ -1023,7 +1115,7 @@ if (!empty($resolved_base_payload['kedcd'])) {
 
     if (!empty($sell_call['ok']) && !empty($sell_call['data']['results']) && is_array($sell_call['data']['results'])) {
         $sell_live_ok = true;
-        $sell_results = company_list_ai_filter_results_by_partner_bzc($sell_call['data']['results'], $partner_bzc_filters);
+        $sell_results = company_list_ai_filter_results_by_partner_bzc($sell_call['data']['results'], $use_sell_partner_filter ? $partner_bzc_filters : array());
         $sell_bucket = company_list_ai_build_bucket($sell_results, 45);
         $sell_items = array_merge($sell_bucket['top3'], $sell_bucket['list']);
         $sell_keyword_map = company_list_ai_fetch_company_keyword_map(array_column($sell_items, 'kedcd'));

@@ -181,6 +181,238 @@ function exist_mb_hp($reg_mb_hp, $reg_mb_id)
         return "";
 }
 
+function macomaex_aligo_config()
+{
+    $user_id = function_exists('macomaex_env') ? trim((string) macomaex_env('ALIGO_USER_ID', '')) : '';
+    $api_key = function_exists('macomaex_env') ? trim((string) macomaex_env('ALIGO_API_KEY', '')) : '';
+    $sender = function_exists('macomaex_env') ? trim((string) macomaex_env('ALIGO_SENDER', '')) : '';
+    $sender = preg_replace('/[^0-9]/', '', $sender);
+
+    return array(
+        'user_id' => $user_id,
+        'api_key' => $api_key,
+        'sender' => $sender,
+        'ready' => ($user_id !== '' && $api_key !== '' && $sender !== ''),
+    );
+}
+
+function macomaex_aligo_send_sms($receiver, $message)
+{
+    $config = macomaex_aligo_config();
+    $receiver = preg_replace('/[^0-9]/', '', (string) $receiver);
+    $message = trim((string) $message);
+
+    if (!$config['ready']) {
+        return array(
+            'ok' => false,
+            'message' => '알리고 설정값이 누락되었습니다.',
+            'debug' => array('reason' => 'missing_config'),
+        );
+    }
+
+    if ($receiver === '') {
+        return array(
+            'ok' => false,
+            'message' => '수신번호를 입력해 주세요.',
+            'debug' => array('reason' => 'empty_receiver'),
+        );
+    }
+
+    if ($message === '') {
+        return array(
+            'ok' => false,
+            'message' => '문자 내용을 입력해 주세요.',
+            'debug' => array('reason' => 'empty_message'),
+        );
+    }
+
+    if (!function_exists('curl_init')) {
+        return array(
+            'ok' => false,
+            'message' => '문자 발송 모듈을 사용할 수 없습니다.',
+            'debug' => array('reason' => 'curl_missing'),
+        );
+    }
+
+    $data = array(
+        'key' => $config['api_key'],
+        'user_id' => $config['user_id'],
+        'sender' => $config['sender'],
+        'receiver' => $receiver,
+        'msg' => $message,
+        'msg_type' => 'SMS',
+    );
+
+    $ch = curl_init('https://apis.aligo.in/send/');
+    curl_setopt_array($ch, array(
+        CURLOPT_POST => true,
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_POSTFIELDS => http_build_query($data),
+        CURLOPT_TIMEOUT => 10,
+    ));
+
+    $response_body = curl_exec($ch);
+    $curl_error = curl_error($ch);
+    $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    $decoded = json_decode((string) $response_body, true);
+    $result_code = isset($decoded['result_code']) ? (int) $decoded['result_code'] : 0;
+    $ok = ($curl_error === '' && $http_code >= 200 && $http_code < 300 && $result_code > 0);
+
+    $debug = array(
+        'http_code' => $http_code,
+        'curl_error' => $curl_error,
+        'result_code' => isset($decoded['result_code']) ? $decoded['result_code'] : null,
+        'aligo_message' => isset($decoded['message']) ? $decoded['message'] : '',
+    );
+
+    if (!$ok) {
+        $log_debug = $debug;
+        $log_debug['raw'] = $response_body;
+        error_log('[aligo_sms] send failed ' . json_encode($log_debug, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+    }
+
+    return array(
+        'ok' => $ok,
+        'message' => $ok ? '문자를 발송했습니다.' : '문자 발송에 실패했습니다.',
+        'debug' => $debug,
+    );
+}
+
+function macomaex_signup_phone_otp_normalize($phone)
+{
+    return hyphen_hp_number($phone);
+}
+
+function macomaex_signup_phone_otp_hash($phone, $code)
+{
+    return hash('sha256', macomaex_signup_phone_otp_normalize($phone).'|'.trim((string) $code).'|'.session_id());
+}
+
+function macomaex_signup_phone_otp_clear()
+{
+    set_session('ss_signup_phone_otp_hp', '');
+    set_session('ss_signup_phone_otp_code_hash', '');
+    set_session('ss_signup_phone_otp_expires', '');
+    set_session('ss_signup_phone_otp_verified', '');
+    set_session('ss_signup_phone_otp_verified_hp', '');
+}
+
+function macomaex_signup_phone_otp_send($phone)
+{
+    $phone = macomaex_signup_phone_otp_normalize($phone);
+
+    if ($msg = valid_mb_hp($phone)) {
+        return array('ok' => false, 'message' => $msg, 'debug' => array('reason' => 'invalid_phone'));
+    }
+
+    if (function_exists('random_int')) {
+        try {
+            $code = (string) random_int(100000, 999999);
+        } catch (Exception $e) {
+            $code = (string) mt_rand(100000, 999999);
+        }
+    } else {
+        $code = (string) mt_rand(100000, 999999);
+    }
+
+    $message = '[매커멕스] 인증번호 ['.$code.']를 입력해 주세요.';
+    $result = macomaex_aligo_send_sms($phone, $message);
+
+    if (empty($result['ok'])) {
+        macomaex_signup_phone_otp_clear();
+        return $result;
+    }
+
+    set_session('ss_signup_phone_otp_hp', $phone);
+    set_session('ss_signup_phone_otp_code_hash', macomaex_signup_phone_otp_hash($phone, $code));
+    set_session('ss_signup_phone_otp_expires', G5_SERVER_TIME + 300);
+    set_session('ss_signup_phone_otp_verified', '');
+    set_session('ss_signup_phone_otp_verified_hp', '');
+
+    return array(
+        'ok' => true,
+        'message' => '인증번호를 발송했습니다. 5분 안에 입력해 주세요.',
+        'debug' => isset($result['debug']) ? $result['debug'] : array(),
+    );
+}
+
+function macomaex_signup_phone_otp_verify($phone, $code)
+{
+    $phone = macomaex_signup_phone_otp_normalize($phone);
+    $code = preg_replace('/[^0-9]/', '', (string) $code);
+
+    if ($msg = valid_mb_hp($phone)) {
+        return array('ok' => false, 'message' => $msg);
+    }
+
+    if ($code === '' || strlen($code) !== 6) {
+        return array('ok' => false, 'message' => '인증번호 6자리를 입력해 주세요.');
+    }
+
+    $session_phone = macomaex_signup_phone_otp_normalize(get_session('ss_signup_phone_otp_hp'));
+    $session_hash = (string) get_session('ss_signup_phone_otp_code_hash');
+    $session_expires = (int) get_session('ss_signup_phone_otp_expires');
+
+    if ($session_phone === '' || $session_hash === '' || $session_expires <= 0) {
+        return array('ok' => false, 'message' => '인증번호 발송 후 다시 시도해 주세요.');
+    }
+
+    if ($session_phone !== $phone) {
+        return array('ok' => false, 'message' => '인증번호를 받은 휴대폰 번호와 일치하지 않습니다.');
+    }
+
+    if ($session_expires < G5_SERVER_TIME) {
+        macomaex_signup_phone_otp_clear();
+        return array('ok' => false, 'message' => '인증번호가 만료되었습니다. 다시 발송해 주세요.');
+    }
+
+    $expected_hash = macomaex_signup_phone_otp_hash($phone, $code);
+    $hash_matched = function_exists('hash_equals') ? hash_equals($session_hash, $expected_hash) : ($session_hash === $expected_hash);
+
+    if (!$hash_matched) {
+        return array('ok' => false, 'message' => '인증번호가 일치하지 않습니다.');
+    }
+
+    set_session('ss_signup_phone_otp_verified', '1');
+    set_session('ss_signup_phone_otp_verified_hp', $phone);
+
+    return array('ok' => true, 'message' => '휴대폰 인증이 완료되었습니다.');
+}
+
+function macomaex_signup_phone_otp_is_verified($phone)
+{
+    $phone = macomaex_signup_phone_otp_normalize($phone);
+    $verified = get_session('ss_signup_phone_otp_verified');
+    $verified_phone = macomaex_signup_phone_otp_normalize(get_session('ss_signup_phone_otp_verified_hp'));
+
+    return ($verified === '1' && $phone !== '' && $verified_phone === $phone);
+}
+
+function macomaex_signup_sms_debug_allowed()
+{
+    $ip = isset($_SERVER['REMOTE_ADDR']) ? trim((string) $_SERVER['REMOTE_ADDR']) : '';
+
+    if (isset($_SERVER['HTTP_X_FORWARDED_FOR']) && trim((string) $_SERVER['HTTP_X_FORWARDED_FOR']) !== '') {
+        $parts = explode(',', (string) $_SERVER['HTTP_X_FORWARDED_FOR']);
+        $forwarded_ip = trim((string) $parts[0]);
+        if ($forwarded_ip !== '') {
+            $ip = $forwarded_ip;
+        }
+    }
+
+    $allowed_ips = array(
+        '1.226.85.230',
+        '222.107.227.177',
+        '222.122.39.49',
+        '127.0.0.1',
+        '::1',
+    );
+
+    return in_array($ip, $allowed_ips, true);
+}
+
 function macomaex_signup_phone_certification($mb_name, $mb_hp, $post_cert_no = '')
 {
     global $config, $g5, $member;
