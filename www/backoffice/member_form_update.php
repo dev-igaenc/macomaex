@@ -68,13 +68,37 @@ foreach( $check_keys as $key ){
     $posts[$key] = isset($_POST[$key]) ? clean_xss_tags($_POST[$key], 1, 1) : '';
 }
 $mb_nick =$mb_name;
-$_POST['mb_9']=array_filter($_POST['mb_9']);
-if($_POST['mb_9']) $posts['mb_9']=implode(":|:",$_POST['mb_9']);
+$mb_9_values = (isset($_POST['mb_9']) && is_array($_POST['mb_9'])) ? array_filter($_POST['mb_9']) : null;
+if ($mb_9_values !== null && $mb_9_values) {
+    $posts['mb_9'] = implode(":|:", $mb_9_values);
+}
 
-$_POST['mb_10']=array_filter($_POST['mb_10']);
-if($_POST['mb_10']) $posts['mb_10']=implode(":|:",$_POST['mb_10']);
+$mb_10_values = (isset($_POST['mb_10']) && is_array($_POST['mb_10'])) ? array_filter($_POST['mb_10']) : null;
+if ($mb_10_values !== null && $mb_10_values) {
+    $posts['mb_10'] = implode(":|:", $mb_10_values);
+}
 
 $posts['mb_company']=$_POST['mb_company'];
+
+if ($w == 'u') {
+    $existing_mb = get_member($mb_id);
+
+    if (isset($existing_mb['mb_id']) && $existing_mb['mb_id']) {
+        foreach (array('mb_3', 'mb_7') as $preserve_key) {
+            if (!isset($_POST[$preserve_key])) {
+                $posts[$preserve_key] = $existing_mb[$preserve_key];
+            }
+        }
+
+        if (!isset($_POST['mb_9'])) {
+            $posts['mb_9'] = $existing_mb['mb_9'];
+        }
+
+        if (!isset($_POST['mb_10'])) {
+            $posts['mb_10'] = $existing_mb['mb_10'];
+        }
+    }
+}
 
 $mb_memo = isset($_POST['mb_memo']) ? $_POST['mb_memo'] : '';
 

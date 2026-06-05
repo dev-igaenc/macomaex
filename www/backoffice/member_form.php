@@ -269,48 +269,10 @@ input:read-only {background-color:#eeee;}
 	</tr>
 		<input type="hidden" name="mb_email" value="<?php echo $mb['mb_email'] ?>">
 		<input type="hidden" name="mb_level" value="<?=$mb['mb_level']?>">
-    <tr>
-        <th scope="row"><label for="mb_3">회사유형</label></th>
-        <td>
-            <input type="radio" name="mb_3" value="제조사" id="mb_3_1">
-            <label for="mb_3_1">제조사</label>
-            <input type="radio" name="mb_3" value="유통사" id="mb_3_2">
-            <label for="mb_3_2">유통사</label>
-			<input type="radio" name="mb_3" value="기타" id="mb_3_3">
-            <label for="mb_3_3">기타</label>
-			<?if($mb['mb_3']){?><script>$("input[name='mb_3'][value='<?=$mb['mb_3']?>']").prop("checked",true);</script><?}?>
-		</td>
-    </tr>
-	<tr>
-        <th scope="row"><label for="">회원사 가입유무</label></th>
-        <td>
-			<span class="checkIn">
-				<input type="checkbox" id="mb_10_1" name="mb_10[]"  class="selec_chk" value="벤처기업" ><label for="mb_10_1">벤처기업</label>&ensp;
-				<input type="checkbox" id="mb_10_2" name="mb_10[]"  class="selec_chk" value="메인비즈" ><label for="mb_10_2">메인비즈</label>&ensp;
-				<input type="checkbox" id="mb_10_3" name="mb_10[]"  class="selec_chk" value="이노비즈" ><label for="mb_10_3">이노비즈</label>&ensp;
-				<input type="checkbox" id="mb_10_4" name="mb_10[]"  class="selec_chk" value="해당사항없음" ><label for="mb_10_4">해당사항없음</label>
-			</span>
-			<?if($mb['mb_10']){?>
-			<script>
-				var mb10="<?=$mb['mb_10']?>";
-				mb10=mb10.split(":|:");
-				$.each(mb10, function(index, item){
-					$("input[name='mb_10[]'][value='"+item+"'").prop("checked",true);
-				})
-			</script>
-			<?}?>
-		</td>
-	</tr>
 	<tr>
         <th scope="row"><label for="">담당자 이름</label></th>
         <td>
 			<input type="text" name="mb_6" value="<?php echo $mb['mb_6'] ?>" id="mb_6" required class="required frm_input" size="15">
-		</td>
-	</tr>
-	<tr>
-        <th scope="row"><label for="">담당자 직위</label></th>
-        <td>
-			<input type="text" name="mb_7" value="<?php echo $mb['mb_7'] ?>" id="mb_7" required class="required frm_input" size="15">
 		</td>
 	</tr>
 		<tr>
@@ -323,23 +285,6 @@ input:read-only {background-color:#eeee;}
         <th scope="row"><label for="">휴대폰 번호</label></th>
         <td>
 			<input type="text" name="mb_8" value="<?php echo $mb['mb_8'] ?>" id="mb_8"  class=" frm_input tel_chk" size="15" maxlength="13">
-		</td>
-	</tr>
-	<tr>
-        <th scope="row"><label for="">주요 서비스/제품</label></th>
-        <td class="majors">
-			<?$mb_9=explode(":|:",$mb['mb_9']);?>
-			<?foreach($mb_9 as $value){?>
-			<p class="products">
-				<input type="text" name="mb_9[]" value="<?=$value?>" id="mb_9" class="frm_input" size="15">
-				<a href="javascript:;" class="minus">-</a>
-			</p>
-			<?}?>
-			<p class="products">
-				<input type="text" name="mb_9[]" value="" id="mb_9" class="frm_input" size="15">
-				<a href="javascript:;" class="add">+</a>
-				<a href="javascript:;" class="minus">-</a>
-			</p>
 		</td>
 	</tr>
     <tr>
@@ -425,14 +370,6 @@ $("#bz_sch").click(function(){
 		});
 })
 
-$("input[name='mb_10[]']").click(function(){
-	$this=$(this);
-	if($this.is(":checked")){
-		if($this.val()=="해당사항없음") $("input[name='mb_10[]'][value!='해당사항없음']").prop("checked",false);
-		else $("input[name='mb_10[]'][value='해당사항없음']").prop("checked",false);
-	}
-})
-
 //사업자번호
 	$('.comnum_chk').on('keyup', function(){
         var num = $(this).val();
@@ -476,15 +413,6 @@ $(".tel_chk").keyup(function(){
 	phone=phone.replace(/[^0-9]/g, '').replace(/^(\d{2,3})(\d{3,4})(\d{4})$/, `$1-$2-$3`);
 	$(this).val(phone);
 })
-	//서비스 추가
-	$add='<p class="products">'+$(".majors .products:last").html()+"</p>";
-	$("body").on("click",".products .add",function(){
-		$(".majors").append($add);
-	})
-	//서비스 삭제
-	$("body").on("click",".products .minus",function(){
-		$(this).parents(".products").remove();
-	})
 
 </script>
 

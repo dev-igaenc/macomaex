@@ -69,7 +69,7 @@ $g5['title'] = '회원관리';
 $sql = " select * {$sql_common} {$sql_search} {$sql_order} limit {$from_record}, {$rows} ";
 $result = sql_query($sql);
 
-$colspan = 12;
+$colspan = 7;
 ?>
 <style>
 tr.leave td {background:#eee !important;}
@@ -139,14 +139,12 @@ tr.leave td {background:#eee !important;}
         <th scope="col" id="mb_list_join"><?php echo subject_sort_link('mb_datetime', '', 'desc') ?>가입일</a></th>
     </tr-->
 	<tr>
-        <th scope="col" id="mb_list_no">가입날짜</th>
         <th scope="col" id="mb_list_id">아이디</th>
         <th scope="col" id="mb_list_1">법인명</th>
 		<th scope="col" id="mb_list_2">사업자등록번호</th>
         <th scope="col" id="mb_list_3">담당자 이름</th>
-		<th scope="col" id="mb_list_4">담당자 직위</th>
-		<th scope="col" id="mb_list_5">이메일주소</th>
 		<th scope="col" id="mb_list_6">연락처</th>
+        <th scope="col" id="mb_list_no">가입날짜</th>
 		<!--th scope="col" id="mb_list_7">날짜</th-->
 		<!--th scope="col" id="mb_list_8">회사 홈페이지</th-->
         <th scope="col" id="mb_list_mng" width="120px">관리</th>
@@ -179,6 +177,10 @@ tr.leave td {background:#eee !important;}
             $intercept_title = '차단하기';
 
         $address = $row['mb_zip1'] ? print_address($row['mb_addr1'], $row['mb_addr2'], $row['mb_addr3'], $row['mb_addr_jibeon']) : '';
+        $biz_number_raw = trim((string) $row['mb_4']);
+        $biz_number = preg_replace('/[^0-9]/', '', $biz_number_raw);
+        $display_biz_number = $biz_number !== '' ? get_text($biz_number_raw) : '-';
+        $display_company_name = $biz_number !== '' ? get_text($row['mb_name']) : '-';
 
         $bg = 'bg'.($i%2);
 
@@ -207,14 +209,12 @@ tr.leave td {background:#eee !important;}
     ?>
 
     <tr class="<?php echo $bg; ?> <?if($leave_msg){?>leave<?}?>">
-		<td headers="mb_list_no" class="mb_list_no" alt="가입날짜"><?if($leave_msg){echo $leave_msg;}else{?><?php echo get_text($row['mb_datetime']); ?><?}?></td>
-        <td headers="mb_list_id" class="mb_list_id" alt="아이디"><?php echo get_text($row['mb_id']); ?></td>
-		<td headers="mb_list_1" class="mb_list_1" alt="법인명"><?php echo get_text($row['mb_name']); ?></td>
-		<td headers="mb_list_2" class="mb_list_2" alt="사업자등록번호"><?php echo get_text($row['mb_4']); ?></td>
+		<td headers="mb_list_id" class="mb_list_id" alt="아이디"><?php echo get_text($row['mb_id']); ?></td>
+		<td headers="mb_list_1" class="mb_list_1" alt="법인명"><?php echo $display_company_name; ?></td>
+		<td headers="mb_list_2" class="mb_list_2" alt="사업자등록번호"><?php echo $display_biz_number; ?></td>
 		<td headers="mb_list_3" class="mb_list_3" alt="담당자 이름	"><?php echo get_text($row['mb_6']); ?></td>
-		<td headers="mb_list_4" class="mb_list_4" alt="담당자 직위	"><?php echo get_text($row['mb_7']); ?></td>
-		<td headers="mb_list_5" class="mb_list_5" alt="이메일주소	"><?php echo get_text($row['mb_email']); ?></td>
 		<td headers="mb_list_7" class="mb_list_7" alt="연락처"><?php echo get_text($row['mb_8']); ?></td>
+		<td headers="mb_list_no" class="mb_list_no" alt="가입날짜"><?if($leave_msg){echo $leave_msg;}else{?><?php echo get_text($row['mb_datetime']); ?><?}?></td>
 		<!--td headers="mb_list_8" class="mb_list_8" alt="회사 홈페이지	"><?php echo get_text($row['mb_hp']); ?></td-->
 		<td headers="mb_list_mng" class="td_mng td_mng_s">
 			<a href="<?='./member_form.php?'.$qstr.'&amp;w=u&amp;mb_id='.$row['mb_id'];?>" class="btn btn-sm text-light btn-info">수정</a>
