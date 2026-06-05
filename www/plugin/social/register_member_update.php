@@ -93,6 +93,7 @@ if ($msg = valid_mb_nick($mb_nick))     macomaex_social_register_fail($msg);
 if ($msg = valid_mb_email($mb_email))   macomaex_social_register_fail($msg);
 if ($msg = prohibit_mb_email($mb_email))macomaex_social_register_fail($msg);
 if ($msg = valid_mb_hp($mb_hp))         macomaex_social_register_fail($msg);
+if (!macomaex_signup_phone_otp_is_verified($mb_hp)) macomaex_social_register_fail('휴대폰 인증을 완료해 주세요.');
 
 if ($msg = exist_mb_id($mb_id))     macomaex_social_register_fail($msg);
 if ($msg = exist_mb_nick($mb_nick, $mb_id))     macomaex_social_register_fail($msg);
@@ -175,6 +176,7 @@ if($result) {
     }
 
     set_session('ss_mb_reg', $mb['mb_id']);
+    macomaex_signup_phone_otp_clear();
 
     if( !empty($user_profile->photoURL) && ($config['cf_register_level'] >= $config['cf_icon_level']) ){  //회원 프로필 사진이 있고, 회원 아이콘를 올릴수 있는 조건이면
         

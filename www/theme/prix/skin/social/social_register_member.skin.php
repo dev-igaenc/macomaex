@@ -33,8 +33,17 @@ if ($social_email) {
     .social-join-field label{display:block;margin-bottom:8px;color:#344054;font-size:14px;font-weight:700}
     .social-join-input{width:100%;height:52px;border:1px solid #d0d5dd;border-radius:6px;padding:0 15px;color:#101828;font-size:16px;background:#fff;box-sizing:border-box}
     .social-join-input:read-only{background:#f9fafb;color:#667085}
+    .social-join-cert{display:flex;gap:8px;align-items:center}
+    .social-join-cert .social-join-input{flex:1;min-width:0}
+    .social-join-cert-code{display:none;margin-top:8px}
+    .social-join-cert-btn{height:52px;padding:0 18px;border:0;border-radius:6px;background:#111827;color:#fff;font-size:15px;font-weight:800;white-space:nowrap;cursor:pointer}
+    .social-join-cert-btn.secondary{background:#2563eb}
+    .social-join-cert-btn:disabled{background:#9ca3af;cursor:not-allowed}
     .social-join-help{margin:8px 0 0;color:#8a94a6;font-size:13px;line-height:1.5}
     .social-join-error{margin:8px 0 0;color:#d92d20;font-size:13px;line-height:1.5}
+    .social-join-status{margin:8px 0 0;color:#667085;font-size:13px;line-height:1.5}
+    .social-join-status.success{color:#2563eb}
+    .social-join-status.error{color:#d92d20}
     .social-join-actions{display:flex;gap:10px;margin-top:10px}
     .social-join-submit,.social-join-cancel{display:inline-flex;align-items:center;justify-content:center;height:54px;border-radius:6px;font-size:15px;font-weight:800;text-decoration:none;box-sizing:border-box}
     .social-join-submit{flex:1;border:0;background:#111827;color:#fff;cursor:pointer}
@@ -47,6 +56,8 @@ if ($social_email) {
         .social-join-title{font-size:24px}
         .social-join-actions{flex-direction:column}
         .social-join-cancel{width:100%}
+        .social-join-cert{display:block}
+        .social-join-cert-btn{width:100%;margin-top:8px}
     }
 </style>
 
@@ -93,8 +104,16 @@ if ($social_email) {
 
                 <div class="social-join-field">
                     <label for="reg_mb_hp">휴대폰 번호</label>
-                    <input type="text" id="reg_mb_hp" name="mb_hp" class="social-join-input" value="<?php echo $social_phone; ?>" maxlength="13" placeholder="010-0000-0000" required>
+                    <div class="social-join-cert">
+                        <input type="text" id="reg_mb_hp" name="mb_hp" class="social-join-input" value="<?php echo $social_phone; ?>" maxlength="13" placeholder="010-0000-0000" required>
+                        <button type="button" id="signup_phone_send" class="social-join-cert-btn">인증</button>
+                    </div>
+                    <div id="signup_phone_code_wrap" class="social-join-cert social-join-cert-code">
+                        <input type="text" id="signup_phone_code" class="social-join-input" maxlength="6" inputmode="numeric" placeholder="인증번호 6자리">
+                        <button type="button" id="signup_phone_verify" class="social-join-cert-btn secondary">확인</button>
+                    </div>
                     <p class="social-join-help"><?php echo $social_phone_digits ? '소셜 계정에서 받은 번호를 확인해 주세요.' : '번호가 없다면 직접 입력해 주세요.'; ?></p>
+                    <p id="signup_phone_status" class="social-join-status"></p>
                 </div>
 
                 <div class="social-join-actions">
@@ -134,6 +153,24 @@ if ($social_email) {
 
 <script>
 $(function() {
+    var signupPhoneVerified = false;
+    var signupPhoneVerifiedValue = "";
+
+    function setSignupPhoneStatus(message, type) {
+        var $status = $("#signup_phone_status");
+        $status.removeClass("success error");
+        if (type) $status.addClass(type);
+        $status.text(message || "");
+    }
+
+    function resetSignupPhoneVerification() {
+        signupPhoneVerified = false;
+        signupPhoneVerifiedValue = "";
+        $("#signup_phone_code").val("");
+        $("#signup_phone_code_wrap").hide();
+        setSignupPhoneStatus("", "");
+    }
+
     $("#reg_mb_hp").on("keyup blur", function() {
         var phone = $(this).val().replace(/[^0-9]/g, "");
         if (phone.length > 11) phone = phone.substr(0, 11);
@@ -142,11 +179,91 @@ $(function() {
         }
         $(this).val(phone);
         $("input[name=mb_8]").val(phone);
+        if (signupPhoneVerifiedValue !== phone) {
+            resetSignupPhoneVerification();
+        }
     });
 
     $("#reg_mb_name").on("keyup blur", function() {
         $("input[name=mb_6]").val($.trim($(this).val()));
     });
+
+    $("#signup_phone_send").on("click", function() {
+        var phone = $.trim($("#reg_mb_hp").val());
+        if (phone === "") {
+            alert("휴대폰 번호를 입력해 주세요.");
+            $("#reg_mb_hp").focus();
+            return false;
+        }
+
+        resetSignupPhoneVerification();
+        var $button = $(this);
+        $button.prop("disabled", true).text("발송중");
+
+        $.post("<?php echo G5_BBS_URL; ?>/ajax.signup_phone_send.php", { mb_hp: phone })
+            .done(function(resp) {
+                if (typeof resp === "string") {
+                    try { resp = JSON.parse(resp); } catch(e) { resp = {}; }
+                }
+                if (resp.ok) {
+                    $("#signup_phone_code_wrap").show();
+                    setSignupPhoneStatus(resp.message || "인증번호를 발송했습니다.", "success");
+                    $("#signup_phone_code").focus();
+                } else {
+                    setSignupPhoneStatus(resp.message || "인증번호 발송에 실패했습니다.", "error");
+                    if (resp.debug) console.log("signup_phone_send", resp.debug);
+                }
+            })
+            .fail(function() {
+                setSignupPhoneStatus("인증번호 발송 중 오류가 발생했습니다.", "error");
+            })
+            .always(function() {
+                $button.prop("disabled", false).text("인증");
+            });
+    });
+
+    $("#signup_phone_verify").on("click", function() {
+        var phone = $.trim($("#reg_mb_hp").val());
+        var code = $.trim($("#signup_phone_code").val()).replace(/[^0-9]/g, "");
+        if (code.length !== 6) {
+            setSignupPhoneStatus("인증번호 6자리를 입력해 주세요.", "error");
+            $("#signup_phone_code").focus();
+            return false;
+        }
+
+        var $button = $(this);
+        $button.prop("disabled", true).text("확인중");
+
+        $.post("<?php echo G5_BBS_URL; ?>/ajax.signup_phone_verify.php", { mb_hp: phone, code: code })
+            .done(function(resp) {
+                if (typeof resp === "string") {
+                    try { resp = JSON.parse(resp); } catch(e) { resp = {}; }
+                }
+                if (resp.ok) {
+                    signupPhoneVerified = true;
+                    signupPhoneVerifiedValue = phone;
+                    setSignupPhoneStatus(resp.message || "휴대폰 인증이 완료되었습니다.", "success");
+                } else {
+                    signupPhoneVerified = false;
+                    setSignupPhoneStatus(resp.message || "인증번호를 확인해 주세요.", "error");
+                }
+            })
+            .fail(function() {
+                signupPhoneVerified = false;
+                setSignupPhoneStatus("인증 확인 중 오류가 발생했습니다.", "error");
+            })
+            .always(function() {
+                $button.prop("disabled", false).text("확인");
+            });
+    });
+
+    $("#signup_phone_code").on("input", function() {
+        $(this).val($(this).val().replace(/[^0-9]/g, "").substring(0, 6));
+    });
+
+    window.macomaexSocialPhoneVerified = function() {
+        return signupPhoneVerified && signupPhoneVerifiedValue === $.trim($("#reg_mb_hp").val());
+    };
 });
 
 function fregisterform_submit(f) {
@@ -158,6 +275,12 @@ function fregisterform_submit(f) {
 
     if ($.trim(f.mb_hp.value) === "") {
         alert("휴대폰 번호를 입력해 주세요.");
+        f.mb_hp.focus();
+        return false;
+    }
+
+    if (typeof window.macomaexSocialPhoneVerified !== "function" || !window.macomaexSocialPhoneVerified()) {
+        alert("휴대폰 인증을 완료해 주세요.");
         f.mb_hp.focus();
         return false;
     }
