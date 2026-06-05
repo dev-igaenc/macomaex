@@ -218,7 +218,6 @@ tr.leave td {background:#eee !important;}
 		<!--td headers="mb_list_8" class="mb_list_8" alt="회사 홈페이지	"><?php echo get_text($row['mb_hp']); ?></td-->
 		<td headers="mb_list_mng" class="td_mng td_mng_s">
 			<a href="<?='./member_form.php?'.$qstr.'&amp;w=u&amp;mb_id='.$row['mb_id'];?>" class="btn btn-sm text-light btn-info">수정</a>
-			<a onclick="return delete_confirm(this);" href="<?='./member_form_update.php?'.$qstr.'&amp;w=d&amp;mb_id='.$row['mb_id'];?>" class="btn btn-sm btn-danger">삭제</a>
 		</td>
     </tr>
 
