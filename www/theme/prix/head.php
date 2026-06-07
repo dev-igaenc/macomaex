@@ -41,13 +41,13 @@ if ($is_member) {
 }
 ?>
 
-<link rel="stylesheet" href="<?php echo G5_URL; ?>/ko/css/ai-loading.css">
-<link rel="stylesheet" href="<?php echo G5_THEME_URL; ?>/css/design-tokens.css?v=20260427">
-<link rel="stylesheet" href="<?php echo G5_THEME_URL; ?>/css/common.layout.css?v=20260427">
-<link rel="stylesheet" href="<?php echo G5_THEME_URL; ?>/css/common.scrollbar.css?v=20260427">
-<link rel="stylesheet" href="<?php echo G5_THEME_URL; ?>/css/common.ai-magic-wand.css?v=20260427">
-<link rel="stylesheet" href="<?php echo G5_THEME_URL; ?>/css/header-core.css?v=20260427">
-<link rel="stylesheet" href="<?php echo G5_THEME_URL; ?>/css/header-bridge.css?v=20260427">
+<link rel="stylesheet" href="<?php echo $prix_root_asset_url('ko/css/ai-loading.css', G5_CSS_VER); ?>">
+<link rel="stylesheet" href="<?php echo $prix_theme_asset_url('css/design-tokens.css', G5_CSS_VER); ?>">
+<link rel="stylesheet" href="<?php echo $prix_theme_asset_url('css/common.layout.css', G5_CSS_VER); ?>">
+<link rel="stylesheet" href="<?php echo $prix_theme_asset_url('css/common.scrollbar.css', G5_CSS_VER); ?>">
+<link rel="stylesheet" href="<?php echo $prix_theme_asset_url('css/common.ai-magic-wand.css', G5_CSS_VER); ?>">
+<link rel="stylesheet" href="<?php echo $prix_theme_asset_url('css/header-core.css', G5_CSS_VER); ?>">
+<link rel="stylesheet" href="<?php echo $prix_theme_asset_url('css/header-bridge.css', G5_CSS_VER); ?>">
 <script>
 window.__AUTH_SESSION_GUARD_CONFIG__ = {
     isMember: <?php echo $is_member ? 'true' : 'false'; ?>,
@@ -58,7 +58,7 @@ window.__AUTH_SESSION_GUARD_CONFIG__ = {
 </script>
 <script src="<?php echo G5_URL; ?>/ko/js/auth-session-guard.js?ver=<?php echo $auth_session_guard_js_ver; ?>"></script>
 <?php if (!defined('_INDEX_')) { ?>
-<link rel="stylesheet" href="<?php echo G5_THEME_URL; ?>/css/header-search.css?v=20260427">
+<link rel="stylesheet" href="<?php echo $prix_theme_asset_url('css/header-search.css', G5_CSS_VER); ?>">
 <?php } ?>
 <!-- 상단 시작 { -->
 <div id="hd">

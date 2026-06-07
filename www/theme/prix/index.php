@@ -12,12 +12,12 @@ include_once(G5_THEME_PATH . '/head.php');
 <?php $stream_chat_vendor_js_ver = file_exists(G5_PATH . '/ko/js/vendor/stream-chat.browser.full-bundle.min.js') ? filemtime(G5_PATH . '/ko/js/vendor/stream-chat.browser.full-bundle.min.js') : G5_JS_VER; ?>
 <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" rel="stylesheet" />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;500;600&display=swap">
-<link rel="stylesheet" href="<?php echo G5_URL; ?>/ko/css/company-card.css?ver=<?php echo G5_CSS_VER; ?>">
-<link rel="stylesheet" href="<?php echo G5_URL; ?>/ko/css/section-header.css?ver=<?php echo G5_CSS_VER; ?>">
-<link rel="stylesheet" href="<?php echo G5_URL; ?>/ko/css/auth-toggle.css?ver=<?php echo G5_CSS_VER; ?>">
-<link rel="stylesheet" href="<?php echo G5_URL; ?>/ko/css/ai-loading.css?ver=<?php echo G5_CSS_VER; ?>">
-<link rel="stylesheet" href="<?php echo G5_URL; ?>/ko/css/trade_chat_modal.css?ver=<?php echo G5_CSS_VER; ?>">
-<link rel="stylesheet" href="<?php echo G5_THEME_URL; ?>/css/index.css?ver=<?php echo G5_CSS_VER; ?>&rev=20260417-1610">
+<link rel="stylesheet" href="<?php echo $prix_root_asset_url('ko/css/company-card.css', G5_CSS_VER); ?>">
+<link rel="stylesheet" href="<?php echo $prix_root_asset_url('ko/css/section-header.css', G5_CSS_VER); ?>">
+<link rel="stylesheet" href="<?php echo $prix_root_asset_url('ko/css/auth-toggle.css', G5_CSS_VER); ?>">
+<link rel="stylesheet" href="<?php echo $prix_root_asset_url('ko/css/ai-loading.css', G5_CSS_VER); ?>">
+<link rel="stylesheet" href="<?php echo $prix_root_asset_url('ko/css/trade_chat_modal.css', G5_CSS_VER); ?>">
+<link rel="stylesheet" href="<?php echo $prix_theme_asset_url('css/index.css', G5_CSS_VER); ?>">
 <?php
 
 // 점수를 0~5 범위로 보정
@@ -661,8 +661,8 @@ window.__TRADE_CHAT_MODAL_CONTEXT = {
 };
 </script>
 <script src="<?php echo G5_URL; ?>/ko/js/vendor/stream-chat.browser.full-bundle.min.js?ver=<?php echo $stream_chat_vendor_js_ver; ?>"></script>
-<script src="<?php echo G5_THEME_JS_URL; ?>/index.js?ver=<?php echo G5_JS_VER; ?>&rev=20260417-1550"></script>
-<script src="<?php echo G5_URL; ?>/ko/js/trade_chat_modal.js?ver=<?php echo G5_JS_VER; ?>"></script>
+<script src="<?php echo $prix_theme_asset_url('js/index.js', G5_JS_VER); ?>"></script>
+<script src="<?php echo $prix_root_asset_url('ko/js/trade_chat_modal.js', G5_JS_VER); ?>"></script>
 
 	</div>
 <?php
