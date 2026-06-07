@@ -537,6 +537,28 @@ window.__AUTH_SESSION_GUARD_CONFIG__ = {
 
 	<script>
 // 모달 열기/닫기 함수들
+function syncVerifyModalPageState() {
+	var hasOpenModal = document.querySelector(".modal_verify_overlay.is_open") !== null;
+	var html = document.documentElement;
+	var body = document.body;
+	if (html) {
+		if (hasOpenModal) html.classList.add("modal_verify_open");
+		else html.classList.remove("modal_verify_open");
+	}
+	if (body) {
+		if (hasOpenModal) body.classList.add("modal_verify_open");
+		else body.classList.remove("modal_verify_open");
+	}
+}
+
+function focusVerifyModal(overlay) {
+	if (!overlay) return;
+	window.setTimeout(function() {
+		var focusTarget = overlay.querySelector(".modal_verify_close, button:not([disabled])");
+		if (focusTarget && typeof focusTarget.focus === "function") focusTarget.focus();
+	}, 0);
+}
+
 function openAiGuideModal(opts) {
 	var overlay = document.getElementById("modal_ai_guide_overlay");
 	var titleEl = document.getElementById("modal_ai_guide_title");
@@ -574,6 +596,8 @@ function openAiGuideModal(opts) {
 	};
 	overlay.classList.add("is_open");
 	overlay.setAttribute("aria-hidden", "false");
+	syncVerifyModalPageState();
+	focusVerifyModal(overlay);
 }
 
 function openCreditShortageGuide(opts) {
@@ -667,6 +691,8 @@ function openCreditShortageGuide(opts) {
 		if (overlay) {
 			overlay.classList.add("is_open");
 			overlay.setAttribute("aria-hidden", "false");
+			syncVerifyModalPageState();
+			focusVerifyModal(overlay);
 			loadPartnerKeywordChips(1);
 		}
 		return true;
@@ -693,6 +719,7 @@ function closeAiGuideModal() {
 	overlay.classList.remove("is_open");
 	overlay.setAttribute("aria-hidden", "true");
 	window._aiGuideModalState = null;
+	syncVerifyModalPageState();
 }
 
 	function closeVerifyModal() {
@@ -700,6 +727,7 @@ function closeAiGuideModal() {
 		if (overlay && overlay.classList.contains("is_open")) {
 			overlay.classList.remove("is_open");
 			overlay.setAttribute("aria-hidden", "true");
+			syncVerifyModalPageState();
 		}
 	}
 
@@ -1063,6 +1091,7 @@ $(document).on("click", "#modal_verify_btn_ai", function() {
 			if (overlay) {
 				overlay.classList.remove("is_open");
 				overlay.setAttribute("aria-hidden", "true");
+				syncVerifyModalPageState();
 			}
 			moveToAiRecommendByBizno(comnum);
 			return;
@@ -1159,7 +1188,7 @@ function initComnumPlaceholderTyping() {
 	var inputs = document.querySelectorAll(selector);
 	if (!inputs.length) return;
 
-	inputs.forEach(function (input) {
+	Array.prototype.forEach.call(inputs, function (input) {
 		if (!input || input.dataset.typingInit === '1') return;
 		input.dataset.typingInit = '1';
 
@@ -1261,6 +1290,6 @@ function initComnumPlaceholderTyping() {
 
 initComnumPlaceholderTyping();
 if (document.readyState === 'loading') {
-	document.addEventListener('DOMContentLoaded', initComnumPlaceholderTyping, { once: true });
+	document.addEventListener('DOMContentLoaded', initComnumPlaceholderTyping, false);
 }
 </script>
