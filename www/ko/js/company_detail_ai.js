@@ -70,13 +70,6 @@
     }
     var detailLoginReturnUrl = '/bbs/login.php?url=' + encodeURIComponent(window.location.pathname + window.location.search);
 
-    // BFCache(뒤로가기 복원)로 비로그인 렌더가 남는 경우 방지
-    window.addEventListener('pageshow', function (event) {
-        if (event && event.persisted) {
-            window.location.reload();
-        }
-    });
-
     /* AI 기업 상세 스크립트 */
     (function () {
         'use strict';

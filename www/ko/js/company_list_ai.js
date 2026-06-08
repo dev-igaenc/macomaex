@@ -30,9 +30,52 @@
         };
     }
 
-    var aiData = normalizeData(window.__COMPANY_LIST_AI_DATA__);
-    var aiMeta = window.__COMPANY_LIST_AI_META__ || {};
-    var aiStats = window.__COMPANY_LIST_AI_STATS__ || {};
+    function isBackForwardNavigation() {
+        try {
+            var nav = performance.getEntriesByType && performance.getEntriesByType('navigation')[0];
+            return !!(nav && nav.type === 'back_forward');
+        } catch (e) {}
+        return false;
+    }
+
+    function recommendationSnapshotKey() {
+        return 'companyAiListSnapshot:' + window.location.pathname + window.location.search;
+    }
+
+    function readRecommendationSnapshot() {
+        try {
+            var snapshotKey = recommendationSnapshotKey();
+            var returnKey = sessionStorage.getItem('companyAiListReturnKey') || '';
+            if (!isBackForwardNavigation() && returnKey !== snapshotKey) return null;
+            var raw = sessionStorage.getItem(snapshotKey);
+            if (!raw) return null;
+            var snapshot = JSON.parse(raw);
+            if (!snapshot || !snapshot.data || !snapshot.meta || !snapshot.stats) return null;
+            if (returnKey === snapshotKey) sessionStorage.removeItem('companyAiListReturnKey');
+            return snapshot;
+        } catch (e) {
+            return null;
+        }
+    }
+
+    function saveRecommendationSnapshot(data, meta, stats) {
+        try {
+            sessionStorage.setItem(recommendationSnapshotKey(), JSON.stringify({
+                data: data,
+                meta: meta,
+                stats: stats,
+                saved_at: Date.now()
+            }));
+        } catch (e) {}
+    }
+
+    var restoredSnapshot = readRecommendationSnapshot();
+    var aiData = normalizeData(restoredSnapshot ? restoredSnapshot.data : window.__COMPANY_LIST_AI_DATA__);
+    var aiMeta = restoredSnapshot ? restoredSnapshot.meta : (window.__COMPANY_LIST_AI_META__ || {});
+    var aiStats = restoredSnapshot ? restoredSnapshot.stats : (window.__COMPANY_LIST_AI_STATS__ || {});
+    if (!restoredSnapshot) {
+        saveRecommendationSnapshot(window.__COMPANY_LIST_AI_DATA__ || {}, aiMeta, aiStats);
+    }
 
     var topWrap = document.querySelector('.ai-top3-swiper .swiper-wrapper');
     var restWrap = document.querySelector('.ai-rest-swiper .swiper-wrapper');
@@ -92,14 +135,6 @@
             if (kedcd) return 'kedcd:' + kedcd;
         } catch (e) {}
         return '';
-    }
-
-    function isBackForwardNavigation() {
-        try {
-            var nav = performance.getEntriesByType && performance.getEntriesByType('navigation')[0];
-            return !!(nav && nav.type === 'back_forward');
-        } catch (e) {}
-        return false;
     }
 
     function shouldShowLoadingOverlay() {
@@ -636,6 +671,8 @@
         var linkEl = event.target && event.target.closest ? event.target.closest('.company-ai-link') : null;
         if (!linkEl) return;
         if (linkEl.tagName !== 'A') return;
+        saveRecommendationSnapshot(aiData, aiMeta, aiStats);
+        try { sessionStorage.setItem('companyAiListReturnKey', recommendationSnapshotKey()); } catch (e) {}
         saveCardSnapshot(linkEl);
     });
 
@@ -662,6 +699,7 @@
             };
             updateBannerStats(aiStats);
             restPageIndex = 0;
+            saveRecommendationSnapshot(aiData, aiMeta, aiStats);
             renderCurrent(false);
         },
         setType: function(nextType) {
