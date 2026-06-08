@@ -751,7 +751,7 @@ function company_list_ai_render_card($card, $trade_type, $rank = 0, $src_kedcd =
     $one_line_attr = htmlspecialchars((string)($card['one_line'] ?? ''), ENT_QUOTES, 'UTF-8');
     $trade_q = (int)$trade_type;
     $card_cd = simple_crypt((string)$card['kedcd'], 'e');
-    $url = '/ko/company_detail_ai.php?cd=' . rawurlencode((string)$card_cd) . '&trade_type=' . $trade_q;
+    $url = '/recommendations/detail?id=' . rawurlencode((string)$card_cd) . '&trade_type=' . $trade_q;
     if ($src_kedcd_raw !== '') {
         $src_cd = simple_crypt((string)$src_kedcd_raw, 'e');
         $url .= '&src_cd=' . rawurlencode((string)$src_cd);

@@ -87,7 +87,7 @@ $kedcd = $cd ? simple_crypt($cd, 'd') : '';
 
 // 기업코드 값 최소 검증
 if (!preg_match('/^\d{10}$/', $kedcd)) {
-	alert('잘못된 접근입니다.', '/ko/matching_list.php');
+	alert('잘못된 접근입니다.', '/companies');
 }
 
 $kedcdSql = sql_escape_string($kedcd);
@@ -112,7 +112,7 @@ $company = sql_fetch("
 ");
 
 if (empty($company['KEDCD'])) {
-	alert('기업 정보를 찾을 수 없습니다.', '/ko/matching_list.php');
+	alert('기업 정보를 찾을 수 없습니다.', '/companies');
 }
 
 $favorite_company = array();
@@ -203,8 +203,13 @@ $requesterProfileState = !empty($member['mb_id'])
 	: array();
 
 $tradeRequestLoginParams = $_GET;
+$tradeRequestDetailId = isset($tradeRequestLoginParams['id'])
+	? trim((string)$tradeRequestLoginParams['id'])
+	: (isset($tradeRequestLoginParams['cd']) ? trim((string)$tradeRequestLoginParams['cd']) : '');
+unset($tradeRequestLoginParams['id'], $tradeRequestLoginParams['cd']);
 $tradeRequestLoginParams['trade_request_login'] = '1';
-$tradeRequestReturnUrl = '/ko/company_detail.php?' . http_build_query($tradeRequestLoginParams);
+$tradeRequestReturnQuery = array_merge(array('id' => $tradeRequestDetailId), $tradeRequestLoginParams);
+$tradeRequestReturnUrl = '/companies/detail?' . http_build_query($tradeRequestReturnQuery);
 $tradeRequestLoginUrl = '/bbs/login.php?url=' . urlencode($tradeRequestReturnUrl);
 
 // 프론트 렌더링과 마스킹 분기에 필요한 상세 페이지 데이터 구조를 한 번에 정리해 JS로 내려준다.

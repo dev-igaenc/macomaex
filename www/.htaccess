@@ -3,6 +3,53 @@
 <IfModule mod_rewrite.c>
 RewriteEngine On
 RewriteBase /
+
+# Canonical home URL: hide /index.php while preserving any query string.
+RewriteCond %{THE_REQUEST} \s/+index\.php(?:[?\s]) [NC]
+RewriteRule ^index\.php$ / [R=301,L,NE]
+
+# User-facing routes. Keep existing PHP endpoints available for compatibility.
+RewriteCond %{REQUEST_METHOD} ^(?:GET|HEAD)$
+RewriteRule ^about/?$ ko/greeting.php [QSA,L]
+
+RewriteCond %{REQUEST_METHOD} ^(?:GET|HEAD)$
+RewriteCond %{QUERY_STRING} (?:^|&)category=([^&]+) [NC]
+RewriteRule ^companies/?$ ko/matching_list.php?cat=%1 [QSA,L]
+RewriteCond %{REQUEST_METHOD} ^(?:GET|HEAD)$
+RewriteRule ^companies/?$ ko/matching_list.php [QSA,L]
+
+RewriteCond %{REQUEST_METHOD} ^(?:GET|HEAD)$
+RewriteCond %{QUERY_STRING} (?:^|&)id=([^&]+) [NC]
+RewriteRule ^companies/detail/?$ ko/company_detail.php?cd=%1 [QSA,L]
+RewriteCond %{REQUEST_METHOD} ^(?:GET|HEAD)$
+RewriteRule ^companies/detail/?$ ko/company_detail.php [QSA,L]
+
+RewriteCond %{REQUEST_METHOD} ^(?:GET|HEAD)$
+RewriteRule ^recommendations/?$ ko/company_list_ai.php [QSA,L]
+RewriteCond %{REQUEST_METHOD} ^(?:GET|HEAD)$
+RewriteRule ^recommendations/demo/?$ ko/company_list_ai_demo.php?entry=matching_ai_demo [QSA,L]
+RewriteCond %{REQUEST_METHOD} ^(?:GET|HEAD)$
+RewriteCond %{QUERY_STRING} (?:^|&)id=([^&]+) [NC]
+RewriteRule ^recommendations/detail/?$ ko/company_detail_ai.php?cd=%1 [QSA,L]
+RewriteCond %{REQUEST_METHOD} ^(?:GET|HEAD)$
+RewriteRule ^recommendations/detail/?$ ko/company_detail_ai.php [QSA,L]
+
+RewriteCond %{REQUEST_METHOD} ^(?:GET|HEAD)$
+RewriteRule ^plans/?$ ko/plan.php [QSA,L]
+RewriteCond %{REQUEST_METHOD} ^(?:GET|HEAD)$
+RewriteRule ^account/credits/?$ ko/my_plan.php [QSA,L]
+RewriteCond %{REQUEST_METHOD} ^(?:GET|HEAD)$
+RewriteRule ^account/trades/?$ ko/my_matching.php [QSA,L]
+RewriteCond %{REQUEST_METHOD} ^(?:GET|HEAD)$
+RewriteRule ^account/company/?$ ko/my_company.php [QSA,L]
+RewriteCond %{REQUEST_METHOD} ^(?:GET|HEAD)$
+RewriteRule ^account/profile/?$ ko/my_info.php [QSA,L]
+
+RewriteCond %{REQUEST_METHOD} ^(?:GET|HEAD)$
+RewriteRule ^promotions/?$ ko/promotion.php [QSA,L]
+RewriteCond %{REQUEST_METHOD} ^(?:GET|HEAD)$
+RewriteRule ^signup/?$ bbs/register.php [QSA,L]
+
 RewriteCond %{REQUEST_FILENAME} -f [OR]
 RewriteCond %{REQUEST_FILENAME} -d
 RewriteRule ^ - [L]

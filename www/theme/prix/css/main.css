@@ -408,7 +408,13 @@ body { background: #f9f9f9; }
 .modal_verify_overlay {
     display: none;
     position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
     inset: 0;
+    width: 100%;
+    height: 100%;
     background: rgba(0, 0, 0, 0.5);
     backdrop-filter: blur(4px);
     -webkit-backdrop-filter: blur(4px);
@@ -418,9 +424,16 @@ body { background: #f9f9f9; }
     padding: 24px;
     box-sizing: border-box;
     animation: modalFadeIn 0.3s ease;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
 }
 .modal_verify_overlay.is_open {
     display: flex;
+}
+html.modal_verify_open,
+body.modal_verify_open {
+    overflow: hidden !important;
 }
 @keyframes modalFadeIn {
     from { opacity: 0; }
@@ -447,6 +460,7 @@ body { background: #f9f9f9; }
     animation: modalSlideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
     position: relative;
     overflow: hidden;
+    box-sizing: border-box;
 }
 .modal_verify::before {
     content: '';
@@ -671,8 +685,18 @@ body { background: #f9f9f9; }
 }
 .modal_verify_wide {
     max-width: 560px;
+    max-height: calc(100vh - 48px);
+    max-height: calc(100dvh - 48px);
     padding: 28px 28px 24px;
     text-align: left;
+    display: flex;
+    flex-direction: column;
+}
+#modal_verify_pd_wrap {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-height: 0;
 }
 .modal_verify_compact {
     display: flex;
@@ -769,6 +793,9 @@ body { background: #f9f9f9; }
     justify-content: center;
     gap: 7px;
     font-family: inherit;
+    -webkit-appearance: none;
+    appearance: none;
+    touch-action: manipulation;
 }
 .modal_pd_trade_btn.active {
     border-color: #6366f1;
@@ -796,10 +823,15 @@ body { background: #f9f9f9; }
 }
 .modal_pd_grid {
     display: flex;
+    flex: 1 1 auto;
     flex-wrap: wrap;
+    align-content: flex-start;
     gap: 8px;
+    min-height: 72px;
     max-height: 220px;
     overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
     padding: 2px 2px 4px;
     margin-bottom: 10px;
 }
@@ -813,6 +845,13 @@ body { background: #f9f9f9; }
     background: #fff;
     transition: all 0.15s;
     user-select: none;
+    -webkit-user-select: none;
+    -webkit-appearance: none;
+    appearance: none;
+    touch-action: manipulation;
+    line-height: 1.4;
+    word-break: break-word;
+    overflow-wrap: anywhere;
 }
 .modal_pd_chip:hover {
     border-color: #6366f1;
@@ -831,6 +870,7 @@ body { background: #f9f9f9; }
     margin-bottom: 12px;
     display: flex;
     flex-direction: column;
+    flex: 0 0 auto;
     gap: 10px;
 }
 .modal_pd_bar_info {
@@ -860,6 +900,9 @@ body { background: #f9f9f9; }
     gap: 7px;
     transition: all 0.15s;
     font-family: inherit;
+    -webkit-appearance: none;
+    appearance: none;
+    touch-action: manipulation;
 }
 .modal_pd_btn_confirm svg {
     width: 15px;
@@ -898,6 +941,9 @@ body { background: #f9f9f9; }
     margin: 4px auto 0;
     text-decoration: underline;
     font-family: inherit;
+    -webkit-appearance: none;
+    appearance: none;
+    touch-action: manipulation;
 }
 .modal_pd_skip:hover {
     color: #64748b;
@@ -906,7 +952,7 @@ body { background: #f9f9f9; }
 @media (max-width: 640px) {
     .modal_verify_overlay {
         padding: 12px;
-        overflow-y: auto;
+        align-items: center;
     }
     .modal_verify {
         max-width: 100%;
@@ -915,9 +961,11 @@ body { background: #f9f9f9; }
         border-radius: 20px;
     }
     .modal_verify_wide {
+        width: 100%;
         padding: 28px 16px 20px;
         max-height: calc(100vh - 24px);
-        overflow-y: auto;
+        max-height: calc(100dvh - 24px);
+        overflow: hidden;
     }
     .modal_verify_compact {
         padding: 10px 12px;
@@ -974,10 +1022,43 @@ body { background: #f9f9f9; }
         padding: 9px 6px;
     }
     .modal_pd_grid {
+        min-height: 84px;
         max-height: 190px;
     }
     .modal_pd_bar {
         padding: 10px 12px;
+    }
+}
+
+@media (max-width: 640px) and (max-height: 620px) {
+    .modal_verify_overlay {
+        align-items: flex-start;
+    }
+    .modal_verify_wide {
+        padding-top: 20px;
+        padding-bottom: 14px;
+    }
+    .modal_verify_compact {
+        margin-bottom: 10px;
+    }
+    .modal_verify_pd_title {
+        margin-bottom: 6px;
+    }
+    .modal_pd_trade_toggle {
+        margin-top: 6px;
+    }
+    .modal_pd_grid {
+        min-height: 64px;
+        max-height: 120px;
+    }
+    .modal_pd_bar {
+        gap: 6px;
+        margin-bottom: 6px;
+        padding: 8px 10px;
+    }
+    .modal_pd_skip {
+        margin-top: 0;
+        padding: 5px;
     }
 }
 

@@ -41,13 +41,13 @@ if ($is_member) {
 }
 ?>
 
-<link rel="stylesheet" href="<?php echo G5_URL; ?>/ko/css/ai-loading.css">
-<link rel="stylesheet" href="<?php echo G5_THEME_URL; ?>/css/design-tokens.css?v=20260427">
-<link rel="stylesheet" href="<?php echo G5_THEME_URL; ?>/css/common.layout.css?v=20260427">
-<link rel="stylesheet" href="<?php echo G5_THEME_URL; ?>/css/common.scrollbar.css?v=20260427">
-<link rel="stylesheet" href="<?php echo G5_THEME_URL; ?>/css/common.ai-magic-wand.css?v=20260427">
-<link rel="stylesheet" href="<?php echo G5_THEME_URL; ?>/css/header-core.css?v=20260427">
-<link rel="stylesheet" href="<?php echo G5_THEME_URL; ?>/css/header-bridge.css?v=20260427">
+<link rel="stylesheet" href="<?php echo $prix_root_asset_url('ko/css/ai-loading.css', G5_CSS_VER); ?>">
+<link rel="stylesheet" href="<?php echo $prix_theme_asset_url('css/design-tokens.css', G5_CSS_VER); ?>">
+<link rel="stylesheet" href="<?php echo $prix_theme_asset_url('css/common.layout.css', G5_CSS_VER); ?>">
+<link rel="stylesheet" href="<?php echo $prix_theme_asset_url('css/common.scrollbar.css', G5_CSS_VER); ?>">
+<link rel="stylesheet" href="<?php echo $prix_theme_asset_url('css/common.ai-magic-wand.css', G5_CSS_VER); ?>">
+<link rel="stylesheet" href="<?php echo $prix_theme_asset_url('css/header-core.css', G5_CSS_VER); ?>">
+<link rel="stylesheet" href="<?php echo $prix_theme_asset_url('css/header-bridge.css', G5_CSS_VER); ?>">
 <script>
 window.__AUTH_SESSION_GUARD_CONFIG__ = {
     isMember: <?php echo $is_member ? 'true' : 'false'; ?>,
@@ -58,7 +58,7 @@ window.__AUTH_SESSION_GUARD_CONFIG__ = {
 </script>
 <script src="<?php echo G5_URL; ?>/ko/js/auth-session-guard.js?ver=<?php echo $auth_session_guard_js_ver; ?>"></script>
 <?php if (!defined('_INDEX_')) { ?>
-<link rel="stylesheet" href="<?php echo G5_THEME_URL; ?>/css/header-search.css?v=20260427">
+<link rel="stylesheet" href="<?php echo $prix_theme_asset_url('css/header-search.css', G5_CSS_VER); ?>">
 <?php } ?>
 <!-- 상단 시작 { -->
 <div id="hd">
@@ -153,7 +153,7 @@ window.__AUTH_SESSION_GUARD_CONFIG__ = {
 
 	<div id="header" class="hh"><!-- class="hh" --><p class="gnbBg"></p><div class="inConts">
 			<div class="header-left">
-				<h1><a href="<?php echo G5_URL ?>/index.php">
+				<h1><a href="<?php echo rtrim(G5_URL, '/'); ?>/">
 					<img src="/img/logo.svg" onerror="this.onerror=null;this.src='/img/logo.png';" alt="<?php echo $config['cf_title']; ?>" class="list-header_logo_img">
 				</a></h1>
 
@@ -174,7 +174,7 @@ window.__AUTH_SESSION_GUARD_CONFIG__ = {
 		<div class="right-utill">
             <?php if (!$is_member) {  ?>
 				<a href="<?php echo G5_BBS_URL ?>/login.php?url=<?=$_SERVER['REQUEST_URI']?>" class="menu_txt">로그인</a>
-				<a href="<?php echo G5_BBS_URL ?>/register.php" class="menu_txt">회원가입</a>
+				<a href="/signup" class="menu_txt">회원가입</a>
 			<?php }else{  ?>
 				<a href="<?php echo G5_BBS_URL ?>/logout.php" class="menu_txt">로그아웃</a>
 				<?if($member['mb_level']>9) {?>
@@ -204,7 +204,7 @@ window.__AUTH_SESSION_GUARD_CONFIG__ = {
             <div class="sideMenu_user_wrap">
                 <p class="sideMenu_user_greeting"><?php echo htmlspecialchars($header_display_name); ?> 님</p>
                 <div class="sideMenu_plan_card">
-                    <a href="/ko/plan.php" class="sideMenu_plan_card_title">
+                    <a href="/plans" class="sideMenu_plan_card_title">
                         <span>크레딧 충전하기</span>
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><polyline points="9 18 15 12 9 6"/></svg>
                     </a>
@@ -220,7 +220,7 @@ window.__AUTH_SESSION_GUARD_CONFIG__ = {
 
 			<ul class="all_menu all_layout">
                 <li class="one">
-                    <a href="<?php echo G5_URL; ?>/index.php">
+                    <a href="<?php echo rtrim(G5_URL, '/'); ?>/">
                         <span class="snav-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg></span>홈
                     </a>
                 </li>
@@ -230,7 +230,7 @@ window.__AUTH_SESSION_GUARD_CONFIG__ = {
                     </a>
                 </li>
                 <li class="one">
-                    <a href="/ko/company_list_ai_demo.php?entry=matching_ai_demo">
+                    <a href="/recommendations/demo">
                         <span class="snav-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg></span>AI 추천
                     </a>
                 </li>
@@ -280,7 +280,7 @@ window.__AUTH_SESSION_GUARD_CONFIG__ = {
 			<div class="all_user">
 				<?php if (!$is_member) { ?>
 					<a href="<?php echo G5_BBS_URL ?>/login.php?url=<?php echo urlencode($_SERVER['REQUEST_URI']); ?>" class="side-auth side-login">로그인</a>
-					<a href="<?php echo G5_BBS_URL ?>/register.php" class="side-auth side-signup">회원가입</a>
+					<a href="/signup" class="side-auth side-signup">회원가입</a>
 				<?php } else { ?>
 					<a href="<?php echo G5_BBS_URL ?>/logout.php?url=<?php echo urlencode($_SERVER['REQUEST_URI']); ?>" class="side-auth side-login">로그아웃</a>
 				<?php } ?>
@@ -323,7 +323,7 @@ window.__AUTH_SESSION_GUARD_CONFIG__ = {
             <ul class="all_user all_layout">
                 <?php if (!$is_member) {  ?>
                     <li class="one"><a href="<?php echo G5_BBS_URL ?>/login.php?url=<?=$_SERVER['REQUEST_URI']?>" class="menu_txt">로그인</a></li>
-                    <li class="one"><a href="<?php echo G5_BBS_URL ?>/register.php" class="menu_txt">회원가입</a></li>
+                    <li class="one"><a href="/signup" class="menu_txt">회원가입</a></li>
                 <?php }else{  ?>
                     <li class="one"><a href="<?php echo G5_BBS_URL ?>/logout.php?url=<?=$_SERVER['REQUEST_URI']?>" class="menu_txt">로그아웃</a></li>
 
@@ -537,6 +537,28 @@ window.__AUTH_SESSION_GUARD_CONFIG__ = {
 
 	<script>
 // 모달 열기/닫기 함수들
+function syncVerifyModalPageState() {
+	var hasOpenModal = document.querySelector(".modal_verify_overlay.is_open") !== null;
+	var html = document.documentElement;
+	var body = document.body;
+	if (html) {
+		if (hasOpenModal) html.classList.add("modal_verify_open");
+		else html.classList.remove("modal_verify_open");
+	}
+	if (body) {
+		if (hasOpenModal) body.classList.add("modal_verify_open");
+		else body.classList.remove("modal_verify_open");
+	}
+}
+
+function focusVerifyModal(overlay) {
+	if (!overlay) return;
+	window.setTimeout(function() {
+		var focusTarget = overlay.querySelector(".modal_verify_close, button:not([disabled])");
+		if (focusTarget && typeof focusTarget.focus === "function") focusTarget.focus();
+	}, 0);
+}
+
 function openAiGuideModal(opts) {
 	var overlay = document.getElementById("modal_ai_guide_overlay");
 	var titleEl = document.getElementById("modal_ai_guide_title");
@@ -574,6 +596,8 @@ function openAiGuideModal(opts) {
 	};
 	overlay.classList.add("is_open");
 	overlay.setAttribute("aria-hidden", "false");
+	syncVerifyModalPageState();
+	focusVerifyModal(overlay);
 }
 
 function openCreditShortageGuide(opts) {
@@ -583,7 +607,7 @@ function openCreditShortageGuide(opts) {
 	}
 	var text = (options.text || options.message || "매칭 가능 크레딧이 부족합니다.");
 	var text2 = (options.text2 || "크레딧 충전 후 다시 거래 요청을 진행해 주세요.");
-	var secondaryHref = options.secondaryHref || "/ko/plan.php";
+	var secondaryHref = options.secondaryHref || "/plans";
 	var secondaryText = options.secondaryText || "크레딧 충전하러 가기";
 	var okText = options.okText || "닫기";
 	var okVariant = options.okVariant || "outline";
@@ -667,6 +691,8 @@ function openCreditShortageGuide(opts) {
 		if (overlay) {
 			overlay.classList.add("is_open");
 			overlay.setAttribute("aria-hidden", "false");
+			syncVerifyModalPageState();
+			focusVerifyModal(overlay);
 			loadPartnerKeywordChips(1);
 		}
 		return true;
@@ -693,6 +719,7 @@ function closeAiGuideModal() {
 	overlay.classList.remove("is_open");
 	overlay.setAttribute("aria-hidden", "true");
 	window._aiGuideModalState = null;
+	syncVerifyModalPageState();
 }
 
 	function closeVerifyModal() {
@@ -700,6 +727,7 @@ function closeAiGuideModal() {
 		if (overlay && overlay.classList.contains("is_open")) {
 			overlay.classList.remove("is_open");
 			overlay.setAttribute("aria-hidden", "true");
+			syncVerifyModalPageState();
 		}
 	}
 
@@ -794,7 +822,7 @@ function closeAiGuideModal() {
 			openGuide("추천 진입 오류", "사업자번호 보안 토큰을 생성하지 못했습니다.", "새로고침 후 다시 시도해 주세요.");
 			return false;
 		}
-		window.location.href = "/ko/company_list_ai.php?bizno=" + encodeURIComponent(biznoToken) + "&type=buyer";
+		window.location.href = "/recommendations?bizno=" + encodeURIComponent(biznoToken) + "&type=buyer";
 		return true;
 	}
 
@@ -1036,7 +1064,7 @@ function requestMainCompCheck(comnum, $form, opts) {
 			openGuide("추천 진입 오류", "사업자번호 보안 토큰을 생성하지 못했습니다.", "새로고침 후 다시 시도해 주세요.");
 			return;
 		}
-		var url = "/ko/company_list_ai.php?bizno=" + encodeURIComponent(biznoToken) +
+		var url = "/recommendations?bizno=" + encodeURIComponent(biznoToken) +
 			"&type=" + encodeURIComponent(type) +
 			"&trade_type=" + encodeURIComponent(String(tradeType)) +
 			"&partner_cd=" + encodeURIComponent(partnerCodes.join(","));
@@ -1063,6 +1091,7 @@ $(document).on("click", "#modal_verify_btn_ai", function() {
 			if (overlay) {
 				overlay.classList.remove("is_open");
 				overlay.setAttribute("aria-hidden", "true");
+				syncVerifyModalPageState();
 			}
 			moveToAiRecommendByBizno(comnum);
 			return;
@@ -1159,7 +1188,7 @@ function initComnumPlaceholderTyping() {
 	var inputs = document.querySelectorAll(selector);
 	if (!inputs.length) return;
 
-	inputs.forEach(function (input) {
+	Array.prototype.forEach.call(inputs, function (input) {
 		if (!input || input.dataset.typingInit === '1') return;
 		input.dataset.typingInit = '1';
 
@@ -1261,6 +1290,6 @@ function initComnumPlaceholderTyping() {
 
 initComnumPlaceholderTyping();
 if (document.readyState === 'loading') {
-	document.addEventListener('DOMContentLoaded', initComnumPlaceholderTyping, { once: true });
+	document.addEventListener('DOMContentLoaded', initComnumPlaceholderTyping, false);
 }
 </script>

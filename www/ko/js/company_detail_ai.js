@@ -49,7 +49,7 @@
                 '<h3 class="auth-login-modal_title" id="aiAnalysisLoginTitle">' + title + '</h3>' +
                 '<p class="auth-login-modal_desc">' + desc + '</p>' +
                 '<div class="auth-login-modal_btns">' +
-                '<a href="/bbs/register.php" class="auth-login-modal_btn auth-login-modal_btn--cancel">회원가입</a>' +
+                '<a href="/signup" class="auth-login-modal_btn auth-login-modal_btn--cancel">회원가입</a>' +
                 '<a href="' + loginUrl + '" class="auth-login-modal_btn auth-login-modal_btn--login">로그인</a>' +
                 '</div>' +
                 '</div>';
@@ -985,7 +985,7 @@
                 '<h3 class="auth-login-modal_title">로그인이 필요합니다</h3>' +
                 '<p class="auth-login-modal_desc">AI 추천점수 예측 결과는<br>로그인 후 확인하실 수 있습니다.</p>' +
                 '<div class="auth-login-modal_btns">' +
-                '<a href="/bbs/register.php" class="auth-login-modal_btn auth-login-modal_btn--cancel">회원가입</a>' +
+                '<a href="/signup" class="auth-login-modal_btn auth-login-modal_btn--cancel">회원가입</a>' +
                 '<a href="' + detailLoginReturnUrl + '" class="auth-login-modal_btn auth-login-modal_btn--login">로그인</a>' +
                 '</div>' +
                 '</div>' +
@@ -1027,7 +1027,7 @@
                 '<h3 class="auth-login-modal_title">로그인이 필요합니다</h3>' +
                 '<p class="auth-login-modal_desc">AI 추천점수 예측 결과는<br>로그인 후 확인하실 수 있습니다.</p>' +
                 '<div class="auth-login-modal_btns">' +
-                '<a href="/bbs/register.php" class="auth-login-modal_btn auth-login-modal_btn--cancel">회원가입</a>' +
+                '<a href="/signup" class="auth-login-modal_btn auth-login-modal_btn--cancel">회원가입</a>' +
                 '<a href="' + detailLoginReturnUrl + '" class="auth-login-modal_btn auth-login-modal_btn--login">로그인</a>' +
                 '</div>' +
                 '</div>' +
@@ -1434,7 +1434,7 @@
                                     okText: '닫기',
                                     okVariant: 'outline',
                                     secondaryText: '크레딧 충전하러 가기',
-                                    secondaryHref: '/ko/plan.php'
+                                    secondaryHref: '/plans'
                                 });
                             }
                             btn.disabled = false;
@@ -1566,7 +1566,7 @@
         if (vGo) {
             vGo.addEventListener('click', function () {
                 if (window.closeVerifyModal) window.closeVerifyModal();
-                var url = '/ko/company_list_ai.php?type=buyer';
+                var url = '/recommendations?type=buyer';
                 var _kedcd = _pendingKedcd || _pendingComnum;
                 if (_kedcd) url += '&comnum=' + encodeURIComponent(_kedcd);
                 if (typeof showAiLoading === 'function') { showAiLoading(url); }

@@ -12,18 +12,18 @@ $menu_cnt = count($brand_category);
 $link_0000 = "/"; // 홈
 
 // 매커멕스 소개
-$link_0101 = "/ko/greeting.php"; // 매커멕스 소개
+$link_0101 = "/about"; // 매커멕스 소개
 
 // 기업홍보관
 $link_0201 = "/bbs/board.php?bo_table=Promotion"; // 기업홍보관
 
 // 기업매칭
 $link_0301 = "/ko/matching.php"; // 기업매칭 index
-$link_0302 = "/ko/matching_list.php"; // 기업매칭 List
+$link_0302 = "/companies"; // 기업매칭 List
 $link_0303 = "/ko/matching_view.php"; // 기업매칭 View
 
 // 크레딧 요금제
-$link_0401 = "/ko/plan.php"; // 크레딧 요금제
+$link_0401 = "/plans"; // 크레딧 요금제
 
 // 이용자 지원
 $link_0501 = "/bbs/board.php?bo_table=Notice"; // 공지사항
@@ -33,7 +33,7 @@ $link_0503 = "/bbs/write.php?bo_table=Contact"; // 고객문의
 
 /* Member */
 $link_1001 = "/bbs/login.php"; // 로그인
-$link_1002 = "/bbs/register.php"; // 회원가입
+$link_1002 = "/signup"; // 회원가입
 
 /* Mypage */
 /*
@@ -43,12 +43,12 @@ if($member[mb_11]=='dev'){
 	$link_0601 = "/ko/my_company.php"; // 내 회사 정보
 }
 */
-$link_0601 = "/ko/my_company.php"; // 내 회사 정보
-$link_0602 = "/ko/my_matching.php"; // 매칭 히스토리
-$link_0603 = "/ko/my_matching.php#interested"; // 관심기업
+$link_0601 = "/account/company"; // 내 회사 정보
+$link_0602 = "/account/trades"; // 매칭 히스토리
+$link_0603 = "/account/trades#interested"; // 관심기업
 $link_0604 = G5_BBS_URL."/member_confirm.php?url=".G5_BBS_URL."/register_form.php";
 //else $link_0604 = "/ko/my_info.php"; // 회원 정보 수정
-$link_0605 = "/ko/my_plan.php"; // 결제정보
+$link_0605 = "/account/credits"; // 결제정보
 $link_0606 = "/ko/my_selected.php"; // 마이 셀렉티드
 
 /* etc */

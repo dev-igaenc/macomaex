@@ -300,7 +300,7 @@
             popupSelector: '.popup_submit',
             requestTypeSelector: '#request_type',
             receiverNameSelector: '#recv',
-            planUrl: '/ko/plan.php',
+            planUrl: '/plans',
             loginUrl: function () {
                 return '/bbs/login.php?url=' + encodeURIComponent(location.pathname + location.search);
             },

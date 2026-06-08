@@ -12,12 +12,12 @@ include_once(G5_THEME_PATH . '/head.php');
 <?php $stream_chat_vendor_js_ver = file_exists(G5_PATH . '/ko/js/vendor/stream-chat.browser.full-bundle.min.js') ? filemtime(G5_PATH . '/ko/js/vendor/stream-chat.browser.full-bundle.min.js') : G5_JS_VER; ?>
 <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" rel="stylesheet" />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;500;600&display=swap">
-<link rel="stylesheet" href="<?php echo G5_URL; ?>/ko/css/company-card.css?ver=<?php echo G5_CSS_VER; ?>">
-<link rel="stylesheet" href="<?php echo G5_URL; ?>/ko/css/section-header.css?ver=<?php echo G5_CSS_VER; ?>">
-<link rel="stylesheet" href="<?php echo G5_URL; ?>/ko/css/auth-toggle.css?ver=<?php echo G5_CSS_VER; ?>">
-<link rel="stylesheet" href="<?php echo G5_URL; ?>/ko/css/ai-loading.css?ver=<?php echo G5_CSS_VER; ?>">
-<link rel="stylesheet" href="<?php echo G5_URL; ?>/ko/css/trade_chat_modal.css?ver=<?php echo G5_CSS_VER; ?>">
-<link rel="stylesheet" href="<?php echo G5_THEME_URL; ?>/css/index.css?ver=<?php echo G5_CSS_VER; ?>&rev=20260417-1610">
+<link rel="stylesheet" href="<?php echo $prix_root_asset_url('ko/css/company-card.css', G5_CSS_VER); ?>">
+<link rel="stylesheet" href="<?php echo $prix_root_asset_url('ko/css/section-header.css', G5_CSS_VER); ?>">
+<link rel="stylesheet" href="<?php echo $prix_root_asset_url('ko/css/auth-toggle.css', G5_CSS_VER); ?>">
+<link rel="stylesheet" href="<?php echo $prix_root_asset_url('ko/css/ai-loading.css', G5_CSS_VER); ?>">
+<link rel="stylesheet" href="<?php echo $prix_root_asset_url('ko/css/trade_chat_modal.css', G5_CSS_VER); ?>">
+<link rel="stylesheet" href="<?php echo $prix_theme_asset_url('css/index.css', G5_CSS_VER); ?>">
 <?php
 
 // 점수를 0~5 범위로 보정
@@ -287,7 +287,7 @@ $stable_list = get_processed_companies('stability_score_5', 3, $unlocked_bzno_ma
         </div>
         <div class="mVisual_right">
             <div class="mVisual_quick">
-                <a href="/ko/my_matching.php#received" class="mVisual_quick_item mVisual_quick_item--request">
+                <a href="/account/trades#received" class="mVisual_quick_item mVisual_quick_item--request">
                     <div class="mVisual_quick_icon">
                         <svg viewBox="0 0 48 48">
                             <path fill="#3b82f6" d="M8 26 L40 26 L36 22 L4 22 Z"></path>
@@ -426,28 +426,28 @@ $stable_list = get_processed_companies('stability_score_5', 3, $unlocked_bzno_ma
             <div class="mCategories_primary">
         <!-- 데스크탑/태블릿: 그리드 (대분류 8개) -->
         <div class="mCategories_grid">
-            <a href="/ko/matching_list.php?cat=metal" class="mCategories_item" title="금속·소재"><div class="cat_inner"><div class="cat_icon"><svg viewBox="0 0 48 48"><use href="#cat-iso-7"/></svg></div><span class="cat_label">금속·소재</span></div></a>
-            <a href="/ko/matching_list.php?cat=chemical" class="mCategories_item" title="화학·케미컬·원료"><div class="cat_inner"><div class="cat_icon"><svg viewBox="0 0 48 48"><use href="#cat-iso-5"/></svg></div><span class="cat_label">화학·케미컬·원료</span></div></a>
-            <a href="/ko/matching_list.php?cat=electronics" class="mCategories_item" title="전자·전기·반도체"><div class="cat_inner"><div class="cat_icon"><svg viewBox="0 0 48 48"><use href="#cat-iso-10"/></svg></div><span class="cat_label">전자·전기·반도체</span></div></a>
-            <a href="/ko/matching_list.php?cat=machinery" class="mCategories_item" title="기계·설비·산업장비"><div class="cat_inner"><div class="cat_icon"><svg viewBox="0 0 48 48"><use href="#cat-iso-6"/></svg></div><span class="cat_label">기계·설비·산업장비</span></div></a>
-            <a href="/ko/matching_list.php?cat=auto" class="mCategories_item" title="자동차·모빌리티"><div class="cat_inner"><div class="cat_icon"><svg viewBox="0 0 48 48"><use href="#cat-iso-11"/></svg></div><span class="cat_label">자동차·모빌리티</span></div></a>
-            <a href="/ko/matching_list.php?cat=food" class="mCategories_item" title="식자재·식품 B2B"><div class="cat_inner"><div class="cat_icon"><svg viewBox="0 0 48 48"><use href="#cat-iso-4"/></svg></div><span class="cat_label">식자재·식품 B2B</span></div></a>
-            <a href="/ko/matching_list.php?cat=medical" class="mCategories_item" title="의료·헬스케어"><div class="cat_inner"><div class="cat_icon"><svg viewBox="0 0 48 48"><use href="#cat-iso-17"/></svg></div><span class="cat_label">의료·헬스케어</span></div></a>
-            <a href="/ko/matching_list.php?cat=packaging" class="mCategories_item" title="포장재·소모성 자재"><div class="cat_inner"><div class="cat_icon"><svg viewBox="0 0 48 48"><use href="#cat-iso-12"/></svg></div><span class="cat_label">포장재·소모성 자재</span></div></a>
+            <a href="/companies?category=metal" class="mCategories_item" title="금속·소재"><div class="cat_inner"><div class="cat_icon"><svg viewBox="0 0 48 48"><use href="#cat-iso-7"/></svg></div><span class="cat_label">금속·소재</span></div></a>
+            <a href="/companies?category=chemical" class="mCategories_item" title="화학·케미컬·원료"><div class="cat_inner"><div class="cat_icon"><svg viewBox="0 0 48 48"><use href="#cat-iso-5"/></svg></div><span class="cat_label">화학·케미컬·원료</span></div></a>
+            <a href="/companies?category=electronics" class="mCategories_item" title="전자·전기·반도체"><div class="cat_inner"><div class="cat_icon"><svg viewBox="0 0 48 48"><use href="#cat-iso-10"/></svg></div><span class="cat_label">전자·전기·반도체</span></div></a>
+            <a href="/companies?category=machinery" class="mCategories_item" title="기계·설비·산업장비"><div class="cat_inner"><div class="cat_icon"><svg viewBox="0 0 48 48"><use href="#cat-iso-6"/></svg></div><span class="cat_label">기계·설비·산업장비</span></div></a>
+            <a href="/companies?category=auto" class="mCategories_item" title="자동차·모빌리티"><div class="cat_inner"><div class="cat_icon"><svg viewBox="0 0 48 48"><use href="#cat-iso-11"/></svg></div><span class="cat_label">자동차·모빌리티</span></div></a>
+            <a href="/companies?category=food" class="mCategories_item" title="식자재·식품 B2B"><div class="cat_inner"><div class="cat_icon"><svg viewBox="0 0 48 48"><use href="#cat-iso-4"/></svg></div><span class="cat_label">식자재·식품 B2B</span></div></a>
+            <a href="/companies?category=medical" class="mCategories_item" title="의료·헬스케어"><div class="cat_inner"><div class="cat_icon"><svg viewBox="0 0 48 48"><use href="#cat-iso-17"/></svg></div><span class="cat_label">의료·헬스케어</span></div></a>
+            <a href="/companies?category=packaging" class="mCategories_item" title="포장재·소모성 자재"><div class="cat_inner"><div class="cat_icon"><svg viewBox="0 0 48 48"><use href="#cat-iso-12"/></svg></div><span class="cat_label">포장재·소모성 자재</span></div></a>
         </div>
         <!-- 모바일 전용: 대분류 8개 2줄 스와이프 캐러셀 -->
         <div class="mCategories_carousel_wrap">
             <div class="mCategories_carousel_card">
             <div class="mCategories_swiper swiper">
                 <div class="swiper-wrapper">
-                    <div class="swiper-slide"><a href="/ko/matching_list.php?cat=metal" class="mCategories_item" title="금속·소재"><div class="cat_inner"><div class="cat_icon"><svg viewBox="0 0 48 48"><use href="#cat-iso-7"/></svg></div><span class="cat_label">금속·소재</span></div></a></div>
-                    <div class="swiper-slide"><a href="/ko/matching_list.php?cat=chemical" class="mCategories_item" title="화학·케미컬·원료"><div class="cat_inner"><div class="cat_icon"><svg viewBox="0 0 48 48"><use href="#cat-iso-5"/></svg></div><span class="cat_label">화학·케미컬·원료</span></div></a></div>
-                    <div class="swiper-slide"><a href="/ko/matching_list.php?cat=electronics" class="mCategories_item" title="전자·전기·반도체"><div class="cat_inner"><div class="cat_icon"><svg viewBox="0 0 48 48"><use href="#cat-iso-10"/></svg></div><span class="cat_label">전자·전기·반도체</span></div></a></div>
-                    <div class="swiper-slide"><a href="/ko/matching_list.php?cat=machinery" class="mCategories_item" title="기계·설비·산업장비"><div class="cat_inner"><div class="cat_icon"><svg viewBox="0 0 48 48"><use href="#cat-iso-6"/></svg></div><span class="cat_label">기계·설비·산업장비</span></div></a></div>
-                    <div class="swiper-slide"><a href="/ko/matching_list.php?cat=auto" class="mCategories_item" title="자동차·모빌리티"><div class="cat_inner"><div class="cat_icon"><svg viewBox="0 0 48 48"><use href="#cat-iso-11"/></svg></div><span class="cat_label">자동차·모빌리티</span></div></a></div>
-                    <div class="swiper-slide"><a href="/ko/matching_list.php?cat=food" class="mCategories_item" title="식자재·식품 B2B"><div class="cat_inner"><div class="cat_icon"><svg viewBox="0 0 48 48"><use href="#cat-iso-4"/></svg></div><span class="cat_label">식자재·식품 B2B</span></div></a></div>
-                    <div class="swiper-slide"><a href="/ko/matching_list.php?cat=medical" class="mCategories_item" title="의료·헬스케어"><div class="cat_inner"><div class="cat_icon"><svg viewBox="0 0 48 48"><use href="#cat-iso-17"/></svg></div><span class="cat_label">의료·헬스케어</span></div></a></div>
-                    <div class="swiper-slide"><a href="/ko/matching_list.php?cat=packaging" class="mCategories_item" title="포장재·소모성 자재"><div class="cat_inner"><div class="cat_icon"><svg viewBox="0 0 48 48"><use href="#cat-iso-12"/></svg></div><span class="cat_label">포장재·소모성 자재</span></div></a></div>
+                    <div class="swiper-slide"><a href="/companies?category=metal" class="mCategories_item" title="금속·소재"><div class="cat_inner"><div class="cat_icon"><svg viewBox="0 0 48 48"><use href="#cat-iso-7"/></svg></div><span class="cat_label">금속·소재</span></div></a></div>
+                    <div class="swiper-slide"><a href="/companies?category=chemical" class="mCategories_item" title="화학·케미컬·원료"><div class="cat_inner"><div class="cat_icon"><svg viewBox="0 0 48 48"><use href="#cat-iso-5"/></svg></div><span class="cat_label">화학·케미컬·원료</span></div></a></div>
+                    <div class="swiper-slide"><a href="/companies?category=electronics" class="mCategories_item" title="전자·전기·반도체"><div class="cat_inner"><div class="cat_icon"><svg viewBox="0 0 48 48"><use href="#cat-iso-10"/></svg></div><span class="cat_label">전자·전기·반도체</span></div></a></div>
+                    <div class="swiper-slide"><a href="/companies?category=machinery" class="mCategories_item" title="기계·설비·산업장비"><div class="cat_inner"><div class="cat_icon"><svg viewBox="0 0 48 48"><use href="#cat-iso-6"/></svg></div><span class="cat_label">기계·설비·산업장비</span></div></a></div>
+                    <div class="swiper-slide"><a href="/companies?category=auto" class="mCategories_item" title="자동차·모빌리티"><div class="cat_inner"><div class="cat_icon"><svg viewBox="0 0 48 48"><use href="#cat-iso-11"/></svg></div><span class="cat_label">자동차·모빌리티</span></div></a></div>
+                    <div class="swiper-slide"><a href="/companies?category=food" class="mCategories_item" title="식자재·식품 B2B"><div class="cat_inner"><div class="cat_icon"><svg viewBox="0 0 48 48"><use href="#cat-iso-4"/></svg></div><span class="cat_label">식자재·식품 B2B</span></div></a></div>
+                    <div class="swiper-slide"><a href="/companies?category=medical" class="mCategories_item" title="의료·헬스케어"><div class="cat_inner"><div class="cat_icon"><svg viewBox="0 0 48 48"><use href="#cat-iso-17"/></svg></div><span class="cat_label">의료·헬스케어</span></div></a></div>
+                    <div class="swiper-slide"><a href="/companies?category=packaging" class="mCategories_item" title="포장재·소모성 자재"><div class="cat_inner"><div class="cat_icon"><svg viewBox="0 0 48 48"><use href="#cat-iso-12"/></svg></div><span class="cat_label">포장재·소모성 자재</span></div></a></div>
                 </div>
                 <div class="swiper-pagination mCategories_carousel_pagination"></div>
             </div>
@@ -501,7 +501,7 @@ $stable_list = get_processed_companies('stability_score_5', 3, $unlocked_bzno_ma
                 </div>
                 <div class="mHookSection_titleRow">
                     <h2 class="mHookSection_title">3년 연속 성장 기업</h2>
-                    <a href="/ko/matching_list.php?sort=grow" class="mHookSection_more">더보기</a>
+                    <a href="/companies?sort=grow" class="mHookSection_more">더보기</a>
                 </div>
                 <p class="mHookSection_subtitle">매출과 고용이 꾸준히 성장하고 있는 검증된 기업들</p>
             </div>
@@ -515,7 +515,7 @@ $stable_list = get_processed_companies('stability_score_5', 3, $unlocked_bzno_ma
                         : count($allTags);
                     $restCount = max($totalCount - count($displayTags), 0);
                     $growthTop = (int)round($com['growth_score_5']);
-                    $detailUrl = '/ko/company_detail.php?cd=' . urlencode(simple_crypt($com['KEDCD']));
+                    $detailUrl = '/companies/detail?id=' . urlencode(simple_crypt($com['KEDCD']));
                 ?>
                 <div class="mCompanyCard detail_view" kedcd="<?= $com['KEDCD'] ?>" data-kedcd="<?= $com['KEDCD'] ?>" data-detail-url="<?= htmlspecialchars($detailUrl, ENT_QUOTES) ?>">
                     <div class="mCompanyCard_content">
@@ -578,7 +578,7 @@ $stable_list = get_processed_companies('stability_score_5', 3, $unlocked_bzno_ma
                 </div>
                 <div class="mHookSection_titleRow">
                     <h2 class="mHookSection_title">안정성이 높은 기업</h2>
-                    <a href="/ko/matching_list.php?sort=stable" class="mHookSection_more">더보기</a>
+                    <a href="/companies?sort=stable" class="mHookSection_more">더보기</a>
                 </div>
                 <p class="mHookSection_subtitle">지역 접근성과 업력이 탄탄한 신뢰할 수 있는 파트너</p>
             </div>
@@ -592,7 +592,7 @@ $stable_list = get_processed_companies('stability_score_5', 3, $unlocked_bzno_ma
                         : count($allTags);
                     $restCount = max($totalCount - count($displayTags), 0);
                     $stableTop = (int)round($com['stability_score_5']);
-                    $detailUrl = '/ko/company_detail.php?cd=' . urlencode(simple_crypt($com['KEDCD']));
+                    $detailUrl = '/companies/detail?id=' . urlencode(simple_crypt($com['KEDCD']));
                 ?>
                 <div class="mCompanyCard detail_view" kedcd="<?= $com['KEDCD'] ?>" data-kedcd="<?= $com['KEDCD'] ?>" data-detail-url="<?= htmlspecialchars($detailUrl, ENT_QUOTES) ?>">
                     <div class="mCompanyCard_content">
@@ -661,8 +661,8 @@ window.__TRADE_CHAT_MODAL_CONTEXT = {
 };
 </script>
 <script src="<?php echo G5_URL; ?>/ko/js/vendor/stream-chat.browser.full-bundle.min.js?ver=<?php echo $stream_chat_vendor_js_ver; ?>"></script>
-<script src="<?php echo G5_THEME_JS_URL; ?>/index.js?ver=<?php echo G5_JS_VER; ?>&rev=20260417-1550"></script>
-<script src="<?php echo G5_URL; ?>/ko/js/trade_chat_modal.js?ver=<?php echo G5_JS_VER; ?>"></script>
+<script src="<?php echo $prix_theme_asset_url('js/index.js', G5_JS_VER); ?>"></script>
+<script src="<?php echo $prix_root_asset_url('ko/js/trade_chat_modal.js', G5_JS_VER); ?>"></script>
 
 	</div>
 <?php

@@ -15,7 +15,7 @@
         receiverNameSelector: "#recv",
         detailOpenMode: "modal",
         detailUrlAttr: "data-detail-url",
-        planUrl: "/ko/plan.php",
+        planUrl: "/plans",
         loginUrl: function () {
             return "/bbs/login.php?url=" + encodeURIComponent(location.pathname + location.search);
         },
@@ -62,7 +62,7 @@
                     okText: "닫기",
                     okVariant: "outline",
                     secondaryText: "크레딧 충전하러 가기",
-                    secondaryHref: "/ko/plan.php"
+                    secondaryHref: "/plans"
                 });
             }, 0);
             return;

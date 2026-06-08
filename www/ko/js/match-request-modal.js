@@ -167,7 +167,7 @@ function getSignupEntryUrl() {
     } else {
         returnUrl = window.location.pathname + window.location.search;
     }
-    return '/bbs/register.php?url=' + encodeURIComponent(returnUrl);
+    return '/signup?url=' + encodeURIComponent(returnUrl);
 }
 
 function openLoginRequiredModal(descriptionHtml) {
@@ -374,7 +374,7 @@ function showCreditShortageModal(message) {
                 okText: '닫기',
                 okVariant: 'outline',
                 secondaryText: '크레딧 충전하러 가기',
-                secondaryHref: '/ko/plan.php'
+                secondaryHref: '/plans'
             });
         }, 0);
         return;

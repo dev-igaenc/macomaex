@@ -542,10 +542,10 @@ function AutoHypen(companyNum){
 											okText: "닫기",
 											okVariant: "outline",
 											secondaryText: "크레딧 충전하러 가기",
-											secondaryHref: "/ko/plan.php"
+											secondaryHref: "/plans"
 										});
 									} else {
-										jAlert(msg,"알림",function(){ location.href='/ko/plan.php'; });
+										jAlert(msg,"알림",function(){ location.href='/plans'; });
 									}
 							}else{
 								jAlert(msg,"알림");
@@ -600,10 +600,10 @@ function AutoHypen(companyNum){
 										okText: "닫기",
 										okVariant: "outline",
 										secondaryText: "크레딧 충전하러 가기",
-										secondaryHref: "/ko/plan.php"
+										secondaryHref: "/plans"
 									});
 								} else {
-									jAlert(preMsg,"알림",function(){ location.href='/ko/plan.php'; });
+									jAlert(preMsg,"알림",function(){ location.href='/plans'; });
 								}
 						}else{
 							jAlert(preMsg,"알림");

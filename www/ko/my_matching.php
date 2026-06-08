@@ -390,7 +390,7 @@ if ($requesterCompanyDataJson === false) {
 // 공통 모달은 이 컨텍스트만 보고 company_detail 저장 로직을 공통으로 호출한다.
 add_javascript('<script>window.__MATCHING_PAGE_DATA = ' . $matchingPageDataJson . ';</script>', 239);
 add_javascript('<script>window.MATCH_REQUEST_CONTEXT = { defaultRequestMessage: ' . $defaultMessageJson . ', endpoint: "/ko/company_detail.php", sourcePage: "my_matching", isLoggedIn: true, loginCheckUrl: "", autoOpenOnLoad: false, requesterCompany: ' . $requesterCompanyDataJson . ', target: null };</script>', 238);
-add_javascript('<script>window.__TRADE_CHAT_MODAL_CONTEXT = { isLoggedIn: true, loginUrl: "/bbs/login.php?url=' . urlencode('/ko/my_matching.php') . '", bootstrapUrl: "/ko/trade_chat_modal_data.php", uiEventUrl: "/ko/trade_chat_ui_event.php" };</script>', 237);
+add_javascript('<script>window.__TRADE_CHAT_MODAL_CONTEXT = { isLoggedIn: true, loginUrl: "/bbs/login.php?url=' . urlencode('/account/trades') . '", bootstrapUrl: "/ko/trade_chat_modal_data.php", uiEventUrl: "/ko/trade_chat_ui_event.php" };</script>', 237);
 ?>
 
 <div id="myMatchingPage">
