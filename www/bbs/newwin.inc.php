@@ -24,7 +24,7 @@ $result = sql_query($sql, false);
 				continue;
 
 			$nw_content = preg_replace(
-				'/(?:<br\s+style=["\']clear:both;["\']>\s*)+$/i',
+				'/(?:\s*<br\b[^>]*>)+\s*$/i',
 				'',
 				trim($nw['nw_content'])
 			);

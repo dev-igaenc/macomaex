@@ -969,38 +969,8 @@ function requestMainCompCheck(comnum, $form, opts) {
 	window.currentSearchBzcCd = "";
 	window.currentSearchKedcd = "";
 
-	// 1단계: DB에서 기업명 조회하여 모달 띄우기
-	var companyLookupRequestId = Date.now() + ":" + Math.random();
-	window.currentCompanyLookupRequestId = companyLookupRequestId;
-	var companyLookupPendingTimer = setTimeout(function() {
-		if (window.currentCompanyLookupRequestId !== companyLookupRequestId) return;
-		openCompanyLookupPendingGuide();
-	}, 3000);
-
-	$.post("<?php echo G5_URL; ?>/get_company_name.php", { comnum: comnumDigits })
-		.done(function(res) {
-			clearTimeout(companyLookupPendingTimer);
-			if (window.currentCompanyLookupRequestId !== companyLookupRequestId) return;
-			try {
-				var data = JSON.parse(res);
-				if (data.result === 'success') {
-					openCompanyVerifyModalFromData(data, $form);
-					} else {
-						if ($form && $form.length) {
-							$form.find("input[name='cominfo']").val("");
-						}
-						requestMainCompCheck(comnumDigits, $form);
-				}
-			} catch(e) {
-					console.error("Lookup error:", e);
-					requestMainCompCheck(comnumDigits, $form);
-				}
-			})
-			.fail(function() {
-				clearTimeout(companyLookupPendingTimer);
-				if (window.currentCompanyLookupRequestId !== companyLookupRequestId) return;
-				requestMainCompCheck(comnumDigits, $form);
-			});
+	// test_ml2와 동일하게 KODATA(main_comp_chk) 기준 기업정보를 먼저 확인한다.
+	requestMainCompCheck(comnumDigits, $form);
 	});
 
 	$(document).on("click", "#modal_pd_trade_buy, #modal_pd_trade_sell", function() {
@@ -1017,9 +987,11 @@ function requestMainCompCheck(comnum, $form, opts) {
 		if (!item) return;
 
 		var selected = window.currentSelectedPartnerBzcItems || [];
+		var selectionKey = String(item.partner_bzc || "") + "|" + String(item.label || "");
 		var existingIdx = -1;
 		for (var i = 0; i < selected.length; i++) {
-			if (selected[i].partner_bzc === item.partner_bzc) {
+			var existingKey = String(selected[i].partner_bzc || "") + "|" + String(selected[i].label || "");
+			if (existingKey === selectionKey) {
 				existingIdx = i;
 				break;
 			}
@@ -1041,9 +1013,19 @@ function requestMainCompCheck(comnum, $form, opts) {
 		if (this.disabled) return;
 		var selected = window.currentSelectedPartnerBzcItems || [];
 		var partnerCodes = [];
+		var partnerWeights = [];
+		var partnerIndexes = {};
 		for (var i = 0; i < selected.length; i++) {
 			var partnerCode = String(selected[i].partner_cd || "");
-			if (partnerCode && partnerCodes.indexOf(partnerCode) === -1) partnerCodes.push(partnerCode);
+			var partnerBzc = String(selected[i].partner_bzc || "");
+			if (!partnerCode || !partnerBzc) continue;
+			if (partnerIndexes[partnerBzc] === undefined) {
+				partnerIndexes[partnerBzc] = partnerCodes.length;
+				partnerCodes.push(partnerCode);
+				partnerWeights.push(1);
+			} else {
+				partnerWeights[partnerIndexes[partnerBzc]] += 1;
+			}
 		}
 		if (!partnerCodes.length) return;
 
@@ -1064,7 +1046,8 @@ function requestMainCompCheck(comnum, $form, opts) {
 		var url = "/recommendations?bizno=" + encodeURIComponent(biznoToken) +
 			"&type=" + encodeURIComponent(type) +
 			"&trade_type=" + encodeURIComponent(String(tradeType)) +
-			"&partner_cd=" + encodeURIComponent(partnerCodes.join(","));
+			"&partner_cd=" + encodeURIComponent(partnerCodes.join(",")) +
+			"&partner_weight=" + encodeURIComponent(partnerWeights.join(","));
 		if (typeof showAiLoading === "function") {
 			showAiLoading(url);
 		} else {

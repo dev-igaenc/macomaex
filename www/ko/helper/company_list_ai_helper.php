@@ -524,32 +524,7 @@ if (!function_exists('company_list_ai_resolve_base_payload_by_bizno')) {
             }
         }
 
-        // 2) 최신 캐시(기간 제한 없음, 로컬 개발에서 Kodata IP 제한 시 fallback)
-        $latest_row = company_list_ai_pick_company_api_log($bizno, false, 0);
-        if (is_array($latest_row) && !empty($latest_row['c_content'])) {
-            $parsed = company_list_ai_build_base_payload_from_kodata_json($latest_row['c_content'], $latest_row['c_kedcd']);
-            if (!empty($parsed['ok'])) {
-                company_list_ai_write_event_log('bizno_resolve', 'success', array(
-                    'action' => 'resolve_base_payload',
-                    'bizno' => $bizno,
-                    'kedcd' => (string)($parsed['base_payload']['kedcd'] ?? ''),
-                    'source' => 'company_api_log_latest',
-                    'cache_scope' => 'latest',
-                    'cache_datetime' => (string)$latest_row['c_datetime'],
-                    'from_cache' => 1,
-                ));
-                return array(
-                    'ok' => true,
-                    'status' => 200,
-                    'error' => '',
-                    'source' => 'company_api_log_latest',
-                    'cached_datetime' => (string)$latest_row['c_datetime'],
-                    'base_payload' => $parsed['base_payload'],
-                );
-            }
-        }
-
-        // 3) Kodata 직접 호출 (운영/허용 IP에서만 성공 가능)
+        // 2) 한 달 이내 캐시가 없으면 KODATA를 직접 호출한다.
         if (!$allow_kodata || !function_exists('getKODATA')) {
             company_list_ai_write_event_log('bizno_resolve', 'fail', array(
                 'action' => 'resolve_base_payload',

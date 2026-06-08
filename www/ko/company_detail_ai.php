@@ -131,7 +131,6 @@ $company_detail_ai_css_ver = file_exists(__DIR__ . '/css/company_detail_ai.css')
 $match_request_modal_css_ver = file_exists(__DIR__ . '/css/match-request-modal.css') ? filemtime(__DIR__ . '/css/match-request-modal.css') : time();
 $top_nav_css_ver = file_exists(__DIR__ . '/css/top-nav.css') ? filemtime(__DIR__ . '/css/top-nav.css') : time();
 
-$mock_data_js_ver = file_exists(__DIR__ . '/js/mock-data.js') ? filemtime(__DIR__ . '/js/mock-data.js') : time();
 $badges_js_ver = file_exists(__DIR__ . '/js/badges.js') ? filemtime(__DIR__ . '/js/badges.js') : time();
 $company_detail_left_js_ver = file_exists(__DIR__ . '/js/company-detail-left.js') ? filemtime(__DIR__ . '/js/company-detail-left.js') : time();
 $company_detail_ai_js_ver = file_exists(__DIR__ . '/js/company_detail_ai.js') ? filemtime(__DIR__ . '/js/company_detail_ai.js') : time();
@@ -189,14 +188,14 @@ if (!empty($company['ENP_TYP']) && isset($enp_typt[$company['ENP_TYP']])) {
 
 $preloaded_ai_report_markdown = '';
 $preloaded_ai_once_key = '';
+$src_cd = isset($_GET['src_cd']) ? trim((string)$_GET['src_cd']) : '';
+$preload_src_kedcd = $src_cd ? preg_replace('/\D/', '', (string)simple_crypt($src_cd, 'd')) : '';
+if (strlen($preload_src_kedcd) !== 10) {
+    $preload_src_kedcd = isset($_GET['src_kedcd']) ? preg_replace('/\D/', '', (string)$_GET['src_kedcd']) : '';
+}
 if (!empty($member['mb_id'])) {
     $preload_trade_type = $detail_trade_type;
 
-    $src_cd = isset($_GET['src_cd']) ? trim((string)$_GET['src_cd']) : '';
-    $preload_src_kedcd = $src_cd ? preg_replace('/\D/', '', (string)simple_crypt($src_cd, 'd')) : '';
-    if (strlen($preload_src_kedcd) !== 10) {
-        $preload_src_kedcd = isset($_GET['src_kedcd']) ? preg_replace('/\D/', '', (string)$_GET['src_kedcd']) : '';
-    }
     if (strlen($preload_src_kedcd) !== 10) {
         $preload_src_kedcd = preg_replace('/\D/', '', (string)($member['mb_company'] ?? ''));
     }
@@ -486,7 +485,6 @@ window.PRELOADED_AI_REPORT = {
 	once_key: <?php echo json_encode($preloaded_ai_once_key, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>
 };
 </script>
-<script src="/ko/js/mock-data.js?ver=<?php echo $mock_data_js_ver; ?>"></script>
 <script src="/ko/js/badges.js?ver=<?php echo $badges_js_ver; ?>"></script>
 <script src="/ko/js/company-detail-left.js?ver=<?php echo $company_detail_left_js_ver; ?>"></script>
 <script src="/ko/js/favorite.js?ver=<?php echo $favorite_js_ver; ?>"></script>
