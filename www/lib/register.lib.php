@@ -240,11 +240,15 @@ function macomaex_aligo_find_recent_send($sender, $message)
         $registered_time = isset($item['reg_date']) ? strtotime((string) $item['reg_date']) : false;
 
         if ($item_sender === $sender && $item_message === $message && $registered_time !== false && $registered_time >= $minimum_time) {
+            $sms_count = isset($item['sms_count']) ? (int) $item['sms_count'] : 0;
+            $fail_count = isset($item['fail_count']) ? (int) $item['fail_count'] : 0;
+
             return array(
-                'confirmed' => true,
+                'confirmed' => ($sms_count > 0 && $fail_count === 0),
                 'mid' => isset($item['mid']) ? $item['mid'] : null,
                 'reserve_state' => isset($item['reserve_state']) ? $item['reserve_state'] : '',
-                'fail_count' => isset($item['fail_count']) ? $item['fail_count'] : null,
+                'sms_count' => $sms_count,
+                'fail_count' => $fail_count,
             );
         }
     }
@@ -333,7 +337,9 @@ function macomaex_aligo_send_sms($receiver, $message)
         }
     }
 
-    $ok = $confirmed || $proxy_response_missing;
+    // HTTP 500 + 빈 응답만으로 발송 성공 처리하지 않습니다.
+    // 알리고 직접 응답 또는 최근 발송내역에서 정상 접수가 확인된 경우만 성공입니다.
+    $ok = $confirmed;
 
     $debug = array(
         'http_code' => $http_code,
@@ -360,7 +366,7 @@ function macomaex_aligo_send_sms($receiver, $message)
     return array(
         'ok' => $ok,
         'confirmed' => $confirmed,
-        'message' => $confirmed ? '문자를 발송했습니다.' : ($proxy_response_missing ? '인증번호 발송 요청을 처리했습니다. 문자를 받으면 5분 안에 입력해 주세요.' : '문자 발송에 실패했습니다.'),
+        'message' => $confirmed ? '문자를 발송했습니다.' : ($proxy_response_missing ? '알리고 발송 결과를 확인하지 못했습니다. 잠시 후 다시 시도해 주세요.' : '문자 발송에 실패했습니다.'),
         'debug' => $debug,
     );
 }
