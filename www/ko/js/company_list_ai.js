@@ -42,6 +42,35 @@
         return 'companyAiListSnapshot:' + window.location.pathname + window.location.search;
     }
 
+    var recommendationSnapshotMaxAgeMs = 60 * 60 * 1000;
+
+    function removeRecommendationSnapshot(snapshotKey) {
+        try {
+            sessionStorage.removeItem(snapshotKey);
+            if ((sessionStorage.getItem('companyAiListReturnKey') || '') === snapshotKey) {
+                sessionStorage.removeItem('companyAiListReturnKey');
+            }
+        } catch (e) {}
+    }
+
+    function pruneRecommendationSnapshots() {
+        try {
+            var now = Date.now();
+            var removeKeys = [];
+            for (var i = 0; i < sessionStorage.length; i++) {
+                var key = sessionStorage.key(i) || '';
+                if (key.indexOf('companyAiListSnapshot:') !== 0) continue;
+                var raw = sessionStorage.getItem(key);
+                var snapshot = raw ? JSON.parse(raw) : null;
+                var savedAt = Number(snapshot && snapshot.saved_at);
+                if (!Number.isFinite(savedAt) || now - savedAt > recommendationSnapshotMaxAgeMs) {
+                    removeKeys.push(key);
+                }
+            }
+            removeKeys.forEach(removeRecommendationSnapshot);
+        } catch (e) {}
+    }
+
     function readRecommendationSnapshot() {
         try {
             var snapshotKey = recommendationSnapshotKey();
@@ -51,6 +80,11 @@
             if (!raw) return null;
             var snapshot = JSON.parse(raw);
             if (!snapshot || !snapshot.data || !snapshot.meta || !snapshot.stats) return null;
+            var savedAt = Number(snapshot.saved_at);
+            if (!Number.isFinite(savedAt) || Date.now() - savedAt > recommendationSnapshotMaxAgeMs) {
+                removeRecommendationSnapshot(snapshotKey);
+                return null;
+            }
             if (returnKey === snapshotKey) sessionStorage.removeItem('companyAiListReturnKey');
             return snapshot;
         } catch (e) {
@@ -60,6 +94,7 @@
 
     function saveRecommendationSnapshot(data, meta, stats) {
         try {
+            pruneRecommendationSnapshots();
             sessionStorage.setItem(recommendationSnapshotKey(), JSON.stringify({
                 data: data,
                 meta: meta,
@@ -672,7 +707,10 @@
         if (!linkEl) return;
         if (linkEl.tagName !== 'A') return;
         saveRecommendationSnapshot(aiData, aiMeta, aiStats);
-        try { sessionStorage.setItem('companyAiListReturnKey', recommendationSnapshotKey()); } catch (e) {}
+        var opensInCurrentTab = event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey && linkEl.target !== '_blank';
+        if (opensInCurrentTab) {
+            try { sessionStorage.setItem('companyAiListReturnKey', recommendationSnapshotKey()); } catch (e) {}
+        }
         saveCardSnapshot(linkEl);
     });
 
