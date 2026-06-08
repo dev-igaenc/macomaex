@@ -95,6 +95,85 @@ function llm_report_log_file_path($dateYmd = '') {
     return llm_report_log_directory_path() . '/llm_report_log_' . $dateYmd . '.php';
 }
 
+function llm_report_slack_webhook() {
+    $webhook = trim((string)llm_env('LLM_REPORT_SLACK_WEBHOOK', ''));
+    if ($webhook !== '') return $webhook;
+
+    $webhook = trim((string)llm_env('SYSTEM_ERROR_SLACK_WEBHOOK', ''));
+    if ($webhook !== '') return $webhook;
+
+    $webhook = trim((string)llm_env('TM_OVERDUE_SLACK_WEBHOOK', ''));
+    if ($webhook !== '') return $webhook;
+
+    if (defined('_system_error_slack_webhook')) {
+        $webhook = trim((string)_system_error_slack_webhook);
+        if ($webhook !== '') return $webhook;
+    }
+    if (defined('_tm_overdue_slack_webhook')) {
+        $webhook = trim((string)_tm_overdue_slack_webhook);
+        if ($webhook !== '') return $webhook;
+    }
+
+    return '';
+}
+
+function llm_report_slack_notify($sourceKedcd, $targetKedcd, $tradeType, $onceKey, $payload = array()) {
+    $payload = is_array($payload) ? $payload : array();
+    $status = strtoupper(trim((string)($payload['status'] ?? 'ERROR')));
+    $stage = trim((string)($payload['stage'] ?? ''));
+    if ($status !== 'ERROR' || $stage === 'credit') return false;
+
+    $webhook = llm_report_slack_webhook();
+    if ($webhook === '' || !function_exists('curl_init')) return false;
+
+    $sourceKedcd = preg_replace('/\D/', '', (string)$sourceKedcd);
+    $targetKedcd = preg_replace('/\D/', '', (string)$targetKedcd);
+    $tradeType = ((int)$tradeType === 2) ? 2 : 1;
+    $tradeLabel = ($tradeType === 2) ? '판매처' : '구매처';
+    $onceKey = trim((string)$onceKey);
+    $provider = trim((string)($payload['provider'] ?? ''));
+    $model = trim((string)($payload['model'] ?? ''));
+    $httpCode = isset($payload['http_code']) ? (int)$payload['http_code'] : 0;
+    $message = llm_report_compact_log_message((string)($payload['message'] ?? llm_report_log_default_message($status, $payload)), 500);
+    $creditCharged = !empty($payload['credit_charged']) ? 'Y' : 'N';
+    $uid = trim((string)($payload['uid'] ?? ($GLOBALS['member']['mb_id'] ?? '')));
+    $host = trim((string)($_SERVER['HTTP_HOST'] ?? 'CLI'));
+    $requestUri = trim((string)($_SERVER['REQUEST_URI'] ?? ''));
+
+    $text = "[AI 분석 오류 알림]"
+        . "\n- site: " . ($host !== '' ? $host : '-')
+        . "\n- user: " . ($uid !== '' ? $uid : '-')
+        . "\n- stage: " . ($stage !== '' ? $stage : '-')
+        . "\n- provider: " . ($provider !== '' ? $provider : '-')
+        . "\n- model: " . ($model !== '' ? $model : '-')
+        . "\n- http_code: " . ($httpCode > 0 ? $httpCode : '-')
+        . "\n- trade_type: " . $tradeLabel
+        . "\n- source_kedcd: " . ($sourceKedcd !== '' ? $sourceKedcd : '-')
+        . "\n- target_kedcd: " . ($targetKedcd !== '' ? $targetKedcd : '-')
+        . "\n- credit_charged: " . $creditCharged
+        . "\n- once_key: " . ($onceKey !== '' ? $onceKey : '-')
+        . "\n- uri: " . ($requestUri !== '' ? $requestUri : '-')
+        . "\n- message: " . ($message !== '' ? $message : '-');
+
+    $body = json_encode(array('text' => $text), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    if ($body === false) return false;
+
+    $ch = curl_init($webhook);
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type: application/json'));
+    curl_setopt($ch, CURLOPT_POSTFIELDS, $body);
+    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 6);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
+    $response = curl_exec($ch);
+    $http_code = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    return !($response === false || $http_code < 200 || $http_code >= 300);
+}
+
 function llm_report_log_default_message($status, $payload = array()) {
     $status = strtoupper(trim((string)$status));
     $stage = trim((string)($payload['stage'] ?? ''));
@@ -445,6 +524,7 @@ function llm_report_log_write($sourceKedcd, $targetKedcd, $tradeType, $onceKey, 
 
     $status = strtoupper(trim((string)($payload['status'] ?? 'ERROR')));
     llm_report_write_daily_file_log($sourceKedcd, $targetKedcd, $tradeType, $onceKey, $status, is_array($payload) ? $payload : array());
+    llm_report_slack_notify($sourceKedcd, $targetKedcd, $tradeType, $onceKey, is_array($payload) ? $payload : array());
 
     return $result;
 }
