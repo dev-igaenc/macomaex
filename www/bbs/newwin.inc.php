@@ -22,16 +22,22 @@ $result = sql_query($sql, false);
 			// 이미 체크 되었다면 Continue
 			if (isset($_COOKIE["hd_pops_{$nw['nw_id']}"]) && $_COOKIE["hd_pops_{$nw['nw_id']}"])
 				continue;
+
+			$nw_content = preg_replace(
+				'/(?:<br\s+style=["\']clear:both;["\']>\s*)+$/i',
+				'',
+				trim($nw['nw_content'])
+			);
 	?>
 		<div id="hd_pops_<?php echo $nw['nw_id'] ?>" class="hd_pops" style="display:none; top:<?php echo $nw['nw_top']?>px;left:<?php echo $nw['nw_left']?>px" data-device="<?=$nw['nw_device']?>">
 			<div class="hd_pops_con" style="width:<?php echo $nw['nw_width'] ?>px;"><!-- height:<?php echo $nw['nw_height'] ?>px; -->
 				<?//php echo str_replace('&nbsp;','',strip_tags($nw['nw_content']));?>
 				<?if($nw['nw_link']){?>
 					<a href="<?=$nw['nw_link']?>" <?if($nw['nw_blank']){?>target="_blank"<?}?>>
-					<?php echo conv_content($nw['nw_content'], 1); ?>
+					<?php echo conv_content($nw_content, 1); ?>
 					</a>
 				<?}else{?>
-					<?php echo conv_content($nw['nw_content'], 1); ?>
+					<?php echo conv_content($nw_content, 1); ?>
 				<?}?>
 			</div>
 			<div class="hd_pops_footer">
