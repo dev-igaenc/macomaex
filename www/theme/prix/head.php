@@ -579,12 +579,15 @@ function openAiGuideModal(opts) {
 		}
 	}
 	if (secondaryBtn) {
+		var forceHideSecondary = !!opts.hideSecondary;
 		var secondaryText = (opts.secondaryText || "").trim();
-		if (secondaryText) {
+		if (!forceHideSecondary && secondaryText) {
 			secondaryBtn.hidden = false;
+			secondaryBtn.style.display = "";
 			secondaryBtn.textContent = secondaryText;
 		} else {
 			secondaryBtn.hidden = true;
+			secondaryBtn.style.display = "none";
 			secondaryBtn.textContent = "바로가기";
 		}
 	}

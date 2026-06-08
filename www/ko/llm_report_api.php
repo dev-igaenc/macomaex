@@ -95,6 +95,85 @@ function llm_report_log_file_path($dateYmd = '') {
     return llm_report_log_directory_path() . '/llm_report_log_' . $dateYmd . '.php';
 }
 
+function llm_report_slack_webhook() {
+    $webhook = trim((string)llm_env('LLM_REPORT_SLACK_WEBHOOK', ''));
+    if ($webhook !== '') return $webhook;
+
+    $webhook = trim((string)llm_env('SYSTEM_ERROR_SLACK_WEBHOOK', ''));
+    if ($webhook !== '') return $webhook;
+
+    $webhook = trim((string)llm_env('TM_OVERDUE_SLACK_WEBHOOK', ''));
+    if ($webhook !== '') return $webhook;
+
+    if (defined('_system_error_slack_webhook')) {
+        $webhook = trim((string)_system_error_slack_webhook);
+        if ($webhook !== '') return $webhook;
+    }
+    if (defined('_tm_overdue_slack_webhook')) {
+        $webhook = trim((string)_tm_overdue_slack_webhook);
+        if ($webhook !== '') return $webhook;
+    }
+
+    return '';
+}
+
+function llm_report_slack_notify($sourceKedcd, $targetKedcd, $tradeType, $onceKey, $payload = array()) {
+    $payload = is_array($payload) ? $payload : array();
+    $status = strtoupper(trim((string)($payload['status'] ?? 'ERROR')));
+    $stage = trim((string)($payload['stage'] ?? ''));
+    if ($status !== 'ERROR' || $stage === 'credit') return false;
+
+    $webhook = llm_report_slack_webhook();
+    if ($webhook === '' || !function_exists('curl_init')) return false;
+
+    $sourceKedcd = preg_replace('/\D/', '', (string)$sourceKedcd);
+    $targetKedcd = preg_replace('/\D/', '', (string)$targetKedcd);
+    $tradeType = ((int)$tradeType === 2) ? 2 : 1;
+    $tradeLabel = ($tradeType === 2) ? '판매처' : '구매처';
+    $onceKey = trim((string)$onceKey);
+    $provider = trim((string)($payload['provider'] ?? ''));
+    $model = trim((string)($payload['model'] ?? ''));
+    $httpCode = isset($payload['http_code']) ? (int)$payload['http_code'] : 0;
+    $message = llm_report_compact_log_message((string)($payload['message'] ?? llm_report_log_default_message($status, $payload)), 500);
+    $creditCharged = !empty($payload['credit_charged']) ? 'Y' : 'N';
+    $uid = trim((string)($payload['uid'] ?? ($GLOBALS['member']['mb_id'] ?? '')));
+    $host = trim((string)($_SERVER['HTTP_HOST'] ?? 'CLI'));
+    $requestUri = trim((string)($_SERVER['REQUEST_URI'] ?? ''));
+
+    $text = "[AI 분석 오류 알림]"
+        . "\n- site: " . ($host !== '' ? $host : '-')
+        . "\n- user: " . ($uid !== '' ? $uid : '-')
+        . "\n- stage: " . ($stage !== '' ? $stage : '-')
+        . "\n- provider: " . ($provider !== '' ? $provider : '-')
+        . "\n- model: " . ($model !== '' ? $model : '-')
+        . "\n- http_code: " . ($httpCode > 0 ? $httpCode : '-')
+        . "\n- trade_type: " . $tradeLabel
+        . "\n- source_kedcd: " . ($sourceKedcd !== '' ? $sourceKedcd : '-')
+        . "\n- target_kedcd: " . ($targetKedcd !== '' ? $targetKedcd : '-')
+        . "\n- credit_charged: " . $creditCharged
+        . "\n- once_key: " . ($onceKey !== '' ? $onceKey : '-')
+        . "\n- uri: " . ($requestUri !== '' ? $requestUri : '-')
+        . "\n- message: " . ($message !== '' ? $message : '-');
+
+    $body = json_encode(array('text' => $text), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    if ($body === false) return false;
+
+    $ch = curl_init($webhook);
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type: application/json'));
+    curl_setopt($ch, CURLOPT_POSTFIELDS, $body);
+    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 6);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
+    $response = curl_exec($ch);
+    $http_code = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    return !($response === false || $http_code < 200 || $http_code >= 300);
+}
+
 function llm_report_log_default_message($status, $payload = array()) {
     $status = strtoupper(trim((string)$status));
     $stage = trim((string)($payload['stage'] ?? ''));
@@ -445,6 +524,7 @@ function llm_report_log_write($sourceKedcd, $targetKedcd, $tradeType, $onceKey, 
 
     $status = strtoupper(trim((string)($payload['status'] ?? 'ERROR')));
     llm_report_write_daily_file_log($sourceKedcd, $targetKedcd, $tradeType, $onceKey, $status, is_array($payload) ? $payload : array());
+    llm_report_slack_notify($sourceKedcd, $targetKedcd, $tradeType, $onceKey, is_array($payload) ? $payload : array());
 
     return $result;
 }
@@ -821,26 +901,22 @@ $creditOnceKey = $analysisOnceKey;
 $hasRecentUse = llm_report_has_recent_use($memberId, $analysisOnceKey, $creditWindowMonths);
 // 2개월 이내 재조회는 크레딧 재차감 없이 그대로 분석을 진행
 if (!$hasRecentUse) {
-    // 첫 조회(2개월 내 이력 없음)일 때만 1크레딧 차감
-    $creditTx = llm_report_consume_credit_once($memberId, $sourceKedcd, $targetKedcd, $tradeType, $creditCost);
-    if (empty($creditTx['success'])) {
+    // 첫 조회는 분석 시작 전에 잔액만 확인, 실제 차감은 분석 성공 직후에 진행
+    $remainCredit = credit_ledger_get_balance($memberId);
+    if ($remainCredit < $creditCost) {
         llm_report_log_write($sourceKedcd, $targetKedcd, $tradeType, $analysisOnceKey, array(
             'status' => 'ERROR',
             'stage' => 'credit',
-            'message' => (string)($creditTx['message'] ?? '크레딧 처리 중 오류가 발생했습니다.'),
-            'plan_required' => !empty($creditTx['plan_required']),
+            'message' => 'AI 분석 크레딧이 부족합니다. (필요: ' . $creditCost . ')',
+            'plan_required' => true,
         ));
-        $status = isset($creditTx['status']) ? (int)$creditTx['status'] : 400;
-        if ($status < 400 || $status > 599) $status = 400;
-        http_response_code($status);
+        http_response_code(402);
         echo json_encode(array(
-            'error' => (string)($creditTx['message'] ?? '크레딧 처리 중 오류가 발생했습니다.'),
-            'plan_required' => !empty($creditTx['plan_required']),
+            'error' => 'AI 분석 크레딧이 부족합니다. (필요: ' . $creditCost . ')',
+            'plan_required' => true,
         ), JSON_UNESCAPED_UNICODE);
         exit;
     }
-    $creditCharged = !empty($creditTx['charged']);
-    $creditOnceKey = (string)($creditTx['once_key'] ?? $analysisOnceKey);
 }
 
 $elapsedMs = 0;
@@ -899,7 +975,6 @@ if ($provider === 'gemini') {
             'credit_charged' => $creditCharged ? 1 : 0,
             'message' => 'LLM 연결 실패: ' . ($curlErr ?: '빈 응답'),
         ));
-        if ($creditCharged) llm_report_refund_credit_once($memberId, $creditOnceKey, $creditCost);
         http_response_code(502);
         echo json_encode(array('error' => 'LLM 연결 실패: ' . ($curlErr ?: '빈 응답')), JSON_UNESCAPED_UNICODE);
         exit;
@@ -918,7 +993,6 @@ if ($provider === 'gemini') {
             'credit_charged' => $creditCharged ? 1 : 0,
             'message' => 'LLM API 오류: ' . $errMsg,
         ));
-        if ($creditCharged) llm_report_refund_credit_once($memberId, $creditOnceKey, $creditCost);
         http_response_code(502);
         echo json_encode(array('error' => 'LLM API 오류 (' . $code . '): ' . $errMsg . $hint), JSON_UNESCAPED_UNICODE);
         exit;
@@ -977,7 +1051,6 @@ if ($provider === 'gemini') {
             'credit_charged' => $creditCharged ? 1 : 0,
             'message' => 'LLM 연결 실패: ' . ($curlErr ?: '빈 응답'),
         ));
-        if ($creditCharged) llm_report_refund_credit_once($memberId, $creditOnceKey, $creditCost);
         http_response_code(502);
         echo json_encode(array('error' => 'LLM 연결 실패: ' . ($curlErr ?: '빈 응답')), JSON_UNESCAPED_UNICODE);
         exit;
@@ -995,7 +1068,6 @@ if ($provider === 'gemini') {
             'credit_charged' => $creditCharged ? 1 : 0,
             'message' => 'LLM API 오류: ' . $errMsg,
         ));
-        if ($creditCharged) llm_report_refund_credit_once($memberId, $creditOnceKey, $creditCost);
         http_response_code(502);
         echo json_encode(array('error' => 'LLM API 오류 (' . $code . '): ' . $errMsg), JSON_UNESCAPED_UNICODE);
         exit;
@@ -1025,7 +1097,6 @@ if (trim($reportText) === '') {
         'credit_charged' => $creditCharged ? 1 : 0,
         'message' => '보고서 텍스트 추출 실패',
     ));
-    if ($creditCharged) llm_report_refund_credit_once($memberId, $creditOnceKey, $creditCost);
     http_response_code(502);
     echo json_encode(array('error' => '보고서 텍스트 추출 실패'), JSON_UNESCAPED_UNICODE);
     exit;
@@ -1036,6 +1107,31 @@ if ($recNmReal !== '') {
 }
 $reportText = str_replace('__', '', $reportText);
 $reportText = preg_replace('/\s*\(추론\)/', '', $reportText);
+if (!$hasRecentUse) {
+    $creditTx = llm_report_consume_credit_once($memberId, $sourceKedcd, $targetKedcd, $tradeType, $creditCost);
+    if (empty($creditTx['success'])) {
+        llm_report_log_write($sourceKedcd, $targetKedcd, $tradeType, $analysisOnceKey, array(
+            'status' => 'ERROR',
+            'stage' => 'credit',
+            'provider' => $provider,
+            'model' => $model,
+            'elapsed_ms' => $elapsedMs,
+            'credit_charged' => 0,
+            'message' => (string)($creditTx['message'] ?? '크레딧 처리 중 오류가 발생했습니다.'),
+            'plan_required' => !empty($creditTx['plan_required']),
+        ));
+        $status = isset($creditTx['status']) ? (int)$creditTx['status'] : 400;
+        if ($status < 400 || $status > 599) $status = 400;
+        http_response_code($status);
+        echo json_encode(array(
+            'error' => (string)($creditTx['message'] ?? '크레딧 처리 중 오류가 발생했습니다.'),
+            'plan_required' => !empty($creditTx['plan_required']),
+        ), JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+    $creditCharged = !empty($creditTx['charged']);
+    $creditOnceKey = (string)($creditTx['once_key'] ?? $analysisOnceKey);
+}
 // 최종 성공 결과를 company_llm_log에 남겨 상세 진입 시 즉시 재사용 가능하게 함
 llm_report_log_write($sourceKedcd, $targetKedcd, $tradeType, $analysisOnceKey, array(
     'status' => 'SUCCESS',
@@ -1058,4 +1154,5 @@ echo json_encode(array(
     'elapsed_ms' => $elapsedMs,
     'cache_hit' => false,
     'credit_charged' => $creditCharged,
+    'once_key' => $creditOnceKey,
 ), JSON_UNESCAPED_UNICODE);
