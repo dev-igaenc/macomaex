@@ -181,6 +181,12 @@
 	.clauseArea .nTable>table>thead>tr>th{background-color: #f8f8f8; border-right:none; font-weight:500; color:#222; position: relative;}
 	.clauseArea .nTable>table>thead>tr>th+th{}
 
+	.clauseArea .tm-support-notice{margin-top:1.5rem; padding:1.5rem; border:2px dashed #9d7cff; border-radius:0.8rem; color:#222; box-sizing:border-box;}
+	.clauseArea .tm-support-notice>p{margin:0 0 0.5rem; color:#111;}
+	.clauseArea .tm-support-notice>p>strong{font-weight:600;}
+	.clauseArea .tm-support-notice>ul>li{padding-left:1.2rem; position:relative; box-sizing:border-box;}
+	.clauseArea .tm-support-notice>ul>li:before{content:"\2022"; display:inline-block; position:absolute; left:0; top:0;}
+
 	.clauseArea .checkIn{padding-top:1.5rem; float:right;}
 	.clauseArea .checkIn input[type=checkbox]+label{height:2rem; padding-left:2.8rem; font-size: var(--f__size--15); line-height:1.8rem;}
 	.clauseArea .checkIn input[type=checkbox]+label:before,

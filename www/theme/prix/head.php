@@ -441,7 +441,7 @@ window.__AUTH_SESSION_GUARD_CONFIG__ = {
         </div>
 
         <div id="modal_verify_pd_wrap">
-            <p class="modal_verify_pd_title">주요 취급 품목을 선택해주세요</p>
+            <p class="modal_verify_pd_title">찾고 싶은 거래품목을 선택해주세요</p>
             <div class="modal_pd_trade_toggle">
                 <button type="button" class="modal_pd_trade_btn active" id="modal_pd_trade_buy">
                     <svg class="modal_pd_trade_icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">

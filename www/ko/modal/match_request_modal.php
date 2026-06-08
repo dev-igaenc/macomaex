@@ -111,11 +111,11 @@
 							<div class="trm-type-cost">30 크레딧 차감</div>
 						</div>
 					</div>
-					<p class="trm-type-desc">24시간 무응답 시 전문 TM이 피거래기업을 직접 컨택하여 회신을 유도합니다.</p>
+					<p class="trm-type-desc">TM 서포트는 피거래기업과의 연락 및 회신을 지원하는 서비스입니다. 실제 거래 여부 및 계약 조건은 당사자 간 협의 사항입니다.</p>
 					<ul class="trm-type-features">
 						<li>&#10003; TM 거래 중계</li>
 						<li>&#10003; 무응답 시 직접 컨택</li>
-						<li>&#10003; 체계적 진행 보장</li>
+						<li>&#10003; 거래 협의 지원</li>
 					</ul>
 				</div>
 			</div>
