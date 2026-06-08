@@ -224,7 +224,7 @@ $(function() {
                 }
                 if (resp.ok) {
                     $("#signup_phone_code_wrap").css("display", window.matchMedia("(max-width: 640px)").matches ? "block" : "flex");
-                    setSignupPhoneStatus(resp.message || "인증번호 발송 요청을 처리했습니다.", resp.confirmed ? "success" : "warning");
+                    setSignupPhoneStatus(resp.message || "인증번호 발송 요청을 처리했습니다.", "success");
                     $("#signup_phone_code").focus();
                 } else {
                     setSignupPhoneStatus(getSignupPhoneErrorMessage(resp, "인증번호 발송에 실패했습니다."), "error");
