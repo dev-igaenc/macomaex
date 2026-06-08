@@ -260,16 +260,20 @@ function macomaex_aligo_send_sms($receiver, $message)
 
     $decoded = json_decode((string) $response_body, true);
     $result_code = isset($decoded['result_code']) ? (int) $decoded['result_code'] : 0;
-    $ok = ($curl_error === '' && $http_code >= 200 && $http_code < 300 && $result_code > 0);
+    $proxy_response_missing = ($curl_error === '' && $http_code === 500 && trim((string) $response_body) === '');
+    $ok = ($curl_error === '' && $result_code > 0) || $proxy_response_missing;
 
     $debug = array(
         'http_code' => $http_code,
         'curl_error' => $curl_error,
         'result_code' => isset($decoded['result_code']) ? $decoded['result_code'] : null,
         'aligo_message' => isset($decoded['message']) ? $decoded['message'] : '',
+        'proxy_response_missing' => $proxy_response_missing,
     );
 
-    if (!$ok) {
+    if ($proxy_response_missing) {
+        error_log('[aligo_sms] send response missing after request ' . json_encode($debug, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+    } elseif (!$ok) {
         $log_debug = $debug;
         $log_debug['raw'] = $response_body;
         error_log('[aligo_sms] send failed ' . json_encode($log_debug, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
@@ -277,7 +281,7 @@ function macomaex_aligo_send_sms($receiver, $message)
 
     return array(
         'ok' => $ok,
-        'message' => $ok ? '문자를 발송했습니다.' : '문자 발송에 실패했습니다.',
+        'message' => $proxy_response_missing ? '인증번호 발송 요청을 처리했습니다.' : ($ok ? '문자를 발송했습니다.' : '문자 발송에 실패했습니다.'),
         'debug' => $debug,
     );
 }
