@@ -197,6 +197,66 @@ function macomaex_aligo_config()
     );
 }
 
+// 발송 응답이 누락된 경우 최근 발송내역에서 동일한 요청이 접수되었는지 확인합니다.
+function macomaex_aligo_find_recent_send($sender, $message)
+{
+    $config = macomaex_aligo_config();
+
+    if (!$config['ready'] || !function_exists('curl_init')) {
+        return array('confirmed' => false, 'reason' => 'lookup_unavailable');
+    }
+
+    $data = array(
+        'key' => $config['api_key'],
+        'user_id' => $config['user_id'],
+        'page' => 1,
+        'page_size' => 30,
+        'start_date' => date('Ymd'),
+        'limit_day' => 1,
+    );
+
+    $ch = curl_init('https://apis.aligo.in/list/');
+    curl_setopt_array($ch, array(
+        CURLOPT_POST => true,
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_POSTFIELDS => http_build_query($data),
+        CURLOPT_TIMEOUT => 5,
+    ));
+
+    $response_body = curl_exec($ch);
+    $curl_error = curl_error($ch);
+    $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    $decoded = json_decode((string) $response_body, true);
+    $items = isset($decoded['list']) && is_array($decoded['list']) ? $decoded['list'] : array();
+    $sender = preg_replace('/[^0-9]/', '', (string) $sender);
+    $message = trim((string) $message);
+    $minimum_time = G5_SERVER_TIME - 600;
+
+    foreach ($items as $item) {
+        $item_sender = isset($item['sender']) ? preg_replace('/[^0-9]/', '', (string) $item['sender']) : '';
+        $item_message = isset($item['msg']) ? trim((string) $item['msg']) : '';
+        $registered_time = isset($item['reg_date']) ? strtotime((string) $item['reg_date']) : false;
+
+        if ($item_sender === $sender && $item_message === $message && $registered_time !== false && $registered_time >= $minimum_time) {
+            return array(
+                'confirmed' => true,
+                'mid' => isset($item['mid']) ? $item['mid'] : null,
+                'reserve_state' => isset($item['reserve_state']) ? $item['reserve_state'] : '',
+                'fail_count' => isset($item['fail_count']) ? $item['fail_count'] : null,
+            );
+        }
+    }
+
+    return array(
+        'confirmed' => false,
+        'http_code' => $http_code,
+        'curl_error' => $curl_error,
+        'result_code' => isset($decoded['result_code']) ? $decoded['result_code'] : null,
+    );
+}
+
 // 알리고 SMS 발송 API를 호출하고 성공 여부 및 진단 정보를 반환합니다.
 function macomaex_aligo_send_sms($receiver, $message)
 {
@@ -263,6 +323,16 @@ function macomaex_aligo_send_sms($receiver, $message)
     $proxy_response_missing = ($curl_error === '' && $http_code === 500 && trim((string) $response_body) === '');
     $success_count = isset($decoded['success_cnt']) ? (int) $decoded['success_cnt'] : 0;
     $confirmed = ($curl_error === '' && $result_code > 0 && $success_count > 0);
+    $recent_send = array();
+
+    if ($proxy_response_missing) {
+        for ($attempt = 0; $attempt < 2 && !$confirmed; $attempt++) {
+            usleep(500000);
+            $recent_send = macomaex_aligo_find_recent_send($config['sender'], $message);
+            $confirmed = !empty($recent_send['confirmed']);
+        }
+    }
+
     $ok = $confirmed || $proxy_response_missing;
 
     $debug = array(
@@ -274,9 +344,12 @@ function macomaex_aligo_send_sms($receiver, $message)
         'success_cnt' => isset($decoded['success_cnt']) ? $decoded['success_cnt'] : null,
         'error_cnt' => isset($decoded['error_cnt']) ? $decoded['error_cnt'] : null,
         'proxy_response_missing' => $proxy_response_missing,
+        'recent_send' => $recent_send,
     );
 
-    if ($proxy_response_missing) {
+    if ($proxy_response_missing && $confirmed) {
+        error_log('[aligo_sms] send confirmed by recent list ' . json_encode($debug, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+    } elseif ($proxy_response_missing) {
         error_log('[aligo_sms] send response missing after request ' . json_encode($debug, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
     } elseif (!$ok) {
         $log_debug = $debug;
@@ -287,7 +360,7 @@ function macomaex_aligo_send_sms($receiver, $message)
     return array(
         'ok' => $ok,
         'confirmed' => $confirmed,
-        'message' => $proxy_response_missing ? '알리고 발송 결과를 확인하지 못했습니다. 문자가 도착하지 않으면 잠시 후 다시 시도해 주세요.' : ($confirmed ? '문자를 발송했습니다.' : '문자 발송에 실패했습니다.'),
+        'message' => $confirmed ? '문자를 발송했습니다.' : ($proxy_response_missing ? '알리고 발송 결과를 확인하지 못했습니다. 문자가 도착하지 않으면 잠시 후 다시 시도해 주세요.' : '문자 발송에 실패했습니다.'),
         'debug' => $debug,
     );
 }

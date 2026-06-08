@@ -377,7 +377,7 @@ var signupPhoneVerifiedValue = "";
 
 function setSignupPhoneStatus(message, type) {
     var $status = $("#signup_phone_status");
-    $status.removeClass("success error");
+    $status.removeClass("success warning error");
     if (type) $status.addClass(type);
     $status.text(message || "");
 }
