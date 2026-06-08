@@ -109,7 +109,7 @@
       '<div class="inConts">' +
         '<div class="header-left">' +
           '<h1>' +
-            '<a href="/index.php" style="display:inline-flex;align-items:center;text-decoration:none;" aria-label="매커멕스 홈">' +
+            '<a href="/" style="display:inline-flex;align-items:center;text-decoration:none;" aria-label="매커멕스 홈">' +
               '<img src="../img/logo.svg" alt="MACOMAEX" class="list-header_logo_img">' +
             '</a>' +
           '</h1>' +
@@ -144,7 +144,7 @@
         '<ul class="all_layout">' +
 
           // 주요 탐색
-          '<li class="one"><a href="/index.php">' +
+          '<li class="one"><a href="/">' +
             '<span class="snav-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></span>홈</a></li>' +
           '<li class="one"><a href="company_list.html?cat=all">' +
             '<span class="snav-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg></span>기업 목록</a></li>' +

@@ -153,7 +153,7 @@ window.__AUTH_SESSION_GUARD_CONFIG__ = {
 
 	<div id="header" class="hh"><!-- class="hh" --><p class="gnbBg"></p><div class="inConts">
 			<div class="header-left">
-				<h1><a href="<?php echo G5_URL ?>/index.php">
+				<h1><a href="<?php echo rtrim(G5_URL, '/'); ?>/">
 					<img src="/img/logo.svg" onerror="this.onerror=null;this.src='/img/logo.png';" alt="<?php echo $config['cf_title']; ?>" class="list-header_logo_img">
 				</a></h1>
 
@@ -220,7 +220,7 @@ window.__AUTH_SESSION_GUARD_CONFIG__ = {
 
 			<ul class="all_menu all_layout">
                 <li class="one">
-                    <a href="<?php echo G5_URL; ?>/index.php">
+                    <a href="<?php echo rtrim(G5_URL, '/'); ?>/">
                         <span class="snav-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg></span>홈
                     </a>
                 </li>
