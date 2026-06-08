@@ -24,10 +24,7 @@ $header_display_name = '';
 $header_credit = 0;
 
 if ($is_member) {
-    $header_display_name = isset($member['mb_5']) ? trim((string)$member['mb_6']) : '';
-    if ($header_display_name === '') {
-        $header_display_name = isset($member['mb_nick']) ? $member['mb_nick'] : '';
-    }
+    $header_display_name = isset($member['mb_id']) ? trim((string)$member['mb_id']) : '';
 
     if (function_exists('credit_ledger_get_balance')) {
         $header_credit = (float)credit_ledger_get_balance($member['mb_id']);
