@@ -111,7 +111,7 @@
 				'<h1 class="login-guard__title" id="tradeChatLoginGuardTitle">로그인이 필요합니다</h1>' +
 				'<p class="login-guard__desc" id="tradeChatLoginGuardDesc">채팅을 확인하시려면 로그인이 필요합니다.</p>' +
 				'<div class="login-guard__actions">' +
-				'<a class="login-guard__btn login-guard__btn--ghost" id="tradeChatLoginGuardSignupLink" href="/bbs/register.php">회원가입</a>' +
+				'<a class="login-guard__btn login-guard__btn--ghost" id="tradeChatLoginGuardSignupLink" href="/signup">회원가입</a>' +
 				'<a class="login-guard__btn login-guard__btn--primary" id="tradeChatLoginGuardLink" href="/bbs/login.php">로그인</a>' +
 				'</div>' +
 				'</div>' +
@@ -132,7 +132,7 @@
 			var guard = ensureLoginGuardModal();
 			closeModal();
 			guard.querySelector('#tradeChatLoginGuardLink').setAttribute('href', loginUrl);
-			guard.querySelector('#tradeChatLoginGuardSignupLink').setAttribute('href', '/bbs/register.php');
+			guard.querySelector('#tradeChatLoginGuardSignupLink').setAttribute('href', '/signup');
 			guard.querySelector('#tradeChatLoginGuardDesc').textContent = '채팅을 확인하시려면 로그인이 필요합니다.';
 			document.documentElement.classList.add('hide-scroll');
 			guard.classList.add('is-open');

@@ -109,7 +109,7 @@ $list_categories = [
 // ----------------------------------------------------------
 // 4. 요청 파라미터 처리
 // ----------------------------------------------------------
-$current_cat  = isset($_GET['cat'])     ? $_GET['cat']     : 'all';
+$current_cat  = isset($_GET['category']) ? $_GET['category'] : (isset($_GET['cat']) ? $_GET['cat'] : 'all');
 $current_type = (isset($_GET['type']) && $_GET['type'] === 'seller') ? 'seller' : 'buyer';
 $current_sort = isset($_GET['sort']) ? $_GET['sort'] : 'rank';
 if (!in_array($current_sort, ['rank', 'grow', 'profit', 'stable'], true)) $current_sort = 'rank';
@@ -673,7 +673,7 @@ function matching_list_render_cards_grid_html($cards) {
             : count($allTags);
         $restCount = max($totalCount - count($displayTags), 0);
         ?>
-        <a href="/ko/company_detail.php?cd=<?php echo urlencode(simple_crypt($c['kedcd'] ?? '')); ?>"
+        <a href="/companies/detail?id=<?php echo urlencode(simple_crypt($c['kedcd'] ?? '')); ?>"
         class="mCompanyCard detail_view"
         data-type="<?php echo htmlspecialchars($c['type'] ?? 'buyer'); ?>"
         data-rank="<?php echo (int)$idx; ?>"
@@ -1069,9 +1069,9 @@ $sidebar_icon_map = [
     'packaging' => 'cat-iso-12',
 ];
 
-$ai_recommend_href = '/ko/company_list_ai_demo.php?entry=matching_ai_demo';
+$ai_recommend_href = '/recommendations/demo';
 if ($has_comnum) {
-    $ai_recommend_href = '/ko/company_list_ai.php?comnum=' . urlencode($input_comnum);
+    $ai_recommend_href = '/recommendations?comnum=' . urlencode($input_comnum);
 }
 ?>
 
@@ -1130,7 +1130,7 @@ if ($has_comnum) {
                                     <use href="#<?php echo htmlspecialchars($group_icon); ?>"></use>
                                 </svg>
                             </span>
-                            <a href="?<?php echo $mq_cat; ?>cat=<?php echo urlencode($lg['slug']); ?>"
+                            <a href="/companies?<?php echo $mq_cat; ?>category=<?php echo urlencode($lg['slug']); ?>"
                                class="list-sidebar_group_name list-sidebar_group_title_link">
                                 <?php echo htmlspecialchars($lg['label']); ?>
                             </a>
@@ -1146,7 +1146,7 @@ if ($has_comnum) {
                          id="sidebar-body-<?php echo htmlspecialchars($lg['slug']); ?>">
                         <div class="list-sidebar_sub_wrap">
                             <?php foreach ($lg['sub'] as $sub): ?>
-                            <a href="?<?php echo $mq_cat; ?>cat=<?php echo urlencode($sub['slug']); ?>"
+                            <a href="/companies?<?php echo $mq_cat; ?>category=<?php echo urlencode($sub['slug']); ?>"
                                class="list-sidebar_sub <?php echo ($current_cat === $sub['slug']) ? 'on' : ''; ?>">
                                 <?php echo htmlspecialchars($sub['label']); ?>
                             </a>

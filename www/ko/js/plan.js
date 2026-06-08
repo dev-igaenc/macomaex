@@ -85,7 +85,7 @@
                 + '    <h3 class="login-guard__title" id="matchingListLoginModalTitle">로그인이 필요합니다</h3>'
                 + '    <p class="login-guard__desc" id="matchingListLoginModalDesc"></p>'
                 + '    <div class="login-guard__actions">'
-                + '      <a href="/bbs/register.php" class="login-guard__btn login-guard__btn--ghost">회원가입</a>'
+                + '      <a href="/signup" class="login-guard__btn login-guard__btn--ghost">회원가입</a>'
                 + '      <a href="' + getLoginReturnUrl() + '" class="login-guard__btn login-guard__btn--primary">로그인</a>'
                 + '    </div>'
                 + '  </div>'
@@ -119,8 +119,8 @@
 
         var isMember = String($root.data('isMember')) === '1';
         var getSetUrl = $root.data('getSetUrl') || '../get_set.php';
-        var loginUrl = $root.data('loginUrl') || '/bbs/login.php?url=/ko/plan.php';
-        var myPlanUrl = $root.data('myPlanUrl') || '/ko/my_plan.php';
+        var loginUrl = $root.data('loginUrl') || '/bbs/login.php?url=/plans';
+        var myPlanUrl = $root.data('myPlanUrl') || '/account/credits';
         var creditPayUrl = $root.data('creditPayUrl') || '/ko/credit_pay.php';
         var creditMobilePayUrl = $root.data('creditMobilePayUrl') || '/ko/credit_pay_mobile.php';
         var membershipCreditPayToken = String($root.data('membershipCreditPayToken') || '');

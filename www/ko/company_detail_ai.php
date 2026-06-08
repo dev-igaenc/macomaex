@@ -90,7 +90,7 @@ if (!preg_match('/^\d{10}$/', $kedcd)) {
 
 // 잘못된 식별자로 직접 진입한 경우 목록으로 되돌린다.
 if (strlen($kedcd) !== 10 || preg_match('/^0+$/', $kedcd)) {
-    alert('잘못된 접근입니다. AI 추천 목록에서 다시 선택해 주세요.', '/ko/company_list_ai.php');
+    alert('잘못된 접근입니다. AI 추천 목록에서 다시 선택해 주세요.', '/recommendations');
 }
 // 상세 진입 trade_type(1=구매처, 2=판매처)에 따라 상단 라벨을 분기한다.
 $detail_trade_type = isset($_GET['trade_type']) ? (int)$_GET['trade_type'] : 1;
@@ -101,7 +101,7 @@ $company = array();
 // 상세 기본 정보 조회
 $company = sql_fetch("\n    SELECT KEDCD, ENP_NM, BZNO, keywords_json, keyword_count, BZC_CD, ENP_TYP, LABORER_SUM, ESTB_DT, LOC_ADDRA, LOC_ADDRB, HPAGE_URL\n    FROM company\n    WHERE KEDCD = '" . sql_escape_string($kedcd) . "'\n    LIMIT 1\n");
 if (empty($company['KEDCD'])) {
-    alert('기업 정보를 찾을 수 없습니다.', '/ko/company_list_ai.php');
+    alert('기업 정보를 찾을 수 없습니다.', '/recommendations');
 }
 
 $is_favorite_company = false;
@@ -297,8 +297,13 @@ $current_request_uri = isset($_SERVER['REQUEST_URI']) ? (string)$_SERVER['REQUES
 $detail_login_url = '/bbs/login.php?url=' . urlencode($current_request_uri);
 
 $trade_request_login_params = $_GET;
+$trade_request_detail_id = isset($trade_request_login_params['id'])
+    ? trim((string)$trade_request_login_params['id'])
+    : (isset($trade_request_login_params['cd']) ? trim((string)$trade_request_login_params['cd']) : '');
+unset($trade_request_login_params['id'], $trade_request_login_params['cd']);
 $trade_request_login_params['trade_request_login'] = '1';
-$trade_request_return_url = '/ko/company_detail_ai.php?' . http_build_query($trade_request_login_params);
+$trade_request_return_query = array_merge(array('id' => $trade_request_detail_id), $trade_request_login_params);
+$trade_request_return_url = '/recommendations/detail?' . http_build_query($trade_request_return_query);
 $trade_request_login_url = '/bbs/login.php?url=' . urlencode($trade_request_return_url);
 
 $requester_company_data = !empty($member['mb_id'])

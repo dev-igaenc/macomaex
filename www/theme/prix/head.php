@@ -174,7 +174,7 @@ window.__AUTH_SESSION_GUARD_CONFIG__ = {
 		<div class="right-utill">
             <?php if (!$is_member) {  ?>
 				<a href="<?php echo G5_BBS_URL ?>/login.php?url=<?=$_SERVER['REQUEST_URI']?>" class="menu_txt">로그인</a>
-				<a href="<?php echo G5_BBS_URL ?>/register.php" class="menu_txt">회원가입</a>
+				<a href="/signup" class="menu_txt">회원가입</a>
 			<?php }else{  ?>
 				<a href="<?php echo G5_BBS_URL ?>/logout.php" class="menu_txt">로그아웃</a>
 				<?if($member['mb_level']>9) {?>
@@ -204,7 +204,7 @@ window.__AUTH_SESSION_GUARD_CONFIG__ = {
             <div class="sideMenu_user_wrap">
                 <p class="sideMenu_user_greeting"><?php echo htmlspecialchars($header_display_name); ?> 님</p>
                 <div class="sideMenu_plan_card">
-                    <a href="/ko/plan.php" class="sideMenu_plan_card_title">
+                    <a href="/plans" class="sideMenu_plan_card_title">
                         <span>크레딧 충전하기</span>
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><polyline points="9 18 15 12 9 6"/></svg>
                     </a>
@@ -230,7 +230,7 @@ window.__AUTH_SESSION_GUARD_CONFIG__ = {
                     </a>
                 </li>
                 <li class="one">
-                    <a href="/ko/company_list_ai_demo.php?entry=matching_ai_demo">
+                    <a href="/recommendations/demo">
                         <span class="snav-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg></span>AI 추천
                     </a>
                 </li>
@@ -280,7 +280,7 @@ window.__AUTH_SESSION_GUARD_CONFIG__ = {
 			<div class="all_user">
 				<?php if (!$is_member) { ?>
 					<a href="<?php echo G5_BBS_URL ?>/login.php?url=<?php echo urlencode($_SERVER['REQUEST_URI']); ?>" class="side-auth side-login">로그인</a>
-					<a href="<?php echo G5_BBS_URL ?>/register.php" class="side-auth side-signup">회원가입</a>
+					<a href="/signup" class="side-auth side-signup">회원가입</a>
 				<?php } else { ?>
 					<a href="<?php echo G5_BBS_URL ?>/logout.php?url=<?php echo urlencode($_SERVER['REQUEST_URI']); ?>" class="side-auth side-login">로그아웃</a>
 				<?php } ?>
@@ -323,7 +323,7 @@ window.__AUTH_SESSION_GUARD_CONFIG__ = {
             <ul class="all_user all_layout">
                 <?php if (!$is_member) {  ?>
                     <li class="one"><a href="<?php echo G5_BBS_URL ?>/login.php?url=<?=$_SERVER['REQUEST_URI']?>" class="menu_txt">로그인</a></li>
-                    <li class="one"><a href="<?php echo G5_BBS_URL ?>/register.php" class="menu_txt">회원가입</a></li>
+                    <li class="one"><a href="/signup" class="menu_txt">회원가입</a></li>
                 <?php }else{  ?>
                     <li class="one"><a href="<?php echo G5_BBS_URL ?>/logout.php?url=<?=$_SERVER['REQUEST_URI']?>" class="menu_txt">로그아웃</a></li>
 
@@ -607,7 +607,7 @@ function openCreditShortageGuide(opts) {
 	}
 	var text = (options.text || options.message || "매칭 가능 크레딧이 부족합니다.");
 	var text2 = (options.text2 || "크레딧 충전 후 다시 거래 요청을 진행해 주세요.");
-	var secondaryHref = options.secondaryHref || "/ko/plan.php";
+	var secondaryHref = options.secondaryHref || "/plans";
 	var secondaryText = options.secondaryText || "크레딧 충전하러 가기";
 	var okText = options.okText || "닫기";
 	var okVariant = options.okVariant || "outline";
@@ -822,7 +822,7 @@ function closeAiGuideModal() {
 			openGuide("추천 진입 오류", "사업자번호 보안 토큰을 생성하지 못했습니다.", "새로고침 후 다시 시도해 주세요.");
 			return false;
 		}
-		window.location.href = "/ko/company_list_ai.php?bizno=" + encodeURIComponent(biznoToken) + "&type=buyer";
+		window.location.href = "/recommendations?bizno=" + encodeURIComponent(biznoToken) + "&type=buyer";
 		return true;
 	}
 
@@ -1064,7 +1064,7 @@ function requestMainCompCheck(comnum, $form, opts) {
 			openGuide("추천 진입 오류", "사업자번호 보안 토큰을 생성하지 못했습니다.", "새로고침 후 다시 시도해 주세요.");
 			return;
 		}
-		var url = "/ko/company_list_ai.php?bizno=" + encodeURIComponent(biznoToken) +
+		var url = "/recommendations?bizno=" + encodeURIComponent(biznoToken) +
 			"&type=" + encodeURIComponent(type) +
 			"&trade_type=" + encodeURIComponent(String(tradeType)) +
 			"&partner_cd=" + encodeURIComponent(partnerCodes.join(","));

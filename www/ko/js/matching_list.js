@@ -66,7 +66,7 @@
                 + '    <h3 class="login-guard__title" id="matchingListLoginModalTitle">로그인이 필요합니다</h3>'
                 + '    <p class="login-guard__desc" id="matchingListLoginModalDesc"></p>'
                 + '    <div class="login-guard__actions">'
-                + '      <a href="/bbs/register.php" class="login-guard__btn login-guard__btn--ghost">회원가입</a>'
+                + '      <a href="/signup" class="login-guard__btn login-guard__btn--ghost">회원가입</a>'
                 + '      <a href="' + getLoginReturnUrl() + '" class="login-guard__btn login-guard__btn--primary">로그인</a>'
                 + '    </div>'
                 + '  </div>'
@@ -97,12 +97,13 @@
     // 카테고리 이동 시 정렬은 항상 랭킹순으로 고정
     function buildCategoryHref(catSlug) {
         var params = new URLSearchParams(window.location.search);
-        params.set('cat', catSlug);
+        params.set('category', catSlug);
+        params.delete('cat');
         params.delete('offset');
         params.set('page_size', pageSize);
         if (!params.get('type')) params.set('type', currentType);
         params.set('sort', 'rank');
-        return '?' + params.toString();
+        return '/companies?' + params.toString();
     }
 
     // 사이드바/모바일 카테고리 링크의 type/sort 파라미터 동기화
@@ -130,8 +131,12 @@
             url.searchParams.set('sort', 'rank');
             url.searchParams.set('page_size', pageSize);
             url.searchParams.delete('offset');
+            if (url.searchParams.has('cat') && !url.searchParams.has('category')) {
+                url.searchParams.set('category', url.searchParams.get('cat'));
+            }
+            url.searchParams.delete('cat');
 
-            a.setAttribute('href', url.pathname + '?' + url.searchParams.toString());
+            a.setAttribute('href', '/companies?' + url.searchParams.toString());
         });
     }
 
@@ -798,7 +803,7 @@
                 popupSelector: '.popup_submit',
                 requestTypeSelector: '#request_type',
                 receiverNameSelector: '#recv',
-                planUrl: '/ko/plan.php',
+                planUrl: '/plans',
                 loginUrl: function () {
                     return '/bbs/login.php?url=' + encodeURIComponent(window.location.pathname + window.location.search);
                 },
