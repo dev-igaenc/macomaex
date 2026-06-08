@@ -261,13 +261,18 @@ function macomaex_aligo_send_sms($receiver, $message)
     $decoded = json_decode((string) $response_body, true);
     $result_code = isset($decoded['result_code']) ? (int) $decoded['result_code'] : 0;
     $proxy_response_missing = ($curl_error === '' && $http_code === 500 && trim((string) $response_body) === '');
-    $ok = ($curl_error === '' && $result_code > 0) || $proxy_response_missing;
+    $success_count = isset($decoded['success_cnt']) ? (int) $decoded['success_cnt'] : 0;
+    $confirmed = ($curl_error === '' && $result_code > 0 && $success_count > 0);
+    $ok = $confirmed || $proxy_response_missing;
 
     $debug = array(
         'http_code' => $http_code,
         'curl_error' => $curl_error,
         'result_code' => isset($decoded['result_code']) ? $decoded['result_code'] : null,
         'aligo_message' => isset($decoded['message']) ? $decoded['message'] : '',
+        'msg_id' => isset($decoded['msg_id']) ? $decoded['msg_id'] : null,
+        'success_cnt' => isset($decoded['success_cnt']) ? $decoded['success_cnt'] : null,
+        'error_cnt' => isset($decoded['error_cnt']) ? $decoded['error_cnt'] : null,
         'proxy_response_missing' => $proxy_response_missing,
     );
 
@@ -281,7 +286,8 @@ function macomaex_aligo_send_sms($receiver, $message)
 
     return array(
         'ok' => $ok,
-        'message' => $proxy_response_missing ? '인증번호 발송 요청을 처리했습니다.' : ($ok ? '문자를 발송했습니다.' : '문자 발송에 실패했습니다.'),
+        'confirmed' => $confirmed,
+        'message' => $proxy_response_missing ? '알리고 발송 결과를 확인하지 못했습니다. 문자가 도착하지 않으면 잠시 후 다시 시도해 주세요.' : ($confirmed ? '문자를 발송했습니다.' : '문자 발송에 실패했습니다.'),
         'debug' => $debug,
     );
 }
@@ -409,7 +415,8 @@ function macomaex_signup_phone_otp_send($phone)
 
     return array(
         'ok' => true,
-        'message' => '인증번호를 발송했습니다. 5분 안에 입력해 주세요.',
+        'confirmed' => !empty($result['confirmed']),
+        'message' => !empty($result['confirmed']) ? '인증번호를 발송했습니다. 5분 안에 입력해 주세요.' : $result['message'],
         'debug' => isset($result['debug']) ? $result['debug'] : array(),
     );
 }

@@ -45,6 +45,7 @@ if ($social_email) {
     .social-join-error{margin:8px 0 0;color:#d92d20;font-size:13px;line-height:1.5}
     .social-join-status{margin:8px 0 0;color:#667085;font-size:13px;line-height:1.5}
     .social-join-status.success{color:#2563eb}
+    .social-join-status.warning{color:#b45309}
     .social-join-status.error{color:#d92d20}
     .social-join-actions{display:flex;gap:10px;margin-top:12px}
     .social-join-submit,.social-join-cancel{display:flex;align-items:center;justify-content:center;flex:1;width:100%;height:60px;border:0;border-radius:5px;color:#fff;font-size:17px;line-height:20px;font-weight:550;text-decoration:none;box-sizing:border-box}
@@ -223,7 +224,7 @@ $(function() {
                 }
                 if (resp.ok) {
                     $("#signup_phone_code_wrap").css("display", window.matchMedia("(max-width: 640px)").matches ? "block" : "flex");
-                    setSignupPhoneStatus(resp.message || "인증번호를 발송했습니다.", "success");
+                    setSignupPhoneStatus(resp.message || "인증번호 발송 요청을 처리했습니다.", resp.confirmed ? "success" : "warning");
                     $("#signup_phone_code").focus();
                 } else {
                     setSignupPhoneStatus(getSignupPhoneErrorMessage(resp, "인증번호 발송에 실패했습니다."), "error");
