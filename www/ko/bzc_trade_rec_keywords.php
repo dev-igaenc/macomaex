@@ -117,6 +117,7 @@ if (!bzc_trade_rec_rows_have_keywords($rows) && strlen($bzc_cd) > 4) {
 }
 
 $items = array();
+$seen_items = array();
 foreach ($rows as $row) {
     $partner_bzc = strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', (string)($row['c_partner_bzc'] ?? '')), 0, 10));
     if ($partner_bzc === '') continue;
@@ -125,6 +126,10 @@ foreach ($rows as $row) {
     if (empty($keywords)) continue;
 
     foreach ($keywords as $keyword) {
+        $item_key = $partner_bzc . '|' . $keyword;
+        if (isset($seen_items[$item_key])) continue;
+        $seen_items[$item_key] = true;
+
         $items[] = array(
             'source_bzc' => strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', (string)($row['c_source_bzc'] ?? '')), 0, 10)),
             'partner_bzc' => $partner_bzc,
