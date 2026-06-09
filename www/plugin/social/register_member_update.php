@@ -2,6 +2,7 @@
 include_once('./_common.php');
 include_once(G5_LIB_PATH.'/register.lib.php');
 include_once(G5_LIB_PATH.'/mailer.lib.php');
+include_once(G5_PATH.'/ko/helper/alimtalk_log_helper.php');
 
 if (!function_exists('macomaex_social_register_fail')) {
     function macomaex_social_register_fail($message)
@@ -281,6 +282,11 @@ if($result) {
 
     // 사용자 코드 실행
     @include_once ($member_skin_path.'/register_form_update.tail.skin.php');
+
+    // 네이버/카카오/구글 공통 소셜 가입 완료 시 최종 저장된 휴대폰 번호로 알림톡을 발송합니다.
+    if (function_exists('macomaex_send_signup_alimtalk')) {
+        macomaex_send_signup_alimtalk($mb['mb_id'], isset($mb['mb_8']) ? $mb['mb_8'] : $mb_8);
+    }
 
     goto_url(G5_HTTP_BBS_URL.'/register_result.php');
 

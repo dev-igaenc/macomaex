@@ -70,22 +70,15 @@
     }
     var detailLoginReturnUrl = '/bbs/login.php?url=' + encodeURIComponent(window.location.pathname + window.location.search);
 
-    // BFCache(뒤로가기 복원)로 비로그인 렌더가 남는 경우 방지
-    window.addEventListener('pageshow', function (event) {
-        if (event && event.persisted) {
-            window.location.reload();
-        }
-    });
-
     /* AI 기업 상세 스크립트 */
     (function () {
         'use strict';
 
         /* 초기 데이터 */
-        var COMPANIES = window.MOCK_COMPANIES;
+        var COMPANIES = {};
         var seedCompany = (window.MATCH_REQUEST_CONTEXT && window.MATCH_REQUEST_CONTEXT.seedCompany) || null;
         if (seedCompany && seedCompany.id) {
-            COMPANIES[seedCompany.id] = Object.assign({}, COMPANIES[seedCompany.id] || {}, seedCompany);
+            COMPANIES[seedCompany.id] = Object.assign({}, seedCompany);
         }
 
         /* 분석 템플릿 데이터 */
@@ -93,8 +86,8 @@
         /* URL 파라미터 */
         var params = new URLSearchParams(window.location.search);
         var contextKedcd = String((window.MATCH_REQUEST_CONTEXT && window.MATCH_REQUEST_CONTEXT.target && window.MATCH_REQUEST_CONTEXT.target.kedcd) || '').replace(/\D/g, '');
-        var demoId = params.get('id') || params.get('kedcd') || contextKedcd || '';
-        demoId = String(demoId).replace(/\D/g, '');
+        var queryKedcd = String(params.get('kedcd') || '').replace(/\D/g, '');
+        var demoId = /^\d{10}$/.test(queryKedcd) ? queryKedcd : contextKedcd;
         var pageTradeType = parseInt(params.get('trade_type') || '1', 10);
         if (pageTradeType !== 2) pageTradeType = 1;
         var srcKedcdParam = String(params.get('src_kedcd') || '').replace(/\D/g, '');
@@ -300,8 +293,8 @@
         }
 
         if (!demoId || !COMPANIES[demoId]) {
-            if (!/^\d{10}$/.test(demoId)) demoId = 'beauty-factory';
-            else COMPANIES[demoId] = Object.assign({}, seedCompany || {}, { id: demoId });
+            if (!/^\d{10}$/.test(demoId)) return;
+            COMPANIES[demoId] = Object.assign({}, seedCompany || {}, { id: demoId });
         }
         var co = COMPANIES[demoId];
 

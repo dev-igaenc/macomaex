@@ -50,6 +50,7 @@ if (!defined('_GNUBOARD_')) exit; // 개별 페이지 접근 불가
     #join_single .phone_cert_code{display:none; margin-top:0.8rem;}
     #join_single .phone_cert_status{margin-top:0.8rem; color:#666; font-size:1.4rem; line-height:1.5;}
     #join_single .phone_cert_status.success{color:#2563eb;}
+    #join_single .phone_cert_status.warning{color:#b45309;}
     #join_single .phone_cert_status.error{color:#d92d20;}
     @media (max-width: 640px){
         #join_single .cert_input_group{display:block;}
@@ -376,7 +377,7 @@ var signupPhoneVerifiedValue = "";
 
 function setSignupPhoneStatus(message, type) {
     var $status = $("#signup_phone_status");
-    $status.removeClass("success error");
+    $status.removeClass("success warning error");
     if (type) $status.addClass(type);
     $status.text(message || "");
 }
@@ -462,7 +463,7 @@ $("#signup_phone_send").on("click", function(){
             }
             if (resp.ok) {
                 $("#signup_phone_code_wrap").css("display", window.matchMedia("(max-width: 640px)").matches ? "block" : "flex");
-                setSignupPhoneStatus(resp.message || "인증번호를 발송했습니다.", "success");
+                setSignupPhoneStatus(resp.message || "인증번호 발송 요청을 처리했습니다.", "success");
                 $("#signup_phone_code").focus();
             } else {
                 setSignupPhoneStatus(getSignupPhoneErrorMessage(resp, "인증번호 발송에 실패했습니다."), "error");

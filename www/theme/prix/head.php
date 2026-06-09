@@ -24,10 +24,7 @@ $header_display_name = '';
 $header_credit = 0;
 
 if ($is_member) {
-    $header_display_name = isset($member['mb_5']) ? trim((string)$member['mb_6']) : '';
-    if ($header_display_name === '') {
-        $header_display_name = isset($member['mb_nick']) ? $member['mb_nick'] : '';
-    }
+    $header_display_name = isset($member['mb_id']) ? trim((string)$member['mb_id']) : '';
 
     if (function_exists('credit_ledger_get_balance')) {
         $header_credit = (float)credit_ledger_get_balance($member['mb_id']);
@@ -444,7 +441,7 @@ window.__AUTH_SESSION_GUARD_CONFIG__ = {
         </div>
 
         <div id="modal_verify_pd_wrap">
-            <p class="modal_verify_pd_title">주요 취급 품목을 선택해주세요</p>
+            <p class="modal_verify_pd_title">찾고 싶은 거래품목을 선택해주세요</p>
             <div class="modal_pd_trade_toggle">
                 <button type="button" class="modal_pd_trade_btn active" id="modal_pd_trade_buy">
                     <svg class="modal_pd_trade_icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -975,38 +972,8 @@ function requestMainCompCheck(comnum, $form, opts) {
 	window.currentSearchBzcCd = "";
 	window.currentSearchKedcd = "";
 
-	// 1단계: DB에서 기업명 조회하여 모달 띄우기
-	var companyLookupRequestId = Date.now() + ":" + Math.random();
-	window.currentCompanyLookupRequestId = companyLookupRequestId;
-	var companyLookupPendingTimer = setTimeout(function() {
-		if (window.currentCompanyLookupRequestId !== companyLookupRequestId) return;
-		openCompanyLookupPendingGuide();
-	}, 3000);
-
-	$.post("<?php echo G5_URL; ?>/get_company_name.php", { comnum: comnumDigits })
-		.done(function(res) {
-			clearTimeout(companyLookupPendingTimer);
-			if (window.currentCompanyLookupRequestId !== companyLookupRequestId) return;
-			try {
-				var data = JSON.parse(res);
-				if (data.result === 'success') {
-					openCompanyVerifyModalFromData(data, $form);
-					} else {
-						if ($form && $form.length) {
-							$form.find("input[name='cominfo']").val("");
-						}
-						requestMainCompCheck(comnumDigits, $form);
-				}
-			} catch(e) {
-					console.error("Lookup error:", e);
-					requestMainCompCheck(comnumDigits, $form);
-				}
-			})
-			.fail(function() {
-				clearTimeout(companyLookupPendingTimer);
-				if (window.currentCompanyLookupRequestId !== companyLookupRequestId) return;
-				requestMainCompCheck(comnumDigits, $form);
-			});
+	// test_ml2와 동일하게 KODATA(main_comp_chk) 기준 기업정보를 먼저 확인한다.
+	requestMainCompCheck(comnumDigits, $form);
 	});
 
 	$(document).on("click", "#modal_pd_trade_buy, #modal_pd_trade_sell", function() {
@@ -1023,9 +990,11 @@ function requestMainCompCheck(comnum, $form, opts) {
 		if (!item) return;
 
 		var selected = window.currentSelectedPartnerBzcItems || [];
+		var selectionKey = String(item.partner_bzc || "") + "|" + String(item.label || "");
 		var existingIdx = -1;
 		for (var i = 0; i < selected.length; i++) {
-			if (selected[i].partner_bzc === item.partner_bzc) {
+			var existingKey = String(selected[i].partner_bzc || "") + "|" + String(selected[i].label || "");
+			if (existingKey === selectionKey) {
 				existingIdx = i;
 				break;
 			}
@@ -1047,9 +1016,19 @@ function requestMainCompCheck(comnum, $form, opts) {
 		if (this.disabled) return;
 		var selected = window.currentSelectedPartnerBzcItems || [];
 		var partnerCodes = [];
+		var partnerWeights = [];
+		var partnerIndexes = {};
 		for (var i = 0; i < selected.length; i++) {
 			var partnerCode = String(selected[i].partner_cd || "");
-			if (partnerCode && partnerCodes.indexOf(partnerCode) === -1) partnerCodes.push(partnerCode);
+			var partnerBzc = String(selected[i].partner_bzc || "");
+			if (!partnerCode || !partnerBzc) continue;
+			if (partnerIndexes[partnerBzc] === undefined) {
+				partnerIndexes[partnerBzc] = partnerCodes.length;
+				partnerCodes.push(partnerCode);
+				partnerWeights.push(1);
+			} else {
+				partnerWeights[partnerIndexes[partnerBzc]] += 1;
+			}
 		}
 		if (!partnerCodes.length) return;
 
@@ -1070,7 +1049,8 @@ function requestMainCompCheck(comnum, $form, opts) {
 		var url = "/recommendations?bizno=" + encodeURIComponent(biznoToken) +
 			"&type=" + encodeURIComponent(type) +
 			"&trade_type=" + encodeURIComponent(String(tradeType)) +
-			"&partner_cd=" + encodeURIComponent(partnerCodes.join(","));
+			"&partner_cd=" + encodeURIComponent(partnerCodes.join(",")) +
+			"&partner_weight=" + encodeURIComponent(partnerWeights.join(","));
 		if (typeof showAiLoading === "function") {
 			showAiLoading(url);
 		} else {

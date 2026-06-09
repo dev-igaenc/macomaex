@@ -27,6 +27,7 @@ $result = macomaex_signup_phone_otp_send($phone);
 
 $payload = array(
     'ok' => !empty($result['ok']),
+    'confirmed' => !empty($result['confirmed']),
     'message' => isset($result['message']) ? $result['message'] : '',
 );
 

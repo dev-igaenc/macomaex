@@ -123,3 +123,52 @@ if (!function_exists('alimtalk_write_event_log')) {
 		return @file_put_contents($filePath, $body, FILE_APPEND | LOCK_EX) !== false;
 	}
 }
+
+if (!function_exists('macomaex_send_signup_alimtalk')) {
+	function macomaex_send_signup_alimtalk($mbId, $phone) {
+		$mbId = trim((string)$mbId);
+		$phone = trim((string)$phone);
+		$payload = array(
+			'template_code' => 'signup2',
+			'mb_id' => $mbId,
+			'to' => $phone,
+			'request_id' => '',
+			'provider_status' => '',
+			'error_code' => '',
+			'reason' => '',
+		);
+		$status = 'skip';
+
+		if ($phone === '') {
+			$payload['reason'] = 'receiver_hp_empty';
+		} elseif (!class_exists('NCP_SENS_AT')) {
+			$payload['reason'] = 'alimtalk_class_missing';
+		} else {
+			$status = 'fail';
+			$gwMsg = new NCP_SENS_AT();
+			$gwMsg->templateCode = 'signup2';
+			$gwMsg->to = $phone;
+			$sendResult = $gwMsg->send();
+
+			if (is_array($sendResult)) {
+				$payload['request_id'] = trim((string)($sendResult['requestId'] ?? ''));
+				$payload['provider_status'] = trim((string)($sendResult['statusName'] ?? $sendResult['requestStatusName'] ?? ''));
+				$payload['error_code'] = trim((string)($sendResult['statusCode'] ?? $sendResult['errorCode'] ?? ''));
+			}
+
+			if (!empty($payload['request_id'])) {
+				$status = 'success';
+			} else {
+				$payload['reason'] = 'send_failed';
+			}
+		}
+
+		alimtalk_write_event_log('signup2', $status, $payload);
+
+		return array(
+			'ok' => ($status === 'success'),
+			'status' => $status,
+			'payload' => $payload,
+		);
+	}
+}

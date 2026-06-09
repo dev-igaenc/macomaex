@@ -224,16 +224,8 @@ switch ($type) {
 				exit;
 			}
 
-			// 오늘 검색 로그 우선 사용
-			$log_chk=sql_fetch("select * from company_api_log where c_bizno='{$comnum}' and DATE(c_datetime)='".date("Y-m-d")."' order by c_datetime desc limit 1");
-			// 외부 API 장애/제한 시를 대비해 최신 캐시 fallback 확보
-			if(empty($log_chk['c_content'])) {
-				$latest_log = sql_fetch("select * from company_api_log where c_bizno='{$comnum}' and c_content!='' order by c_datetime desc limit 1");
-				if (!empty($latest_log['c_content'])) {
-					echo "1000|".$latest_log['c_content'];
-					exit;
-				}
-			}
+			// 한 달 이내 KODATA 캐시가 있으면 사용하고, 없으면 최신 정보를 조회한다.
+			$log_chk=sql_fetch("select * from company_api_log where c_bizno='{$comnum}' and c_content!='' and c_datetime >= date_sub(now(), interval 1 month) order by c_datetime desc limit 1");
 			if(empty($log_chk['c_content'])){
 				//사용자 토큰 받기
 				$TOKEN_URL = "https://218.55.37.214:6059/enpinfo?userid=igaenconl&process=S&bzno={$comnum}&pidagryn=Y&jmno=ig001&format=XML&Length=10000";
