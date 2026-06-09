@@ -1044,68 +1044,114 @@ function company_detail_handle_trade_request_insert($member, $request) {
 		'credit_after' => $creditConsume['credit_after'] ?? null,
 	));
 
-	$alimtalkResult = array(
-		'attempted' => false,
-		'sent' => false,
-		'to' => '',
-		'request_id' => '',
-		'error_code' => '',
-		'provider_status' => '',
-		'reason' => '',
-	);
-	$receiverAlimtalk = sql_fetch(" select mb_8
-		from {$g5['member_table']}
-		where mb_company = '" . sql_escape_string($targetKedcd) . "'
-		  and (mb_leave_date = '' or mb_leave_date is null)
-		order by mb_no asc
-		limit 1 ");
-	$receiverHp = trim((string)($receiverAlimtalk['mb_8'] ?? ''));
-	if ($receiverHp === '') {
-		$alimtalkResult['reason'] = 'receiver_hp_empty';
-	} elseif (!class_exists('NCP_SENS_AT')) {
-		$alimtalkResult['reason'] = 'alimtalk_class_missing';
-	} else {
-		$alimtalkResult['attempted'] = true;
-		$alimtalkResult['to'] = $receiverHp;
-		$gw_msg = new NCP_SENS_AT();
-		$gw_msg->templateCode = 'reqmatching2';
-		$gw_msg->to = $receiverHp;
-		$sendRes = $gw_msg->send();
-		if (is_array($sendRes) && !empty($sendRes['requestId'])) {
-			$alimtalkResult['sent'] = true;
-			$alimtalkResult['request_id'] = trim((string)$sendRes['requestId']);
+		$alimtalkResult = array(
+			'attempted' => false,
+			'sent' => false,
+			'to' => '',
+			'request_id' => '',
+			'error_code' => '',
+			'provider_status' => '',
+			'recipient_count' => 0,
+			'sent_count' => 0,
+			'reason' => '',
+		);
+		$receiverPhoneMap = array();
+		$receiverAlimtalkRows = sql_query(" select mb_8
+			from {$g5['member_table']}
+			where mb_company = '" . sql_escape_string($targetKedcd) . "'
+			  and (mb_leave_date = '' or mb_leave_date is null)
+			order by mb_no asc ", false);
+		if ($receiverAlimtalkRows) {
+			while ($receiverAlimtalk = sql_fetch_array($receiverAlimtalkRows)) {
+				$receiverHpRaw = trim((string)($receiverAlimtalk['mb_8'] ?? ''));
+				$receiverHpDigits = trade_request_normalize_phone($receiverHpRaw);
+				if ($receiverHpDigits === '') {
+					continue;
+				}
+				if (!isset($receiverPhoneMap[$receiverHpDigits])) {
+					$receiverPhoneMap[$receiverHpDigits] = $receiverHpRaw !== ''
+						? $receiverHpRaw
+						: company_detail_format_phone_hyphen($receiverHpDigits);
+				}
+			}
+		}
+
+		$receiverPhones = array_values($receiverPhoneMap);
+		$alimtalkResult['recipient_count'] = count($receiverPhones);
+		if (empty($receiverPhones)) {
+			$alimtalkResult['reason'] = 'receiver_hp_empty';
+		} elseif (!class_exists('NCP_SENS_AT')) {
+			$alimtalkResult['reason'] = 'alimtalk_class_missing';
 		} else {
-			$alimtalkResult['reason'] = 'send_failed';
+			$alimtalkResult['attempted'] = true;
+			$alimtalkResult['to'] = implode(',', $receiverPhones);
+			$requestIds = array();
+			$providerStatuses = array();
+			$errorCodes = array();
+			$sentCount = 0;
+
+			foreach ($receiverPhones as $receiverHp) {
+				$gw_msg = new NCP_SENS_AT();
+				$gw_msg->templateCode = 'reqmatching2';
+				$gw_msg->to = $receiverHp;
+				$sendRes = $gw_msg->send();
+				if (is_array($sendRes)) {
+					$requestId = trim((string)($sendRes['requestId'] ?? ''));
+					$providerStatus = trim((string)($sendRes['statusName'] ?? $sendRes['requestStatusName'] ?? ''));
+					$errorCode = trim((string)($sendRes['statusCode'] ?? $sendRes['errorCode'] ?? ''));
+					if ($requestId !== '') {
+						$requestIds[] = $requestId;
+					}
+					if ($providerStatus !== '') {
+						$providerStatuses[] = $providerStatus;
+					}
+					if ($errorCode !== '') {
+						$errorCodes[] = $errorCode;
+					}
+				}
+
+				if (is_array($sendRes) && !empty($sendRes['requestId'])) {
+					$sentCount++;
+				}
+			}
+
+			$alimtalkResult['request_id'] = implode(',', array_values(array_unique($requestIds)));
+			$alimtalkResult['provider_status'] = implode(',', array_values(array_unique($providerStatuses)));
+			$alimtalkResult['error_code'] = implode(',', array_values(array_unique($errorCodes)));
+			$alimtalkResult['sent_count'] = $sentCount;
+			$alimtalkResult['sent'] = ($alimtalkResult['recipient_count'] > 0 && $sentCount === $alimtalkResult['recipient_count']);
+			if (!$alimtalkResult['sent']) {
+				$alimtalkResult['reason'] = ($sentCount > 0) ? 'partial_send_failed' : 'send_failed';
+			}
 		}
-		if (is_array($sendRes)) {
-			$alimtalkResult['error_code'] = trim((string)($sendRes['statusCode'] ?? $sendRes['errorCode'] ?? ''));
-			$alimtalkResult['provider_status'] = trim((string)($sendRes['statusName'] ?? $sendRes['requestStatusName'] ?? ''));
-		}
-	}
-	company_detail_trade_request_log('receiver_alimtalk', array(
-		'tr_no' => $insertId,
-		'attempted' => $alimtalkResult['attempted'],
-		'sent' => $alimtalkResult['sent'],
-		'to' => $alimtalkResult['to'],
-		'request_id' => $alimtalkResult['request_id'],
-		'error_code' => $alimtalkResult['error_code'],
-		'provider_status' => $alimtalkResult['provider_status'],
-		'reason' => $alimtalkResult['reason'],
+		company_detail_trade_request_log('receiver_alimtalk', array(
+			'tr_no' => $insertId,
+			'attempted' => $alimtalkResult['attempted'],
+			'sent' => $alimtalkResult['sent'],
+			'to' => $alimtalkResult['to'],
+			'recipient_count' => $alimtalkResult['recipient_count'],
+			'sent_count' => $alimtalkResult['sent_count'],
+			'request_id' => $alimtalkResult['request_id'],
+			'error_code' => $alimtalkResult['error_code'],
+			'provider_status' => $alimtalkResult['provider_status'],
+			'reason' => $alimtalkResult['reason'],
 	));
 	alimtalk_write_event_log(
 		'reqmatching2',
 		$alimtalkResult['sent'] ? 'success' : ($alimtalkResult['attempted'] ? 'fail' : 'skip'),
-		array(
-			'template_code' => 'reqmatching2',
-			'tr_no' => $insertId,
-			'mb_id' => $requestMemberId,
-			'to' => $alimtalkResult['to'],
-			'request_id' => $alimtalkResult['request_id'],
-			'provider_status' => $alimtalkResult['provider_status'],
-			'error_code' => $alimtalkResult['error_code'],
-			'reason' => $alimtalkResult['reason'],
-		)
-	);
+			array(
+				'template_code' => 'reqmatching2',
+				'tr_no' => $insertId,
+				'mb_id' => $requestMemberId,
+				'to' => isset($receiverPhones[0]) ? $receiverPhones[0] : '',
+				'request_id' => $alimtalkResult['request_id'],
+				'provider_status' => $alimtalkResult['provider_status'],
+				'error_code' => $alimtalkResult['error_code'],
+				'reason' => trim((string)$alimtalkResult['reason']) !== ''
+					? trim((string)$alimtalkResult['reason']) . '|count=' . (int)$alimtalkResult['sent_count'] . '/' . (int)$alimtalkResult['recipient_count']
+					: 'count=' . (int)$alimtalkResult['sent_count'] . '/' . (int)$alimtalkResult['recipient_count'],
+			)
+		);
 
 	$mailResult = company_detail_trade_request_send_receiver_mail(
 		$insertId,
