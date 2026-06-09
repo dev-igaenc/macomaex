@@ -379,6 +379,8 @@ function company_detail_trade_request_send_receiver_mail($tradeRequestNo, $reque
 		'sent' => false,
 		'recipient_type' => '',
 		'recipient_email' => '',
+		'recipient_count' => 0,
+		'sent_count' => 0,
 		'reason' => '',
 	);
 
@@ -387,47 +389,48 @@ function company_detail_trade_request_send_receiver_mail($tradeRequestNo, $reque
 		return $result;
 	}
 
-	$receiverMember = sql_fetch(" select mb_id, mb_name, mb_email
+	$recipientMap = array();
+	$receiverMembers = sql_query(" select mb_id, mb_name, mb_email
 		from {$g5['member_table']}
 		where mb_company = '" . sql_escape_string($targetKedcd) . "'
 		  and (mb_leave_date = '' or mb_leave_date is null)
-		order by mb_no asc
-		limit 1 ");
+		order by mb_no asc ", false);
 
-	$receiverMemberId = trim((string)($receiverMember['mb_id'] ?? ''));
-	$receiverMemberEmail = company_detail_trade_request_valid_email($receiverMember['mb_email'] ?? '');
-
-	$recipientEmail = '';
-	$recipientType = '';
-
-	if ($receiverMemberId !== '') {
-		if ($receiverMemberEmail !== '') {
-			$recipientEmail = $receiverMemberEmail;
-			$recipientType = 'member';
-		} else {
-			$result['reason'] = 'member_email_empty';
-			if (function_exists('mailer_log_write')) {
-				$skipContext = $mailLogBaseContext;
-				$skipContext['recipient_route'] = 'member';
-				$skipContext['skip_reason'] = 'member_email_empty';
-				mailer_log_write($skipContext, '', $subject, 'SKIP', '회원 수신 경로이나 member.mb_email이 비어 있습니다.');
+	if ($receiverMembers) {
+		while ($receiverMember = sql_fetch_array($receiverMembers)) {
+			$receiverMemberEmail = company_detail_trade_request_valid_email($receiverMember['mb_email'] ?? '');
+			if ($receiverMemberEmail === '') {
+				continue;
 			}
-			return $result;
-		}
-	} else {
-		if ($companyEmail !== '') {
-			$recipientEmail = $companyEmail;
-			$recipientType = 'company';
-		} else {
-			$result['reason'] = 'company_email_empty';
-			if (function_exists('mailer_log_write')) {
-				$skipContext = $mailLogBaseContext;
-				$skipContext['recipient_route'] = 'company';
-				$skipContext['skip_reason'] = 'company_email_empty';
-				mailer_log_write($skipContext, '', $subject, 'SKIP', '비회원 수신 경로이나 company.EMAIL 값이 비어 있습니다.');
+
+			if (!isset($recipientMap[$receiverMemberEmail])) {
+				$recipientMap[$receiverMemberEmail] = array(
+					'email' => $receiverMemberEmail,
+					'type' => 'member',
+					'name' => trim((string)($receiverMember['mb_name'] ?? '')),
+				);
 			}
-			return $result;
 		}
+	}
+
+	if ($companyEmail !== '' && !isset($recipientMap[$companyEmail])) {
+		$recipientMap[$companyEmail] = array(
+			'email' => $companyEmail,
+			'type' => 'company',
+			'name' => $targetCompanyName,
+		);
+	}
+
+	$recipientList = array_values($recipientMap);
+	if (empty($recipientList)) {
+		$result['reason'] = 'recipient_email_empty';
+		if (function_exists('mailer_log_write')) {
+			$skipContext = $mailLogBaseContext;
+			$skipContext['recipient_route'] = 'member,company';
+			$skipContext['skip_reason'] = 'recipient_email_empty';
+			mailer_log_write($skipContext, '', $subject, 'SKIP', '대상 회사의 활성 회원 이메일과 회사 이메일이 모두 비어 있습니다.');
+		}
+		return $result;
 	}
 
 	$directionLabelMap = array(
@@ -437,10 +440,6 @@ function company_detail_trade_request_send_receiver_mail($tradeRequestNo, $reque
 	);
 	$tradeDirectionLabel = isset($directionLabelMap[$tradeDirection]) ? $directionLabelMap[$tradeDirection] : $tradeDirection;
 	$tradeTypeLabel = ($tradeType === 'TM') ? 'TM' : '기본';
-	$receiverName = $recipientType === 'member'
-		? trim((string)($receiverMember['mb_name'] ?? ''))
-		: $targetCompanyName;
-	if ($receiverName === '') $receiverName = '담당자';
 
 	$purposeLabelMap = array(
 		'BUY_PRODUCT' => '제품·상품 구매',
@@ -532,42 +531,66 @@ function company_detail_trade_request_send_receiver_mail($tradeRequestNo, $reque
 
 	$mailDateLabel = date('Y년 m월 d일 H:i', defined('G5_SERVER_TIME') ? (int)G5_SERVER_TIME : time());
 
-	$mailLogContext = $mailLogBaseContext;
-	$mailLogContext['recipient_route'] = $recipientType;
-	if (function_exists('mailer_prepare_tracking_context')) {
-		$mailLogContext = mailer_prepare_tracking_context(1, $mailLogContext);
+	$recipientTypes = array();
+	$recipientEmails = array();
+	$sentCount = 0;
+
+	foreach ($recipientList as $recipient) {
+		$recipientType = trim((string)($recipient['type'] ?? ''));
+		$recipientEmail = trim((string)($recipient['email'] ?? ''));
+		$receiverName = trim((string)($recipient['name'] ?? ''));
+		if ($receiverName === '') {
+			$receiverName = ($recipientType === 'company' && $targetCompanyName !== '') ? $targetCompanyName : '담당자';
+		}
+
+		$mailLogContext = $mailLogBaseContext;
+		$mailLogContext['recipient_route'] = $recipientType;
+		if (function_exists('mailer_prepare_tracking_context')) {
+			$mailLogContext = mailer_prepare_tracking_context(1, $mailLogContext);
+		}
+
+		$trackToken = trim((string)($mailLogContext['track_token'] ?? ''));
+		$tradeRequestActionUrl = 'https://macomaex.com';
+		if ($trackToken !== '' && function_exists('mailer_tracking_click_url')) {
+			$tradeRequestActionUrl = mailer_tracking_click_url($trackToken, 'https://macomaex.com');
+		}
+		$unsubscribeEmail = $recipientEmail;
+		$unsubscribeUrl = $mailBaseUrl . '/email/unsubscribe?email=' . rawurlencode($unsubscribeEmail);
+
+		ob_start();
+		include G5_BBS_PATH . '/mail/trade_request_received_mail.php';
+		$content = ob_get_clean();
+
+		$result['attempted'] = true;
+		$recipientTypes[] = $recipientType;
+		$recipientEmails[] = $recipientEmail;
+
+		if ((bool)mailer(
+			$config['cf_admin_email_name'],
+			$config['cf_admin_email'],
+			$recipientEmail,
+			$subject,
+			$content,
+			1,
+			"",
+			"",
+			"",
+			$mailLogContext
+		)) {
+			$sentCount++;
+		}
 	}
 
-	$trackToken = trim((string)($mailLogContext['track_token'] ?? ''));
-	$tradeRequestActionUrl = 'https://macomaex.com';
-	if ($trackToken !== '' && function_exists('mailer_tracking_click_url')) {
-		$tradeRequestActionUrl = mailer_tracking_click_url($trackToken, 'https://macomaex.com');
-	}
-	$unsubscribeEmail = $recipientEmail;
-	$unsubscribeUrl = $mailBaseUrl . '/email/unsubscribe?email=' . rawurlencode($unsubscribeEmail);
-
-	ob_start();
-	include G5_BBS_PATH . '/mail/trade_request_received_mail.php';
-	$content = ob_get_clean();
-
-	$result['attempted'] = true;
-	$result['recipient_type'] = $recipientType;
-	$result['recipient_email'] = $recipientEmail;
-	$result['sent'] = (bool)mailer(
-		$config['cf_admin_email_name'],
-		$config['cf_admin_email'],
-		$recipientEmail,
-		$subject,
-		$content,
-		1,
-		"",
-		"",
-		"",
-		$mailLogContext
-	);
+	$recipientTypes = array_values(array_unique(array_filter($recipientTypes)));
+	$recipientEmails = array_values(array_unique(array_filter($recipientEmails)));
+	$result['recipient_type'] = implode(',', $recipientTypes);
+	$result['recipient_email'] = implode(',', $recipientEmails);
+	$result['recipient_count'] = count($recipientEmails);
+	$result['sent_count'] = $sentCount;
+	$result['sent'] = ($result['recipient_count'] > 0 && $sentCount === $result['recipient_count']);
 
 	if (!$result['sent']) {
-		$result['reason'] = 'mailer_failed';
+		$result['reason'] = ($sentCount > 0) ? 'partial_mailer_failed' : 'mailer_failed';
 	}
 
 	return $result;
@@ -1103,6 +1126,8 @@ function company_detail_handle_trade_request_insert($member, $request) {
 		'sent' => !empty($mailResult['sent']),
 		'recipient_type' => $mailResult['recipient_type'] ?? '',
 		'recipient_email' => $mailResult['recipient_email'] ?? '',
+		'recipient_count' => (int)($mailResult['recipient_count'] ?? 0),
+		'sent_count' => (int)($mailResult['sent_count'] ?? 0),
 		'reason' => $mailResult['reason'] ?? '',
 	));
 
@@ -1116,7 +1141,9 @@ function company_detail_handle_trade_request_insert($member, $request) {
 		'mail_attempted' => !empty($mailResult['attempted']),
 		'mail_sent' => !empty($mailResult['sent']),
 		'mail_recipient_type' => $mailResult['recipient_type'] ?? '',
-		'mail_reason' => $mailResult['reason'] ?? '',
+		'mail_reason' => trim((string)($mailResult['reason'] ?? '')) !== ''
+			? trim((string)($mailResult['reason'] ?? '')) . '|count=' . (int)($mailResult['sent_count'] ?? 0) . '/' . (int)($mailResult['recipient_count'] ?? 0)
+			: 'count=' . (int)($mailResult['sent_count'] ?? 0) . '/' . (int)($mailResult['recipient_count'] ?? 0),
 	), $mailResult['reason'] ?? '');
 
 	company_detail_trade_request_success_response('거래 요청서가 저장되었습니다.', array(
