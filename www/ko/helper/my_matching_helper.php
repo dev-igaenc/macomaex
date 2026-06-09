@@ -97,13 +97,13 @@ function my_matching_handle_trade_request_approval($member, $request) {
 	}
 
 	$memberBznoSql = sql_escape_string($memberBzno);
-	$targetRequest = sql_fetch("
-		select tr_no, approval_status, request_mb_id
-		from trade_request
-		where tr_no='{$idx}'
-		  and target_bzno='{$memberBznoSql}'
-		limit 1
-	");
+		$targetRequest = sql_fetch("
+			select tr_no, approval_status, request_mb_id, request_bzno
+			from trade_request
+			where tr_no='{$idx}'
+			  and target_bzno='{$memberBznoSql}'
+			limit 1
+		");
 
 	if (empty($targetRequest['tr_no'])) {
 		my_matching_text_response('500');
@@ -134,49 +134,101 @@ function my_matching_handle_trade_request_approval($member, $request) {
 		my_matching_text_response('500');
 	}
 
-	if ($nextStatus === '1' && (int)($targetRequest['approval_status'] ?? 0) !== 1) {
-		$requestMemberId = trim((string)($targetRequest['request_mb_id'] ?? ''));
-		$alimtalkLogPayload = array(
-			'template_code' => 'accmatching2',
-			'tr_no' => $idx,
-			'mb_id' => $member['mb_id'] ?? '',
-			'reason' => '',
-			'to' => '',
-			'request_id' => '',
-			'provider_status' => '',
-			'error_code' => '',
-		);
-		$alimtalkLogStatus = 'skip';
-		if ($requestMemberId !== '') {
-			$requestMemberInfo = getUserInfo($requestMemberId);
-			$requestHp = trim((string)($requestMemberInfo['mb_8'] ?? ''));
-			if ($requestHp === '') {
-				$alimtalkLogPayload['reason'] = 'requester_hp_empty';
+		if ($nextStatus === '1' && (int)($targetRequest['approval_status'] ?? 0) !== 1) {
+			$alimtalkLogPayload = array(
+				'template_code' => 'accmatching2',
+				'tr_no' => $idx,
+				'mb_id' => $member['mb_id'] ?? '',
+				'reason' => '',
+				'to' => '',
+				'request_id' => '',
+				'provider_status' => '',
+				'error_code' => '',
+			);
+			$alimtalkLogStatus = 'skip';
+			$requestBzno = preg_replace('/[^0-9]/', '', (string)($targetRequest['request_bzno'] ?? ''));
+			$requestCompanyCode = '';
+			if ($requestBzno !== '') {
+				$requestCompany = sql_fetch("
+					select KEDCD
+					from company
+					where BZNO = '" . sql_escape_string($requestBzno) . "'
+					limit 1
+				");
+				$requestCompanyCode = trim((string)($requestCompany['KEDCD'] ?? ''));
+			}
+			$requestPhoneMap = array();
+			if ($requestCompanyCode !== '') {
+				$requestCompanyMembers = sql_query("
+					select mb_8
+					from {$GLOBALS['g5']['member_table']}
+					where mb_company = '" . sql_escape_string($requestCompanyCode) . "'
+					  and (mb_leave_date = '' or mb_leave_date is null)
+					order by mb_no asc
+				", false);
+				if ($requestCompanyMembers) {
+					while ($requestCompanyMember = sql_fetch_array($requestCompanyMembers)) {
+						$requestHpRaw = trim((string)($requestCompanyMember['mb_8'] ?? ''));
+						$requestHpDigits = preg_replace('/[^0-9]/', '', $requestHpRaw);
+						if ($requestHpDigits === '') {
+							continue;
+						}
+						if (!isset($requestPhoneMap[$requestHpDigits])) {
+							$requestPhoneMap[$requestHpDigits] = $requestHpRaw;
+						}
+					}
+				}
+			}
+
+			$requestPhones = array_values($requestPhoneMap);
+			if (empty($requestPhones)) {
+				$alimtalkLogPayload['reason'] = ($requestCompanyCode === '') ? 'requester_company_not_found' : 'requester_company_hp_empty';
 			} elseif (!class_exists('NCP_SENS_AT')) {
 				$alimtalkLogPayload['reason'] = 'alimtalk_class_missing';
 			} else {
-				$alimtalkLogPayload['to'] = $requestHp;
-				$gw_msg = new NCP_SENS_AT();
-				$gw_msg->templateCode = 'accmatching2';
-				$gw_msg->to = $requestHp;
-				$sendRes = $gw_msg->send();
+				$alimtalkLogPayload['to'] = implode(',', $requestPhones);
+				$requestIds = array();
+				$providerStatuses = array();
+				$errorCodes = array();
+				$sentCount = 0;
 				$alimtalkLogStatus = 'fail';
-				if (is_array($sendRes)) {
-					$alimtalkLogPayload['request_id'] = trim((string)($sendRes['requestId'] ?? ''));
-					$alimtalkLogPayload['provider_status'] = trim((string)($sendRes['statusName'] ?? $sendRes['requestStatusName'] ?? ''));
-					$alimtalkLogPayload['error_code'] = trim((string)($sendRes['statusCode'] ?? $sendRes['errorCode'] ?? ''));
+
+				foreach ($requestPhones as $requestHp) {
+					$gw_msg = new NCP_SENS_AT();
+					$gw_msg->templateCode = 'accmatching2';
+					$gw_msg->to = $requestHp;
+					$sendRes = $gw_msg->send();
+					if (is_array($sendRes)) {
+						$requestId = trim((string)($sendRes['requestId'] ?? ''));
+						$providerStatus = trim((string)($sendRes['statusName'] ?? $sendRes['requestStatusName'] ?? ''));
+						$errorCode = trim((string)($sendRes['statusCode'] ?? $sendRes['errorCode'] ?? ''));
+						if ($requestId !== '') {
+							$requestIds[] = $requestId;
+						}
+						if ($providerStatus !== '') {
+							$providerStatuses[] = $providerStatus;
+						}
+						if ($errorCode !== '') {
+							$errorCodes[] = $errorCode;
+						}
+					}
+					if (is_array($sendRes) && !empty($sendRes['requestId'])) {
+						$sentCount++;
+					}
 				}
-				if (is_array($sendRes) && !empty($sendRes['requestId'])) {
+
+				$alimtalkLogPayload['request_id'] = implode(',', array_values(array_unique($requestIds)));
+				$alimtalkLogPayload['provider_status'] = implode(',', array_values(array_unique($providerStatuses)));
+				$alimtalkLogPayload['error_code'] = implode(',', array_values(array_unique($errorCodes)));
+				$alimtalkLogPayload['reason'] = ($sentCount > 0 && $sentCount < count($requestPhones))
+					? 'partial_send_failed|count=' . $sentCount . '/' . count($requestPhones)
+					: (($sentCount === 0) ? 'send_failed|count=0/' . count($requestPhones) : 'count=' . $sentCount . '/' . count($requestPhones));
+				if ($sentCount === count($requestPhones)) {
 					$alimtalkLogStatus = 'success';
-				} else {
-					$alimtalkLogPayload['reason'] = 'send_failed';
 				}
 			}
-		} else {
-			$alimtalkLogPayload['reason'] = 'request_member_id_empty';
+			alimtalk_write_event_log('accmatching2', $alimtalkLogStatus, $alimtalkLogPayload);
 		}
-		alimtalk_write_event_log('accmatching2', $alimtalkLogStatus, $alimtalkLogPayload);
-	}
 
 	if ($nextStatus === '1') {
 		$chatRoomResult = trade_chat_open_or_attach_room($idx, $member);
