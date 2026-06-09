@@ -789,6 +789,8 @@ function closeAiGuideModal() {
 	}
 
 	function loadPartnerKeywordChips(tradeType) {
+		// [추천 키워드 조회]
+		// KODATA에서 확인한 기준 업종코드와 사용자가 선택한 구매/판매 방향으로 키워드 후보를 요청한다.
 		var grid = document.getElementById("modal_pd_grid");
 		var bzcCd = window.currentSearchBzcCd || "";
 		tradeType = (tradeType === 2) ? 2 : 1;
@@ -799,9 +801,11 @@ function closeAiGuideModal() {
 			if (grid) grid.innerHTML = '<span class="modal_pd_empty">업종코드가 없어 전체 추천만 이용할 수 있습니다.</span>';
 			return;
 		}
+		// 동일 trace_id와 trade_type을 다음 화면까지 전달해 키워드 조회부터 카드 출력까지 추적한다.
 		$.getJSON("<?php echo G5_URL; ?>/ko/bzc_trade_rec_keywords.php", {
 			bzc_cd: bzcCd,
-			trade_type: tradeType
+			trade_type: tradeType,
+			trace_id: window.currentRecommendTraceId || ""
 		}).done(function(data) {
 			if (data && data.ok) {
 				renderPartnerKeywordChips(data.items || []);
@@ -822,7 +826,8 @@ function closeAiGuideModal() {
 			openGuide("추천 진입 오류", "사업자번호 보안 토큰을 생성하지 못했습니다.", "새로고침 후 다시 시도해 주세요.");
 			return false;
 		}
-		window.location.href = "/recommendations?bizno=" + encodeURIComponent(biznoToken) + "&type=buyer";
+		window.location.href = "/recommendations?bizno=" + encodeURIComponent(biznoToken) +
+			"&type=buyer&trade_type=1&trace_id=" + encodeURIComponent(String(window.currentRecommendTraceId || ""));
 		return true;
 	}
 
@@ -971,6 +976,9 @@ function requestMainCompCheck(comnum, $form, opts) {
 	window.currentSearchBiznoToken = "";
 	window.currentSearchBzcCd = "";
 	window.currentSearchKedcd = "";
+	window.currentRecommendTraceId = (window.crypto && typeof window.crypto.randomUUID === "function")
+		? window.crypto.randomUUID()
+		: (Date.now().toString(36) + Math.random().toString(36).slice(2));
 
 	// test_ml2와 동일하게 KODATA(main_comp_chk) 기준 기업정보를 먼저 확인한다.
 	requestMainCompCheck(comnumDigits, $form);
@@ -1013,15 +1021,21 @@ function requestMainCompCheck(comnum, $form, opts) {
 	});
 
 	$(document).on("click", "#modal_pd_btn_confirm", function() {
+		// [선택 키워드 -> 추천 요청 조건 변환]
+		// 같은 상대 업종코드의 키워드를 여러 개 선택하면 선택 수를 가중치로 합산해 목록 페이지로 전달한다.
 		if (this.disabled) return;
 		var selected = window.currentSelectedPartnerBzcItems || [];
 		var partnerCodes = [];
 		var partnerWeights = [];
+		var selectedKeywords = [];
+		var keywordSourceBzcCodes = [];
 		var partnerIndexes = {};
 		for (var i = 0; i < selected.length; i++) {
 			var partnerCode = String(selected[i].partner_cd || "");
 			var partnerBzc = String(selected[i].partner_bzc || "");
 			if (!partnerCode || !partnerBzc) continue;
+			if (selected[i].label) selectedKeywords.push(String(selected[i].label));
+			if (selected[i].source_bzc) keywordSourceBzcCodes.push(String(selected[i].source_bzc));
 			if (partnerIndexes[partnerBzc] === undefined) {
 				partnerIndexes[partnerBzc] = partnerCodes.length;
 				partnerCodes.push(partnerCode);
@@ -1046,11 +1060,15 @@ function requestMainCompCheck(comnum, $form, opts) {
 			openGuide("추천 진입 오류", "사업자번호 보안 토큰을 생성하지 못했습니다.", "새로고침 후 다시 시도해 주세요.");
 			return;
 		}
+		// 선택 키워드, 원본 업종코드, 가중치를 함께 보내 EC2 요청과 캐시 키를 재현할 수 있게 한다.
 		var url = "/recommendations?bizno=" + encodeURIComponent(biznoToken) +
 			"&type=" + encodeURIComponent(type) +
 			"&trade_type=" + encodeURIComponent(String(tradeType)) +
 			"&partner_cd=" + encodeURIComponent(partnerCodes.join(",")) +
-			"&partner_weight=" + encodeURIComponent(partnerWeights.join(","));
+			"&partner_weight=" + encodeURIComponent(partnerWeights.join(",")) +
+			"&selected_keyword=" + encodeURIComponent(selectedKeywords.join(",")) +
+			"&keyword_source_bzc=" + encodeURIComponent(keywordSourceBzcCodes.join(",")) +
+			"&trace_id=" + encodeURIComponent(String(window.currentRecommendTraceId || ""));
 		if (typeof showAiLoading === "function") {
 			showAiLoading(url);
 		} else {

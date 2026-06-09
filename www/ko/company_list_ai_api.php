@@ -131,11 +131,13 @@ if (!function_exists('company_list_ai_api_resolve_source_base_payload')) {
 }
 
 $action = isset($_GET['action']) ? trim((string)$_GET['action']) : 'recommend';
+$trace_id = company_list_ai_normalize_trace_id($_GET['trace_id'] ?? '');
 if ($action !== 'recommend' && $action !== 'target_card') {
     company_list_ai_api_response(400, array('error' => 'action은 recommend 또는 target_card만 지원합니다.'));
 }
 
-// 목록용 응답: buy/sell 버킷 전체 반환
+// [API 목록 추천]
+// API 사용처에는 구매처/판매처를 함께 반환하되, 두 방향의 캐시 조회·EC2 호출·출력 로그는 각각 분리한다.
 if ($action === 'recommend') {
     $kedcd_raw = isset($_GET['kedcd']) ? (string)$_GET['kedcd'] : '';
     $bizno_raw = isset($_GET['bizno']) ? (string)$_GET['bizno'] : (isset($_GET['comnum']) ? (string)$_GET['comnum'] : '');
@@ -152,19 +154,68 @@ if ($action === 'recommend') {
     $ml_log_kedcd = isset($resolve_meta['kedcd']) ? company_list_ai_api_normalize_kedcd($resolve_meta['kedcd']) : '';
 
     $timeout_sec = 8;
+    $trace_context = array('trace_id' => $trace_id, 'match_type' => 'full');
 
-    // 목록은 buy/sell을 각각 캐시 우선으로 조회
+    // 목록은 화면 경로와 동일하게 buy/sell 각각 한 달 캐시를 우선 조회
     $buy_call = null;
-    $buy_cached_row = company_list_ai_pick_ml_log($ml_log_bizno, $ml_log_kedcd, 1, true);
+    company_list_ai_write_event_log('recommend_request', 'success', array(
+        'trace_id' => $trace_id,
+        'stage' => 'request',
+        'source' => 'company_ml_log',
+        'recommendation_mode' => 'full',
+        'bizno' => $ml_log_bizno,
+        'kedcd' => $ml_log_kedcd,
+        'trade_type' => 1,
+        'request_data' => $buy_payload,
+    ), 'API 추천 요청 조건 및 한 달 캐시 조회');
+    $buy_cached_row = company_list_ai_pick_ml_log($ml_log_bizno, $ml_log_kedcd, 1, false, 1);
     $buy_cached_call = company_list_ai_restore_call_from_ml_log($buy_cached_row);
     if (is_array($buy_cached_call)) $buy_call = $buy_cached_call;
-    else $buy_call = company_list_ai_call_recommend($buy_payload, $timeout_sec);
+    else $buy_call = company_list_ai_call_recommend($buy_payload, $timeout_sec, $trace_context);
+    if (!empty($buy_call['from_cache'])) {
+        company_list_ai_write_event_log('recommend_response', 'success', array(
+            'trace_id' => $trace_id,
+            'stage' => 'response',
+            'source' => 'company_ml_log',
+            'recommendation_mode' => 'full',
+            'bizno' => $ml_log_bizno,
+            'kedcd' => $ml_log_kedcd,
+            'trade_type' => 1,
+            'from_cache' => 1,
+            'result_count' => count((array)($buy_call['data']['results'] ?? array())),
+            'response_data' => company_list_ai_summarize_recommend_results($buy_call['data']),
+        ), 'API 한 달 추천 캐시 응답 사용');
+    }
 
     $sell_call = null;
-    $sell_cached_row = company_list_ai_pick_ml_log($ml_log_bizno, $ml_log_kedcd, 2, true);
+    company_list_ai_write_event_log('recommend_request', 'success', array(
+        'trace_id' => $trace_id,
+        'stage' => 'request',
+        'source' => 'company_ml_log',
+        'recommendation_mode' => 'full',
+        'bizno' => $ml_log_bizno,
+        'kedcd' => $ml_log_kedcd,
+        'trade_type' => 2,
+        'request_data' => $sell_payload,
+    ), 'API 추천 요청 조건 및 한 달 캐시 조회');
+    $sell_cached_row = company_list_ai_pick_ml_log($ml_log_bizno, $ml_log_kedcd, 2, false, 1);
     $sell_cached_call = company_list_ai_restore_call_from_ml_log($sell_cached_row);
     if (is_array($sell_cached_call)) $sell_call = $sell_cached_call;
-    else $sell_call = company_list_ai_call_recommend($sell_payload, $timeout_sec);
+    else $sell_call = company_list_ai_call_recommend($sell_payload, $timeout_sec, $trace_context);
+    if (!empty($sell_call['from_cache'])) {
+        company_list_ai_write_event_log('recommend_response', 'success', array(
+            'trace_id' => $trace_id,
+            'stage' => 'response',
+            'source' => 'company_ml_log',
+            'recommendation_mode' => 'full',
+            'bizno' => $ml_log_bizno,
+            'kedcd' => $ml_log_kedcd,
+            'trade_type' => 2,
+            'from_cache' => 1,
+            'result_count' => count((array)($sell_call['data']['results'] ?? array())),
+            'response_data' => company_list_ai_summarize_recommend_results($sell_call['data']),
+        ), 'API 한 달 추천 캐시 응답 사용');
+    }
 
     // 실호출 성공 시에만 company_ml_log 적재
     if (!empty($buy_call['ok']) && empty($buy_call['from_cache'])) {
@@ -228,11 +279,40 @@ if ($action === 'recommend') {
         }
     }
 
+    // API 출력도 구매처/판매처를 분리해 trade_type별 요청-응답-출력 흐름을 완성한다.
+    company_list_ai_write_event_log('recommend_card_output', !empty($buy_call['ok']) ? 'success' : 'fail', array(
+        'trace_id' => $trace_id,
+        'stage' => 'card_output',
+        'source' => 'company_list_ai_api',
+        'recommendation_mode' => 'full',
+        'bizno' => $ml_log_bizno,
+        'kedcd' => $ml_log_kedcd,
+        'trade_type' => 1,
+        'from_cache' => !empty($buy_call['from_cache']),
+        'result_count' => count($buy_results),
+        'error_code' => !empty($buy_call['ok']) ? '' : 'recommend_failed',
+        'output_data' => company_list_ai_summarize_recommend_results(array('results' => $buy_results)),
+    ), !empty($buy_call['ok']) ? 'API 구매처 추천 결과 출력 완료' : 'API 구매처 추천 결과 출력 실패');
+    company_list_ai_write_event_log('recommend_card_output', !empty($sell_call['ok']) ? 'success' : 'fail', array(
+        'trace_id' => $trace_id,
+        'stage' => 'card_output',
+        'source' => 'company_list_ai_api',
+        'recommendation_mode' => 'full',
+        'bizno' => $ml_log_bizno,
+        'kedcd' => $ml_log_kedcd,
+        'trade_type' => 2,
+        'from_cache' => !empty($sell_call['from_cache']),
+        'result_count' => count($sell_results),
+        'error_code' => !empty($sell_call['ok']) ? '' : 'recommend_failed',
+        'output_data' => company_list_ai_summarize_recommend_results(array('results' => $sell_results)),
+    ), !empty($sell_call['ok']) ? 'API 판매처 추천 결과 출력 완료' : 'API 판매처 추천 결과 출력 실패');
+
     company_list_ai_api_response(200, $response);
 }
 
-// action=target_card
-// 상세는 src/trade_type 기준으로 target 1건만 찾아서 내려준다.
+// [API 상세 카드 복원]
+// src 기업과 trade_type에 맞는 추천 결과에서 target 기업 1건만 찾아 상세 화면에 내려준다.
+// 캐시에서 찾지 못한 경우에만 EC2를 호출하고, 요청/응답/출력 단계를 같은 trace_id로 기록한다.
 $src_kedcd_raw = isset($_GET['src_kedcd']) ? (string)$_GET['src_kedcd'] : (isset($_GET['kedcd']) ? (string)$_GET['kedcd'] : '');
 $bizno_raw = isset($_GET['bizno']) ? (string)$_GET['bizno'] : (isset($_GET['comnum']) ? (string)$_GET['comnum'] : '');
 $target_kedcd = company_list_ai_api_normalize_kedcd(
@@ -258,6 +338,23 @@ $cache_candidates = array(
 );
 $checked_cache_sources = array();
 
+company_list_ai_write_event_log('recommend_request', 'success', array(
+    'trace_id' => $trace_id,
+    'stage' => 'request',
+    'source' => 'company_ml_log',
+    'recommendation_mode' => 'full',
+    'bizno' => $ml_log_bizno,
+    'kedcd' => $src_kedcd,
+    'trade_type' => $trade_type,
+    'request_data' => array(
+        'action' => 'target_card',
+        'src_kedcd' => $src_kedcd,
+        'tgt_kedcd' => $target_kedcd,
+        'trade_type' => $trade_type,
+        'cache_window_months' => $ml_cache_window_months,
+    ),
+), 'API 상세 카드 요청 조건 및 한 달 캐시 조회');
+
 foreach ($cache_candidates as $candidate) {
     $today_only = !empty($candidate['today_only']);
     $cache_source = (string)$candidate['source'];
@@ -274,6 +371,31 @@ foreach ($cache_candidates as $candidate) {
     $found = company_list_ai_api_find_target_item($results, $target_kedcd);
     if (!is_array($found)) continue;
 
+    company_list_ai_write_event_log('recommend_response', 'success', array(
+        'trace_id' => $trace_id,
+        'stage' => 'response',
+        'source' => 'company_ml_log',
+        'recommendation_mode' => 'full',
+        'bizno' => $ml_log_bizno,
+        'kedcd' => $src_kedcd,
+        'trade_type' => $trade_type,
+        'from_cache' => 1,
+        'result_count' => 1,
+        'response_data' => array('target_kedcd' => $target_kedcd, 'cache_source' => $cache_source),
+    ), 'API 상세 카드 한 달 캐시 응답 사용');
+    company_list_ai_write_event_log('recommend_card_output', 'success', array(
+        'trace_id' => $trace_id,
+        'stage' => 'card_output',
+        'source' => 'company_list_ai_api',
+        'recommendation_mode' => 'full',
+        'bizno' => $ml_log_bizno,
+        'kedcd' => $src_kedcd,
+        'trade_type' => $trade_type,
+        'from_cache' => 1,
+        'result_count' => 1,
+        'output_data' => array('target_kedcd' => $target_kedcd, 'item' => $found),
+    ), 'API 상세 추천 카드 출력 완료');
+
     company_list_ai_api_response(200, array(
         'src_kedcd' => $src_kedcd,
         'tgt_kedcd' => $target_kedcd,
@@ -288,7 +410,10 @@ foreach ($cache_candidates as $candidate) {
 // 캐시 미스 시에만 EC2 호출로 보강
 $payload = $base_payload;
 $payload['trade_type'] = $trade_type;
-$live_call = company_list_ai_call_recommend($payload, 8);
+$live_call = company_list_ai_call_recommend($payload, 8, array(
+    'trace_id' => $trace_id,
+    'match_type' => 'target_card',
+));
 if (!empty($live_call['ok']) && empty($live_call['from_cache'])) {
     company_list_ai_save_ml_log($ml_log_bizno, $src_kedcd, $trade_type, $live_call);
 }
@@ -307,6 +432,18 @@ if (empty($live_call['ok'])) {
 $live_results = company_list_ai_api_extract_results($live_call);
 $live_found = company_list_ai_api_find_target_item($live_results, $target_kedcd);
 if (!is_array($live_found)) {
+    company_list_ai_write_event_log('recommend_card_output', 'fail', array(
+        'trace_id' => $trace_id,
+        'stage' => 'card_output',
+        'source' => 'company_list_ai_api',
+        'recommendation_mode' => 'full',
+        'bizno' => $ml_log_bizno,
+        'kedcd' => $src_kedcd,
+        'trade_type' => $trade_type,
+        'result_count' => 0,
+        'error_code' => 'target_not_found',
+        'output_data' => array('target_kedcd' => $target_kedcd),
+    ), '추천 결과에서 API 상세 카드 대상을 찾지 못했습니다.');
     company_list_ai_api_response(404, array(
         'error' => '추천 결과에서 대상 기업을 찾지 못했습니다.',
         'src_kedcd' => $src_kedcd,
@@ -316,6 +453,19 @@ if (!is_array($live_found)) {
         'cache_checked' => $checked_cache_sources,
     ));
 }
+
+company_list_ai_write_event_log('recommend_card_output', 'success', array(
+    'trace_id' => $trace_id,
+    'stage' => 'card_output',
+    'source' => 'company_list_ai_api',
+    'recommendation_mode' => 'full',
+    'bizno' => $ml_log_bizno,
+    'kedcd' => $src_kedcd,
+    'trade_type' => $trade_type,
+    'from_cache' => 0,
+    'result_count' => 1,
+    'output_data' => array('target_kedcd' => $target_kedcd, 'item' => $live_found),
+), 'API 상세 추천 카드 출력 완료');
 
 company_list_ai_api_response(200, array(
     'src_kedcd' => $src_kedcd,
