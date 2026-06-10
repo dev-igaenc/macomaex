@@ -853,6 +853,17 @@ function closeAiGuideModal() {
 		}
 	}
 
+	function renderCustomKeywordExpandError(message) {
+		// 전체 업종 검색이 지연되거나 실패해도 사용자가 다시 시도하거나 다른 동작을 할 수 있게 로딩 상태를 해제한다.
+		var results = document.getElementById("modal_pd_custom_results");
+		var addBtn = document.getElementById("modal_pd_custom_add");
+		window.currentCustomKeywordItems = [];
+		if (!results) return;
+		results.innerHTML = '<div class="modal_pd_custom_expand"><span>' + escapeModalText(message) + '</span><button type="button" id="modal_pd_custom_expand">다시 검색하기</button></div>';
+		results.hidden = false;
+		if (addBtn) addBtn.disabled = true;
+	}
+
 	function partnerKeywordItemKey(item) {
 		return String((item && item.partner_bzc) || "") + "|" + String((item && item.label) || "");
 	}
@@ -1249,12 +1260,19 @@ function requestMainCompCheck(comnum, $form, opts) {
 		var requestSeq = ++window.currentCustomKeywordRequestSeq;
 		var requestTradeType = window.currentSearchTradeType;
 		var requestBzcCd = window.currentSearchBzcCd || "";
-		var request = $.getJSON("<?php echo G5_URL; ?>/ko/bzc_trade_rec_keyword_search.php", {
-			query: query,
-			bzc_cd: requestBzcCd,
-			trade_type: requestTradeType,
-			scope: "all",
-			trace_id: window.currentRecommendTraceId || ""
+		// 전체 업종 검색은 관련 업종 검색보다 범위가 넓으므로 10초 안에 응답하지 않으면 UI를 복구한다.
+		var request = $.ajax({
+			url: "<?php echo G5_URL; ?>/ko/bzc_trade_rec_keyword_search.php",
+			method: "GET",
+			dataType: "json",
+			timeout: 10000,
+			data: {
+				query: query,
+				bzc_cd: requestBzcCd,
+				trade_type: requestTradeType,
+				scope: "all",
+				trace_id: window.currentRecommendTraceId || ""
+			}
 		});
 		window.currentCustomKeywordRequest = request;
 		request.done(function(data) {
@@ -1264,7 +1282,12 @@ function requestMainCompCheck(comnum, $form, opts) {
 			renderCustomKeywordResults(data && data.ok ? (data.items || []) : [], query, false);
 		}).fail(function(xhr) {
 			if (requestSeq !== window.currentCustomKeywordRequestSeq || (xhr && xhr.statusText === "abort")) return;
-			renderCustomKeywordResults([], query, false);
+			if (xhr && xhr.statusText === "timeout") {
+				renderCustomKeywordExpandError("전체 업종 검색 시간이 초과되었습니다. 잠시 후 다시 시도해 주세요.");
+				showRecommendationToast("검색 시간이 초과되어 검색을 중단했습니다.");
+				return;
+			}
+			renderCustomKeywordExpandError("전체 업종 검색 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.");
 		}).always(function() {
 			if (window.currentCustomKeywordRequest === request) window.currentCustomKeywordRequest = null;
 		});

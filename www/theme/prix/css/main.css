@@ -981,9 +981,9 @@ body.modal_verify_open {
 }
 
 .modal_verify_wide::before {
-    left: 0;
-    right: 0;
-    clip-path: polygon(23px 0, calc(100% - 20px) 0, 99% 99%, 0 98%);
+    left: 8px;
+    right: -1px;
+    clip-path: polygon(8px 0, calc(100% - 19px) 0, 99% 99%, 0 98%);
 }
 
 #modal_verify_pd_wrap {
