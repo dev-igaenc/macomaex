@@ -1260,12 +1260,12 @@ function requestMainCompCheck(comnum, $form, opts) {
 		var requestSeq = ++window.currentCustomKeywordRequestSeq;
 		var requestTradeType = window.currentSearchTradeType;
 		var requestBzcCd = window.currentSearchBzcCd || "";
-		// 전체 업종 검색은 관련 업종 검색보다 범위가 넓으므로 10초 안에 응답하지 않으면 UI를 복구한다.
+		// 전체 업종 검색이 3초 안에 응답하지 않으면 UI를 복구해 다른 동작을 계속할 수 있게 한다.
 		var request = $.ajax({
 			url: "<?php echo G5_URL; ?>/ko/bzc_trade_rec_keyword_search.php",
 			method: "GET",
 			dataType: "json",
-			timeout: 10000,
+			timeout: 3000,
 			data: {
 				query: query,
 				bzc_cd: requestBzcCd,
