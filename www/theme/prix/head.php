@@ -1066,7 +1066,7 @@ function closeAiGuideModal() {
 	}
 
 	function moveToAiRecommendByBizno(comnum) {
-		// 검색창 사업자번호 흐름은 AI 목록 페이지로 직접 이동
+		// 키워드를 건너뛴 전체 추천임을 서버 진입 로그에서 구분할 수 있게 전달한다.
 		var digits = (comnum || "").replace(/[^0-9]/g, "");
 		if (digits.length !== 10) return false;
 		var biznoToken = String(window.currentSearchBiznoToken || "");
@@ -1075,7 +1075,7 @@ function closeAiGuideModal() {
 			return false;
 		}
 		window.location.href = "/recommendations?bizno=" + encodeURIComponent(biznoToken) +
-			"&type=buyer&trade_type=1&trace_id=" + encodeURIComponent(String(window.currentRecommendTraceId || ""));
+			"&type=buyer&trade_type=1&recommendation_action=skip&trace_id=" + encodeURIComponent(String(window.currentRecommendTraceId || ""));
 		return true;
 	}
 
@@ -1363,6 +1363,7 @@ function requestMainCompCheck(comnum, $form, opts) {
 		var partnerWeights = [];
 		var selectedKeywords = [];
 		var keywordSourceBzcCodes = [];
+		var keywordMatchTypes = [];
 		var partnerIndexes = {};
 		for (var i = 0; i < selected.length; i++) {
 			var partnerCode = String(selected[i].partner_cd || "");
@@ -1370,6 +1371,7 @@ function requestMainCompCheck(comnum, $form, opts) {
 			if (!partnerCode || !partnerBzc) continue;
 			if (selected[i].label) selectedKeywords.push(String(selected[i].label));
 			if (selected[i].source_bzc) keywordSourceBzcCodes.push(String(selected[i].source_bzc));
+			if (selected[i].match_type) keywordMatchTypes.push(String(selected[i].match_type));
 			if (partnerIndexes[partnerBzc] === undefined) {
 				partnerIndexes[partnerBzc] = partnerCodes.length;
 				partnerCodes.push(partnerCode);
@@ -1402,6 +1404,8 @@ function requestMainCompCheck(comnum, $form, opts) {
 			"&partner_weight=" + encodeURIComponent(partnerWeights.join(",")) +
 			"&selected_keyword=" + encodeURIComponent(selectedKeywords.join(",")) +
 			"&keyword_source_bzc=" + encodeURIComponent(keywordSourceBzcCodes.join(",")) +
+			"&keyword_match_type=" + encodeURIComponent(keywordMatchTypes.join(",")) +
+			"&recommendation_action=keyword_select" +
 			"&trace_id=" + encodeURIComponent(String(window.currentRecommendTraceId || ""));
 		if (typeof showAiLoading === "function") {
 			showAiLoading(url);

@@ -945,8 +945,14 @@ $partner_bzc_weights = array_slice($partner_bzc_weights, 0, count($partner_bzc_f
 while (count($partner_bzc_weights) < count($partner_bzc_filters)) $partner_bzc_weights[] = 1;
 $selected_keywords = array_values(array_filter(array_map('trim', preg_split('/\s*,\s*/u', (string)($_GET['selected_keyword'] ?? '')))));
 $keyword_source_bzc_cds = company_list_ai_parse_partner_bzc_filters($_GET['keyword_source_bzc'] ?? '');
+$keyword_match_types = array_values(array_filter(array_map(function ($value) {
+    $value = trim((string)$value);
+    return in_array($value, array('exact', 'prefix_5', 'prefix_4', 'all'), true) ? $value : '';
+}, preg_split('/\s*,\s*/', (string)($_GET['keyword_match_type'] ?? ''), -1, PREG_SPLIT_NO_EMPTY))));
+$recommendation_action = trim((string)($_GET['recommendation_action'] ?? ''));
+if (!in_array($recommendation_action, array('skip', 'keyword_select'), true)) $recommendation_action = '';
 // [추천 흐름 추적 ID]
-// 키워드 조회부터 캐시 조회, EC2 요청/응답, 카드 출력까지 동일한 trace_id로 연결한다.
+// 추천 버튼으로 서버에 진입한 시점부터 캐시/EC2 응답과 카드 출력까지 동일한 trace_id로 연결한다.
 $trace_id = company_list_ai_normalize_trace_id($_GET['trace_id'] ?? '');
 $has_partner_bzc_filters = !empty($partner_bzc_filters);
 $use_buy_partner_filter = $has_partner_bzc_filters && $partner_filter_trade_type === 1;
@@ -1016,6 +1022,17 @@ if (!empty($resolved_base_payload['kedcd'])) {
     $ml_log_bizno = $has_valid_bizno_query ? $bizno_query : '';
     $ml_log_kedcd = isset($resolved_base_payload['kedcd']) ? (string)$resolved_base_payload['kedcd'] : '';
     $recommendation_mode = $has_partner_bzc_filters ? 'keyword' : 'full';
+    $unique_keyword_match_types = array_values(array_unique($keyword_match_types));
+    if ($recommendation_mode === 'full') {
+        $recommendation_match_type = $recommendation_action === 'skip' ? 'skip' : 'full';
+    } else if (count($unique_keyword_match_types) === 1) {
+        $recommendation_match_type = $unique_keyword_match_types[0];
+    } else if (empty($unique_keyword_match_types)) {
+        // 변경 전 링크나 외부 진입은 세부 fallback 정보가 없으므로 키워드 선택 추천으로만 식별한다.
+        $recommendation_match_type = 'selected_keyword';
+    } else {
+        $recommendation_match_type = 'mixed';
+    }
     $partner_bzc_cds_for_log = implode(',', $partner_bzc_filters);
     $buy_cache_context = company_list_ai_normalize_ml_cache_context($use_buy_partner_filter ? array(
         'filter_bzc_cds' => $partner_bzc_filters,
@@ -1033,7 +1050,7 @@ if (!empty($resolved_base_payload['kedcd'])) {
     $trace_context = array(
         'trace_id' => $trace_id,
         'keywords' => implode(',', $selected_keywords),
-        'match_type' => $has_partner_bzc_filters ? 'selected_keyword' : 'full',
+        'match_type' => $recommendation_match_type,
     );
 
     // [추천 진입 로그]
@@ -1044,6 +1061,7 @@ if (!empty($resolved_base_payload['kedcd'])) {
         'stage' => 'entry',
         'source' => 'company_list_ai',
         'recommendation_mode' => $recommendation_mode,
+        'match_type' => $recommendation_match_type,
         'requested_type' => $requested_type,
         'trade_type' => $partner_filter_trade_type,
         'bizno' => $ml_log_bizno,
@@ -1062,6 +1080,8 @@ if (!empty($resolved_base_payload['kedcd'])) {
             'resolved_base_payload' => $resolved_base_payload,
             'selected_keywords' => $selected_keywords,
             'keyword_source_bzc_cds' => $keyword_source_bzc_cds,
+            'keyword_match_types' => $keyword_match_types,
+            'recommendation_action' => $recommendation_action,
             'filter_bzc_cds' => $partner_bzc_filters,
             'filter_bzc_weights' => $partner_bzc_weights,
         ),
@@ -1099,6 +1119,7 @@ if (!empty($resolved_base_payload['kedcd'])) {
             'stage' => 'response',
             'source' => 'company_ml_log',
             'recommendation_mode' => $buy_cache_context['recommendation_mode'],
+            'match_type' => $recommendation_match_type,
             'bizno' => $ml_log_bizno,
             'kedcd' => $ml_log_kedcd,
             'trade_type' => 1,
@@ -1147,6 +1168,7 @@ if (!empty($resolved_base_payload['kedcd'])) {
             'stage' => 'response',
             'source' => 'company_ml_log',
             'recommendation_mode' => $sell_cache_context['recommendation_mode'],
+            'match_type' => $recommendation_match_type,
             'bizno' => $ml_log_bizno,
             'kedcd' => $ml_log_kedcd,
             'trade_type' => 2,
@@ -1282,6 +1304,7 @@ if (!empty($resolved_base_payload['kedcd'])) {
         'stage' => 'card_output',
         'source' => 'company_list_ai',
         'recommendation_mode' => $buy_cache_context['recommendation_mode'],
+        'match_type' => $recommendation_match_type,
         'bizno' => $ml_log_bizno,
         'kedcd' => $ml_log_kedcd,
         'trade_type' => 1,
@@ -1299,6 +1322,7 @@ if (!empty($resolved_base_payload['kedcd'])) {
         'stage' => 'card_output',
         'source' => 'company_list_ai',
         'recommendation_mode' => $sell_cache_context['recommendation_mode'],
+        'match_type' => $recommendation_match_type,
         'bizno' => $ml_log_bizno,
         'kedcd' => $ml_log_kedcd,
         'trade_type' => 2,

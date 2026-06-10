@@ -53,45 +53,6 @@ function bzc_trade_rec_search_local_test_enabled()
         || substr($host, -6) === '.local';
 }
 
-function bzc_trade_rec_search_should_write_log($trace_id, $trade_type, $source_bzc, $query, $match_type)
-{
-    // 검색 결과 반환과 로그 적재를 분리한다. 같은 추천 흐름의 반복 검색은 결과는 반환하되 로그만 제한한다.
-    if (!company_list_ai_ensure_recommend_log_table()) return true;
-
-    $trace_id_sql = sql_real_escape_string(company_list_ai_normalize_trace_id($trace_id));
-    $source_bzc_sql = sql_real_escape_string($source_bzc);
-    $query_sql = sql_real_escape_string($query);
-    $match_type_sql = sql_real_escape_string($match_type);
-    $trade_type = (int)$trade_type;
-
-    // 동일 조건의 검색이 10초 안에 반복되면 DB와 파일 로그를 모두 생략한다.
-    $duplicate = sql_fetch("
-        SELECT c_id
-        FROM company_recommend_log
-        WHERE c_trace_id = '{$trace_id_sql}'
-          AND c_event_type = 'custom_keyword_search'
-          AND c_stage = 'keyword_search'
-          AND c_trade_type = {$trade_type}
-          AND c_source_bzc_cd = '{$source_bzc_sql}'
-          AND c_keywords = '{$query_sql}'
-          AND c_match_type = '{$match_type_sql}'
-          AND c_datetime >= DATE_SUB(NOW(), INTERVAL 10 SECOND)
-        LIMIT 1
-    ", false);
-    if (!empty($duplicate['c_id'])) return false;
-
-    // 자동 입력이나 비정상 반복 호출로 한 추천 흐름의 검색 로그가 과도하게 쌓이지 않도록 분당 상한을 둔다.
-    $rate = sql_fetch("
-        SELECT COUNT(*) AS cnt
-        FROM company_recommend_log
-        WHERE c_trace_id = '{$trace_id_sql}'
-          AND c_event_type = 'custom_keyword_search'
-          AND c_stage = 'keyword_search'
-          AND c_datetime >= DATE_SUB(NOW(), INTERVAL 1 MINUTE)
-    ", false);
-    return (int)($rate['cnt'] ?? 0) < 30;
-}
-
 function bzc_trade_rec_search_fetch_rows($source_where, $query_sql, $trade_type, $keyword_source = 'expanded')
 {
     // 로컬 비교 테스트에서는 bzc_trade_rec 키워드만 검색하고, 기본 모드는 업종명까지 함께 검색한다.
@@ -167,6 +128,21 @@ function bzc_trade_rec_search_append_items(&$items, &$seen, $rows, $query, $matc
     }
 }
 
+function bzc_trade_rec_search_sort_items(&$items)
+{
+    // 후보 수량을 단계별로 채운 뒤 화면에는 관련도 높은 순서와 같은 단계의 거래량 순서로 정렬한다.
+    $priority = array('exact' => 1, 'prefix_5' => 2, 'prefix_4' => 3, 'all' => 4);
+    usort($items, function ($a, $b) use ($priority) {
+        $a_priority = $priority[(string)($a['match_type'] ?? '')] ?? 99;
+        $b_priority = $priority[(string)($b['match_type'] ?? '')] ?? 99;
+        if ($a_priority !== $b_priority) return $a_priority <=> $b_priority;
+
+        $trade_compare = (int)($b['trade_cnt'] ?? 0) <=> (int)($a['trade_cnt'] ?? 0);
+        if ($trade_compare !== 0) return $trade_compare;
+        return strcmp((string)($a['label'] ?? ''), (string)($b['label'] ?? ''));
+    });
+}
+
 $action = trim((string)($_POST['action'] ?? $_GET['action'] ?? 'search'));
 $query = bzc_trade_rec_search_normalize_query($_POST['query'] ?? $_GET['query'] ?? '');
 $source_bzc = strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', (string)($_POST['bzc_cd'] ?? $_GET['bzc_cd'] ?? '')), 0, 10));
@@ -189,7 +165,6 @@ if ($query === '') {
 }
 
 if ($action === 'select') {
-    // 선택 당시 관련도 단계와 검색 범위를 함께 기록해 최종 추천 조건의 출처를 추적한다.
     $partner_cd = trim((string)($_POST['partner_cd'] ?? ''));
     $partner_bzc = strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', (string)simple_crypt($partner_cd, 'd')), 0, 10));
     $label = trim((string)($_POST['label'] ?? ''));
@@ -198,21 +173,6 @@ if ($action === 'select') {
         bzc_trade_rec_search_response(422, array('ok' => false, 'error' => 'invalid_selection'));
     }
 
-    company_list_ai_write_event_log('custom_keyword_select', 'success', array(
-        'action' => 'select_custom_keyword',
-        'trace_id' => $trace_id,
-        'stage' => 'keyword_select',
-        'source' => 'recommendation_modal',
-        'recommendation_mode' => 'keyword',
-        'trade_type' => $trade_type,
-        'source_bzc_cd' => $source_bzc,
-        'match_type' => $match_type,
-        'keywords' => $label,
-        'filter_bzc_cds' => $partner_bzc,
-        'result_count' => 1,
-        'request_data' => array('query' => $query, 'label' => $label, 'search_scope' => $search_scope),
-        'response_data' => array('partner_bzc' => $partner_bzc, 'match_type' => $match_type),
-    ), '직접 입력 검색 후보 선택 완료');
     bzc_trade_rec_search_response(200, array('ok' => true));
 }
 
@@ -256,31 +216,7 @@ if ($search_scope === 'all') {
 }
 
 if ($query_failed) {
-    if (bzc_trade_rec_search_should_write_log($trace_id, $trade_type, $source_bzc, $query, 'query_failed')) {
-        company_list_ai_write_event_log('custom_keyword_search', 'fail', array(
-            'action' => 'search_custom_keyword',
-            'trace_id' => $trace_id,
-            'stage' => 'keyword_search',
-            'source' => $keyword_source === 'partner_kw' ? 'bzc_trade_rec' : 'bzc_trade_rec+kssc+kssc_9',
-            'recommendation_mode' => 'keyword',
-            'trade_type' => $trade_type,
-            'source_bzc_cd' => $source_bzc,
-            'match_type' => 'query_failed',
-            'keywords' => $query,
-            'error_code' => 'query_failed',
-            'request_data' => array('query' => $query, 'search_scope' => $search_scope, 'keyword_source' => $keyword_source),
-        ), '직접 입력 품목 검색 실패');
-    }
-    bzc_trade_rec_search_response(500, array('ok' => false, 'error' => 'query_failed', 'items' => array()));
-}
-
-$match_types = array_values(array_unique(array_map(function ($item) {
-    return (string)($item['match_type'] ?? '');
-}, $items)));
-$log_match_type = empty($match_types) ? 'no_match' : ($search_scope === 'all' ? 'all' : (count($match_types) > 1 ? 'related_mixed' : $match_types[0]));
-$log_recorded = bzc_trade_rec_search_should_write_log($trace_id, $trade_type, $source_bzc, $query, $log_match_type);
-if ($log_recorded) {
-    company_list_ai_write_event_log('custom_keyword_search', 'success', array(
+    company_list_ai_write_event_log('custom_keyword_search', 'fail', array(
         'action' => 'search_custom_keyword',
         'trace_id' => $trace_id,
         'stage' => 'keyword_search',
@@ -288,13 +224,20 @@ if ($log_recorded) {
         'recommendation_mode' => 'keyword',
         'trade_type' => $trade_type,
         'source_bzc_cd' => $source_bzc,
-        'match_type' => $log_match_type,
+        'match_type' => 'query_failed',
         'keywords' => $query,
-        'result_count' => count($items),
-        'request_data' => array('query' => $query, 'bzc_cd' => $source_bzc, 'trade_type' => $trade_type, 'search_scope' => $search_scope, 'keyword_source' => $keyword_source),
-        'response_data' => array('search_scope' => $search_scope, 'keyword_source' => $keyword_source, 'match_types' => $match_types, 'items' => $items),
-    ), empty($items) ? '직접 입력 품목 검색 결과 없음' : '직접 입력 품목 검색 완료');
+        'error_code' => 'query_failed',
+        'request_data' => array('query' => $query, 'search_scope' => $search_scope, 'keyword_source' => $keyword_source),
+    ), '직접 입력 품목 검색 실패');
+    bzc_trade_rec_search_response(500, array('ok' => false, 'error' => 'query_failed', 'items' => array()));
 }
+
+bzc_trade_rec_search_sort_items($items);
+$match_types = array_values(array_unique(array_map(function ($item) {
+    return (string)($item['match_type'] ?? '');
+}, $items)));
+$log_match_type = empty($match_types) ? 'no_match' : ($search_scope === 'all' ? 'all' : (count($match_types) > 1 ? 'related_mixed' : $match_types[0]));
+$log_recorded = false;
 
 bzc_trade_rec_search_response(200, array(
     'ok' => true,

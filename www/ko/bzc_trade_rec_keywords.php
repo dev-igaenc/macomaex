@@ -210,37 +210,12 @@ foreach ($rows as $row) {
             'keywords' => array($keyword),
             'label' => $keyword,
             'trade_cnt' => (int)($row['c_trade_cnt'] ?? 0),
+            // 사용자가 추천 버튼을 누를 때 실제 선택 키워드의 fallback 단계를 서버 로그까지 전달한다.
+            'match_type' => $match_type,
         );
         if (count($items) >= 15) break 2;
     }
 }
-
-// [키워드 조회 결과 추적]
-// 실제로 적용된 매칭 단계, 조회에 사용된 기준 업종, 반환 키워드를 DB와 파일 로그에 함께 남긴다.
-company_list_ai_write_event_log('keyword_lookup', 'success', array(
-    'action' => 'lookup_keywords',
-    'trace_id' => $trace_id,
-    'stage' => 'keyword_lookup',
-    'source' => 'bzc_trade_rec',
-    'recommendation_mode' => 'keyword',
-    'trade_type' => $trade_type,
-    'source_bzc_cd' => $bzc_cd,
-    'matched_source_bzc_cds' => implode(',', $matched_source_bzc_cds),
-    'match_type' => $match_type,
-    'reason' => empty($items) ? 'no_keywords' : 'matched',
-    'keyword_count' => count($items),
-    'keywords' => implode(',', $matched_keywords),
-    'result_count' => count($items),
-    'request_data' => array(
-        'bzc_cd' => $bzc_cd,
-        'trade_type' => $trade_type,
-    ),
-    'response_data' => array(
-        'match_type' => $match_type,
-        'matched_source_bzc_cds' => $matched_source_bzc_cds,
-        'items' => $items,
-    ),
-));
 
 bzc_trade_rec_json_response(array(
     'ok' => true,

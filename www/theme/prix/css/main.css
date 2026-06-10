@@ -694,6 +694,11 @@ body.modal_verify_open {
     flex-direction: column;
     overflow: visible;
 }
+.modal_verify_wide::before {
+    left: 24px;
+    right: 24px;
+    border-radius: 0 0 4px 4px;
+}
 #modal_verify_pd_wrap {
     display: flex;
     flex: 1 1 auto;

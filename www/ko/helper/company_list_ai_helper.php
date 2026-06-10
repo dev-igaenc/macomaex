@@ -148,18 +148,18 @@ if (!function_exists('company_list_ai_ensure_recommend_log_table')) {
         // 이벤트마다 채워지는 필드가 달라 NULL 대신 빈 문자열/0을 사용해 조회와 집계를 단순화한다.
         $sql = "CREATE TABLE IF NOT EXISTS company_recommend_log (
             c_id bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '로그 행 식별자',
-            c_trace_id varchar(64) NOT NULL DEFAULT '' COMMENT '키워드 조회부터 카드 출력까지 연결하는 실행 ID',
+            c_trace_id varchar(64) NOT NULL DEFAULT '' COMMENT '추천 버튼 진입부터 요청, 응답, 카드 출력까지 연결하는 실행 ID',
             c_event_type varchar(50) NOT NULL DEFAULT '' COMMENT '로그 이벤트 유형',
-            c_event_status varchar(10) NOT NULL DEFAULT '' COMMENT 'success/fail/skip',
-            c_stage varchar(30) NOT NULL DEFAULT '' COMMENT 'keyword_lookup/request/response/card_output 등 처리 단계',
-            c_source varchar(50) NOT NULL DEFAULT '' COMMENT 'bzc_trade_rec/company_ml_log/ec2/화면 등 데이터 출처',
-            c_recommendation_mode varchar(20) NOT NULL DEFAULT '' COMMENT 'full 또는 keyword 추천 방식',
+            c_event_status varchar(10) NOT NULL DEFAULT '' COMMENT 'success/fail',
+            c_stage varchar(30) NOT NULL DEFAULT '' COMMENT 'entry/request/response/card_output 또는 실패 발생 단계',
+            c_source varchar(50) NOT NULL DEFAULT '' COMMENT 'company_ml_log/ec2/화면 또는 실패 발생 데이터 출처',
+            c_recommendation_mode varchar(20) NOT NULL DEFAULT '' COMMENT 'full=전체 추천, keyword=키워드 선택 추천',
             c_bizno varchar(10) NOT NULL DEFAULT '' COMMENT '기준 기업 사업자번호',
             c_kedcd varchar(10) NOT NULL DEFAULT '' COMMENT '기준 기업 KED 기업코드',
             c_trade_type tinyint unsigned NOT NULL DEFAULT 0 COMMENT '0=방향 없음, 1=구매처 추천, 2=판매처 추천',
             c_source_bzc_cd varchar(10) NOT NULL DEFAULT '' COMMENT '기준 기업 업종코드',
-            c_match_type varchar(20) NOT NULL DEFAULT '' COMMENT 'exact/prefix_5/prefix_4/selected_keyword/full 등 매칭 방식',
-            c_keywords text NOT NULL COMMENT '선택 또는 조회된 키워드 목록',
+            c_match_type varchar(20) NOT NULL DEFAULT '' COMMENT 'skip/exact/prefix_5/prefix_4/all/mixed/target_card 등 추천 진입 방식',
+            c_keywords text NOT NULL COMMENT '추천 버튼 클릭 시 선택되어 전달된 키워드 목록',
             c_filter_bzc_cds text NOT NULL COMMENT 'EC2 요청 및 캐시 구분에 사용한 업종코드 목록',
             c_filter_bzc_weights text NOT NULL COMMENT '필터 업종코드별 가중치 목록',
             c_from_cache tinyint unsigned NOT NULL DEFAULT 0 COMMENT '0=실호출 또는 해당 없음, 1=캐시 응답',
@@ -174,9 +174,10 @@ if (!function_exists('company_list_ai_ensure_recommend_log_table')) {
             PRIMARY KEY (c_id),
             KEY idx_trace_trade_stage (c_trace_id, c_trade_type, c_stage, c_datetime),
             KEY idx_kedcd_trade_dt (c_kedcd, c_trade_type, c_datetime),
-            KEY idx_event_dt (c_event_type, c_datetime)
+            KEY idx_event_dt (c_event_type, c_datetime),
+            KEY idx_status_dt (c_event_status, c_datetime)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
-          COMMENT='거래처 추천 키워드 조회, 요청, 응답, 카드 출력 추적 로그'";
+          COMMENT='거래처 추천 버튼 진입 이후 핵심 성공 이벤트와 단계별 실패 추적 로그'";
 
         $ready = (bool)sql_query($sql, false);
         return $ready;
@@ -260,28 +261,40 @@ if (!function_exists('company_list_ai_log_default_message')) {
             return 'AI 추천 작업이 완료되었습니다.';
         }
 
-        if ($status === 'skip') {
-            if ($event_type === 'ml_cache_lookup' && $source === 'company_ml_log') return '키워드 추천 요청으로 ML 캐시 조회를 건너뛰었습니다.';
-            if ($event_type === 'recommend_call' && $source === 'company_ml_log') return '당일 ML 캐시를 사용했습니다.';
-            return 'AI 추천 작업을 건너뛰었습니다.';
-        }
-
         return 'AI 추천 작업 중 오류가 발생했습니다.';
+    }
+}
+
+if (!function_exists('company_list_ai_should_write_event_log')) {
+    function company_list_ai_should_write_event_log($event_type, $status, $payload = array())
+    {
+        // 실패는 발생 단계와 무관하게 남기고, 성공은 추천 버튼 진입 이후 핵심 추적 이벤트만 저장한다.
+        if ($status === 'fail') return true;
+        if ($status !== 'success') return false;
+
+        $source = trim((string)($payload['source'] ?? ''));
+        if ($event_type === 'recommend_entry') return true;
+        if ($event_type === 'recommend_request') return $source === 'ec2';
+        if ($event_type === 'recommend_response') return in_array($source, array('ec2', 'company_ml_log'), true);
+        if ($event_type === 'recommend_card_output') return true;
+        return false;
     }
 }
 
 if (!function_exists('company_list_ai_write_event_log')) {
     function company_list_ai_write_event_log($event_type, $status, $payload = array(), $message = '')
     {
-        // [DB + 파일 이중 로그]
-        // 같은 이벤트를 company_recommend_log와 일자별 로그 파일에 기록해 조회성과 운영 가독성을 함께 확보한다.
+        // [추천 핵심 이벤트 DB + 파일 이중 로그]
+        // 추천 버튼 진입 이후 핵심 성공 이벤트와 실제 실패만 company_recommend_log와 일자별 파일에 동일하게 기록한다.
         $event_type = trim((string)$event_type);
         $status = trim((string)$status);
         if ($event_type === '' || $status === '') return false;
-        if (!in_array($status, array('success', 'fail', 'skip'), true)) $status = 'fail';
+        // 상태 분류는 성공/실패만 허용한다. skip 같은 흐름 구분값을 실패로 오인해 적재하지 않는다.
+        if (!in_array($status, array('success', 'fail'), true)) return false;
         if (!preg_match('/^[a-z0-9_.:-]{1,50}$/i', $event_type)) $event_type = 'invalid_event_type';
 
         $payload = is_array($payload) ? $payload : array('value' => $payload);
+        if (!company_list_ai_should_write_event_log($event_type, $status, $payload)) return true;
         $payload['trace_id'] = company_list_ai_normalize_trace_id($payload['trace_id'] ?? '');
         $dir = company_list_ai_log_directory_path();
         // 파일과 DB는 독립 저장한다. 한쪽 장애가 다른 쪽 로그 기록까지 막아서는 안 된다.
@@ -1076,12 +1089,6 @@ if (!function_exists('company_list_ai_call_recommend')) {
             'match_type' => (string)($trace_context['match_type'] ?? ''),
         );
 
-        company_list_ai_write_event_log('recommend_request', 'success', array_merge($log_payload, array(
-            'stage' => 'request',
-            'reason' => 'prepared',
-            'request_data' => $payload,
-        )), 'EC2 추천 요청 데이터 준비 완료');
-
         if ($base_url === '' || $api_key === '') {
             company_list_ai_write_event_log('recommend_response', 'fail', array_merge($log_payload, array(
                 'reason' => 'missing_ml_config',
@@ -1119,6 +1126,13 @@ if (!function_exists('company_list_ai_call_recommend')) {
                 'data' => null,
             );
         }
+
+        // 설정과 JSON 검증이 끝난 뒤 실제 EC2 호출 직전에만 요청 성공 이벤트를 기록한다.
+        company_list_ai_write_event_log('recommend_request', 'success', array_merge($log_payload, array(
+            'stage' => 'request',
+            'reason' => 'call_started',
+            'request_data' => $payload,
+        )), 'EC2 추천 요청 호출 시작');
 
         $start = microtime(true);
 
