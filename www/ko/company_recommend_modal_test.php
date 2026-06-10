@@ -38,6 +38,8 @@ if (strlen($kedcd) !== 10 || preg_match('/^0+$/', $kedcd)) $kedcd = '';
 $bizno = preg_replace('/\D/', '', (string)($_GET['bizno'] ?? ''));
 if (strlen($bizno) !== 10) $bizno = '';
 
+$keyword_source = trim((string)($_GET['keyword_source'] ?? '')) === 'partner_kw' ? 'partner_kw' : 'expanded';
+
 $where = array("c.KEDCD != ''");
 if ($kedcd !== '') {
     $where[] = "ml.c_kedcd='" . sql_real_escape_string($kedcd) . "'";
@@ -101,6 +103,7 @@ company_recommend_modal_test_response(200, array(
     'bizno_token' => simple_crypt($resolved_bizno, 'e'),
     'kedcd' => (string)$row['KEDCD'],
     'trade_type' => ((int)$row['c_trade_type'] === 2) ? 2 : 1,
+    'keyword_source' => $keyword_source,
     'source' => 'local_company_ml_log',
     'test_meta' => array(
         'ml_log_id' => (int)$row['ml_log_id'],

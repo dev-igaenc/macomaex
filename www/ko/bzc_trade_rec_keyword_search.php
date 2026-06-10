@@ -42,6 +42,17 @@ function bzc_trade_rec_search_contains($haystack, $needle)
     return stripos((string)$haystack, (string)$needle) !== false;
 }
 
+function bzc_trade_rec_search_local_test_enabled()
+{
+    $enabled = strtolower(trim((string)macomaex_env('LOCAL_RECOMMEND_MODAL_TEST', '')));
+    if (!in_array($enabled, array('1', 'true', 'yes', 'on'), true)) return false;
+
+    $host = strtolower(preg_replace('/:\d+$/', '', (string)($_SERVER['HTTP_HOST'] ?? '')));
+    return in_array($host, array('localhost', '127.0.0.1', '::1'), true)
+        || substr($host, -5) === '.test'
+        || substr($host, -6) === '.local';
+}
+
 function bzc_trade_rec_search_should_write_log($trace_id, $trade_type, $source_bzc, $query, $match_type)
 {
     // 검색 결과 반환과 로그 적재를 분리한다. 같은 추천 흐름의 반복 검색은 결과는 반환하되 로그만 제한한다.
@@ -81,26 +92,34 @@ function bzc_trade_rec_search_should_write_log($trace_id, $trade_type, $source_b
     return (int)($rate['cnt'] ?? 0) < 30;
 }
 
-function bzc_trade_rec_search_fetch_rows($source_where, $query_sql, $trade_type)
+function bzc_trade_rec_search_fetch_rows($source_where, $query_sql, $trade_type, $keyword_source = 'expanded')
 {
-    // 입력 키워드가 상대 업종 키워드 또는 업종명에 포함된 데이터만 거래량 순으로 조회한다.
+    // 로컬 비교 테스트에서는 bzc_trade_rec 키워드만 검색하고, 기본 모드는 업종명까지 함께 검색한다.
+    $keyword_source = $keyword_source === 'partner_kw' ? 'partner_kw' : 'expanded';
+    $industry_select = $keyword_source === 'partner_kw'
+        ? "'' AS industry_name"
+        : "COALESCE(k.k_code_name, k9.k_code_name, '') AS industry_name";
+    $industry_joins = $keyword_source === 'partner_kw'
+        ? ''
+        : "LEFT JOIN kssc k ON k.k_code = r.c_partner_bzc
+        LEFT JOIN kssc_9 k9 ON k9.k_code = r.c_partner_bzc";
+    $query_where = $keyword_source === 'partner_kw'
+        ? "r.c_partner_kw LIKE '%{$query_sql}%'"
+        : "(r.c_partner_kw LIKE '%{$query_sql}%'
+            OR k.k_code_name LIKE '%{$query_sql}%'
+            OR k9.k_code_name LIKE '%{$query_sql}%')";
     $sql = "
         SELECT
             r.c_source_bzc,
             r.c_partner_bzc,
             r.c_partner_kw,
             r.c_trade_cnt,
-            COALESCE(k.k_code_name, k9.k_code_name, '') AS industry_name
+            {$industry_select}
         FROM bzc_trade_rec r
-        LEFT JOIN kssc k ON k.k_code = r.c_partner_bzc
-        LEFT JOIN kssc_9 k9 ON k9.k_code = r.c_partner_bzc
+        {$industry_joins}
         WHERE r.c_trade_type = " . (int)$trade_type . "
           AND ({$source_where})
-          AND (
-            r.c_partner_kw LIKE '%{$query_sql}%'
-            OR k.k_code_name LIKE '%{$query_sql}%'
-            OR k9.k_code_name LIKE '%{$query_sql}%'
-          )
+          AND ({$query_where})
         ORDER BY r.c_trade_cnt DESC
         LIMIT 200
     ";
@@ -153,6 +172,10 @@ $query = bzc_trade_rec_search_normalize_query($_POST['query'] ?? $_GET['query'] 
 $source_bzc = strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', (string)($_POST['bzc_cd'] ?? $_GET['bzc_cd'] ?? '')), 0, 10));
 $trade_type = (int)($_POST['trade_type'] ?? $_GET['trade_type'] ?? 0);
 $search_scope = trim((string)($_POST['scope'] ?? $_GET['scope'] ?? 'related')) === 'all' ? 'all' : 'related';
+$keyword_source = bzc_trade_rec_search_local_test_enabled()
+    && trim((string)($_POST['keyword_source'] ?? $_GET['keyword_source'] ?? '')) === 'partner_kw'
+    ? 'partner_kw'
+    : 'expanded';
 $trace_id = company_list_ai_normalize_trace_id($_POST['trace_id'] ?? $_GET['trace_id'] ?? '');
 
 if (!in_array($trade_type, array(1, 2), true)) {
@@ -201,7 +224,7 @@ $query_failed = false;
 
 if ($search_scope === 'all') {
     // 사용자가 명시적으로 범위를 넓힌 경우에만 전체 업종에서 검색한다.
-    $rows = bzc_trade_rec_search_fetch_rows("1=1", $query_sql, $trade_type);
+    $rows = bzc_trade_rec_search_fetch_rows("1=1", $query_sql, $trade_type, $keyword_source);
     if ($rows === false) $query_failed = true;
     else bzc_trade_rec_search_append_items($items, $seen, $rows, $query, 'all', '다른 업종');
 } else {
@@ -215,7 +238,7 @@ if ($search_scope === 'all') {
     );
     $tier_rows = array();
     foreach ($tiers as $idx => $tier) {
-        $rows = bzc_trade_rec_search_fetch_rows($tier[0], $query_sql, $trade_type);
+        $rows = bzc_trade_rec_search_fetch_rows($tier[0], $query_sql, $trade_type, $keyword_source);
         if ($rows === false) {
             $query_failed = true;
             break;
@@ -238,14 +261,14 @@ if ($query_failed) {
             'action' => 'search_custom_keyword',
             'trace_id' => $trace_id,
             'stage' => 'keyword_search',
-            'source' => 'bzc_trade_rec+kssc+kssc_9',
+            'source' => $keyword_source === 'partner_kw' ? 'bzc_trade_rec' : 'bzc_trade_rec+kssc+kssc_9',
             'recommendation_mode' => 'keyword',
             'trade_type' => $trade_type,
             'source_bzc_cd' => $source_bzc,
             'match_type' => 'query_failed',
             'keywords' => $query,
             'error_code' => 'query_failed',
-            'request_data' => array('query' => $query, 'search_scope' => $search_scope),
+            'request_data' => array('query' => $query, 'search_scope' => $search_scope, 'keyword_source' => $keyword_source),
         ), '직접 입력 품목 검색 실패');
     }
     bzc_trade_rec_search_response(500, array('ok' => false, 'error' => 'query_failed', 'items' => array()));
@@ -261,15 +284,15 @@ if ($log_recorded) {
         'action' => 'search_custom_keyword',
         'trace_id' => $trace_id,
         'stage' => 'keyword_search',
-        'source' => 'bzc_trade_rec+kssc+kssc_9',
+        'source' => $keyword_source === 'partner_kw' ? 'bzc_trade_rec' : 'bzc_trade_rec+kssc+kssc_9',
         'recommendation_mode' => 'keyword',
         'trade_type' => $trade_type,
         'source_bzc_cd' => $source_bzc,
         'match_type' => $log_match_type,
         'keywords' => $query,
         'result_count' => count($items),
-        'request_data' => array('query' => $query, 'bzc_cd' => $source_bzc, 'trade_type' => $trade_type, 'search_scope' => $search_scope),
-        'response_data' => array('search_scope' => $search_scope, 'match_types' => $match_types, 'items' => $items),
+        'request_data' => array('query' => $query, 'bzc_cd' => $source_bzc, 'trade_type' => $trade_type, 'search_scope' => $search_scope, 'keyword_source' => $keyword_source),
+        'response_data' => array('search_scope' => $search_scope, 'keyword_source' => $keyword_source, 'match_types' => $match_types, 'items' => $items),
     ), empty($items) ? '직접 입력 품목 검색 결과 없음' : '직접 입력 품목 검색 완료');
 }
 
@@ -278,6 +301,7 @@ bzc_trade_rec_search_response(200, array(
     'query' => $query,
     'trade_type' => $trade_type,
     'search_scope' => $search_scope,
+    'keyword_source' => $keyword_source,
     'can_expand' => $search_scope === 'related' && empty($items),
     'limit' => 10,
     'trace_id' => $trace_id,

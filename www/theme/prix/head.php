@@ -679,24 +679,31 @@ function openCreditShortageGuide(opts) {
 
 		var overlay = document.getElementById("modal_verify_overlay");
 		var companyEl = document.getElementById("modal_verify_company");
-		var bzcEl = document.getElementById("modal_verify_bzc");
-		var typeEl = document.getElementById("modal_verify_type");
-		var cominfoVal = data.cominfo ? data.cominfo : "";
+			var bzcEl = document.getElementById("modal_verify_bzc");
+			var typeEl = document.getElementById("modal_verify_type");
+			var customTitleEl = document.querySelector(".modal_pd_custom_title");
+			var cominfoVal = data.cominfo ? data.cominfo : "";
 		var initialTradeType = Number(data.trade_type) === 2 ? 2 : 1;
 
 		window.currentSearchBizno = data.bizno || window.currentSearchBizno || "";
 		window.currentSearchBiznoToken = data.bizno_token || window.currentSearchBiznoToken || "";
-		window.currentSearchBzcCd = data.bzc_cd || "";
-		window.currentSearchKedcd = data.kedcd || "";
-		window.currentSearchTradeType = initialTradeType;
+			window.currentSearchBzcCd = data.bzc_cd || "";
+			window.currentSearchKedcd = data.kedcd || "";
+			window.currentSearchTradeType = initialTradeType;
+			window.currentCustomKeywordSource = data.keyword_source === "partner_kw" ? "partner_kw" : "expanded";
 
 		if ($form && $form.length) {
 			$form.find("input[name='cominfo']").val(cominfoVal);
 		}
 
-		if (companyEl) companyEl.textContent = data.name || "";
-		if (bzcEl) bzcEl.textContent = data.bzc_name || "";
-		if (typeEl) typeEl.textContent = data.enp_type || "";
+			if (companyEl) companyEl.textContent = data.name || "";
+			if (bzcEl) bzcEl.textContent = data.bzc_name || "";
+			if (typeEl) typeEl.textContent = data.enp_type || "";
+			if (customTitleEl) {
+				customTitleEl.textContent = window.currentCustomKeywordSource === "partner_kw"
+					? "찾는 품목이 없나요? 직접 입력해보세요 (추천 키워드 테이블만 검색)"
+					: "찾는 품목이 없나요? 직접 입력해보세요";
+			}
 		$("#modal_pd_trade_buy").toggleClass("active", initialTradeType === 1);
 		$("#modal_pd_trade_sell").toggleClass("active", initialTradeType === 2);
 		$("#modal_pd_trade_desc").html((initialTradeType === 1 ? "귀사가 구매하려는 품목을 선택하세요" : "귀사가 판매하려는 품목을 선택하세요") + ' <span class="modal_pd_multi_hint">복수 선택 가능</span>');
@@ -723,10 +730,11 @@ function openCreditShortageGuide(opts) {
 		if (params.get("recommend_modal_test") !== "1") return;
 
 		var requestData = {};
-		var testKedcd = String(params.get("test_kedcd") || "").replace(/[^0-9]/g, "");
-		var testBizno = String(params.get("test_bizno") || "").replace(/[^0-9]/g, "");
-		if (testKedcd.length === 10) requestData.kedcd = testKedcd;
-		else if (testBizno.length === 10) requestData.bizno = testBizno;
+			var testKedcd = String(params.get("test_kedcd") || "").replace(/[^0-9]/g, "");
+			var testBizno = String(params.get("test_bizno") || "").replace(/[^0-9]/g, "");
+			if (testKedcd.length === 10) requestData.kedcd = testKedcd;
+			else if (testBizno.length === 10) requestData.bizno = testBizno;
+			if (params.get("keyword_source") === "partner_kw") requestData.keyword_source = "partner_kw";
 
 		window.currentRecommendTraceId = (window.crypto && typeof window.crypto.randomUUID === "function")
 			? window.crypto.randomUUID()
@@ -784,6 +792,7 @@ function closeAiGuideModal() {
 	window.currentCustomKeywordTimer = null;
 	window.currentCustomKeywordRequest = null;
 	window.currentCustomKeywordRequestSeq = 0;
+	window.currentCustomKeywordSource = "expanded";
 	window.currentPartnerKeywordRequestSeq = 0;
 
 	if (document.readyState === "loading") {
@@ -1260,6 +1269,7 @@ function requestMainCompCheck(comnum, $form, opts) {
 				bzc_cd: requestBzcCd,
 				trade_type: requestTradeType,
 				scope: "related",
+				keyword_source: window.currentCustomKeywordSource || "expanded",
 				trace_id: window.currentRecommendTraceId || ""
 			});
 			window.currentCustomKeywordRequest = request;
@@ -1293,6 +1303,7 @@ function requestMainCompCheck(comnum, $form, opts) {
 			bzc_cd: requestBzcCd,
 			trade_type: requestTradeType,
 			scope: "all",
+			keyword_source: window.currentCustomKeywordSource || "expanded",
 			trace_id: window.currentRecommendTraceId || ""
 		});
 		window.currentCustomKeywordRequest = request;
