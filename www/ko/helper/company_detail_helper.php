@@ -350,6 +350,12 @@ function company_detail_trade_request_valid_email($email) {
 	return filter_var($email, FILTER_VALIDATE_EMAIL) ? $email : '';
 }
 
+function company_detail_trade_request_plain_text($value) {
+	$value = strip_tags((string)$value);
+	$cleaned = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/u', '', $value);
+	return trim($cleaned === null ? $value : $cleaned);
+}
+
 function company_detail_trade_request_send_receiver_mail($tradeRequestNo, $requestMemberId, $requestCompanyName, $targetCompany, $tradeDirection, $desiredItem, $messageContent, $tradeType, $requestBzno = '', $mappedPurposes = array()) {
 	global $config;
 	global $g5;
@@ -718,8 +724,8 @@ function company_detail_handle_trade_request_insert($member, $request) {
 	$targetKedcd = isset($request['target_kedcd']) ? preg_replace('/[^0-9]/', '', (string)$request['target_kedcd']) : '';
 	$tradeDirectionRaw = isset($request['trade_direction']) ? trim((string)$request['trade_direction']) : '';
 	$tradePurposeRaw = isset($request['trade_purpose']) ? $request['trade_purpose'] : array();
-	$desiredItem = isset($request['desired_item']) ? trim((string)$request['desired_item']) : '';
-	$messageContent = isset($request['message_content']) ? trim((string)$request['message_content']) : '';
+	$desiredItem = company_detail_trade_request_plain_text($request['desired_item'] ?? '');
+	$messageContent = company_detail_trade_request_plain_text($request['message_content'] ?? '');
 	$tradeTypeRaw = isset($request['trade_type']) ? trim((string)$request['trade_type']) : '';
 
 	$directionMap = array(

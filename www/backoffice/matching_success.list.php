@@ -260,7 +260,7 @@ $rnumber=($total_count-($page-1)*$rows)+1;
 			<td class="td_center"><?=trim((string)$v['tgt_manager_name']) ? $v['tgt_manager_name'] : '-'?></td>
 			<td class="td_center"><?=trim((string)$v['tgt_manager_position']) ? $v['tgt_manager_position'] : '-'?></td>
 			<td class="td_center"><?=trim((string)$v['tgt_manager_email']) ? $v['tgt_manager_email'] : '-'?></td>
-			<td class="td_center"><?=nl2br((string)$v['message_content'])?></td>
+			<td class="td_center"><?=nl2br(htmlspecialchars((string)$v['message_content'], ENT_QUOTES, 'UTF-8'))?></td>
 			<td class="td_center">
 			<?if($status!="거래진행중" && $status != "거래거절"){?>
 				<span id="chk_k" class="<?=$adm_chk_class?>" idx="<?=$v['tr_no']?>" chk="<?=$adm_chk_text?>"><?=$adm_chk_text?></span>

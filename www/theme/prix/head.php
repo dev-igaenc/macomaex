@@ -465,6 +465,14 @@ window.__AUTH_SESSION_GUARD_CONFIG__ = {
             <div class="modal_pd_grid" id="modal_pd_grid" aria-live="polite">
                 <span class="modal_pd_empty">추천 키워드를 불러올 준비 중입니다.</span>
             </div>
+            <div class="modal_pd_custom">
+                <p class="modal_pd_custom_title">찾는 품목이 없나요? 직접 입력해보세요</p>
+                <div class="modal_pd_custom_row">
+                    <input type="text" class="modal_pd_custom_input" id="modal_pd_custom_input" maxlength="30" autocomplete="off" placeholder="품목명을 입력하세요" aria-controls="modal_pd_custom_results" aria-autocomplete="list">
+                    <button type="button" class="modal_pd_custom_add" id="modal_pd_custom_add" disabled><span aria-hidden="true">+</span> 추가</button>
+                </div>
+                <div class="modal_pd_custom_results" id="modal_pd_custom_results" role="listbox" aria-live="polite" hidden></div>
+            </div>
             <div class="modal_pd_bar">
                 <div class="modal_pd_bar_info">
                     <span><b id="modal_pd_count">0</b>개 선택됨</span>
@@ -671,29 +679,34 @@ function openCreditShortageGuide(opts) {
 
 		var overlay = document.getElementById("modal_verify_overlay");
 		var companyEl = document.getElementById("modal_verify_company");
-		var bzcEl = document.getElementById("modal_verify_bzc");
-		var typeEl = document.getElementById("modal_verify_type");
-		var cominfoVal = data.cominfo ? data.cominfo : "";
+			var bzcEl = document.getElementById("modal_verify_bzc");
+			var typeEl = document.getElementById("modal_verify_type");
+			var cominfoVal = data.cominfo ? data.cominfo : "";
+		var initialTradeType = Number(data.trade_type) === 2 ? 2 : 1;
 
 		window.currentSearchBizno = data.bizno || window.currentSearchBizno || "";
 		window.currentSearchBiznoToken = data.bizno_token || window.currentSearchBiznoToken || "";
-		window.currentSearchBzcCd = data.bzc_cd || "";
-		window.currentSearchKedcd = data.kedcd || "";
+			window.currentSearchBzcCd = data.bzc_cd || "";
+			window.currentSearchKedcd = data.kedcd || "";
+			window.currentSearchTradeType = initialTradeType;
 
 		if ($form && $form.length) {
 			$form.find("input[name='cominfo']").val(cominfoVal);
 		}
 
-		if (companyEl) companyEl.textContent = data.name || "";
-		if (bzcEl) bzcEl.textContent = data.bzc_name || "";
-		if (typeEl) typeEl.textContent = data.enp_type || "";
+			if (companyEl) companyEl.textContent = data.name || "";
+			if (bzcEl) bzcEl.textContent = data.bzc_name || "";
+			if (typeEl) typeEl.textContent = data.enp_type || "";
+		$("#modal_pd_trade_buy").toggleClass("active", initialTradeType === 1);
+		$("#modal_pd_trade_sell").toggleClass("active", initialTradeType === 2);
+		$("#modal_pd_trade_desc").html((initialTradeType === 1 ? "귀사가 구매하려는 품목을 선택하세요" : "귀사가 판매하려는 품목을 선택하세요") + ' <span class="modal_pd_multi_hint">복수 선택 가능</span>');
 
 		if (overlay) {
 			overlay.classList.add("is_open");
 			overlay.setAttribute("aria-hidden", "false");
 			syncVerifyModalPageState();
 			focusVerifyModal(overlay);
-			loadPartnerKeywordChips(1);
+			loadPartnerKeywordChips(initialTradeType);
 		}
 		return true;
 	}
@@ -734,6 +747,11 @@ function closeAiGuideModal() {
 	window.currentSearchTradeType = 1;
 	window.currentPartnerBzcItems = [];
 	window.currentSelectedPartnerBzcItems = [];
+	window.currentCustomKeywordItems = [];
+	window.currentCustomKeywordTimer = null;
+	window.currentCustomKeywordRequest = null;
+	window.currentCustomKeywordRequestSeq = 0;
+	window.currentPartnerKeywordRequestSeq = 0;
 
 	function escapeModalText(text) {
 		var div = document.createElement("div");
@@ -743,12 +761,173 @@ function closeAiGuideModal() {
 
 	function resetPartnerKeywordSelection() {
 		window.currentSelectedPartnerBzcItems = [];
+		$("#modal_pd_grid .modal_pd_chip").removeClass("selected");
 		var countEl = document.getElementById("modal_pd_count");
 		var previewEl = document.getElementById("modal_pd_preview");
 		var confirmBtn = document.getElementById("modal_pd_btn_confirm");
 		if (countEl) countEl.textContent = "0";
 		if (previewEl) previewEl.innerHTML = '<span class="modal_pd_empty">품목을 선택하면 여기에 표시됩니다</span>';
 		if (confirmBtn) confirmBtn.disabled = true;
+	}
+
+	function showRecommendationToast(message) {
+		// 공통 토스트가 없는 메인 페이지에서도 방향 미선택·5개 제한 안내를 모달로 가리지 않고 표시한다.
+		if (typeof window._showToast === "function") {
+			window._showToast("!", message, "default");
+			return;
+		}
+		var oldToast = document.querySelector(".modal_pd_toast");
+		if (oldToast) oldToast.remove();
+		var toast = document.createElement("div");
+		toast.className = "modal_pd_toast";
+		toast.setAttribute("role", "status");
+		toast.textContent = message;
+		document.body.appendChild(toast);
+		window.requestAnimationFrame(function() {
+			toast.classList.add("is_show");
+		});
+		window.setTimeout(function() {
+			toast.classList.remove("is_show");
+			window.setTimeout(function() {
+				if (toast.parentNode) toast.parentNode.removeChild(toast);
+			}, 200);
+		}, 2200);
+	}
+
+	function cancelCustomKeywordRequest() {
+		// 검색어·거래 방향이 바뀌면 진행 중 응답을 취소하고 순번을 올려 늦은 응답도 화면 반영에서 제외한다.
+		window.currentCustomKeywordRequestSeq++;
+		if (window.currentCustomKeywordRequest && window.currentCustomKeywordRequest.readyState !== 4) {
+			window.currentCustomKeywordRequest.abort();
+		}
+		window.currentCustomKeywordRequest = null;
+	}
+
+	function resetCustomKeywordSearch() {
+		// 거래 방향 변경 또는 후보 선택 뒤 이전 검색 결과가 다른 방향에 재사용되지 않도록 초기화한다.
+		var input = document.getElementById("modal_pd_custom_input");
+		var results = document.getElementById("modal_pd_custom_results");
+		var addBtn = document.getElementById("modal_pd_custom_add");
+		window.currentCustomKeywordItems = [];
+		if (window.currentCustomKeywordTimer) window.clearTimeout(window.currentCustomKeywordTimer);
+		window.currentCustomKeywordTimer = null;
+		cancelCustomKeywordRequest();
+		if (input) input.value = "";
+		if (results) {
+			results.innerHTML = "";
+			results.hidden = true;
+		}
+		if (addBtn) addBtn.disabled = true;
+	}
+
+	function relevanceBadgeClass(matchType) {
+		if (matchType === "exact") return " exact";
+		if (matchType === "prefix_5") return " prefix_5";
+		if (matchType === "prefix_4") return " prefix_4";
+		return " all";
+	}
+
+	function renderCustomKeywordResults(items, query, canExpand) {
+		// 서버가 내부 테이블에서 확정한 표시명만 노출하며 업종코드는 화면에 출력하지 않는다.
+		var results = document.getElementById("modal_pd_custom_results");
+		var addBtn = document.getElementById("modal_pd_custom_add");
+		window.currentCustomKeywordItems = Array.isArray(items) ? items : [];
+		if (!results) return;
+		if (!window.currentCustomKeywordItems.length) {
+			results.innerHTML = canExpand
+				? '<div class="modal_pd_custom_expand"><span>현재 업종과 관련된 품목을 찾지 못했어요.</span><button type="button" id="modal_pd_custom_expand">검색 범위 넓히기</button></div>'
+				: '<span class="modal_pd_custom_empty">전체 업종에서도 일치하는 품목이 없어요</span>';
+			results.hidden = false;
+			if (addBtn) addBtn.disabled = true;
+			return;
+		}
+		results.innerHTML = window.currentCustomKeywordItems.map(function(item, idx) {
+			return '<button type="button" class="modal_pd_custom_option" role="option" data-custom-idx="' + idx + '">' +
+				'<span>' + escapeModalText(item.label || "") + '</span>' +
+				'<em class="modal_pd_relevance' + relevanceBadgeClass(item.match_type || "all") + '">' + escapeModalText(item.relevance_label || "다른 업종") + '</em></button>';
+		}).join("");
+		results.hidden = false;
+		if (addBtn) {
+			addBtn.disabled = false;
+			addBtn.setAttribute("data-query", query || "");
+		}
+	}
+
+	function partnerKeywordItemKey(item) {
+		return String((item && item.partner_bzc) || "") + "|" + String((item && item.label) || "");
+	}
+
+	function findSelectedPartnerKeywordIndex(item) {
+		var selected = window.currentSelectedPartnerBzcItems || [];
+		var itemKey = partnerKeywordItemKey(item);
+		for (var i = 0; i < selected.length; i++) {
+			if (partnerKeywordItemKey(selected[i]) === itemKey) return i;
+		}
+		return -1;
+	}
+
+	function syncPartnerKeywordChipSelection() {
+		$("#modal_pd_grid .modal_pd_chip").each(function() {
+			var idx = parseInt($(this).attr("data-idx"), 10);
+			var item = window.currentPartnerBzcItems && window.currentPartnerBzcItems[idx] ? window.currentPartnerBzcItems[idx] : null;
+			$(this).toggleClass("selected", !!item && findSelectedPartnerKeywordIndex(item) >= 0);
+		});
+	}
+
+	function addCustomKeywordItem(item, query) {
+		// 검색 결과가 기존 추천 칩이면 기존 칩만 선택하고, 새 품목만 중단 영역에 추가해 최대 5개로 제한한다.
+		if (!item) return;
+		var selected = window.currentSelectedPartnerBzcItems || [];
+		var allItems = window.currentPartnerBzcItems || [];
+		var matchingItem = null;
+		for (var i = 0; i < allItems.length; i++) {
+			if (partnerKeywordItemKey(allItems[i]) === partnerKeywordItemKey(item)) {
+				matchingItem = allItems[i];
+				break;
+			}
+		}
+		if (matchingItem) {
+			// 기존 추천 칩을 검색으로 선택한 경우에도 검색 당시 관련도 단계는 선택 로그에 남긴다.
+			matchingItem.match_type = item.match_type || matchingItem.match_type;
+			matchingItem.relevance_label = item.relevance_label || matchingItem.relevance_label;
+			item = matchingItem;
+		}
+
+		var customCount = allItems.filter(function(existingItem) {
+			return existingItem.selection_source === "custom";
+		}).length;
+		if (findSelectedPartnerKeywordIndex(item) >= 0) {
+			showRecommendationToast("이미 선택한 품목입니다.");
+			return;
+		}
+		if (!matchingItem && customCount >= 5) {
+			showRecommendationToast("직접 검색한 품목은 최대 5개까지 추가할 수 있습니다.");
+			return;
+		}
+
+		if (!matchingItem) {
+			item.selection_source = "custom";
+			allItems.push(item);
+			window.currentPartnerBzcItems = allItems;
+		}
+		selected.push(item);
+		window.currentSelectedPartnerBzcItems = selected;
+		renderPartnerKeywordChips(window.currentPartnerBzcItems, true);
+		updatePartnerKeywordSelection();
+		$.post("<?php echo G5_URL; ?>/ko/bzc_trade_rec_keyword_search.php", {
+			action: "select",
+			query: query || item.label || "",
+			label: item.label || "",
+			partner_cd: item.partner_cd || "",
+			match_type: item.match_type || "custom_keyword",
+			scope: item.match_type === "all" ? "all" : "related",
+			bzc_cd: window.currentSearchBzcCd || "",
+			trade_type: window.currentSearchTradeType || 0,
+			trace_id: window.currentRecommendTraceId || ""
+		});
+		resetCustomKeywordSearch();
+		var grid = document.getElementById("modal_pd_grid");
+		if (grid && !matchingItem) grid.scrollTop = grid.scrollHeight;
 	}
 
 	function updatePartnerKeywordSelection() {
@@ -773,48 +952,73 @@ function closeAiGuideModal() {
 		if (confirmBtn) confirmBtn.disabled = selected.length === 0;
 	}
 
-	function renderPartnerKeywordChips(items) {
+	function renderPartnerKeywordChips(items, preserveSelection) {
 		var grid = document.getElementById("modal_pd_grid");
 		if (!grid) return;
 		window.currentPartnerBzcItems = Array.isArray(items) ? items : [];
-		resetPartnerKeywordSelection();
+		if (!preserveSelection) resetPartnerKeywordSelection();
 		if (!window.currentPartnerBzcItems.length) {
 			grid.innerHTML = '<span class="modal_pd_empty">추천 키워드가 없습니다. 건너뛰고 전체 추천받기를 이용해 주세요.</span>';
 			return;
 		}
 		grid.innerHTML = window.currentPartnerBzcItems.map(function(item, idx) {
 			var label = item.label || ((item.keywords || []).join(", "));
-			return '<button type="button" class="modal_pd_chip" data-idx="' + idx + '" data-partner-bzc="' + escapeModalText(item.partner_bzc || "") + '">' + escapeModalText(label) + '</button>';
+			var selectedClass = findSelectedPartnerKeywordIndex(item) >= 0 ? " selected" : "";
+			return '<button type="button" class="modal_pd_chip' + selectedClass + '" data-idx="' + idx + '" data-partner-bzc="' + escapeModalText(item.partner_bzc || "") + '">' + escapeModalText(label) + '</button>';
 		}).join("");
 	}
 
 	function loadPartnerKeywordChips(tradeType) {
+		// [추천 키워드 조회]
+		// KODATA에서 확인한 기준 업종코드와 사용자가 선택한 구매/판매 방향으로 키워드 후보를 요청한다.
 		var grid = document.getElementById("modal_pd_grid");
 		var bzcCd = window.currentSearchBzcCd || "";
+		var requestSeq = ++window.currentPartnerKeywordRequestSeq;
 		tradeType = (tradeType === 2) ? 2 : 1;
 		window.currentSearchTradeType = tradeType;
 		resetPartnerKeywordSelection();
-		if (grid) grid.innerHTML = '<span class="modal_pd_empty">추천 키워드를 불러오는 중입니다.</span>';
+		resetCustomKeywordSearch();
+		if (grid) {
+			grid.classList.add("is_loading");
+			grid.setAttribute("aria-busy", "true");
+		}
 		if (!bzcCd) {
-			if (grid) grid.innerHTML = '<span class="modal_pd_empty">업종코드가 없어 전체 추천만 이용할 수 있습니다.</span>';
+			if (grid) {
+				grid.classList.remove("is_loading");
+				grid.removeAttribute("aria-busy");
+				grid.innerHTML = '<span class="modal_pd_empty">업종코드가 없어 전체 추천만 이용할 수 있습니다.</span>';
+			}
 			return;
 		}
+		// 동일 trace_id와 trade_type을 다음 화면까지 전달해 키워드 조회부터 카드 출력까지 추적한다.
 		$.getJSON("<?php echo G5_URL; ?>/ko/bzc_trade_rec_keywords.php", {
 			bzc_cd: bzcCd,
-			trade_type: tradeType
+			trade_type: tradeType,
+			trace_id: window.currentRecommendTraceId || ""
 		}).done(function(data) {
+			// 빠르게 탭을 전환했을 때 이전 방향의 늦은 응답이 현재 키워드를 덮어쓰지 않도록 무시한다.
+			if (requestSeq !== window.currentPartnerKeywordRequestSeq) return;
+			if (grid) {
+				grid.classList.remove("is_loading");
+				grid.removeAttribute("aria-busy");
+			}
 			if (data && data.ok) {
 				renderPartnerKeywordChips(data.items || []);
 				return;
 			}
 			if (grid) grid.innerHTML = '<span class="modal_pd_empty">추천 키워드를 불러오지 못했습니다. 전체 추천을 이용해 주세요.</span>';
 		}).fail(function() {
-			if (grid) grid.innerHTML = '<span class="modal_pd_empty">추천 키워드 조회 중 오류가 발생했습니다. 전체 추천을 이용해 주세요.</span>';
+			if (requestSeq !== window.currentPartnerKeywordRequestSeq) return;
+			if (grid) {
+				grid.classList.remove("is_loading");
+				grid.removeAttribute("aria-busy");
+				grid.innerHTML = '<span class="modal_pd_empty">추천 키워드 조회 중 오류가 발생했습니다. 전체 추천을 이용해 주세요.</span>';
+			}
 		});
 	}
 
 	function moveToAiRecommendByBizno(comnum) {
-		// 검색창 사업자번호 흐름은 AI 목록 페이지로 직접 이동
+		// 키워드를 건너뛴 전체 추천임을 서버 진입 로그에서 구분할 수 있게 전달한다.
 		var digits = (comnum || "").replace(/[^0-9]/g, "");
 		if (digits.length !== 10) return false;
 		var biznoToken = String(window.currentSearchBiznoToken || "");
@@ -822,7 +1026,8 @@ function closeAiGuideModal() {
 			openGuide("추천 진입 오류", "사업자번호 보안 토큰을 생성하지 못했습니다.", "새로고침 후 다시 시도해 주세요.");
 			return false;
 		}
-		window.location.href = "/recommendations?bizno=" + encodeURIComponent(biznoToken) + "&type=buyer";
+		window.location.href = "/recommendations?bizno=" + encodeURIComponent(biznoToken) +
+			"&type=buyer&trade_type=1&recommendation_action=skip&trace_id=" + encodeURIComponent(String(window.currentRecommendTraceId || ""));
 		return true;
 	}
 
@@ -971,6 +1176,9 @@ function requestMainCompCheck(comnum, $form, opts) {
 	window.currentSearchBiznoToken = "";
 	window.currentSearchBzcCd = "";
 	window.currentSearchKedcd = "";
+	window.currentRecommendTraceId = (window.crypto && typeof window.crypto.randomUUID === "function")
+		? window.crypto.randomUUID()
+		: (Date.now().toString(36) + Math.random().toString(36).slice(2));
 
 	// test_ml2와 동일하게 KODATA(main_comp_chk) 기준 기업정보를 먼저 확인한다.
 	requestMainCompCheck(comnumDigits, $form);
@@ -984,21 +1192,104 @@ function requestMainCompCheck(comnum, $form, opts) {
 		loadPartnerKeywordChips(isBuy ? 1 : 2);
 	});
 
+	$(document).on("input", "#modal_pd_custom_input", function() {
+		// 입력 중 API 호출을 줄이기 위해 350ms 대기하고, 선택된 구매/판매 방향으로만 후보를 조회한다.
+		var query = String(this.value || "").trim().replace(/\s+/g, " ");
+		var results = document.getElementById("modal_pd_custom_results");
+		var addBtn = document.getElementById("modal_pd_custom_add");
+		if (window.currentCustomKeywordTimer) window.clearTimeout(window.currentCustomKeywordTimer);
+		cancelCustomKeywordRequest();
+		if (addBtn) addBtn.disabled = true;
+		if (query.length < 2) {
+			window.currentCustomKeywordItems = [];
+			if (results) {
+				results.innerHTML = "";
+				results.hidden = true;
+			}
+			return;
+		}
+		if (window.currentSearchTradeType !== 1 && window.currentSearchTradeType !== 2) {
+			showRecommendationToast("먼저 구매처 찾기 또는 판매처 찾기를 선택해주세요.");
+			return;
+		}
+		window.currentCustomKeywordTimer = window.setTimeout(function() {
+			var requestSeq = ++window.currentCustomKeywordRequestSeq;
+			var requestTradeType = window.currentSearchTradeType;
+			var requestBzcCd = window.currentSearchBzcCd || "";
+			var request = $.getJSON("<?php echo G5_URL; ?>/ko/bzc_trade_rec_keyword_search.php", {
+				query: query,
+				bzc_cd: requestBzcCd,
+				trade_type: requestTradeType,
+				scope: "related",
+				trace_id: window.currentRecommendTraceId || ""
+			});
+			window.currentCustomKeywordRequest = request;
+			request.done(function(data) {
+				if (requestSeq !== window.currentCustomKeywordRequestSeq ||
+					requestTradeType !== window.currentSearchTradeType ||
+					requestBzcCd !== (window.currentSearchBzcCd || "")) return;
+				renderCustomKeywordResults(data && data.ok ? (data.items || []) : [], query, !!(data && data.can_expand));
+			}).fail(function(xhr) {
+				if (requestSeq !== window.currentCustomKeywordRequestSeq || (xhr && xhr.statusText === "abort")) return;
+				var error = xhr && xhr.responseJSON ? xhr.responseJSON.error : "";
+				renderCustomKeywordResults([], query, false);
+				if (error === "invalid_query") showRecommendationToast("품목명은 2~30자의 한글, 영문, 숫자로 입력해주세요.");
+			}).always(function() {
+				if (window.currentCustomKeywordRequest === request) window.currentCustomKeywordRequest = null;
+			});
+		}, 350);
+	});
+
+	$(document).on("click", "#modal_pd_custom_expand", function() {
+		var input = document.getElementById("modal_pd_custom_input");
+		var query = String((input && input.value) || "").trim().replace(/\s+/g, " ");
+		if (query.length < 2) return;
+		cancelCustomKeywordRequest();
+		$(this).prop("disabled", true).text("전체 업종 검색 중...");
+		var requestSeq = ++window.currentCustomKeywordRequestSeq;
+		var requestTradeType = window.currentSearchTradeType;
+		var requestBzcCd = window.currentSearchBzcCd || "";
+		var request = $.getJSON("<?php echo G5_URL; ?>/ko/bzc_trade_rec_keyword_search.php", {
+			query: query,
+			bzc_cd: requestBzcCd,
+			trade_type: requestTradeType,
+			scope: "all",
+			trace_id: window.currentRecommendTraceId || ""
+		});
+		window.currentCustomKeywordRequest = request;
+		request.done(function(data) {
+			if (requestSeq !== window.currentCustomKeywordRequestSeq ||
+				requestTradeType !== window.currentSearchTradeType ||
+				requestBzcCd !== (window.currentSearchBzcCd || "")) return;
+			renderCustomKeywordResults(data && data.ok ? (data.items || []) : [], query, false);
+		}).fail(function(xhr) {
+			if (requestSeq !== window.currentCustomKeywordRequestSeq || (xhr && xhr.statusText === "abort")) return;
+			renderCustomKeywordResults([], query, false);
+		}).always(function() {
+			if (window.currentCustomKeywordRequest === request) window.currentCustomKeywordRequest = null;
+		});
+	});
+
+	$(document).on("click", ".modal_pd_custom_option", function() {
+		var idx = parseInt($(this).attr("data-custom-idx"), 10);
+		var item = window.currentCustomKeywordItems && window.currentCustomKeywordItems[idx] ? window.currentCustomKeywordItems[idx] : null;
+		var input = document.getElementById("modal_pd_custom_input");
+		addCustomKeywordItem(item, input ? input.value : "");
+	});
+
+	$(document).on("click", "#modal_pd_custom_add", function() {
+		if (this.disabled) return;
+		var input = document.getElementById("modal_pd_custom_input");
+		addCustomKeywordItem(window.currentCustomKeywordItems[0] || null, input ? input.value : "");
+	});
+
 	$(document).on("click", ".modal_pd_chip", function() {
 		var idx = parseInt($(this).attr("data-idx"), 10);
 		var item = window.currentPartnerBzcItems && window.currentPartnerBzcItems[idx] ? window.currentPartnerBzcItems[idx] : null;
 		if (!item) return;
 
 		var selected = window.currentSelectedPartnerBzcItems || [];
-		var selectionKey = String(item.partner_bzc || "") + "|" + String(item.label || "");
-		var existingIdx = -1;
-		for (var i = 0; i < selected.length; i++) {
-			var existingKey = String(selected[i].partner_bzc || "") + "|" + String(selected[i].label || "");
-			if (existingKey === selectionKey) {
-				existingIdx = i;
-				break;
-			}
-		}
+		var existingIdx = findSelectedPartnerKeywordIndex(item);
 
 		if (existingIdx >= 0) {
 			selected.splice(existingIdx, 1);
@@ -1009,19 +1300,28 @@ function requestMainCompCheck(comnum, $form, opts) {
 		}
 
 		window.currentSelectedPartnerBzcItems = selected;
+		syncPartnerKeywordChipSelection();
 		updatePartnerKeywordSelection();
 	});
 
 	$(document).on("click", "#modal_pd_btn_confirm", function() {
+		// [선택 키워드 -> 추천 요청 조건 변환]
+		// 같은 상대 업종코드의 키워드를 여러 개 선택하면 선택 수를 가중치로 합산해 목록 페이지로 전달한다.
 		if (this.disabled) return;
 		var selected = window.currentSelectedPartnerBzcItems || [];
 		var partnerCodes = [];
 		var partnerWeights = [];
+		var selectedKeywords = [];
+		var keywordSourceBzcCodes = [];
+		var keywordMatchTypes = [];
 		var partnerIndexes = {};
 		for (var i = 0; i < selected.length; i++) {
 			var partnerCode = String(selected[i].partner_cd || "");
 			var partnerBzc = String(selected[i].partner_bzc || "");
 			if (!partnerCode || !partnerBzc) continue;
+			if (selected[i].label) selectedKeywords.push(String(selected[i].label));
+			if (selected[i].source_bzc) keywordSourceBzcCodes.push(String(selected[i].source_bzc));
+			if (selected[i].match_type) keywordMatchTypes.push(String(selected[i].match_type));
 			if (partnerIndexes[partnerBzc] === undefined) {
 				partnerIndexes[partnerBzc] = partnerCodes.length;
 				partnerCodes.push(partnerCode);
@@ -1046,11 +1346,17 @@ function requestMainCompCheck(comnum, $form, opts) {
 			openGuide("추천 진입 오류", "사업자번호 보안 토큰을 생성하지 못했습니다.", "새로고침 후 다시 시도해 주세요.");
 			return;
 		}
+		// 선택 키워드, 원본 업종코드, 가중치를 함께 보내 EC2 요청과 캐시 키를 재현할 수 있게 한다.
 		var url = "/recommendations?bizno=" + encodeURIComponent(biznoToken) +
 			"&type=" + encodeURIComponent(type) +
 			"&trade_type=" + encodeURIComponent(String(tradeType)) +
 			"&partner_cd=" + encodeURIComponent(partnerCodes.join(",")) +
-			"&partner_weight=" + encodeURIComponent(partnerWeights.join(","));
+			"&partner_weight=" + encodeURIComponent(partnerWeights.join(",")) +
+			"&selected_keyword=" + encodeURIComponent(selectedKeywords.join(",")) +
+			"&keyword_source_bzc=" + encodeURIComponent(keywordSourceBzcCodes.join(",")) +
+			"&keyword_match_type=" + encodeURIComponent(keywordMatchTypes.join(",")) +
+			"&recommendation_action=keyword_select" +
+			"&trace_id=" + encodeURIComponent(String(window.currentRecommendTraceId || ""));
 		if (typeof showAiLoading === "function") {
 			showAiLoading(url);
 		} else {

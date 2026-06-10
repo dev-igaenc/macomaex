@@ -119,7 +119,7 @@
     var loadMoreBtn = document.getElementById('btnLoadMore');
     var typeBtns = document.querySelectorAll('.list-type-btn');
     var typeSlider = document.querySelector('.list-type-slider');
-    var bannerStatEls = document.querySelectorAll('.ai-banner_stat_value');
+    var activeBannerStatEl = document.querySelector('[data-role="active-recommend-total"]');
     var loadingOverlay = document.getElementById('companyAiLoadingOverlay');
     var loadingDesc = document.getElementById('companyAiLoadingDesc');
     var loadingHelp = document.getElementById('companyAiLoadingHelp');
@@ -364,7 +364,9 @@
         return;
     }
 
-    var currentType = 'buyer';
+    // 서버가 확정한 한 방향만 표시한다. 목록 페이지 내 구매/판매 탭 전환은 비활성화 상태다.
+    var requestedType = window.__COMPANY_LIST_AI_REQUESTED_TYPE__ === 'seller' ? 'seller' : 'buyer';
+    var currentType = requestedType;
     var restPageSize = 9;
     var restPageIndex = 0;
     var top3Swiper = null;
@@ -606,13 +608,11 @@
     }
 
     function updateBannerStats(stats) {
-        if (!bannerStatEls || bannerStatEls.length < 3) return;
-        var buyerTotal = parseTotal(stats && stats.buyer_total);
-        var sellerTotal = parseTotal(stats && stats.seller_total);
-        if (buyerTotal === null) buyerTotal = fallbackTotal(aiData.buyer);
-        if (sellerTotal === null) sellerTotal = fallbackTotal(aiData.seller);
-        bannerStatEls[1].textContent = String(buyerTotal);
-        bannerStatEls[2].textContent = String(sellerTotal);
+        if (!activeBannerStatEl) return;
+        var statKey = requestedType === 'seller' ? 'seller_total' : 'buyer_total';
+        var total = parseTotal(stats && stats[statKey]);
+        if (total === null) total = fallbackTotal(aiData[requestedType]);
+        activeBannerStatEl.textContent = String(total);
     }
 
     function renderCurrent(shouldScrollToRest) {
@@ -656,7 +656,7 @@
     }
 
     function setType(type, shouldSyncUrl) {
-        if (type !== 'buyer' && type !== 'seller') type = 'buyer';
+        type = requestedType;
         currentType = type;
         restPageIndex = 0;
         var activeBtn = null;
@@ -671,6 +671,8 @@
         renderCurrent(false);
     }
 
+    /*
+    // 구매처/판매처 찾기 진입 방향과 다른 목록으로 전환되지 않도록 탭 이벤트를 임시 비활성화한다.
     typeBtns.forEach(function(btn) {
         btn.setAttribute('aria-pressed', btn.classList.contains('on') ? 'true' : 'false');
         btn.addEventListener('click', function() {
@@ -679,6 +681,7 @@
             setType(nextType, true);
         });
     });
+    */
 
     loadMoreBtn.addEventListener('click', function() {
         var data = aiData[currentType] || { rest: [] };
@@ -748,11 +751,6 @@
         }
     };
 
-    var urlType = null;
-    try {
-        urlType = new URLSearchParams(window.location.search).get('type');
-    } catch (e) {}
     updateBannerStats(aiStats);
-    if (urlType === 'seller') setType('seller', false);
-    else setType('buyer', false);
+    setType(requestedType, false);
 })();
