@@ -695,9 +695,9 @@ body.modal_verify_open {
     overflow: visible;
 }
 .modal_verify_wide::before {
-    left: 24px;
-    right: 24px;
-    border-radius: 0 0 4px 4px;
+    left: 0;
+    right: 0;
+    clip-path: polygon(24px 0, calc(100% - 24px) 0, 100% 100%, 0 100%);
 }
 #modal_verify_pd_wrap {
     display: flex;
@@ -1136,6 +1136,9 @@ body.modal_verify_open {
         max-height: calc(100vh - 24px);
         max-height: calc(100dvh - 24px);
         overflow-y: auto;
+    }
+    .modal_verify_wide::before {
+        clip-path: polygon(20px 0, calc(100% - 20px) 0, 100% 100%, 0 100%);
     }
     .modal_verify_compact {
         padding: 10px 12px;
