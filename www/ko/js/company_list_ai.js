@@ -119,7 +119,7 @@
     var loadMoreBtn = document.getElementById('btnLoadMore');
     var typeBtns = document.querySelectorAll('.list-type-btn');
     var typeSlider = document.querySelector('.list-type-slider');
-    var bannerStatEls = document.querySelectorAll('.ai-banner_stat_value');
+    var activeBannerStatEl = document.querySelector('[data-role="active-recommend-total"]');
     var loadingOverlay = document.getElementById('companyAiLoadingOverlay');
     var loadingDesc = document.getElementById('companyAiLoadingDesc');
     var loadingHelp = document.getElementById('companyAiLoadingHelp');
@@ -608,13 +608,11 @@
     }
 
     function updateBannerStats(stats) {
-        if (!bannerStatEls || bannerStatEls.length < 3) return;
-        var buyerTotal = parseTotal(stats && stats.buyer_total);
-        var sellerTotal = parseTotal(stats && stats.seller_total);
-        if (buyerTotal === null) buyerTotal = fallbackTotal(aiData.buyer);
-        if (sellerTotal === null) sellerTotal = fallbackTotal(aiData.seller);
-        bannerStatEls[1].textContent = String(buyerTotal);
-        bannerStatEls[2].textContent = String(sellerTotal);
+        if (!activeBannerStatEl) return;
+        var statKey = requestedType === 'seller' ? 'seller_total' : 'buyer_total';
+        var total = parseTotal(stats && stats[statKey]);
+        if (total === null) total = fallbackTotal(aiData[requestedType]);
+        activeBannerStatEl.textContent = String(total);
     }
 
     function renderCurrent(shouldScrollToRest) {

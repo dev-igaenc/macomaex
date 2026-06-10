@@ -1380,9 +1380,9 @@ $active_rest_first = array_slice($active_rest_pool, 0, 9);
 $active_top3_notice = ($partner_filter_trade_type === 2) ? $sell_top3_notice : $buy_top3_notice;
 $active_rest_notice = ($partner_filter_trade_type === 2) ? $sell_rest_notice : $buy_rest_notice;
 
-// 시안과 동일하게 배너 통계는 고정 노출
-$banner_buy_stat = 12;
-$banner_sell_stat = 12;
+// 추천 모달에서 선택한 방향의 실제 추천 결과 수만 배너에 노출한다.
+$active_total_stat = ($partner_filter_trade_type === 2) ? $sell_total_stat : $buy_total_stat;
+$active_total_label = ($partner_filter_trade_type === 2) ? '판매처' : '구매처';
 
 ?>
 
@@ -1445,12 +1445,8 @@ $banner_sell_stat = 12;
                     <span class="ai-banner_stat_label">거래 데이터</span>
                 </div>
                 <div class="ai-banner_stat">
-                    <span class="ai-banner_stat_value"><?php echo (int)$banner_buy_stat; ?></span>
-                    <span class="ai-banner_stat_label">구매처</span>
-                </div>
-                <div class="ai-banner_stat">
-                    <span class="ai-banner_stat_value"><?php echo (int)$banner_sell_stat; ?></span>
-                    <span class="ai-banner_stat_label">판매처</span>
+                    <span class="ai-banner_stat_value" data-role="active-recommend-total"><?php echo (int)$active_total_stat; ?></span>
+                    <span class="ai-banner_stat_label"><?php echo htmlspecialchars($active_total_label, ENT_QUOTES, 'UTF-8'); ?></span>
                 </div>
             </div>
         </div>
@@ -1459,18 +1455,18 @@ $banner_sell_stat = 12;
     <div class="list-body">
         <div class="inner">
             <main class="list-main">
+                <?php /*
+                구매처/판매처 찾기 진입 방향과 다른 목록으로 전환되지 않도록 하단 탭 영역 전체를 임시 비활성화한다.
                 <div class="list-top">
                     <div class="list-type-wrap">
-                        <?php /*
-                        구매처/판매처 찾기 진입 방향과 다른 목록으로 전환되지 않도록 탭 UI를 임시 비활성화한다.
                         <div class="list-type-switch" role="group" aria-label="구매하기/판매하기">
                             <span class="list-type-slider" aria-hidden="true"></span>
                             <button type="button" class="list-type-btn on" data-type="buyer">구매하기</button>
                             <button type="button" class="list-type-btn" data-type="seller">판매하기</button>
                         </div>
-                        */ ?>
                     </div>
                 </div>
+                */ ?>
 
                 <div class="ai-list-panel is-active" data-type="<?php echo htmlspecialchars($requested_type, ENT_QUOTES, 'UTF-8'); ?>">
                     <section class="ai-top3-section-top">
