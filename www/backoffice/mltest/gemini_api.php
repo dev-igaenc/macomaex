@@ -75,6 +75,76 @@ if (empty($companyData['buy_top1']) && empty($companyData['sell_top1'])) {
     exit;
 }
 
+function mltest_trade_exact_items($value): array {
+    $rawItems = is_array($value) ? $value : [$value];
+    $out = [];
+    foreach ($rawItems as $raw) {
+        $raw = trim((string)$raw);
+        if ($raw === '' || $raw === '-' || $raw === '미공개') continue;
+        $parts = preg_split('/\s*(?:,|\/|\||;|\n|\r\n|·|ㆍ)\s*/u', $raw);
+        foreach ($parts as $part) {
+            $part = trim((string)$part);
+            if ($part === '' || $part === '-' || $part === '미공개') continue;
+            if (!in_array($part, $out, true)) $out[] = $part;
+        }
+    }
+    return $out;
+}
+
+function mltest_trade_allowed_items(array $companyData): array {
+    $tradeType = (int)($companyData['trade_type'] ?? 1);
+    $isSell = ($tradeType === 2);
+    $rec = $isSell ? ($companyData['sell_top1'] ?? null) : ($companyData['buy_top1'] ?? null);
+    if (empty($rec)) {
+        $rec = $isSell ? ($companyData['buy_top1'] ?? null) : ($companyData['sell_top1'] ?? null);
+        $isSell = !$isSell;
+    }
+    $srcItems = array_values(array_unique(array_merge(
+        mltest_trade_exact_items($companyData['src_keywords'] ?? []),
+        mltest_trade_exact_items($companyData['source_mpd'] ?? '')
+    )));
+    $recItems = mltest_trade_exact_items(is_array($rec) ? ($rec['keywords'] ?? []) : []);
+    $buyItems = $isSell ? $srcItems : $recItems;
+    $sellItems = $isSell ? $recItems : $srcItems;
+    return ['buy_items' => $buyItems, 'sell_items' => $sellItems];
+}
+
+function mltest_trade_reason_line(array $buyItems, array $sellItems, string $tradeLabel): string {
+    $buyList = implode(', ', array_slice(array_values($buyItems), 0, 3));
+    $sellList = implode(', ', array_slice(array_values($sellItems), 0, 3));
+    if ($tradeLabel === '판매처' && $sellList !== '') {
+        return "귀사가 제공할 수 있는 {$sellList} 관련 거래 가능성을 우선 검토할 수 있는 기업으로 분석되었습니다.";
+    }
+    if ($buyList !== '') {
+        return "귀사가 필요로 하는 {$buyList} 관련 거래 가능성을 우선 검토할 수 있는 기업으로 분석되었습니다.";
+    }
+    if ($sellList !== '') {
+        return "귀사가 제공할 수 있는 {$sellList} 관련 거래 가능성을 함께 검토할 수 있는 기업으로 분석되었습니다.";
+    }
+    return "원본 품목 정보가 부족하여 품목 요약은 생략하고 거래 가능성 중심으로 분석했습니다.";
+}
+
+function mltest_trade_sanitize_report_json(string $reportText, array $companyData): string {
+    $decoded = json_decode($reportText, true);
+    if (!is_array($decoded)) return $reportText;
+
+    $tradeType = (int)($companyData['trade_type'] ?? 1);
+    $tradeLabel = ($tradeType === 2) ? '판매처' : '구매처';
+    $allowed = mltest_trade_allowed_items($companyData);
+
+    $decoded['trade_label'] = trim((string)($decoded['trade_label'] ?? '')) ?: $tradeLabel;
+    $decoded['title'] = trim((string)($decoded['title'] ?? '')) ?: ($decoded['trade_label'] . ' 거래 가능성 분석');
+    $decoded['buy_items'] = $allowed['buy_items'];
+    $decoded['sell_items'] = $allowed['sell_items'];
+
+    $reasons = isset($decoded['reasons']) && is_array($decoded['reasons']) ? array_values(array_filter(array_map('trim', $decoded['reasons']), fn($v) => $v !== '')) : [];
+    $reasons[0] = mltest_trade_reason_line($decoded['buy_items'], $decoded['sell_items'], $decoded['trade_label']);
+    $decoded['reasons'] = array_values(array_slice($reasons, 0, 3));
+
+    $encoded = json_encode($decoded, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    return $encoded === false ? $reportText : $encoded;
+}
+
 // ── 모델 설정 ─────────────────────────────────────────────
 $MODEL_CFG = [
     'gemini-3.1-pro-preview'       => ['model_id' => 'gemini-3.1-pro-preview',       'thinking' => false, 'label' => 'Gemini 3.1 Pro Preview',       'search' => false, 'search_tool' => null],
@@ -108,6 +178,67 @@ $requestBody = [
         'maxOutputTokens' => $maxTokens,
     ],
 ];
+
+if ($promptTier === 'trade') {
+    $requestBody['generationConfig']['responseMimeType'] = 'application/json';
+    $requestBody['generationConfig']['responseSchema'] = [
+        'type' => 'OBJECT',
+        'required' => [
+            'title',
+            'trade_label',
+            'score',
+            'connection_type',
+            'buy_items',
+            'sell_items',
+            'reasons',
+            'positioning',
+            'tradable_items_detail',
+            'connection_background',
+            'supply_chain_fit',
+            'trade_scenarios',
+            'stability_analysis',
+            'financial_analysis',
+            'first_touch_actions',
+            'considerations',
+        ],
+        'properties' => [
+            'title' => ['type' => 'STRING'],
+            'trade_label' => ['type' => 'STRING'],
+            'score' => ['type' => 'STRING'],
+            'connection_type' => ['type' => 'STRING'],
+            'buy_items' => [
+                'type' => 'ARRAY',
+                'items' => ['type' => 'STRING'],
+            ],
+            'sell_items' => [
+                'type' => 'ARRAY',
+                'items' => ['type' => 'STRING'],
+            ],
+            'reasons' => [
+                'type' => 'ARRAY',
+                'items' => ['type' => 'STRING'],
+            ],
+            'positioning' => ['type' => 'STRING'],
+            'tradable_items_detail' => ['type' => 'STRING'],
+            'connection_background' => ['type' => 'STRING'],
+            'supply_chain_fit' => ['type' => 'STRING'],
+            'trade_scenarios' => [
+                'type' => 'ARRAY',
+                'items' => ['type' => 'STRING'],
+            ],
+            'stability_analysis' => ['type' => 'STRING'],
+            'financial_analysis' => ['type' => 'STRING'],
+            'first_touch_actions' => [
+                'type' => 'ARRAY',
+                'items' => ['type' => 'STRING'],
+            ],
+            'considerations' => [
+                'type' => 'ARRAY',
+                'items' => ['type' => 'STRING'],
+            ],
+        ],
+    ];
+}
 
 if ($cfg['thinking']) {
     $requestBody['generationConfig']['thinkingConfig'] = [
@@ -216,6 +347,9 @@ if ($reportText === '') {
 $reportText = str_replace('__', '', $reportText);
 // (추론) 제거
 $reportText = preg_replace('/\s*\(추론\)/', '', $reportText);
+if ($promptTier === 'trade') {
+    $reportText = mltest_trade_sanitize_report_json($reportText, $companyData);
+}
 
 // ── 비용 산정 ─────────────────────────────────────────────
 $usage        = $resp['usageMetadata'] ?? [];

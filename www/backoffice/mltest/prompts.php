@@ -114,6 +114,22 @@ function _get_rec_and_label(array $d): array {
     ];
 }
 
+function _trade_exact_items($value): array {
+    $rawItems = is_array($value) ? $value : [$value];
+    $out = [];
+    foreach ($rawItems as $raw) {
+        $raw = trim((string)$raw);
+        if ($raw === '' || $raw === '-' || $raw === '미공개') continue;
+        $parts = preg_split('/\s*(?:,|\/|\||;|\n|\r\n|·|ㆍ)\s*/u', $raw);
+        foreach ($parts as $part) {
+            $part = trim((string)$part);
+            if ($part === '' || $part === '-' || $part === '미공개') continue;
+            if (!in_array($part, $out, true)) $out[] = $part;
+        }
+    }
+    return $out;
+}
+
 // ── Tier 1: Basic ──────────────────────────────────────────
 
 function _prompt_basic(array $d): array {
@@ -613,6 +629,15 @@ function _prompt_trade(array $d): array {
     $recP2y     = isset($rec['consec_profit_2y'])  ? ($rec['consec_profit_2y'] ? '2년 연속 흑자' : '미확인') : '-';
     $recKeywords = !empty($rec['keywords']) ? implode(', ', $rec['keywords']) : '';
     $srcKeywords = !empty($d['src_keywords']) ? implode(', ', $d['src_keywords']) : '';
+    $srcExactItems = array_values(array_unique(array_merge(
+        _trade_exact_items($d['src_keywords'] ?? []),
+        _trade_exact_items($d['source_mpd'] ?? '')
+    )));
+    $recExactItems = _trade_exact_items($rec['keywords'] ?? []);
+    $buyExactItems = $isSell ? $srcExactItems : $recExactItems;
+    $sellExactItems = $isSell ? $recExactItems : $srcExactItems;
+    $buyItemHint = !empty($buyExactItems) ? implode(', ', $buyExactItems) : '없음';
+    $sellItemHint = !empty($sellExactItems) ? implode(', ', $sellExactItems) : '없음';
 
     return [
         'system_instruction' => <<<SYS
@@ -639,11 +664,26 @@ function _prompt_trade(array $d): array {
 핵심 질문: "{$tradeAction}"을 담당자가 즉시 이해할 수 있도록 설명합니다.
 - {$tradeDir}를 보고서 전반에 걸쳐 구체적으로 서술합니다.
 - '품목 키워드'가 제공된 경우 해당 키워드를 거래 가능 품목 서술의 우선 근거로 사용합니다. 없으면 업종코드로 추론합니다.
+- 추천 사유를 업종명 중심으로 쓰지 말고, 실제 거래 품목 중심으로 씁니다.
+- `buy_items`, `sell_items`에는 아래 제공된 '구매 가능 품목 원본값', '판매 가능 품목 원본값'에 있는 표현만 그대로 사용합니다.
+- `buy_items`, `sell_items`에서 새로운 품목명이나 서비스명을 추론해서 만들지 않습니다.
+- 원본값이 없으면 해당 배열은 비워 둘 수 있으며, 없는 품목을 억지로 만들지 않습니다.
+- 구매 가능 품목은 이 거래에서 실제로 구매 수요가 맞닿는 품목·서비스로 정리하고, 판매 가능 품목은 실제로 공급·제공 가능한 품목·서비스로 정리합니다.
+- '핵심 추천 사유' 첫 번째 항목은 반드시 구체적 품목명 또는 서비스명으로 시작합니다. 업종 설명으로 시작하지 않습니다.
+- '핵심 추천 사유', '거래 연결 배경', '공급망·공정 연결성', '거래 시나리오'에서 품목명 또는 서비스명이 필요할 때도 가능한 한 위 원본값 표현을 그대로 재사용합니다.
+- 'IT 시스템 구축 서비스', '솔루션 제공', '운영 지원'처럼 너무 넓은 표현만 단독으로 쓰지 말고, 가능한 한 서버 구축, 네트워크 설계, 보안 시스템 구축, 유지보수 계약, 금속구조물, 배전반 외함처럼 실제 거래 단위를 씁니다.
 - 각 섹션은 충분한 분량(2~4문장 이상)으로 구체적으로 서술합니다. 한 줄 요약으로 끝내지 않습니다.
 - 재무·업력·규모는 섹션 3에서 별도로 다루되, 거래 신뢰도 관점에서 항목별로 해석합니다.
 - 업종명은 항상 **거래언어변환 표현** 형식으로 볼드 처리합니다. 그 외 볼드(**)는 사용하지 않습니다.
 - 모든 문장은 '~입니다', '~습니다' 존댓말로 작성합니다.
 - 추천 기업의 실명은 보고서 어디서도 직접 기재하지 말고 반드시 '해당 기업'으로 표기하세요.
+
+[출력 규칙 — 최우선]
+- 마크다운 보고서를 쓰지 말고 JSON만 출력합니다.
+- 코드펜스 없이 순수 JSON 객체만 반환합니다.
+- 키 이름을 바꾸거나 생략하지 않습니다.
+- `buy_items`, `sell_items`는 위 원본값 표현만 그대로 사용합니다.
+- 원본값에 없는 새 품목명은 절대 만들지 않습니다.
 SYS,
         'user_content' => <<<USR
 ## ※ 사용 가능한 데이터 (이 목록 외 정보는 존재하지 않습니다)
@@ -677,16 +717,30 @@ SYS,
 | 추천 점수 | {$recScore} |
 | 연결 방식 | {$recType} |
 | 품목 키워드 | {$recKeywords} |
+| 구매 가능 품목 참고 | {$buyItemHint} |
+| 판매 가능 품목 참고 | {$sellItemHint} |
+| 구매 가능 품목 원본값 | {$buyItemHint} |
+| 판매 가능 품목 원본값 | {$sellItemHint} |
 
 레이더 지표 (★ 강점 · ◎ 보통 · ○ 참고)
 {$recRadar}
 
 ---
-## [출력 형식 — 반드시 이 순서로]
+## [기존 보고서 형식 — 내용 흐름은 아래 형식을 유지]
 
 # {$tradeLabel} 거래 가능성 분석
 
 > 추천 유형: {$tradeLabel} | 점수: {$recScore} | 연결: {$recType}
+
+---
+
+## 거래 품목 요약
+
+### 구매 가능 품목
+(구매 가능 품목 원본값을 우선 사용하여 1줄 요약)
+
+### 판매 가능 품목
+(판매 가능 품목 원본값을 우선 사용하여 1줄 요약)
 
 ---
 
@@ -741,7 +795,50 @@ SYS,
 
 ### 4-2. 감안할 사항
 (거래 시 주의해야 할 리스크 또는 보완 사항 2~3가지)
+
+---
+## [추가 요청 반영 규칙 — 위 기존 형식에 아래 내용을 추가 반영]
+
+- 보고서 상단 또는 추천사유 영역에서 사용자가 바로 이해할 수 있도록 '구매 가능 품목', '판매 가능 품목'을 별도 항목으로 노출합니다.
+- 추천사유에 업종명만 쓰지 말고 구매 품목과 판매 품목을 함께 반영합니다.
+- 예: "귀사가 필요로 하는 알루미늄 판넬 및 배전반 외함을 공급할 수 있는 기업으로 분석되었습니다." 같은 방식으로 작성합니다.
+- 목적은 사용자가 "왜 이 기업이 추천됐는지"를 업종이 아니라 실제 거래 품목 기준으로 바로 이해하게 만드는 것입니다.
+
+---
+## [JSON 출력 스키마 — 이 키 이름 그대로만 출력]
+
+{
+  "title": "{$tradeLabel} 거래 가능성 분석",
+  "trade_label": "{$tradeLabel}",
+  "score": "{$recScore}",
+  "connection_type": "{$recType}",
+  "buy_items": ["원본값1", "원본값2"],
+  "sell_items": ["원본값1", "원본값2"],
+  "reasons": [
+    "귀사가 필요로 하는 [품목A], [품목B] 등을 공급/제공할 수 있는 기업으로 분석되었습니다.",
+    "두 기업이 공급망·공정에서 어떻게 연결되는지 품목 중심으로 설명합니다.",
+    "ML 연결 방식이 실거래 가능성과 어떻게 이어지는지 품목 또는 납품 형태를 포함해 설명합니다."
+  ],
+  "positioning": "거래 언어로 본 기업 포지션을 3~4문장으로 작성합니다.",
+  "tradable_items_detail": "거래 가능한 구체적 품목·소재·서비스·공정을 3개 이상 포함해 설명합니다.",
+  "connection_background": "거래 연결 배경을 실제 품목명 또는 서비스명을 포함해 3~4문장으로 설명합니다.",
+  "supply_chain_fit": "공급망·공정 연결성과 레이더 강점 지표를 거래 연결 신뢰도 관점에서 설명합니다.",
+  "trade_scenarios": [
+    "거래 흐름 시나리오 1",
+    "거래 흐름 시나리오 2"
+  ],
+  "stability_analysis": "업력·규모 기반 거래 안정성을 2~3문장으로 설명합니다.",
+  "financial_analysis": "매출성장률·부채비율·2년 연속흑자를 거래 리스크 관점에서 2~3문장으로 설명합니다.",
+  "first_touch_actions": [
+    "첫 접촉 방법 1",
+    "첫 접촉 방법 2"
+  ],
+  "considerations": [
+    "감안할 사항 1",
+    "감안할 사항 2"
+  ]
+}
 USR,
-        'temperature' => 0.3,
+        'temperature' => 0.1,
     ];
 }

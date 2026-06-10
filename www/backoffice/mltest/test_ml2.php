@@ -278,6 +278,7 @@ tr:hover td{background:#fafafa;}
 var FIXED_MODEL = '<?= htmlspecialchars($fixedModel) ?>';
 var _company = null, _mlBuy = [], _mlSell = [];
 var _buyPage = 0, _sellPage = 0;
+var _srcKeywords = [];
 var _kwTab = 1;
 var _kwData = {1: [], 2: []};
 var _kwLoaded = {1: false, 2: false};
@@ -292,6 +293,85 @@ function buildQs(p){return Object.keys(p).filter(function(k){return p[k]!==''&&p
 function ctClass(t){return 'ct-chip ct-'+(t||'').replace(/[^a-z0-9]/g,'');}
 function isMobile(){return window.innerWidth<640;}
 function renderMd(txt){try{return marked.parse(txt||'');}catch(e){return '<pre style="white-space:pre-wrap;font-size:12px;">'+txt+'</pre>';}}
+function escHtml(txt){
+  return String(txt==null?'':txt)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;')
+    .replace(/'/g,'&#39;');
+}
+function arrOrEmpty(v){
+  return Array.isArray(v)
+    ? v.filter(function(x){
+        var s=String(x||'').trim();
+        return s!=='' && s!=='미확인' && s!=='없음';
+      })
+    : [];
+}
+function parseTradeJson(raw){
+  if(!raw||typeof raw!=='string') return null;
+  var cleaned=raw.trim();
+  cleaned=cleaned.replace(/^```json\s*/i,'').replace(/^```\s*/,'').replace(/\s*```$/,'').trim();
+  try{return JSON.parse(cleaned);}catch(e){}
+  var start=cleaned.indexOf('{');
+  var end=cleaned.lastIndexOf('}');
+  if(start===-1||end===-1||end<=start) return null;
+  try{return JSON.parse(cleaned.slice(start,end+1));}catch(e){}
+  return null;
+}
+function renderTradeJsonReport(raw){
+  var data=parseTradeJson(raw);
+  if(!data||typeof data!=='object') return null;
+  var buyItems=arrOrEmpty(data.buy_items);
+  var sellItems=arrOrEmpty(data.sell_items);
+  var reasons=arrOrEmpty(data.reasons);
+  var scenarios=arrOrEmpty(data.trade_scenarios);
+  var actions=arrOrEmpty(data.first_touch_actions);
+  var considerations=arrOrEmpty(data.considerations);
+  var html='';
+  html+='<h1>'+escHtml(data.title||'거래 가능성 분석')+'</h1>';
+  html+='<blockquote>추천 유형: '+escHtml(data.trade_label||'')+' | 점수: '+escHtml(data.score||'')+' | 연결: '+escHtml(data.connection_type||'')+'</blockquote>';
+  if(buyItems.length||sellItems.length){
+    html+='<h2>거래 품목 요약</h2>';
+    if(buyItems.length){
+      html+='<h3>구매 가능 품목</h3>';
+      html+='<p>'+escHtml(buyItems.map(function(item,idx){return String.fromCharCode(9312+idx)+' '+item;}).join('  '))+'</p>';
+    }
+    if(sellItems.length){
+      html+='<h3>판매 가능 품목</h3>';
+      html+='<p>'+escHtml(sellItems.map(function(item,idx){return String.fromCharCode(9312+idx)+' '+item;}).join('  '))+'</p>';
+    }
+  }
+  html+='<h2>핵심 추천 사유</h2>';
+  html+='<ul>'+(reasons.length?reasons:['미확인']).map(function(item){return '<li>'+escHtml(item)+'</li>';}).join('')+'</ul>';
+  html+='<h2>1. 어떤 거래처인가</h2>';
+  html+='<h3>1-1. 거래 언어로 본 기업 포지션</h3><p>'+escHtml(data.positioning||'')+'</p>';
+  html+='<h3>1-2. 거래 가능 품목 상세</h3><p>'+escHtml(data.tradable_items_detail||'')+'</p>';
+  html+='<h2>2. 왜 우리 회사와 연결되는가</h2>';
+  html+='<h3>2-1. 거래 연결 배경</h3><p>'+escHtml(data.connection_background||'')+'</p>';
+  html+='<h3>2-2. 공급망·공정 연결성</h3><p>'+escHtml(data.supply_chain_fit||'')+'</p>';
+  html+='<h3>2-3. 거래 시나리오</h3><ul>'+(scenarios.length?scenarios:['미확인']).map(function(item){return '<li>'+escHtml(item)+'</li>';}).join('')+'</ul>';
+  html+='<h2>3. 거래 신뢰도 분석</h2>';
+  html+='<h3>3-1. 거래 안정성</h3><p>'+escHtml(data.stability_analysis||'')+'</p>';
+  html+='<h3>3-2. 재무 건전성</h3><p>'+escHtml(data.financial_analysis||'')+'</p>';
+  html+='<h2>4. 실행 제안 및 감안할 사항</h2>';
+  html+='<h3>4-1. 첫 거래 접점</h3><ul>'+(actions.length?actions:['미확인']).map(function(item){return '<li>'+escHtml(item)+'</li>';}).join('')+'</ul>';
+  html+='<h3>4-2. 감안할 사항</h3><ul>'+(considerations.length?considerations:['미확인']).map(function(item){return '<li>'+escHtml(item)+'</li>';}).join('')+'</ul>';
+  return html;
+}
+function renderTradeJsonFailure(raw){
+  var preview=String(raw==null?'':raw).trim();
+  if(preview.length>3000) preview=preview.slice(0,3000)+'\n...';
+  return ''
+    +'<div class="err">❌ B-현장형 응답이 JSON 스키마를 지키지 않았습니다. 아래는 원본 응답입니다.</div>'
+    +'<div class="report-body">'
+    +'<h2>거래 품목 요약</h2>'
+    +'<h3>구매 가능 품목</h3><p>파싱 실패</p>'
+    +'<h3>판매 가능 품목</h3><p>파싱 실패</p>'
+    +'<h3>원본 응답</h3><pre style="white-space:pre-wrap;font-size:12px;background:#f8f9fa;border:1px solid #eee;border-radius:8px;padding:10px;">'+escHtml(preview||'(빈 응답)')+'</pre>'
+    +'</div>';
+}
 
 // ── 접기/펼치기 ─────────────────────────────────────────────
 function toggleParams(){
@@ -310,6 +390,7 @@ function runTest(){
   ['step1','step2kw','stepParams','step3','step4'].forEach(function(id){document.getElementById(id).style.display='none';});
   document.getElementById('topCompany').textContent='';
   _mlBuy=[]; _mlSell=[];
+  _srcKeywords=[];
   _kwData={1:[],2:[]}; _kwLoaded={1:false,2:false};
   _kwSelected={1:new Map(),2:new Map()};
 
@@ -618,6 +699,7 @@ function runStep3(noFilter){
     var sellAll=(sellData.sell&&sellData.sell.top3)?[].concat(sellData.sell.top3,sellData.sell.list||[]):[];
     if(sellData.error) sellAll=[];
     _mlBuy=buyAll; _mlSell=sellAll;
+    _srcKeywords=(buyData.src_keywords||sellData.src_keywords||[]);
     if(_company) _company.coldstart=buyData.coldstart||false;
     _buyPage=0; _sellPage=0;
 
@@ -742,6 +824,7 @@ function buildReportData(tradeType){
     source_enp_typ:   C.enp_typ,
     source_estb_dt:   C.estb_dt,
     source_mpd:       C.mpd,
+    src_keywords:     _srcKeywords,
     source_sales:     C.sales,
     source_prev_sales:C.prev_sales,
     source_asset:     C.asset,
@@ -781,7 +864,11 @@ function renderResult(elId, res){
       ?'<span class="stat-chip" style="font-size:11px;">₩'+res.cost_krw.toLocaleString()+'</span>'
       :'')
     +'</div>';
-  el.innerHTML=chips+'<div class="report-body">'+renderMd(res.report)+'</div>';
+  var bodyHtml=null;
+  if(res.prompt_tier==='trade') bodyHtml=renderTradeJsonReport(res.report);
+  if(res.prompt_tier==='trade'&&!bodyHtml) bodyHtml=renderTradeJsonFailure(res.report);
+  if(!bodyHtml) bodyHtml=renderMd(res.report);
+  el.innerHTML=chips+'<div class="report-body">'+bodyHtml+'</div>';
 }
 
 function generateReport(tradeType){
