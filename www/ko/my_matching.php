@@ -371,18 +371,18 @@ $matchingPageData = array(
 
 $matchingPageDataJson = json_encode(
 	$matchingPageData,
-	JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
+	JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT
 );
 if ($matchingPageDataJson === false) {
 	$matchingPageDataJson = '{"received":[],"sent":[],"interested":[],"csrfToken":""}';
 }
 
-$defaultMessageJson = json_encode($defaultMessage, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+$defaultMessageJson = json_encode($defaultMessage, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
 if ($defaultMessageJson === false) {
 	$defaultMessageJson = '""';
 }
 
-$requesterCompanyDataJson = json_encode($requesterCompanyData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+$requesterCompanyDataJson = json_encode($requesterCompanyData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
 if ($requesterCompanyDataJson === false) {
 	$requesterCompanyDataJson = '{}';
 }

@@ -8,23 +8,32 @@ var matchingCsrfToken = matchingPageData.csrfToken || '';
    Rendering Functions
    ====================================================== */
 
+function escapeHtml(value) {
+    return String(value == null ? '' : value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
 function renderMsgHtml(msg) {
     if (msg && typeof msg === 'object') {
         var tags = '<div class="req-msg-tags">';
-        if (msg.direction) tags += '<span class="req-tag dir">' + msg.direction + '</span>';
-        (msg.types || []).forEach(function (t) { tags += '<span class="req-tag type">' + t + '</span>'; });
-        if (msg.matchType) tags += '<span class="req-tag mtype">' + msg.matchType + ' 거래</span>';
+        if (msg.direction) tags += '<span class="req-tag dir">' + escapeHtml(msg.direction) + '</span>';
+        (msg.types || []).forEach(function (t) { tags += '<span class="req-tag type">' + escapeHtml(t) + '</span>'; });
+        if (msg.matchType) tags += '<span class="req-tag mtype">' + escapeHtml(msg.matchType) + ' 거래</span>';
         tags += '</div>';
 
         var itemHtml = '';
         if (msg.item) {
-            itemHtml = '<div class="req-detail"><div class="req-detail-section"><div class="req-detail-row"><span class="req-detail-label">거래 희망 품목</span><span class="req-detail-value">' + msg.item + '</span></div></div></div>';
+            itemHtml = '<div class="req-detail"><div class="req-detail-section"><div class="req-detail-row"><span class="req-detail-label">거래 희망 품목</span><span class="req-detail-value">' + escapeHtml(msg.item) + '</span></div></div></div>';
         }
 
-        var extra = msg.extra ? '<p class="req-msg-extra">' + msg.extra + '</p>' : '';
+        var extra = msg.extra ? '<p class="req-msg-extra">' + escapeHtml(msg.extra) + '</p>' : '';
         return tags + itemHtml + extra;
     }
-    return msg || '';
+    return escapeHtml(msg || '');
 }
 
 /* ======================================================
