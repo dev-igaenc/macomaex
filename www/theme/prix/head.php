@@ -1187,9 +1187,32 @@ function requestMainCompCheck(comnum, $form, opts) {
 	window.currentSearchBiznoToken = "";
 	window.currentSearchBzcCd = "";
 	window.currentSearchKedcd = "";
-	window.currentRecommendTraceId = (window.crypto && typeof window.crypto.randomUUID === "function")
-		? window.crypto.randomUUID()
-		: (Date.now().toString(36) + Math.random().toString(36).slice(2));
+	// 한 번의 추천 실행에서 발생한 서버 로그를 사람이 조회하기 쉬운 짧은 ID로 묶는다.
+	var traceAlphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+	var traceRandom = "";
+	var traceBytes = new Uint8Array(4);
+	if (window.crypto && typeof window.crypto.getRandomValues === "function") {
+		window.crypto.getRandomValues(traceBytes);
+		for (var traceIndex = 0; traceIndex < traceBytes.length; traceIndex++) {
+			traceRandom += traceAlphabet.charAt(traceBytes[traceIndex] % traceAlphabet.length);
+		}
+	} else {
+		for (var fallbackIndex = 0; fallbackIndex < 4; fallbackIndex++) {
+			traceRandom += traceAlphabet.charAt(Math.floor(Math.random() * traceAlphabet.length));
+		}
+	}
+	var traceNow = new Date();
+	var tracePad = function(value) { return Number(value) < 10 ? "0" + Number(value) : String(value); };
+	window.currentRecommendTraceId = "R-"
+		+ String(traceNow.getFullYear()).slice(-2)
+		+ tracePad(traceNow.getMonth() + 1)
+		+ tracePad(traceNow.getDate())
+		+ "-"
+		+ tracePad(traceNow.getHours())
+		+ tracePad(traceNow.getMinutes())
+		+ tracePad(traceNow.getSeconds())
+		+ "-"
+		+ traceRandom;
 
 	// test_ml2와 동일하게 KODATA(main_comp_chk) 기준 기업정보를 먼저 확인한다.
 	requestMainCompCheck(comnumDigits, $form);

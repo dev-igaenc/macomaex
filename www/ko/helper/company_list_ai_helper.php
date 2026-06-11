@@ -98,15 +98,23 @@ if (!function_exists('company_list_ai_normalize_trace_id')) {
     function company_list_ai_normalize_trace_id($trace_id = '')
     {
         // [추적 ID 정규화]
-        // 외부에서 전달된 ID는 허용 문자와 길이를 제한하고, 없으면 새 ID를 만들어 전체 추천 흐름을 연결한다.
+        // 외부에서 전달된 ID는 허용 문자와 길이를 제한하고, 없으면 조회하기 쉬운 짧은 실행 ID를 만든다.
         $trace_id = preg_replace('/[^a-zA-Z0-9_-]/', '', (string)$trace_id);
         if ($trace_id !== '') return substr($trace_id, 0, 64);
+
+        $alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+        $suffix = '';
         try {
-            return date('YmdHis') . '-' . bin2hex(random_bytes(8));
+            $bytes = random_bytes(4);
+            for ($i = 0; $i < 4; $i++) {
+                $suffix .= $alphabet[ord($bytes[$i]) % strlen($alphabet)];
+            }
         } catch (Exception $e) {
-            // 추적 ID 생성 실패가 추천 기능 자체를 중단시키지 않도록 시간 기반 ID로 대체한다.
-            return date('YmdHis') . '-' . str_replace('.', '', uniqid('', true));
+            for ($i = 0; $i < 4; $i++) {
+                $suffix .= $alphabet[mt_rand(0, strlen($alphabet) - 1)];
+            }
         }
+        return 'R-' . date('ymd-His') . '-' . $suffix;
     }
 }
 
@@ -145,42 +153,75 @@ if (!function_exists('company_list_ai_ensure_recommend_log_table')) {
         static $ready = null;
         if ($ready !== null) return $ready;
 
-        // 이벤트마다 채워지는 필드가 달라 NULL 대신 빈 문자열/0을 사용해 조회와 집계를 단순화한다.
+        // 자주 조회하는 식별 필드만 컬럼으로 두고, 이벤트별 상세는 c_data JSON에 모은다.
         $sql = "CREATE TABLE IF NOT EXISTS company_recommend_log (
             c_id bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '로그 행 식별자',
-            c_trace_id varchar(64) NOT NULL DEFAULT '' COMMENT '추천 버튼 진입부터 요청, 응답, 카드 출력까지 연결하는 실행 ID',
-            c_event_type varchar(50) NOT NULL DEFAULT '' COMMENT '로그 이벤트 유형',
+            c_trace_id varchar(64) NOT NULL DEFAULT '' COMMENT '한 번의 추천 실행에서 발생한 이벤트를 묶는 실행 ID',
+            c_event_type varchar(50) NOT NULL DEFAULT '' COMMENT 'request_received/external_request/external_response/cache_response/cache_save/output 등 이벤트 유형',
             c_event_status varchar(10) NOT NULL DEFAULT '' COMMENT 'success/fail',
-            c_stage varchar(30) NOT NULL DEFAULT '' COMMENT 'entry/request/response/card_output 또는 실패 발생 단계',
-            c_source varchar(50) NOT NULL DEFAULT '' COMMENT 'company_ml_log/ec2/화면 또는 실패 발생 데이터 출처',
+            c_source varchar(50) NOT NULL DEFAULT '' COMMENT 'company_list_ai/company_list_ai_api/ec2/company_ml_log 등 이벤트 발생 주체',
             c_recommendation_mode varchar(20) NOT NULL DEFAULT '' COMMENT 'full=전체 추천, keyword=키워드 선택 추천',
             c_bizno varchar(10) NOT NULL DEFAULT '' COMMENT '기준 기업 사업자번호',
             c_kedcd varchar(10) NOT NULL DEFAULT '' COMMENT '기준 기업 KED 기업코드',
             c_trade_type tinyint unsigned NOT NULL DEFAULT 0 COMMENT '0=방향 없음, 1=구매처 추천, 2=판매처 추천',
-            c_source_bzc_cd varchar(10) NOT NULL DEFAULT '' COMMENT '기준 기업 업종코드',
-            c_match_type varchar(20) NOT NULL DEFAULT '' COMMENT 'skip/exact/prefix_5/prefix_4/all/mixed/target_card 등 추천 진입 방식',
             c_keywords text NOT NULL COMMENT '추천 버튼 클릭 시 선택되어 전달된 키워드 목록',
-            c_filter_bzc_cds text NOT NULL COMMENT 'EC2 요청 및 캐시 구분에 사용한 업종코드 목록',
-            c_filter_bzc_weights text NOT NULL COMMENT '필터 업종코드별 가중치 목록',
-            c_from_cache tinyint unsigned NOT NULL DEFAULT 0 COMMENT '0=실호출 또는 해당 없음, 1=캐시 응답',
-            c_result_count int unsigned NOT NULL DEFAULT 0 COMMENT '해당 단계의 결과 또는 출력 건수',
-            c_request_data mediumtext NOT NULL COMMENT '요청 단계 JSON 스냅샷',
-            c_response_data mediumtext NOT NULL COMMENT '응답 단계 JSON 요약',
-            c_output_data mediumtext NOT NULL COMMENT '화면/API 출력 JSON 요약',
             c_error_code varchar(100) NOT NULL DEFAULT '' COMMENT '실패 사유 식별 코드',
             c_message varchar(500) NOT NULL DEFAULT '' COMMENT '사람이 읽는 로그 설명',
+            c_data mediumtext NOT NULL COMMENT '이벤트별 요청, 응답, 출력 및 부가정보 JSON',
             c_datetime datetime NOT NULL COMMENT '로그 기록 시각',
             c_ip varchar(45) NOT NULL DEFAULT '' COMMENT '요청자 IPv4 또는 IPv6',
             PRIMARY KEY (c_id),
-            KEY idx_trace_trade_stage (c_trace_id, c_trade_type, c_stage, c_datetime),
+            KEY idx_trace_trade_event (c_trace_id, c_trade_type, c_event_type, c_id),
             KEY idx_kedcd_trade_dt (c_kedcd, c_trade_type, c_datetime),
-            KEY idx_event_dt (c_event_type, c_datetime),
-            KEY idx_status_dt (c_event_status, c_datetime)
+            KEY idx_event_status_dt (c_event_type, c_event_status, c_datetime),
+            KEY idx_error_dt (c_error_code, c_datetime)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
-          COMMENT='거래처 추천 버튼 진입 이후 핵심 성공 이벤트와 단계별 실패 추적 로그'";
+          COMMENT='거래처 추천 실행의 핵심 성공 이벤트와 단계별 실패 추적 로그'";
 
         $ready = (bool)sql_query($sql, false);
         return $ready;
+    }
+}
+
+if (!function_exists('company_list_ai_normalize_event_type')) {
+    function company_list_ai_normalize_event_type($event_type, $payload = array())
+    {
+        $source = trim((string)($payload['source'] ?? ''));
+        $map = array(
+            'recommend_entry' => 'request_received',
+            'recommend_card_output' => 'output',
+            'ml_log_save' => 'cache_save',
+            'ml_cache_restore' => 'cache_response',
+        );
+        if ($event_type === 'recommend_request' && $source === 'ec2') return 'external_request';
+        if ($event_type === 'recommend_response' && $source === 'ec2') return 'external_response';
+        if ($event_type === 'recommend_response' && $source === 'company_ml_log') return 'cache_response';
+        return isset($map[$event_type]) ? $map[$event_type] : $event_type;
+    }
+}
+
+if (!function_exists('company_list_ai_build_event_data')) {
+    function company_list_ai_build_event_data($payload)
+    {
+        $payload = is_array($payload) ? $payload : array('value' => $payload);
+        $excluded = array(
+            'trace_id', 'source', 'recommendation_mode', 'bizno', 'kedcd', 'trade_type',
+            'keywords', 'error_code', 'client_ip', 'user_agent', 'stage',
+        );
+        $renamed = array(
+            'request_data' => 'request',
+            'response_data' => 'response',
+            'output_data' => 'output',
+        );
+        $data = array();
+        foreach ($payload as $key => $value) {
+            if (in_array($key, $excluded, true)) continue;
+            if ($value === '' || $value === null) continue;
+            $data[isset($renamed[$key]) ? $renamed[$key] : $key] = $value;
+        }
+        $data['request_uri'] = trim((string)($_SERVER['REQUEST_URI'] ?? ''));
+        $data['user_agent'] = company_list_ai_compact_log_message((string)($payload['user_agent'] ?? ($_SERVER['HTTP_USER_AGENT'] ?? '')), 300);
+        return company_list_ai_log_json($data);
     }
 }
 
@@ -188,7 +229,7 @@ if (!function_exists('company_list_ai_write_db_event_log')) {
     function company_list_ai_write_db_event_log($event_type, $status, $payload, $message)
     {
         // [DB 추적 로그 저장]
-        // 이벤트별 payload를 company_recommend_log 컬럼에 매핑한다. 적용되지 않는 값은 빈 문자열/0으로 저장한다.
+        // 조회에 자주 쓰는 식별 필드는 컬럼에, 이벤트별 상세는 c_data JSON에 저장한다.
         if (!company_list_ai_ensure_recommend_log_table()) return false;
         $payload = is_array($payload) ? $payload : array();
 
@@ -196,24 +237,15 @@ if (!function_exists('company_list_ai_write_db_event_log')) {
             'c_trace_id' => company_list_ai_normalize_trace_id($payload['trace_id'] ?? ''),
             'c_event_type' => (string)$event_type,
             'c_event_status' => (string)$status,
-            'c_stage' => (string)($payload['stage'] ?? ''),
             'c_source' => (string)($payload['source'] ?? ''),
             'c_recommendation_mode' => (string)($payload['recommendation_mode'] ?? ''),
             'c_bizno' => preg_replace('/\D/', '', (string)($payload['bizno'] ?? '')),
             'c_kedcd' => preg_replace('/\D/', '', (string)($payload['kedcd'] ?? '')),
             'c_trade_type' => (int)($payload['trade_type'] ?? 0),
-            'c_source_bzc_cd' => strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', (string)($payload['source_bzc_cd'] ?? '')), 0, 10)),
-            'c_match_type' => (string)($payload['match_type'] ?? ''),
-            'c_keywords' => (string)($payload['keywords'] ?? ''),
-            'c_filter_bzc_cds' => (string)($payload['filter_bzc_cds'] ?? ''),
-            'c_filter_bzc_weights' => (string)($payload['filter_bzc_weights'] ?? ''),
-            'c_from_cache' => !empty($payload['from_cache']) ? 1 : 0,
-            'c_result_count' => max(0, (int)($payload['result_count'] ?? 0)),
-            'c_request_data' => company_list_ai_log_json($payload['request_data'] ?? ''),
-            'c_response_data' => company_list_ai_log_json($payload['response_data'] ?? ''),
-            'c_output_data' => company_list_ai_log_json($payload['output_data'] ?? ''),
+            'c_keywords' => company_list_ai_compact_log_message((string)($payload['keywords'] ?? ''), 2000),
             'c_error_code' => (string)($payload['error_code'] ?? ''),
             'c_message' => company_list_ai_compact_log_message($message, 500),
+            'c_data' => company_list_ai_build_event_data($payload),
             'c_datetime' => date('Y-m-d H:i:s'),
             'c_ip' => (string)($payload['client_ip'] ?? ($_SERVER['REMOTE_ADDR'] ?? '')),
         );
@@ -250,14 +282,14 @@ if (!function_exists('company_list_ai_log_default_message')) {
         $source = trim((string)($payload['source'] ?? ''));
 
         if ($status === 'success') {
-            if ($event_type === 'recommend_entry') return 'AI 추천 목록 진입 완료';
+            if ($event_type === 'request_received') return '추천 요청 접수 완료';
             if ($event_type === 'bizno_resolve') return '사업자번호 기준 기업정보 해석 완료';
-            if ($event_type === 'recommend_request') return '추천 요청 데이터 기록 완료';
-            if ($event_type === 'recommend_response') return '추천 응답 데이터 기록 완료';
-            if ($event_type === 'recommend_card_output') return '추천 카드 출력 기록 완료';
+            if ($event_type === 'external_request') return 'EC2 추천 요청 호출 시작';
+            if ($event_type === 'external_response') return 'EC2 추천 응답 수신 완료';
+            if ($event_type === 'cache_response') return '추천 캐시 응답 사용';
+            if ($event_type === 'cache_save') return '추천 응답 캐시 저장 완료';
+            if ($event_type === 'output') return '추천 카드 출력 완료';
             if ($event_type === 'keyword_lookup') return '업종코드 기반 추천 키워드 조회 완료';
-            if ($event_type === 'ml_cache_restore') return 'ML 캐시 복원 완료';
-            if ($event_type === 'ml_log_save') return 'ML 결과 DB 저장 완료';
             return 'AI 추천 작업이 완료되었습니다.';
         }
 
@@ -268,16 +300,17 @@ if (!function_exists('company_list_ai_log_default_message')) {
 if (!function_exists('company_list_ai_should_write_event_log')) {
     function company_list_ai_should_write_event_log($event_type, $status, $payload = array())
     {
-        // 실패는 발생 단계와 무관하게 남기고, 성공은 추천 버튼 진입 이후 핵심 추적 이벤트만 저장한다.
-        if ($status === 'fail') return true;
+        // 실패는 실제 발생 단계에만 남긴다. EC2 실패 뒤 이어지는 출력 불가 로그는 같은 오류의 중복이므로 제외한다.
+        if ($status === 'fail') {
+            if ($event_type === 'output' && (string)($payload['error_code'] ?? '') === 'recommend_failed') return false;
+            return true;
+        }
         if ($status !== 'success') return false;
 
-        $source = trim((string)($payload['source'] ?? ''));
-        if ($event_type === 'recommend_entry') return true;
-        if ($event_type === 'recommend_request') return $source === 'ec2';
-        if ($event_type === 'recommend_response') return in_array($source, array('ec2', 'company_ml_log'), true);
-        if ($event_type === 'recommend_card_output') return true;
-        return false;
+        return in_array($event_type, array(
+            'request_received', 'external_request', 'external_response',
+            'cache_response', 'cache_save', 'output',
+        ), true);
     }
 }
 
@@ -291,9 +324,9 @@ if (!function_exists('company_list_ai_write_event_log')) {
         if ($event_type === '' || $status === '') return false;
         // 상태 분류는 성공/실패만 허용한다. skip 같은 흐름 구분값을 실패로 오인해 적재하지 않는다.
         if (!in_array($status, array('success', 'fail'), true)) return false;
-        if (!preg_match('/^[a-z0-9_.:-]{1,50}$/i', $event_type)) $event_type = 'invalid_event_type';
-
         $payload = is_array($payload) ? $payload : array('value' => $payload);
+        $event_type = company_list_ai_normalize_event_type($event_type, $payload);
+        if (!preg_match('/^[a-z0-9_.:-]{1,50}$/i', $event_type)) $event_type = 'invalid_event_type';
         if (!company_list_ai_should_write_event_log($event_type, $status, $payload)) return true;
         $payload['trace_id'] = company_list_ai_normalize_trace_id($payload['trace_id'] ?? '');
         $dir = company_list_ai_log_directory_path();
@@ -312,59 +345,20 @@ if (!function_exists('company_list_ai_write_event_log')) {
             'event_type' => $event_type,
             'event_status' => $status,
             'trace_id' => $payload['trace_id'],
-            'stage' => trim((string)($payload['stage'] ?? '')),
-            'action' => trim((string)($payload['action'] ?? '')),
-            'reason' => trim((string)($payload['reason'] ?? '')),
             'source' => trim((string)($payload['source'] ?? '')),
             'recommendation_mode' => trim((string)($payload['recommendation_mode'] ?? '')),
-            'requested_type' => trim((string)($payload['requested_type'] ?? '')),
             'bizno' => preg_replace('/\D/', '', (string)($payload['bizno'] ?? '')),
             'kedcd' => preg_replace('/\D/', '', (string)($payload['kedcd'] ?? '')),
             'trade_type' => (int)($payload['trade_type'] ?? 0),
-            'selected_trade_type' => (int)($payload['selected_trade_type'] ?? 0),
-            'source_bzc_cd' => strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', (string)($payload['source_bzc_cd'] ?? '')), 0, 10)),
-            'matched_source_bzc_cds' => strtoupper(substr(preg_replace('/[^A-Za-z0-9,]/', '', (string)($payload['matched_source_bzc_cds'] ?? '')), 0, 500)),
-            'match_type' => trim((string)($payload['match_type'] ?? '')),
-            'keyword_count' => (int)($payload['keyword_count'] ?? 0),
-            'keywords' => company_list_ai_compact_log_message((string)($payload['keywords'] ?? ''), 500),
-            'partner_bzc_count' => (int)($payload['partner_bzc_count'] ?? 0),
-            'partner_bzc_cds' => strtoupper(substr(preg_replace('/[^A-Za-z0-9,]/', '', (string)($payload['partner_bzc_cds'] ?? '')), 0, 500)),
-            'filter_bzc_count' => (int)($payload['filter_bzc_count'] ?? 0),
-            'filter_bzc_cds' => strtoupper(substr(preg_replace('/[^A-Za-z0-9,]/', '', (string)($payload['filter_bzc_cds'] ?? '')), 0, 500)),
-            'filter_bzc_weights' => substr(preg_replace('/[^0-9,]/', '', (string)($payload['filter_bzc_weights'] ?? '')), 0, 500),
-            'cache_policy' => trim((string)($payload['cache_policy'] ?? '')),
-            'http_code' => (int)($payload['http_code'] ?? 0),
-            'elapsed_ms' => (int)($payload['elapsed_ms'] ?? 0),
-            'result_count' => (int)($payload['result_count'] ?? 0),
-            'cache_scope' => trim((string)($payload['cache_scope'] ?? '')),
-            'cache_datetime' => trim((string)($payload['cache_datetime'] ?? '')),
-            'from_cache' => isset($payload['from_cache']) ? ((int)!empty($payload['from_cache'])) : '',
-            'top_n' => (int)($payload['top_n'] ?? 0),
-            'cust_name_count' => (int)($payload['cust_name_count'] ?? 0),
-            'supp_name_count' => (int)($payload['supp_name_count'] ?? 0),
+            'keywords' => company_list_ai_compact_log_message((string)($payload['keywords'] ?? ''), 2000),
             'error_code' => trim((string)($payload['error_code'] ?? '')),
-            'request_data' => company_list_ai_log_json($payload['request_data'] ?? ''),
-            'response_data' => company_list_ai_log_json($payload['response_data'] ?? ''),
-            'output_data' => company_list_ai_log_json($payload['output_data'] ?? ''),
             'message' => $message,
-            'request_uri' => trim((string)($_SERVER['REQUEST_URI'] ?? '')),
+            'data' => company_list_ai_build_event_data($payload),
             'client_ip' => trim((string)($payload['client_ip'] ?? ($_SERVER['REMOTE_ADDR'] ?? ''))),
-            'user_agent' => company_list_ai_compact_log_message((string)($payload['user_agent'] ?? ($_SERVER['HTTP_USER_AGENT'] ?? '')), 300),
         );
 
         $allow_zero_keys = array(
             'trade_type',
-            'selected_trade_type',
-            'keyword_count',
-            'partner_bzc_count',
-            'filter_bzc_count',
-            'http_code',
-            'elapsed_ms',
-            'result_count',
-            'from_cache',
-            'top_n',
-            'cust_name_count',
-            'supp_name_count',
         );
 
         $lines = array();
@@ -843,6 +837,7 @@ if (!function_exists('company_list_ai_save_ml_log')) {
     {
         $trade_type = ((int)$trade_type === 2) ? 2 : 1;
         $trace_id = company_list_ai_normalize_trace_id($cache_context['trace_id'] ?? '');
+        $keywords_for_log = (string)($cache_context['keywords'] ?? '');
         $cache_context = company_list_ai_normalize_ml_cache_context($cache_context);
 
         $bizno = preg_replace('/\D/', '', (string)$bizno);
@@ -873,9 +868,10 @@ if (!function_exists('company_list_ai_save_ml_log')) {
         }
 
         if (!is_string($raw) || trim($raw) === '') {
-            company_list_ai_write_event_log('ml_log_save', 'fail', array(
+            company_list_ai_write_event_log('cache_save', 'fail', array(
                 'trace_id' => $trace_id,
                 'stage' => 'cache_save',
+                'source' => 'company_ml_log',
                 'bizno' => $bizno,
                 'kedcd' => $kedcd,
                 'trade_type' => $trade_type,
@@ -904,7 +900,7 @@ if (!function_exists('company_list_ai_save_ml_log')) {
                     c_ip='{$ip_sql}'";
 
         $ok = (bool)sql_query($sql, false);
-        company_list_ai_write_event_log('ml_log_save', $ok ? 'success' : 'fail', array(
+        company_list_ai_write_event_log('cache_save', $ok ? 'success' : 'fail', array(
             'trace_id' => $trace_id,
             'stage' => 'cache_save',
             'bizno' => $bizno,
@@ -912,6 +908,7 @@ if (!function_exists('company_list_ai_save_ml_log')) {
             'trade_type' => $trade_type,
             'source' => 'company_ml_log',
             'recommendation_mode' => $cache_context['recommendation_mode'],
+            'keywords' => $keywords_for_log,
             'filter_bzc_count' => count($cache_context['filter_bzc_cds']),
             'filter_bzc_cds' => implode(',', $cache_context['filter_bzc_cds']),
             'filter_bzc_weights' => implode(',', $cache_context['filter_bzc_weights']),
@@ -970,7 +967,7 @@ if (!function_exists('company_list_ai_pick_ml_log')) {
 // [캐시 응답 복원]
 // company_ml_log의 JSON을 실시간 EC2 호출 결과와 동일한 call_result 형태로 복원한다.
 if (!function_exists('company_list_ai_restore_call_from_ml_log')) {
-    function company_list_ai_restore_call_from_ml_log($row)
+    function company_list_ai_restore_call_from_ml_log($row, $trace_context = array())
     {
         if (!is_array($row) || empty($row['c_content'])) {
             return null;
@@ -979,32 +976,20 @@ if (!function_exists('company_list_ai_restore_call_from_ml_log')) {
         $raw = (string)$row['c_content'];
         $decoded = json_decode($raw, true);
         if (!is_array($decoded)) {
-            company_list_ai_write_event_log('ml_cache_restore', 'fail', array(
+            company_list_ai_write_event_log('cache_response', 'fail', array(
+                'trace_id' => (string)($trace_context['trace_id'] ?? ''),
                 'bizno' => (string)($row['c_bizno'] ?? ''),
                 'kedcd' => (string)($row['c_kedcd'] ?? ''),
                 'trade_type' => (int)($row['c_trade_type'] ?? 0),
                 'source' => 'company_ml_log',
+                'recommendation_mode' => (string)($trace_context['recommendation_mode'] ?? ''),
+                'keywords' => (string)($trace_context['keywords'] ?? ''),
                 'reason' => 'json_decode_failed',
                 'cache_datetime' => (string)($row['c_datetime'] ?? ''),
                 'error_code' => 'json_decode_failed',
             ), 'ML 캐시 JSON 파싱 실패');
             return null;
         }
-
-        company_list_ai_write_event_log('ml_cache_restore', 'success', array(
-            'bizno' => (string)($row['c_bizno'] ?? ''),
-            'kedcd' => (string)($row['c_kedcd'] ?? ''),
-            'trade_type' => (int)($row['c_trade_type'] ?? 0),
-            'source' => 'company_ml_log',
-            'recommendation_mode' => (string)($decoded['_cache_meta']['recommendation_mode'] ?? 'full'),
-            'filter_bzc_count' => count((array)($decoded['_cache_meta']['filter_bzc_cds'] ?? array())),
-            'filter_bzc_cds' => implode(',', (array)($decoded['_cache_meta']['filter_bzc_cds'] ?? array())),
-            'filter_bzc_weights' => implode(',', (array)($decoded['_cache_meta']['filter_bzc_weights'] ?? array())),
-            'cache_scope' => 'db',
-            'cache_datetime' => (string)($row['c_datetime'] ?? ''),
-            'from_cache' => 1,
-            'result_count' => (isset($decoded['results']) && is_array($decoded['results'])) ? count($decoded['results']) : 0,
-        ));
 
         return array(
             'ok' => true,
@@ -1042,6 +1027,27 @@ if (!function_exists('company_list_ai_summarize_recommend_results')) {
     }
 }
 
+if (!function_exists('company_list_ai_ec2_curl_error_code')) {
+    function company_list_ai_ec2_curl_error_code($curl_errno, $connect_time_ms)
+    {
+        $curl_errno = (int)$curl_errno;
+        if ($curl_errno === CURLE_COULDNT_RESOLVE_HOST) return 'dns_resolution_failed';
+        if ($curl_errno === CURLE_COULDNT_CONNECT) return 'connection_refused';
+        if ($curl_errno === CURLE_OPERATION_TIMEDOUT) {
+            return (int)$connect_time_ms <= 0 ? 'connect_timeout' : 'response_timeout';
+        }
+        if (in_array($curl_errno, array(CURLE_RECV_ERROR, CURLE_SEND_ERROR, CURLE_PARTIAL_FILE), true)) {
+            return 'connection_reset';
+        }
+
+        $ssl_errors = array(CURLE_SSL_CONNECT_ERROR);
+        if (defined('CURLE_PEER_FAILED_VERIFICATION')) $ssl_errors[] = constant('CURLE_PEER_FAILED_VERIFICATION');
+        if (defined('CURLE_SSL_CACERT')) $ssl_errors[] = constant('CURLE_SSL_CACERT');
+        if (in_array($curl_errno, array_unique($ssl_errors), true)) return 'ssl_verification_failed';
+        return 'curl_error';
+    }
+}
+
 // [EC2 /recommend 단건 호출]
 // 전송 직전에 요청 로그를 남기고, 설정 누락/cURL/HTTP/JSON 오류 및 정상 응답을 각각 응답 로그로 기록한다.
 if (!function_exists('company_list_ai_call_recommend')) {
@@ -1052,7 +1058,7 @@ if (!function_exists('company_list_ai_call_recommend')) {
         $api_key = (string)company_list_ai_env('ML_API_KEY', '');
         $kedcd_for_log = str_pad(preg_replace('/\D/', '', (string)($payload['kedcd'] ?? '')), 10, '0', STR_PAD_LEFT);
         if (strlen($kedcd_for_log) !== 10 || preg_match('/^0+$/', $kedcd_for_log)) $kedcd_for_log = '';
-        $bizno_for_log = preg_replace('/\D/', '', (string)($payload['bizno'] ?? ($payload['bzno'] ?? '')));
+        $bizno_for_log = preg_replace('/\D/', '', (string)($payload['bizno'] ?? ($payload['bzno'] ?? ($trace_context['bizno'] ?? ''))));
         if (strlen($bizno_for_log) !== 10) $bizno_for_log = '';
         $trade_type_for_log = ((int)($payload['trade_type'] ?? 1) === 2) ? 2 : 1;
         $filter_bzc_cds_for_log = array();
@@ -1090,7 +1096,7 @@ if (!function_exists('company_list_ai_call_recommend')) {
         );
 
         if ($base_url === '' || $api_key === '') {
-            company_list_ai_write_event_log('recommend_response', 'fail', array_merge($log_payload, array(
+            company_list_ai_write_event_log('external_response', 'fail', array_merge($log_payload, array(
                 'reason' => 'missing_ml_config',
                 'error_code' => 'missing_ml_config',
                 'http_code' => 0,
@@ -1110,7 +1116,7 @@ if (!function_exists('company_list_ai_call_recommend')) {
         $url = $base_url . '/recommend';
         $json_payload = json_encode($payload, JSON_UNESCAPED_UNICODE);
         if ($json_payload === false) {
-            company_list_ai_write_event_log('recommend_response', 'fail', array_merge($log_payload, array(
+            company_list_ai_write_event_log('external_response', 'fail', array_merge($log_payload, array(
                 'reason' => 'json_encode_failed',
                 'error_code' => 'json_encode_failed',
                 'http_code' => 0,
@@ -1128,7 +1134,7 @@ if (!function_exists('company_list_ai_call_recommend')) {
         }
 
         // 설정과 JSON 검증이 끝난 뒤 실제 EC2 호출 직전에만 요청 성공 이벤트를 기록한다.
-        company_list_ai_write_event_log('recommend_request', 'success', array_merge($log_payload, array(
+        company_list_ai_write_event_log('external_request', 'success', array_merge($log_payload, array(
             'stage' => 'request',
             'reason' => 'call_started',
             'request_data' => $payload,
@@ -1155,17 +1161,20 @@ if (!function_exists('company_list_ai_call_recommend')) {
         $curl_errno = curl_errno($ch);
         $curl_error = curl_error($ch);
         $http_code = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $connect_time_ms = (int)round((float)curl_getinfo($ch, CURLINFO_CONNECT_TIME) * 1000);
         curl_close($ch);
 
         $elapsed_ms = (int)round((microtime(true) - $start) * 1000);
 
         if ($curl_errno) {
-            company_list_ai_write_event_log('recommend_response', 'fail', array_merge($log_payload, array(
-                'reason' => 'curl_error',
-                'error_code' => 'curl_error',
+            $error_code = company_list_ai_ec2_curl_error_code($curl_errno, $connect_time_ms);
+            company_list_ai_write_event_log('external_response', 'fail', array_merge($log_payload, array(
+                'reason' => $error_code,
+                'error_code' => $error_code,
                 'http_code' => $http_code,
                 'elapsed_ms' => $elapsed_ms,
-                'response_data' => array('curl_error' => $curl_error),
+                'connect_time_ms' => $connect_time_ms,
+                'response_data' => array('curl_errno' => $curl_errno, 'curl_error' => $curl_error),
             )), $curl_error !== '' ? $curl_error : 'cURL 오류');
             return array(
                 'ok' => false,
@@ -1178,10 +1187,11 @@ if (!function_exists('company_list_ai_call_recommend')) {
             );
         }
 
-        if ($http_code < 200 || $http_code >= 300 || $raw === false || $raw === '') {
-            company_list_ai_write_event_log('recommend_response', 'fail', array_merge($log_payload, array(
-                'reason' => 'http_error',
-                'error_code' => 'http_error',
+        if ($http_code < 200 || $http_code >= 300) {
+            $error_code = $http_code > 0 ? 'http_' . $http_code : 'http_error';
+            company_list_ai_write_event_log('external_response', 'fail', array_merge($log_payload, array(
+                'reason' => $error_code,
+                'error_code' => $error_code,
                 'http_code' => $http_code,
                 'elapsed_ms' => $elapsed_ms,
                 'response_data' => array('raw' => is_string($raw) ? $raw : ''),
@@ -1197,9 +1207,27 @@ if (!function_exists('company_list_ai_call_recommend')) {
             );
         }
 
+        if ($raw === false || $raw === '') {
+            company_list_ai_write_event_log('external_response', 'fail', array_merge($log_payload, array(
+                'reason' => 'empty_response',
+                'error_code' => 'empty_response',
+                'http_code' => $http_code,
+                'elapsed_ms' => $elapsed_ms,
+            )), 'EC2 응답 본문이 비어 있습니다.');
+            return array(
+                'ok' => false,
+                'status' => 502,
+                'error' => 'EC2 응답 본문이 비어 있습니다.',
+                'elapsed_ms' => $elapsed_ms,
+                'http_code' => $http_code,
+                'raw' => '',
+                'data' => null,
+            );
+        }
+
         $decoded = json_decode($raw, true);
         if (!is_array($decoded)) {
-            company_list_ai_write_event_log('recommend_response', 'fail', array_merge($log_payload, array(
+            company_list_ai_write_event_log('external_response', 'fail', array_merge($log_payload, array(
                 'reason' => 'json_decode_failed',
                 'error_code' => 'json_decode_failed',
                 'http_code' => $http_code,
@@ -1217,11 +1245,60 @@ if (!function_exists('company_list_ai_call_recommend')) {
             );
         }
 
-        company_list_ai_write_event_log('recommend_response', 'success', array_merge($log_payload, array(
+        if (!isset($decoded['results']) || !is_array($decoded['results'])) {
+            company_list_ai_write_event_log('external_response', 'fail', array_merge($log_payload, array(
+                'reason' => 'invalid_response_schema',
+                'error_code' => 'invalid_response_schema',
+                'http_code' => $http_code,
+                'elapsed_ms' => $elapsed_ms,
+                'response_data' => array('response_keys' => array_keys($decoded)),
+            )), 'EC2 응답에 results 배열이 없습니다.');
+            return array(
+                'ok' => false,
+                'status' => 502,
+                'error' => 'EC2 응답 형식이 올바르지 않습니다.',
+                'elapsed_ms' => $elapsed_ms,
+                'http_code' => $http_code,
+                'raw' => $raw,
+                'data' => null,
+            );
+        }
+
+        $invalid_result_count = 0;
+        foreach ($decoded['results'] as $result_item) {
+            $result_kedcd = is_array($result_item)
+                ? str_pad(preg_replace('/\D/', '', (string)($result_item['kedcd'] ?? '')), 10, '0', STR_PAD_LEFT)
+                : '';
+            if (!is_array($result_item) || strlen($result_kedcd) !== 10 || preg_match('/^0+$/', $result_kedcd)) {
+                $invalid_result_count++;
+            }
+        }
+        if (!empty($decoded['results']) && $invalid_result_count === count($decoded['results'])) {
+            company_list_ai_write_event_log('external_response', 'fail', array_merge($log_payload, array(
+                'reason' => 'all_results_invalid',
+                'error_code' => 'all_results_invalid',
+                'http_code' => $http_code,
+                'elapsed_ms' => $elapsed_ms,
+                'result_count' => count($decoded['results']),
+                'invalid_result_count' => $invalid_result_count,
+            )), 'EC2 추천 결과에 유효한 KED 기업코드가 없습니다.');
+            return array(
+                'ok' => false,
+                'status' => 502,
+                'error' => 'EC2 추천 결과가 올바르지 않습니다.',
+                'elapsed_ms' => $elapsed_ms,
+                'http_code' => $http_code,
+                'raw' => $raw,
+                'data' => null,
+            );
+        }
+
+        company_list_ai_write_event_log('external_response', 'success', array_merge($log_payload, array(
             'reason' => 'ok',
             'http_code' => $http_code,
             'elapsed_ms' => $elapsed_ms,
-            'result_count' => (isset($decoded['results']) && is_array($decoded['results'])) ? count($decoded['results']) : 0,
+            'result_count' => count($decoded['results']),
+            'invalid_result_count' => $invalid_result_count,
             'from_cache' => 0,
             'response_data' => company_list_ai_summarize_recommend_results($decoded),
         )));
