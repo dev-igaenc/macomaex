@@ -805,6 +805,9 @@ if (!verify_mb_key($member)) {
 }
 */
 if (isset($auth) && is_array($auth)) {
+    if (isset($auth['200110']) && !isset($auth['200120'])) {
+        $auth['200120'] = $auth['200110'];
+    }
     @ksort($auth);
 } else {
     $auth = array();
@@ -893,6 +896,34 @@ if (isset($menu) && is_array($menu)) {
 	}
 }
 
+// 회원 하위에 회사별 회원 메뉴 보강
+if (isset($menu) && is_array($menu)) {
+	foreach ($menu as $menu_key => $menu_rows) {
+		if (!isset($menu_rows[0][1]) || trim((string)$menu_rows[0][1]) !== '회원') {
+			continue;
+		}
+
+		$company_member_link = G5_ADMIN_URL . '/company_member_list.php';
+		$already_exists = false;
+		foreach ($menu_rows as $menu_row) {
+			if (isset($menu_row[2]) && trim((string)$menu_row[2]) === $company_member_link) {
+				$already_exists = true;
+				break;
+			}
+		}
+
+		if (!$already_exists) {
+			$menu[$menu_key][] = array(
+				'200120',
+				'회사별 회원',
+				$company_member_link,
+				'mb_list'
+			);
+		}
+		break;
+	}
+}
+
 // 결제 하위 순서 통일: 플랜 관리 -> 결제 관리 -> 크레딧 모니터링
 if (isset($menu) && is_array($menu)) {
 	foreach ($menu as $menu_key => $menu_rows) {
@@ -912,6 +943,50 @@ if (isset($menu) && is_array($menu)) {
 			if ($code === '700400') $priority = 10;
 			else if ($code === '700100') $priority = 20;
 			else if ($code === '700200') $priority = 30;
+
+			$decorated[] = array(
+				'priority' => $priority,
+				'idx' => $child_idx,
+				'row' => $child_row
+			);
+		}
+
+		usort($decorated, function($a, $b) {
+			if ($a['priority'] === $b['priority']) {
+				return $a['idx'] - $b['idx'];
+			}
+			return $a['priority'] - $b['priority'];
+		});
+
+		$sorted_rows = array($head);
+		foreach ($decorated as $d) {
+			$sorted_rows[] = $d['row'];
+		}
+		$menu[$menu_key] = $sorted_rows;
+		break;
+	}
+}
+
+// 회원 하위 순서 고정
+if (isset($menu) && is_array($menu)) {
+	foreach ($menu as $menu_key => $menu_rows) {
+		if (!isset($menu_rows[0][1]) || trim((string)$menu_rows[0][1]) !== '회원') {
+			continue;
+		}
+		if (!is_array($menu_rows) || count($menu_rows) < 2) {
+			break;
+		}
+
+		$head = $menu_rows[0];
+		$children = array_slice($menu_rows, 1);
+		$decorated = array();
+		foreach ($children as $child_idx => $child_row) {
+			$label = isset($child_row[1]) ? trim((string)$child_row[1]) : '';
+			$priority = 1000;
+			if ($label === '관리자관리') $priority = 10;
+			else if ($label === '회원관리') $priority = 20;
+			else if ($label === '회사별 회원') $priority = 30;
+			else if ($label === '셀렉티드관리') $priority = 40;
 
 			$decorated[] = array(
 				'priority' => $priority,

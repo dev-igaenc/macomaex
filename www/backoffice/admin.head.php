@@ -110,7 +110,7 @@ function print_menu1($key, $no = '')
 
 function print_menu2($key, $no = '')
 {
-    global $menu, $auth_menu, $is_admin, $auth, $g5, $sub_menu;
+    global $menu, $auth_menu, $is_admin, $auth, $g5, $sub_menu, $current_menu;
 
     $str = "";
     if (!isset($menu[$key]) || !is_array($menu[$key])) {
@@ -157,7 +157,8 @@ function print_menu2($key, $no = '')
 
         $current_class = '';
 
-        if ($menu[$key][$i][0] == $sub_menu) {
+        $active_menu = isset($current_menu) && $current_menu ? $current_menu : $sub_menu;
+        if ($menu[$key][$i][0] == $active_menu) {
             $current_class = ' current-page';
         }
 
