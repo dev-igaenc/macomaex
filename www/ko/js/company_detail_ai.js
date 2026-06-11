@@ -1233,8 +1233,72 @@
                 setTimeout(function () { btn.disabled = false; }, items.length * 60);
             }
 
+            function arrOrEmpty(v) {
+                return Array.isArray(v)
+                    ? v.filter(function (x) {
+                        var s = String(x || '').trim();
+                        return s !== '' && s !== '미확인' && s !== '없음';
+                    })
+                    : [];
+            }
+
+            function parseTradeJson(raw) {
+                if (!raw || typeof raw !== 'string') return null;
+                var cleaned = raw.trim();
+                cleaned = cleaned.replace(/^```json\s*/i, '').replace(/^```\s*/, '').replace(/\s*```$/, '').trim();
+                try { return JSON.parse(cleaned); } catch (e) { }
+                var start = cleaned.indexOf('{');
+                var end = cleaned.lastIndexOf('}');
+                if (start === -1 || end === -1 || end <= start) return null;
+                try { return JSON.parse(cleaned.slice(start, end + 1)); } catch (e2) { }
+                return null;
+            }
+
+            function renderTradeJsonToHtml(raw) {
+                var data = parseTradeJson(raw);
+                if (!data || typeof data !== 'object') return '';
+                var buyItems = arrOrEmpty(data.buy_items);
+                var sellItems = arrOrEmpty(data.sell_items);
+                var reasons = arrOrEmpty(data.reasons);
+                var scenarios = arrOrEmpty(data.trade_scenarios);
+                var actions = arrOrEmpty(data.first_touch_actions);
+                var considerations = arrOrEmpty(data.considerations);
+                var html = '';
+                html += '<h1>' + esc(data.title || '거래 가능성 분석') + '</h1>';
+                html += '<blockquote>추천 유형: ' + esc(data.trade_label || '') + ' | 점수: ' + esc(data.score || '') + ' | 연결: ' + esc(data.connection_type || '') + '</blockquote>';
+                if (buyItems.length || sellItems.length) {
+                    html += '<h2>거래 품목 요약</h2>';
+                    if (buyItems.length) {
+                        html += '<h3>구매 가능 품목</h3>';
+                        html += '<p>' + esc(buyItems.map(function (item, idx) { return String.fromCharCode(9312 + idx) + ' ' + item; }).join('  ')) + '</p>';
+                    }
+                    if (sellItems.length) {
+                        html += '<h3>판매 가능 품목</h3>';
+                        html += '<p>' + esc(sellItems.map(function (item, idx) { return String.fromCharCode(9312 + idx) + ' ' + item; }).join('  ')) + '</p>';
+                    }
+                }
+                html += '<h2>핵심 추천 사유</h2>';
+                html += '<ul>' + (reasons.length ? reasons : ['미확인']).map(function (item) { return '<li>' + esc(item) + '</li>'; }).join('') + '</ul>';
+                html += '<h2>1. 어떤 거래처인가</h2>';
+                html += '<h3>1-1. 거래 언어로 본 기업 포지션</h3><p>' + esc(data.positioning || '') + '</p>';
+                html += '<h3>1-2. 거래 가능 품목 상세</h3><p>' + esc(data.tradable_items_detail || '') + '</p>';
+                html += '<h2>2. 왜 우리 회사와 연결되는가</h2>';
+                html += '<h3>2-1. 거래 연결 배경</h3><p>' + esc(data.connection_background || '') + '</p>';
+                html += '<h3>2-2. 공급망·공정 연결성</h3><p>' + esc(data.supply_chain_fit || '') + '</p>';
+                html += '<h3>2-3. 거래 시나리오</h3><ul>' + (scenarios.length ? scenarios : ['미확인']).map(function (item) { return '<li>' + esc(item) + '</li>'; }).join('') + '</ul>';
+                html += '<h2>3. 거래 신뢰도 분석</h2>';
+                html += '<h3>3-1. 거래 안정성</h3><p>' + esc(data.stability_analysis || '') + '</p>';
+                html += '<h3>3-2. 재무 건전성</h3><p>' + esc(data.financial_analysis || '') + '</p>';
+                html += '<h2>4. 실행 제안 및 감안할 사항</h2>';
+                html += '<h3>4-1. 첫 거래 접점</h3><ul>' + (actions.length ? actions : ['미확인']).map(function (item) { return '<li>' + esc(item) + '</li>'; }).join('') + '</ul>';
+                html += '<h3>4-2. 감안할 사항</h3><ul>' + (considerations.length ? considerations : ['미확인']).map(function (item) { return '<li>' + esc(item) + '</li>'; }).join('') + '</ul>';
+                return html;
+            }
+
             function renderMarkdownToSafeHtml(markdownText) {
                 var md = String(markdownText || '');
+                var tradeHtml = renderTradeJsonToHtml(md);
+                if (tradeHtml) return tradeHtml;
                 if (typeof marked === 'undefined') {
                     return '<pre style="white-space:pre-wrap">' + esc(md) + '</pre>';
                 }
@@ -1303,8 +1367,33 @@
                     stepTimers.forEach(function (t) { clearTimeout(t); });
                 }
 
+                var preloadedSourceContext = (window.PRELOADED_AI_SOURCE_CONTEXT && typeof window.PRELOADED_AI_SOURCE_CONTEXT === 'object')
+                    ? window.PRELOADED_AI_SOURCE_CONTEXT
+                    : {};
+
                 function tryGet(k) {
                     try { return sessionStorage.getItem(k) || ''; } catch (e) { return ''; }
+                }
+
+                function sourceValue(sessionKey, contextKey, fallback) {
+                    var sessionVal = tryGet(sessionKey);
+                    if (sessionVal !== '') return sessionVal;
+                    if (Object.prototype.hasOwnProperty.call(preloadedSourceContext, contextKey)) {
+                        var ctxVal = preloadedSourceContext[contextKey];
+                        if (ctxVal != null && ctxVal !== '') return ctxVal;
+                    }
+                    return fallback;
+                }
+
+                function sourceArray(sessionKey, contextKey) {
+                    var sessionVal = tryGet(sessionKey);
+                    if (sessionVal !== '') {
+                        return sessionVal.split('|').map(function (item) { return String(item || '').trim(); }).filter(Boolean);
+                    }
+                    var ctxVal = preloadedSourceContext[contextKey];
+                    return Array.isArray(ctxVal)
+                        ? ctxVal.map(function (item) { return String(item || '').trim(); }).filter(Boolean)
+                        : [];
                 }
 
                 var card = getCardSnapshotForDemo(demoId);
@@ -1316,9 +1405,26 @@
                     return;
                 }
 
-                var custRaw = tryGet('_aiCustNames');
-                var suppRaw = tryGet('_aiSuppNames');
+                var sourceMpd = String(sourceValue('_aiExtMpd', 'source_mpd', '') || '');
+                var sourceName = String(sourceValue('_aiSrcCompName', 'source_enp_nm', '') || '');
+                var sourceBzcCd = String(sourceValue('_aiExtBzcCd', 'source_bzc_cd', '') || '');
+                var sourceBzcNm = String(sourceValue('_aiExtBzcNm', 'source_bzc_nm', '') || '');
+                var sourceSido = String(sourceValue('_aiExtSido', 'source_sido', '') || '');
+                var sourceSze = String(sourceValue('_aiExtSze', 'source_sze', '3') || '3');
+                var sourceSales = Number(sourceValue('_aiExtSales', 'source_sales', 0) || 0);
+                var sourceCustNames = sourceArray('_aiCustNames', 'source_cust_names');
+                var sourceSuppNames = sourceArray('_aiSuppNames', 'source_supp_names');
                 var isSell = (card.trade_type === 2);
+                var recKeywords = Array.isArray(card.tags) && card.tags.length
+                    ? card.tags.filter(Boolean)
+                    : parseTagListFromLine(card.product_line || '');
+                // 상세 preload에 실제 키워드 배열이 있으면 그것을 우선하고, 없을 때만 기존 세션/mpd fallback을 사용한다.
+                var preloadedSrcKeywords = Array.isArray(preloadedSourceContext.src_keywords)
+                    ? preloadedSourceContext.src_keywords.map(function (item) { return String(item || '').trim(); }).filter(Boolean)
+                    : [];
+                var srcKeywords = preloadedSrcKeywords.length
+                    ? preloadedSrcKeywords
+                    : parseTagListFromLine(tryGet('_aiExtKeywords') || sourceMpd || '');
                 var recObj = {
                     kedcd: card.kedcd || '',
                     enp_nm: card.title || '',
@@ -1333,7 +1439,8 @@
                     sales_growth_pct: card.sales_growth_pct != null ? card.sales_growth_pct : null,
                     debt_ratio_pct: card.debt_ratio_pct != null ? card.debt_ratio_pct : null,
                     consec_profit_2y: card.consec_profit_2y != null ? card.consec_profit_2y : null,
-                    capital_negative: card.capital_negative || 0
+                    capital_negative: card.capital_negative || 0,
+                    keywords: recKeywords
                 };
 
                 // EC2/ML 추천 카드 + 의뢰사 세션값을 합쳐 LLM 보고서 요청 payload 구성
@@ -1341,17 +1448,18 @@
                     data: {
                         trade_type: card.trade_type || 1,
                         // 서버 once_key 생성용 식별값
-                        source_kedcd: card.src_kedcd || tryGet('_aiSrcKedcd') || '',
+                        source_kedcd: card.src_kedcd || tryGet('_aiSrcKedcd') || String(preloadedSourceContext.source_kedcd || ''),
                         target_kedcd: card.kedcd || '',
-                        source_enp_nm: tryGet('_aiSrcCompName'),
-                        source_bzc_cd: tryGet('_aiExtBzcCd'),
-                        source_bzc_nm: tryGet('_aiExtBzcNm'),
-                        source_sido: tryGet('_aiExtSido'),
-                        source_sze: tryGet('_aiExtSze') || '3',
-                        source_mpd: tryGet('_aiExtMpd'),
-                        source_sales: parseFloat(tryGet('_aiExtSales')) || 0,
-                        source_cust_names: custRaw ? custRaw.split('|').filter(Boolean) : [],
-                        source_supp_names: suppRaw ? suppRaw.split('|').filter(Boolean) : [],
+                        source_enp_nm: sourceName,
+                        source_bzc_cd: sourceBzcCd,
+                        source_bzc_nm: sourceBzcNm,
+                        source_sido: sourceSido,
+                        source_sze: sourceSze,
+                        source_mpd: sourceMpd,
+                        src_keywords: srcKeywords,
+                        source_sales: Number.isFinite(sourceSales) ? sourceSales : 0,
+                        source_cust_names: sourceCustNames,
+                        source_supp_names: sourceSuppNames,
                         buy_top1: isSell ? null : recObj,
                         sell_top1: isSell ? recObj : null
                     }
@@ -1536,15 +1644,32 @@
                         try {
                             var info = JSON.parse(p.slice(1).join('|'));
                             var enp = info.CONTENTS && info.CONTENTS.ENPintr0000;
+                            var fsdt = info.CONTENTS && info.CONTENTS.ENPfsdt0001;
+                            var cust = info.CONTENTS && info.CONTENTS.ENPcust0001;
+                            var supp = info.CONTENTS && info.CONTENTS.ENPsupp0001;
                             var compName = (enp && (enp.enp_nm_trd || enp.enp_nm)) || '';
                             _pendingKedcd = String(enp && enp.kedcd || '').replace(/\D/g, '').padStart(10, '0');
-                            // 상세 LLM 보고서 프롬프트에서 쓰는 의뢰사 컨텍스트 세션값 저장
+                            var sales = Number(fsdt && fsdt.fs_val9 || 0) || 0;
+                            var custNames = [];
+                            var suppNames = [];
+                            for (var i = 1; i <= 10; i++) {
+                                var cn = String(cust && cust['cust_nm' + i] || '').trim();
+                                var sn = String(supp && supp['supp_nm' + i] || '').trim();
+                                if (cn && cn !== '기타') custNames.push(cn);
+                                if (sn && sn !== '기타') suppNames.push(sn);
+                            }
+                            // 상세 AI 리포트 요청에 재사용할 의뢰사 컨텍스트 세션에 저장
                             try {
                                 sessionStorage.setItem('_aiSrcCompName', compName);
                                 sessionStorage.setItem('_aiExtBzcNm', String(enp && enp.bzc_nm || ''));
                                 sessionStorage.setItem('_aiExtBzcCd', String(enp && enp.bzc_cd || ''));
                                 sessionStorage.setItem('_aiExtSido', String(enp && enp.loc_addra || '').trim().slice(0, 3));
                                 sessionStorage.setItem('_aiExtSze', String(enp && enp.enp_sze || '3'));
+                                sessionStorage.setItem('_aiExtMpd', String(enp && enp.mpd || ''));
+                                sessionStorage.setItem('_aiExtKeywords', String(enp && enp.mpd || ''));
+                                sessionStorage.setItem('_aiExtSales', String(sales || 0));
+                                sessionStorage.setItem('_aiCustNames', custNames.join('|'));
+                                sessionStorage.setItem('_aiSuppNames', suppNames.join('|'));
                             } catch (e2) { }
                             openVerify(compName);
                         } catch (e) { openVerify(''); }
