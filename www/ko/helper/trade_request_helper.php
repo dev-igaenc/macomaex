@@ -126,6 +126,7 @@ function trade_request_normalize_phone($value) {
 
 function trade_request_bzno_resolve_log($priority, $source, $status, $bzno, $context = array()) {
 	$payload = array_merge(array(
+		'request_id' => trim((string)($GLOBALS['trade_request_bzno_resolve_request_id'] ?? '')),
 		'priority' => (int)$priority,
 		'source' => trim((string)$source),
 		'status' => trim((string)$status),
