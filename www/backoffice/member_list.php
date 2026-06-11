@@ -88,6 +88,7 @@ tr.leave td {background:#eee !important;}
 <select name="sfl" id="sfl">
     <option value="mb_id"<?php echo get_selected($sfl, "mb_id"); ?>>회원아이디</option>
     <option value="mb_name"<?php echo get_selected($sfl, "mb_name"); ?>>법인명</option>
+    <option value="mb_company"<?php echo get_selected($sfl, "mb_company"); ?>>KEDCD</option>
 	<option value="mb_4"<?php echo get_selected($sfl, "mb_4"); ?>>사업자등록번호</option>
     <option value="mb_email"<?php echo get_selected($sfl, "mb_email"); ?>>이메일주소</option>
     <option value="mb_8"<?php echo get_selected($sfl, "mb_8"); ?>>연락처</option>
@@ -233,9 +234,13 @@ tr.leave td {background:#eee !important;}
 </form>
 
 <?php echo get_paging(G5_IS_MOBILE ? $config['cf_mobile_pages'] : $config['cf_write_pages'], $page, $total_page, '?'.$qstr.'&amp;page='); ?>
+<?php // 회사별 회원 화면에서 들어온 목록에서는 신규 회원 추가 버튼 숨김 ?>
+<?php $show_member_add_button = !($sfl === 'mb_company' && trim((string)$stx) !== ''); ?>
+<?php if ($show_member_add_button) { ?>
 <div class="btn_right">
     <a href="./member_form.php?<?php echo $qstr ?>" class="btn_admin  btn_02">회원추가</a>
 </div>
+<?php } ?>
 <script>
 function fmemberlist_submit(f)
 {
