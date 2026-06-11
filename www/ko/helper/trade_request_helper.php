@@ -164,6 +164,46 @@ function trade_request_fetch_kodata_company_json($bzno) {
 	);
 }
 
+// 사업자번호의 최신 정상 KODATA 캐시를 조회한다.
+// recentOnly=true이면 최근 1개월 이내 캐시만 대상으로 하며, 손상된 JSON은 건너뛴다.
+function trade_request_find_company_api_log($bzno, $recentOnly = false) {
+	$bzno = trade_request_normalize_bzno($bzno);
+	if (!preg_match('/^[0-9]{10}$/', $bzno)) return array();
+
+	$recentCondition = $recentOnly
+		? " AND c_datetime >= date_sub(now(), interval 1 month)"
+		: '';
+
+	$result = sql_query("
+		SELECT *
+		FROM company_api_log
+		WHERE c_bizno='" . sql_escape_string($bzno) . "'
+			AND c_content!=''
+			{$recentCondition}
+		ORDER BY c_datetime DESC
+	", false);
+	if (!$result) return array();
+
+	while ($row = sql_fetch_array($result)) {
+		$payload = trade_request_company_payload_from_kodata_json($row['c_content'] ?? '');
+		if (!empty($payload['company'])) return $row;
+	}
+
+	return array();
+}
+
+// KODATA 실시간 조회 결과가 모달에서 사용할 수 있는 정상 데이터인 경우 캐시에 저장한다.
+function trade_request_save_company_api_log($bzno, $jsonText) {
+	$bzno = trade_request_normalize_bzno($bzno);
+	$jsonText = trim((string)$jsonText);
+	if (!preg_match('/^[0-9]{10}$/', $bzno) || $jsonText === '') return false;
+
+	$payload = trade_request_company_payload_from_kodata_json($jsonText);
+	if (empty($payload['company'])) return false;
+
+	return (bool)sql_query("INSERT INTO company_api_log SET c_bizno='" . sql_escape_string($bzno) . "', c_kedcd='" . sql_escape_string($payload['kedcd'] ?? '') . "', c_content='" . sql_escape_string($jsonText) . "', c_datetime=now(), c_ip='" . sql_escape_string($_SERVER['REMOTE_ADDR'] ?? '') . "'", false);
+}
+
 function trade_request_upsert_company_from_kodata_json($bzno, $jsonText) {
 	$bzno = trade_request_normalize_bzno($bzno);
 	$jsonText = (string)$jsonText;
@@ -210,6 +250,34 @@ function trade_request_upsert_company_from_kodata_json($bzno, $jsonText) {
 	return (bool)sql_query($sql, false);
 }
 
+// KODATA 또는 캐시 JSON을 공통 응답으로 변환하고, 최종 제출 단계에서는 company 테이블에 적재한다.
+function trade_request_resolve_company_data_from_kodata_json($bzno, $jsonText, $persist, $source) {
+	if ($persist) {
+		if (!trade_request_upsert_company_from_kodata_json($bzno, $jsonText)) {
+			return array('success' => false, 'message' => '기업 정보 저장에 실패했습니다. 잠시 후 다시 시도해 주세요.');
+		}
+
+		$payload = trade_request_member_company_data($bzno);
+		if (empty($payload['company'])) {
+			return array('success' => false, 'message' => '저장된 기업 정보를 확인하지 못했습니다. 잠시 후 다시 시도해 주세요.');
+		}
+	} else {
+		$payload = trade_request_company_payload_from_kodata_json($jsonText);
+		if (empty($payload['company'])) return array();
+		if (empty($payload['bzno'])) {
+			$payload['bzno'] = licenseNum($bzno);
+		}
+	}
+
+	return array(
+		'success' => true,
+		'company' => $payload,
+		'bzno' => $bzno,
+		'source' => $source,
+	);
+}
+
+// 거래 요청용 기업정보를 최근 캐시, KODATA, 전체 캐시, company 테이블 순서로 조회한다.
 function trade_request_resolve_company_data_by_bzno($bzno, $options = array()) {
 	$bzno = trade_request_normalize_bzno($bzno);
 	// persist=false: 모달 확인용(미리보기만), persist=true: 최종 제출 성공 후 DB 확정 저장
@@ -218,45 +286,37 @@ function trade_request_resolve_company_data_by_bzno($bzno, $options = array()) {
 		return array('success' => false, 'message' => '사업자등록번호 형식을 확인해 주세요.');
 	}
 
+	// 1) 최근 1개월 이내 KODATA 캐시
+	$recentLog = trade_request_find_company_api_log($bzno, true);
+	$recentJson = trim((string)($recentLog['c_content'] ?? ''));
+	if ($recentJson !== '') {
+		$resolved = trade_request_resolve_company_data_from_kodata_json($bzno, $recentJson, $persist, 'company_api_log_1m');
+		if (array_key_exists('success', $resolved)) return $resolved;
+	}
+
+	// 2) 최근 캐시가 없거나 사용할 수 없으면 KODATA 최신 정보 조회
+	$fetched = trade_request_fetch_kodata_company_json($bzno);
+	if (!empty($fetched['success'])) {
+		$fetchedJson = trim((string)($fetched['json'] ?? ''));
+		// 모달 확인 단계에서도 즉시 캐시해 최종 제출 시 외부 API 재호출을 방지한다.
+		trade_request_save_company_api_log($bzno, $fetchedJson);
+		$resolved = trade_request_resolve_company_data_from_kodata_json($bzno, $fetchedJson, $persist, 'kodata_live');
+		if (array_key_exists('success', $resolved)) return $resolved;
+	}
+
+	// 3) KODATA 조회 실패 시 기간 제한 없는 최신 정상 캐시
+	$latestLog = trade_request_find_company_api_log($bzno, false);
+	$latestJson = trim((string)($latestLog['c_content'] ?? ''));
+	if ($latestJson !== '') {
+		$resolved = trade_request_resolve_company_data_from_kodata_json($bzno, $latestJson, $persist, 'company_api_log_latest');
+		if (array_key_exists('success', $resolved)) return $resolved;
+	}
+
+	// 4) 캐시까지 없으면 company 테이블을 마지막 수단으로 사용
 	$payload = trade_request_member_company_data($bzno);
 	if (!empty($payload['company'])) {
-		return array('success' => true, 'company' => $payload, 'bzno' => $bzno);
+		return array('success' => true, 'company' => $payload, 'bzno' => $bzno, 'source' => 'company');
 	}
 
-	$logRow = sql_fetch("SELECT * FROM company_api_log WHERE c_bizno='" . sql_escape_string($bzno) . "' ORDER BY c_datetime DESC LIMIT 1");
-	$jsonText = trim((string)($logRow['c_content'] ?? ''));
-
-	if ($jsonText === '') {
-		$fetched = trade_request_fetch_kodata_company_json($bzno);
-		if (empty($fetched['success'])) return $fetched;
-		$jsonText = (string)$fetched['json'];
-		if ($persist) {
-			// 최종 저장 단계에서만 API 로그를 남긴다.
-			$comInfo = json_decode($jsonText);
-			$kedcd = trim((string)($comInfo->CONTENTS->ENPintr0000->kedcd ?? ''));
-			sql_query("INSERT INTO company_api_log SET c_bizno='" . sql_escape_string($bzno) . "', c_kedcd='" . sql_escape_string($kedcd) . "', c_content='" . sql_escape_string($jsonText) . "', c_datetime=now(), c_ip='" . sql_escape_string($_SERVER['REMOTE_ADDR'] ?? '') . "'", false);
-		}
-	}
-
-	if ($persist) {
-		// 최종 저장 단계에서만 company 적재를 수행한다.
-		if (!trade_request_upsert_company_from_kodata_json($bzno, $jsonText)) {
-			return array('success' => false, 'message' => '기업 정보 저장에 실패했습니다. 잠시 후 다시 시도해 주세요.');
-		}
-		$payload = trade_request_member_company_data($bzno);
-		if (!empty($payload['company'])) {
-			return array('success' => true, 'company' => $payload, 'bzno' => $bzno);
-		}
-		return array('success' => false, 'message' => '저장된 기업 정보를 확인하지 못했습니다. 잠시 후 다시 시도해 주세요.');
-	}
-
-	// 저장 전 단계에서는 DB 반영 없이 모달 출력용 payload만 구성한다.
-	$payload = trade_request_company_payload_from_kodata_json($jsonText);
-	if (empty($payload['company'])) {
-		return array('success' => false, 'message' => '기업 정보를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.');
-	}
-	if (empty($payload['bzno'])) {
-		$payload['bzno'] = licenseNum($bzno);
-	}
-	return array('success' => true, 'company' => $payload, 'bzno' => $bzno);
+	return array('success' => false, 'message' => '입력하신 사업자번호로 기업 정보를 조회하지 못했습니다.');
 }
