@@ -19,6 +19,7 @@ var DEFAULT_NOTE = MATCH_REQUEST_CONTEXT.defaultRequestMessage
         ? String(window.COMPANY_DETAIL_DATA.defaultRequestMessage)
         : '');
 var REQUEST_ENDPOINT = MATCH_REQUEST_CONTEXT.endpoint || '/ko/company_detail.php';
+var VERIFY_REQUEST_ENDPOINT = MATCH_REQUEST_CONTEXT.verifyEndpoint || '/ko/trade_request_verify_bzno.php';
 var requesterProfile = MATCH_REQUEST_CONTEXT.requesterProfile || {};
 
 function normalizeDigits(value) {
@@ -37,6 +38,32 @@ function formatPhone(value) {
     if (digits.length < 4) return digits;
     if (digits.length < 8) return digits.slice(0, 3) + '-' + digits.slice(3);
     return digits.slice(0, 3) + '-' + digits.slice(3, 7) + '-' + digits.slice(7);
+}
+
+function createClientRequestId() {
+    return Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10);
+}
+
+function logVerifyRequestError(detail) {
+    var payload = new URLSearchParams();
+    payload.set('action', 'client_error');
+    payload.set('client_request_id', detail.clientRequestId || '');
+    payload.set('source_page', MATCH_REQUEST_CONTEXT.sourcePage || '');
+    payload.set('error_type', detail.errorType || 'unknown');
+    payload.set('http_status', String(detail.httpStatus || 0));
+    payload.set('content_type', detail.contentType || '');
+    payload.set('error_message', detail.errorMessage || '');
+    payload.set('response_preview', String(detail.responsePreview || '').slice(0, 500));
+
+    fetch(VERIFY_REQUEST_ENDPOINT, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: payload.toString(),
+        keepalive: true
+    }).catch(function () {});
 }
 
 function isMemberFlagTrue(value) {
@@ -268,10 +295,15 @@ if (reqRequesterBznoVerifyBtn) {
         reqRequesterBznoVerifyBtn.classList.add('is-loading');
         reqRequesterBznoVerifyBtn.innerHTML = '<span class="req-btn-spinner" aria-hidden="true"></span><span>확인중</span>';
         var formData = new URLSearchParams();
+        var clientRequestId = createClientRequestId();
+        var verifyResponseReceived = false;
+        var verifyHttpStatus = 0;
+        var verifyContentType = '';
         formData.set('action', 'trade_request_verify_bzno');
         formData.set('bzno', bznoDigits);
+        formData.set('client_request_id', clientRequestId);
 
-        fetch(REQUEST_ENDPOINT, {
+        fetch(VERIFY_REQUEST_ENDPOINT, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
@@ -280,8 +312,37 @@ if (reqRequesterBznoVerifyBtn) {
             body: formData.toString()
         })
         .then(function (response) {
-            if (!response.ok) throw new Error('HTTP_' + response.status);
-            return response.json();
+            verifyResponseReceived = true;
+            verifyHttpStatus = response.status;
+            verifyContentType = response.headers.get('content-type') || '';
+            return response.text().then(function (text) {
+                if (!response.ok) {
+                    var httpError = new Error('HTTP_' + response.status);
+                    httpError.verifyDetail = {
+                        clientRequestId: clientRequestId,
+                        errorType: 'http_error',
+                        httpStatus: response.status,
+                        contentType: verifyContentType,
+                        errorMessage: httpError.message,
+                        responsePreview: text
+                    };
+                    throw httpError;
+                }
+
+                try {
+                    return JSON.parse(text);
+                } catch (parseError) {
+                    parseError.verifyDetail = {
+                        clientRequestId: clientRequestId,
+                        errorType: text ? 'json_parse_error' : 'empty_response',
+                        httpStatus: response.status,
+                        contentType: verifyContentType,
+                        errorMessage: parseError.message,
+                        responsePreview: text
+                    };
+                    throw parseError;
+                }
+            });
         })
         .then(function (data) {
             if (!data || !data.success) {
@@ -296,7 +357,14 @@ if (reqRequesterBznoVerifyBtn) {
                 window._showToast('✓', '사업자번호 확인이 완료되었습니다.', 'success');
             }
         })
-        .catch(function () {
+        .catch(function (error) {
+            logVerifyRequestError((error && error.verifyDetail) || {
+                clientRequestId: clientRequestId,
+                errorType: verifyResponseReceived ? 'client_processing_error' : 'network_error',
+                httpStatus: verifyHttpStatus,
+                contentType: verifyContentType,
+                errorMessage: error && error.message ? error.message : ''
+            });
             showInlineOrToastWarning('서버 통신 중 오류가 발생했습니다.');
         })
         .finally(function () {

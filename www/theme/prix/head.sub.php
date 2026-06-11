@@ -199,6 +199,12 @@ if(!defined('G5_IS_ADMIN')) {
 <script type="text/javascript" src="<?php echo $prix_theme_asset_url('js/jquery.alerts.js', G5_JS_VER); ?>"></script>
 
 
+<?php
+$analytics_host = strtolower(trim(isset($_SERVER['HTTP_HOST']) ? (string)$_SERVER['HTTP_HOST'] : ''));
+$analytics_host = preg_replace('/:\d+$/', '', $analytics_host);
+$analytics_enabled = in_array($analytics_host, array('macomaex.com', 'www.macomaex.com'), true);
+?>
+<?php if ($analytics_enabled) { ?>
 <!-- Google Tag Manager 2025-02-07 -->
 <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
 new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
@@ -206,14 +212,17 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
 })(window,document,'script','dataLayer','GTM-PRWD7J9P');</script>
 <!-- End Google Tag Manager -->
+<?php } ?>
 
 </head>
 <body<?php echo isset($g5['body_script']) ? $g5['body_script'] : ''; ?>>
 
+<?php if ($analytics_enabled) { ?>
 <!-- Google Tag Manager (noscript) 2025-02-07-->
 <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-PRWD7J9P"
 height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 <!-- End Google Tag Manager (noscript) -->
+<?php } ?>
 
 
 <div id="wrap" class="<?php if (!defined("_INDEX_")) { ?> sub<?php } ?>">

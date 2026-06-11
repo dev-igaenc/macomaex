@@ -7,6 +7,12 @@ $board['bo_9']="5"; // 2뎁스
 //로그인 체크
 login_chk();
 
+$ga4_pending_purchase = get_session('ss_ga4_pending_purchase');
+if (!is_array($ga4_pending_purchase)) {
+	$ga4_pending_purchase = array();
+}
+set_session('ss_ga4_pending_purchase', '');
+
 $my_plan_css_ver = file_exists(__DIR__ . '/css/my_plan.css') ? filemtime(__DIR__ . '/css/my_plan.css') : time();
 $my_plan_js_ver = file_exists(__DIR__ . '/js/my_plan.js') ? filemtime(__DIR__ . '/js/my_plan.js') : time();
 $header_css_ver = file_exists(__DIR__ . '/css/header.css') ? filemtime(__DIR__ . '/css/header.css') : time();
@@ -17,6 +23,14 @@ add_javascript('<script src="/ko/js/my_plan.js?ver=' . $my_plan_js_ver . '"></sc
 $hide_theme_svisual = true;
 $hide_theme_pagetop = true;
 include_once(G5_THEME_PATH.'/head.php');
+if ($ga4_pending_purchase) {
+?>
+<script>
+window.dataLayer = window.dataLayer || [];
+window.dataLayer.push(<?php echo json_encode($ga4_pending_purchase, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>);
+</script>
+<?php
+}
 $membership=get_membership();
 
 //맴버쉽 정보

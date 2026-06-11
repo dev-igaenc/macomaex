@@ -350,6 +350,7 @@ include_once(G5_THEME_PATH . '/head.php');
 window.COMPANY_DETAIL_DATA = <?php echo json_encode($companyDetailData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
 window.MATCH_REQUEST_CONTEXT = {
 	endpoint: "/ko/company_detail.php",
+	verifyEndpoint: "/ko/trade_request_verify_bzno.php",
 	sourcePage: "company_detail",
 	isLoggedIn: <?php echo !empty($member['mb_id']) ? 'true' : 'false'; ?>,
 	loginCheckUrl: <?php echo json_encode($tradeRequestLoginUrl, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>,

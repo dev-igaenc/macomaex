@@ -515,6 +515,7 @@ include_once(G5_THEME_PATH . '/head.php');
 window.COMPANY_DETAIL_DATA = <?php echo json_encode($company_seed, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
 window.MATCH_REQUEST_CONTEXT = {
 	endpoint: "/ko/company_detail_ai.php",
+	verifyEndpoint: "/ko/trade_request_verify_bzno.php",
 	sourcePage: "company_detail_ai",
 	isLoggedIn: <?php echo !empty($member['mb_id']) ? 'true' : 'false'; ?>,
 	loginCheckUrl: <?php echo json_encode($detail_login_url, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>,
