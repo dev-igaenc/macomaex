@@ -23,6 +23,7 @@ header('Cache-Control: no-store');
 // _common.php 상대경로 경고 출력(<br><b>...) 방지를 위해 루트로 이동 후 include
 chdir(__DIR__ . '/../');
 include_once(__DIR__ . '/../_common.php');
+include_once(__DIR__ . '/helper/llm_report_trade_helper.php');
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
@@ -684,6 +685,15 @@ $recDebt   = _debt_label($rec['debt_ratio_pct'] ?? null, $rec['capital_negative'
 $recP2y    = (isset($rec['consec_profit_2y']) && $rec['consec_profit_2y'] !== null)
     ? ((int)$rec['consec_profit_2y'] ? '2년 연속 흑자' : '미확인')
     : '-';
+$recKeywords = !empty($rec['keywords']) && is_array($rec['keywords']) ? implode(', ', $rec['keywords']) : '';
+$srcKeywords = !empty($d['src_keywords']) && is_array($d['src_keywords']) ? implode(', ', $d['src_keywords']) : '';
+$tradeDir = $isSell
+    ? '의뢰사가 해당 기업에 판매할 수 있는 품목·서비스'
+    : '의뢰사가 해당 기업으로부터 구매할 수 있는 품목·서비스';
+$tradeAction = $isSell ? '어떤 제품·서비스를 판매할 수 있는지' : '어떤 품목·소재·서비스를 구매할 수 있는지';
+$allowedTradeItems = llm_report_trade_allowed_items($d, $rec, $isSell);
+$buyItemHint = !empty($allowedTradeItems['buy_items']) ? implode(', ', $allowedTradeItems['buy_items']) : '없음';
+$sellItemHint = !empty($allowedTradeItems['sell_items']) ? implode(', ', $allowedTradeItems['sell_items']) : '없음';
 
 $memberId = trim((string)($member['mb_id'] ?? ''));
 if ($memberId === '') {
@@ -718,6 +728,8 @@ if ($analysisOnceKey === '') {
 // 최근 1개월 내 동일 분석 성공 리포트가 있으면 LLM 재호출 없이 즉시 반환
 $cachedReport = llm_report_pick_recent_cached_report($analysisOnceKey, $tradeType, $cacheWindowMonths);
 if (!empty($cachedReport['report'])) {
+    // 과거 캐시도 현재 원본 품목 통제 규칙으로 맞춰서 반환
+    $cachedReportText = llm_report_trade_sanitize_report_json((string)$cachedReport['report'], $d, $rec, $isSell);
     llm_report_write_daily_file_log($sourceKedcd, $targetKedcd, $tradeType, $analysisOnceKey, 'SKIP', array(
         'stage' => 'cache_hit',
         'provider' => (string)($cachedReport['provider'] ?? ''),
@@ -728,7 +740,7 @@ if (!empty($cachedReport['report'])) {
         'message' => '최근 성공 리포트 재사용으로 LLM 호출 생략',
     ));
     echo json_encode(array(
-        'report' => (string)$cachedReport['report'],
+        'report' => $cachedReportText,
         'trade_type' => $tradeType,
         'trade_label' => $tradeLabel,
         'provider' => (string)($cachedReport['provider'] ?? ''),
@@ -741,38 +753,49 @@ if (!empty($cachedReport['report'])) {
 }
 
 $systemInstruction = <<<SYS
-당신은 한국 B2B 시장 15년 경력의 선임 비즈니스 파트너십 컨설턴트입니다.
-운영팀이 실제 거래 의사결정에 활용할 수 있는 심층 보고서를 작성하는 것이 임무입니다.
+당신은 B2B 영업 현장 전문가입니다. 보고서 독자는 실제 구매·영업 담당자이며, "이 회사와 왜 거래가 되는가"를 직관적으로 이해하고 싶어합니다.
 
-[데이터 경계 원칙 — 모든 작성 원칙보다 최우선]
-1. 보고서에 사용 가능한 정보는 아래 '제공 데이터' 항목뿐입니다. 그 외 출처는 존재하지 않습니다.
-2. '-' 또는 '미확인'으로 표시된 항목은 해당 내용을 서술하지 않습니다.
-3. 업종명·지역·레이더 점수·연결방식에서 제품명, 주요 고객사, 인증, 구체적 사업 내용을 추론하여 작성하지 않습니다.
-4. 사전 학습 지식으로 알고 있는 해당 기업의 구체적 정보(제품, 뉴스, 거래처, 대표자, 수상 등)를 기재하지 않습니다.
-5. 모든 서술은 제공된 특정 데이터 항목에 직접 근거해야 합니다. 어떤 항목에도 근거하지 않는 문장은 작성하지 않습니다.
+[데이터 경계 원칙 — 최우선 준수]
+1. 보고서에 사용 가능한 정보는 아래 '제공 데이터' 항목뿐입니다.
+2. '-' 또는 '미확인' 항목은 서술하지 않습니다.
+3. 업종코드·업종명에서 해당 업종의 일반적 거래 품목과 공급망 역할 해석은 허용합니다. 단, 해당 기업의 특정 제품명·고객사·대표자 등 기업 고유 정보는 추론 작성 금지입니다.
+4. 사전 학습 지식으로 알고 있는 해당 기업의 구체적 정보를 기재하지 않습니다.
+5. 모든 서술은 제공된 데이터에 직접 근거해야 합니다.
 
-[필수 작성 흐름 — 순서 변경 불가]
+[업종명 거래 언어 변환 — 필수]
+업종명을 반드시 실제 거래 언어로 변환하여 표현합니다.
+예) '그 외 기타 1차 철강 제조업' → '산업용 철강 원소재 및 가공소재 공급 기업'
+    '응용 소프트웨어 개발 및 공급업' → '업무용 소프트웨어 개발·공급 기업'
+    '화장품 제조업' → '화장품 OEM·ODM 및 완제품 공급 기업'
+    '자동차 부품 제조업' → '자동차 부품·조립 가공 공급 기업'
+    '생산설비 관련 제조업' → '생산설비·자동화 장비 공급 기업'
+    '포장재 제조업' → '포장재·용기 공급 기업'
 
-■ Phase 1: 기업 현황 (제공 데이터 기반)
-  · 기본 정보: 업종의 공급망 특성, 지역 거점 의미, 규모·업력 분석
-  · 재무 경향: 매출성장률(방향과 폭), 부채비율(재무 안정성), 2년 연속흑자(수익 지속성) 해석
+[거래 중심 서술 원칙]
+이 보고서는 {$tradeLabel} 추천입니다.
+핵심 질문: "{$tradeAction}"을 담당자가 즉시 이해할 수 있도록 설명합니다.
+- {$tradeDir}를 보고서 전반에 걸쳐 구체적으로 서술합니다.
+- '품목 키워드'가 제공된 경우 해당 키워드를 거래 가능 품목 서술의 우선 근거로 사용합니다. 없으면 업종코드로 추론합니다.
+- 추천 사유를 업종명 중심으로 쓰지 말고, 실제 거래 품목 중심으로 씁니다.
+- `buy_items`, `sell_items`에는 아래 제공된 '구매 가능 품목 원본값', '판매 가능 품목 원본값'에 있는 표현만 그대로 사용합니다.
+- `buy_items`, `sell_items`에서 새로운 품목명이나 서비스명을 추론해서 만들지 않습니다.
+- 원본값이 없으면 해당 배열은 비워 둘 수 있으며, 없는 품목을 억지로 만들지 않습니다.
+- 구매 가능 품목은 이 거래에서 실제로 구매 수요가 맞닿는 품목·서비스로 정리하고, 판매 가능 품목은 실제로 공급·제공 가능한 품목·서비스로 정리합니다.
+- '핵심 추천 사유' 첫 번째 항목은 반드시 구체적 품목명 또는 서비스명으로 시작합니다. 업종 설명으로 시작하지 않습니다.
+- '핵심 추천 사유', '거래 연결 배경', '공급망·공정 연결성', '거래 시나리오'에서 품목명 또는 서비스명이 필요할 때도 가능한 한 위 원본값 표현을 그대로 재사용합니다.
+- 'IT 시스템 구축 서비스', '솔루션 제공', '운영 지원'처럼 너무 넓은 표현만 단독으로 쓰지 말고, 가능한 한 서버 구축, 네트워크 설계, 보안 시스템 구축, 유지보수 계약, 금속구조물, 배전반 외함처럼 실제 거래 단위를 씁니다.
+- 각 섹션은 충분한 분량(2~4문장 이상)으로 구체적으로 서술합니다. 한 줄 요약으로 끝내지 않습니다.
+- 재무·업력·규모는 섹션 3에서 별도로 다루되, 거래 신뢰도 관점에서 항목별로 해석합니다.
+- 업종명은 항상 **거래언어변환 표현** 형식으로 볼드 처리합니다. 그 외 볼드(**)는 사용하지 않습니다.
+- 모든 문장은 '~입니다', '~습니다' 존댓말로 작성합니다.
+- 추천 기업의 실명은 보고서 어디서도 직접 기재하지 말고 반드시 '해당 기업'으로 표기하세요.
 
-■ Phase 2: 거래처 추천 분석
-  · 거래 연결 유형이 말해주는 의뢰사와 추천 기업 간 연결 스토리
-  · ★(70점 이상) 레이더 축을 추천 기업의 핵심 경쟁력으로 해석
-  · 의뢰사의 기존 거래처 네트워크와 추천 기업의 위치 관계 분석
-
-■ Phase 3: 시너지 및 실행 제안
-  · 거래 성사 시 의뢰사와 추천 기업이 각각 얻는 구체적 이익
-  · 단기·중장기 협력 시나리오 및 첫 번째 실행 액션
-
-■ Phase 4: 감안할 사항 (전체 분량의 10% 이내)
-
-기회와 시너지 중심, 부정적 내용은 Phase 4에만 집약합니다.
-한국어 전용, 전문 비즈니스 문체로 작성합니다.
-모든 문장은 반드시 '~입니다', '~습니다' 형식의 존댓말로 작성하세요.
-보고서 본문에서 업종명을 언급할 때는 반드시 **업종명** 형식으로 볼드 처리하세요. 그 외 볼드 마크다운(**)은 사용하지 마세요.
-추천 기업의 실명은 보고서 어디서도 직접 기재하지 말고 반드시 '해당 기업'으로 표기하세요.
+[출력 규칙 — 최우선]
+- 마크다운 보고서를 쓰지 말고 JSON만 출력합니다.
+- 코드펜스 없이 순수 JSON 객체만 반환합니다.
+- 키 이름을 바꾸거나 생략하지 않습니다.
+- `buy_items`, `sell_items`는 위 원본값 표현만 그대로 사용합니다.
+- 원본값에 없는 새 품목명은 절대 만들지 않습니다.
 SYS;
 
 $userContent = <<<USR
@@ -788,6 +811,7 @@ $userContent = <<<USR
 | 규모 | {$srcSze} |
 | 주력상품 | {$srcMpd} |
 | 매출(당기) | {$srcSales} |
+| 품목 키워드 | {$srcKeywords} |
 | 기존 매입거래처 | {$custList} |
 | 기존 매출거래처 | {$suppList} |
 
@@ -805,63 +829,128 @@ $userContent = <<<USR
 | 2년 연속흑자 | {$recP2y} |
 | 추천 점수 | {$recScore} |
 | 연결 방식 | {$recType} |
+| 품목 키워드 | {$recKeywords} |
+| 구매 가능 품목 참고 | {$buyItemHint} |
+| 판매 가능 품목 참고 | {$sellItemHint} |
+| 구매 가능 품목 원본값 | {$buyItemHint} |
+| 판매 가능 품목 원본값 | {$sellItemHint} |
 
 레이더 지표 (★ 강점 · ◎ 보통 · ○ 참고)
 {$recRadar}
 
 ---
-## [출력 형식 — 반드시 이 순서로]
+## [기존 보고서 형식 — 내용 흐름은 아래 형식을 유지]
 
-# 해당 기업 심층 분석 보고서
+# {$tradeLabel} 거래 가능성 분석
 
-> 추천 유형: {$tradeLabel} | 추천 점수: {$recScore} | 연결 방식: {$recType}
-
----
-
-## 1. 기업 현황 (제공 데이터 기반)
-
-### 1-1. 기업 기본 정보
-(업종의 공급망 내 역할과 특성, 지역 거점 비즈니스적 의미, 기업형태·규모 포지션, 업력 해석 — 각 항목 2~3문장)
-
-### 1-2. 재무 경향 분석
-(매출성장률 방향·폭 해석, 부채비율 기반 재무 안정성 평가, 2년 연속흑자 여부의 수익 지속성 의미)
+> 추천 유형: {$tradeLabel} | 점수: {$recScore} | 연결: {$recType}
 
 ---
 
-## 2. 거래처 추천 배경
+## 거래 품목 요약
 
-### 2-1. 거래 연결 스토리
-(거래 연결 유형 기반 — 두 기업이 어떻게 연결되어 있는가, {$tradeLabel} 관계에서의 의미)
+### 구매 가능 품목
+(구매 가능 품목 원본값을 우선 사용하여 1줄 요약)
 
-### 2-2. 핵심 경쟁력
-(레이더 상위 지표를 중심으로 한 실질적 강점 해석)
-
----
-
-## 3. 의뢰사와의 시너지 및 실행 제안
-
-### 3-1. 시너지 분석
-
-| 시너지 영역 | 의뢰사가 얻는 것 | 추천사가 얻는 것 | 근거 |
-|-----------|--------------|-----------------|------|
-| (업종·공급망) | ... | ... | ... |
-| (네트워크·거래처) | ... | ... | ... |
-| (재무·규모) | ... | ... | ... |
-
-### 3-2. 파트너십 가치 요약
-> (이 거래가 가져올 비즈니스 임팩트를 2~3문장으로)
-
-### 3-3. 실행 제안
-
-| 단계 | 액션 | 기대 효과 |
-|------|------|---------|
-| 단기 (1~3개월) | ... | ... |
-| 중기 (3~12개월) | ... | ... |
+### 판매 가능 품목
+(판매 가능 품목 원본값을 우선 사용하여 1줄 요약)
 
 ---
 
-## 4. 감안할 사항
-- (리스크·주의점·보완 항목 1~3개, 간략히)
+## 핵심 추천 사유
+- ({$tradeAction} — 업종명을 거래 언어로 변환하여 구체적으로)
+- (두 기업이 공급망·공정에서 연결되는 이유)
+- (ML 연결 방식이 말해주는 실거래 연결 근거)
+
+---
+
+## 1. 어떤 {$tradeLabel}인가
+
+### 1-1. 거래 언어로 본 기업 포지션
+(업종명을 거래 언어로 변환: "이 기업은 **[거래언어변환]** 기업으로, [공급망 내 역할]을 담당합니다" 형태. 지역 거점의 물류·접근성 의미, 규모 기반 포지션 분석 포함. 3~4문장)
+
+### 1-2. {$tradeAction}
+({$tradeLabel} 관점에서 거래 가능한 구체적 품목·소재·서비스·공정을 품목 키워드·업종코드 기반으로 열거.
+형태: "① [품목·소재] ② [가공·공정 연계] ③ [서비스·납품 형태]"
+각 항목을 1~2문장으로 구체적으로 설명합니다.)
+
+---
+
+## 2. 왜 우리 회사와 연결되는가
+
+### 2-1. 거래 연결 배경
+(ML 연결 방식({$recType})이 말해주는 두 기업의 관계. 의뢰사 업종과 추천 기업 업종이 공급망에서 어떻게 만나는지 3~4문장으로 구체적으로 서술)
+
+### 2-2. 공급망·공정 연결성
+(두 기업이 실제 공급망에서 어느 단계에 위치하는지, 어떤 공정·거래 흐름으로 연결 가능한지 구체적으로 서술.
+★ 레이더 강점 지표를 거래 연결 신뢰도 관점에서 항목별로 해석. 각 지표 1~2문장)
+
+### 2-3. 거래 시나리오
+(이 거래가 실제로 성사되었을 때의 구체적인 거래 흐름 2~3가지를 서술.
+의뢰사가 얻는 실질적 이익과 추천 기업이 얻는 이익을 각각 명시)
+
+---
+
+## 3. 거래 신뢰도 분석
+
+### 3-1. 거래 안정성
+(업력·규모를 거래 파트너로서의 안정성 관점에서 해석. 2~3문장)
+
+### 3-2. 재무 건전성
+(매출성장률·부채비율·2년 연속흑자를 거래 리스크 관점에서 해석. 항목별로 2~3문장)
+
+---
+
+## 4. 실행 제안 및 감안할 사항
+
+### 4-1. 첫 거래 접점
+(구체적인 첫 접촉 방법·시작 포인트 2~3가지를 단계별로 제시)
+
+### 4-2. 감안할 사항
+(거래 시 주의해야 할 리스크 또는 보완 사항 2~3가지)
+
+---
+## [추가 요청 반영 규칙 — 위 기존 형식에 아래 내용을 추가 반영]
+
+- 보고서 상단 또는 추천사유 영역에서 사용자가 바로 이해할 수 있도록 '구매 가능 품목', '판매 가능 품목'을 별도 항목으로 노출합니다.
+- 추천사유에 업종명만 쓰지 말고 구매 품목과 판매 품목을 함께 반영합니다.
+- 예: "귀사가 필요로 하는 알루미늄 판넬 및 배전반 외함을 공급할 수 있는 기업으로 분석되었습니다." 같은 방식으로 작성합니다.
+- 목적은 사용자가 "왜 이 기업이 추천됐는지"를 업종이 아니라 실제 거래 품목 기준으로 바로 이해하게 만드는 것입니다.
+
+---
+## [JSON 출력 스키마 — 이 키 이름 그대로만 출력]
+
+{
+  "title": "{$tradeLabel} 거래 가능성 분석",
+  "trade_label": "{$tradeLabel}",
+  "score": "{$recScore}",
+  "connection_type": "{$recType}",
+  "buy_items": ["원본값1", "원본값2"],
+  "sell_items": ["원본값1", "원본값2"],
+  "reasons": [
+    "귀사가 필요로 하는 [품목A], [품목B] 등을 공급/제공할 수 있는 기업으로 분석되었습니다.",
+    "두 기업이 공급망·공정에서 어떻게 연결되는지 품목 중심으로 설명합니다.",
+    "ML 연결 방식이 실거래 가능성과 어떻게 이어지는지 품목 또는 납품 형태를 포함해 설명합니다."
+  ],
+  "positioning": "거래 언어로 본 기업 포지션을 3~4문장으로 작성합니다.",
+  "tradable_items_detail": "거래 가능한 구체적 품목·소재·서비스·공정을 3개 이상 포함해 설명합니다.",
+  "connection_background": "거래 연결 배경을 실제 품목명 또는 서비스명을 포함해 3~4문장으로 설명합니다.",
+  "supply_chain_fit": "공급망·공정 연결성과 레이더 강점 지표를 거래 연결 신뢰도 관점에서 설명합니다.",
+  "trade_scenarios": [
+    "거래 흐름 시나리오 1",
+    "거래 흐름 시나리오 2"
+  ],
+  "stability_analysis": "업력·규모 기반 거래 안정성을 2~3문장으로 설명합니다.",
+  "financial_analysis": "매출성장률·부채비율·2년 연속흑자를 거래 리스크 관점에서 2~3문장으로 설명합니다.",
+  "first_touch_actions": [
+    "첫 접촉 방법 1",
+    "첫 접촉 방법 2"
+  ],
+  "considerations": [
+    "감안할 사항 1",
+    "감안할 사항 2"
+  ]
+}
 USR;
 
 // 시안 변수명(GEMINI_*)을 우선 사용하고, LLM_*는 하위 호환으로 유지
@@ -924,13 +1013,52 @@ $reportText = '';
 $startMs = (int)(microtime(true) * 1000);
 
 if ($provider === 'gemini') {
-    // 시안(_gemini_report) premium 프롬프트를 그대로 Gemini generateContent로 전송
     $requestBody = array(
         'system_instruction' => array('parts' => array(array('text' => $systemInstruction))),
         'contents' => array(array('role' => 'user', 'parts' => array(array('text' => $userContent)))),
         'generationConfig' => array(
-            'temperature' => 0.2,
-            'maxOutputTokens' => 8192,
+            'temperature' => 0.1,
+            'maxOutputTokens' => 6000,
+            'responseMimeType' => 'application/json',
+            'responseSchema' => array(
+                'type' => 'OBJECT',
+                'required' => array(
+                    'title',
+                    'trade_label',
+                    'score',
+                    'connection_type',
+                    'buy_items',
+                    'sell_items',
+                    'reasons',
+                    'positioning',
+                    'tradable_items_detail',
+                    'connection_background',
+                    'supply_chain_fit',
+                    'trade_scenarios',
+                    'stability_analysis',
+                    'financial_analysis',
+                    'first_touch_actions',
+                    'considerations',
+                ),
+                'properties' => array(
+                    'title' => array('type' => 'STRING'),
+                    'trade_label' => array('type' => 'STRING'),
+                    'score' => array('type' => 'STRING'),
+                    'connection_type' => array('type' => 'STRING'),
+                    'buy_items' => array('type' => 'ARRAY', 'items' => array('type' => 'STRING')),
+                    'sell_items' => array('type' => 'ARRAY', 'items' => array('type' => 'STRING')),
+                    'reasons' => array('type' => 'ARRAY', 'items' => array('type' => 'STRING')),
+                    'positioning' => array('type' => 'STRING'),
+                    'tradable_items_detail' => array('type' => 'STRING'),
+                    'connection_background' => array('type' => 'STRING'),
+                    'supply_chain_fit' => array('type' => 'STRING'),
+                    'trade_scenarios' => array('type' => 'ARRAY', 'items' => array('type' => 'STRING')),
+                    'stability_analysis' => array('type' => 'STRING'),
+                    'financial_analysis' => array('type' => 'STRING'),
+                    'first_touch_actions' => array('type' => 'ARRAY', 'items' => array('type' => 'STRING')),
+                    'considerations' => array('type' => 'ARRAY', 'items' => array('type' => 'STRING')),
+                ),
+            ),
             'thinkingConfig' => array('thinkingBudget' => 0),
         ),
     );
@@ -1015,7 +1143,7 @@ if ($provider === 'gemini') {
     $apiUrl = $baseUrl . '/chat/completions';
     $requestBody = array(
         'model' => $model,
-        'temperature' => 0.2,
+        'temperature' => 0.1,
         'messages' => array(
             array('role' => 'system', 'content' => $systemInstruction),
             array('role' => 'user', 'content' => $userContent),
@@ -1107,6 +1235,8 @@ if ($recNmReal !== '') {
 }
 $reportText = str_replace('__', '', $reportText);
 $reportText = preg_replace('/\s*\(추론\)/', '', $reportText);
+// 모델이 생성한 JSON에서 허용 품목과 핵심 거래 문장을 최종 보정한다.
+$reportText = llm_report_trade_sanitize_report_json($reportText, $d, $rec, $isSell);
 if (!$hasRecentUse) {
     $creditTx = llm_report_consume_credit_once($memberId, $sourceKedcd, $targetKedcd, $tradeType, $creditCost);
     if (empty($creditTx['success'])) {

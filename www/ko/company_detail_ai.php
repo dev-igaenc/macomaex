@@ -2,6 +2,7 @@
 include_once('./_common.php');
 include_once(__DIR__ . '/helper/trade_request_helper.php');
 include_once(__DIR__ . '/helper/company_detail_helper.php');
+include_once(__DIR__ . '/helper/llm_report_trade_helper.php');
 
 $should_open_trade_request_modal = false;
 if (isset($_GET['trade_request_login']) && $_GET['trade_request_login'] === '1') {
@@ -188,6 +189,7 @@ if (!empty($company['ENP_TYP']) && isset($enp_typt[$company['ENP_TYP']])) {
 
 $preloaded_ai_report_markdown = '';
 $preloaded_ai_once_key = '';
+$preloaded_ai_source_context = array();
 $src_cd = isset($_GET['src_cd']) ? trim((string)$_GET['src_cd']) : '';
 $preload_src_kedcd = $src_cd ? preg_replace('/\D/', '', (string)simple_crypt($src_cd, 'd')) : '';
 if (strlen($preload_src_kedcd) !== 10) {
@@ -198,6 +200,46 @@ if (!empty($member['mb_id'])) {
 
     if (strlen($preload_src_kedcd) !== 10) {
         $preload_src_kedcd = preg_replace('/\D/', '', (string)($member['mb_company'] ?? ''));
+    }
+
+    if (strlen($preload_src_kedcd) === 10) {
+        // 상세 재진입 시에도 AI 리포트 입력값울 복원할 수 있게 의뢰사 컨텍스트 준비
+        $preload_src_sql = sql_escape_string($preload_src_kedcd);
+        $preload_source_company = sql_fetch("
+            SELECT KEDCD, ENP_NM, BZC_CD, ENP_SZE, PD_NM, LOC_ADDRA, keywords_json, keyword_count
+            FROM company
+            WHERE KEDCD = '{$preload_src_sql}'
+            LIMIT 1
+        ");
+        if (!empty($preload_source_company['KEDCD'])) {
+            $preload_source_industry = '';
+            if (!empty($preload_source_company['BZC_CD'])) {
+                $preload_source_industry_row = sql_fetch("
+                    SELECT k_code_name
+                    FROM kssc
+                    WHERE k_code = '" . sql_escape_string((string)$preload_source_company['BZC_CD']) . "'
+                    LIMIT 1
+                ");
+                $preload_source_industry = trim((string)($preload_source_industry_row['k_code_name'] ?? ''));
+            }
+            $preload_source_keywords = company_detail_ai_parse_keywords_json((string)($preload_source_company['keywords_json'] ?? ''));
+            $preloaded_ai_source_context = array(
+                'source_kedcd' => $preload_src_kedcd,
+                'source_enp_nm' => trim((string)($preload_source_company['ENP_NM'] ?? '')),
+                'source_bzc_cd' => trim((string)($preload_source_company['BZC_CD'] ?? '')),
+                'source_bzc_nm' => $preload_source_industry,
+                'source_sido' => trim((string)mb_substr((string)($preload_source_company['LOC_ADDRA'] ?? ''), 0, 3)),
+                'source_sze' => trim((string)($preload_source_company['ENP_SZE'] ?? '3')),
+                'source_mpd' => trim((string)($preload_source_company['PD_NM'] ?? '')),
+                'source_sales' => 0,
+                'source_cust_names' => array(),
+                'source_supp_names' => array(),
+                'src_keywords' => $preload_source_keywords,
+            );
+            if ($preloaded_ai_source_context['source_mpd'] === '' && !empty($preload_source_keywords)) {
+                $preloaded_ai_source_context['source_mpd'] = implode(', ', $preload_source_keywords);
+            }
+        }
     }
 
     if (strlen($preload_src_kedcd) === 10) {
@@ -224,6 +266,21 @@ if (!empty($member['mb_id'])) {
                 }
             }
         }
+    }
+
+    if ($preloaded_ai_report_markdown !== '' && !empty($preloaded_ai_source_context)) {
+        // 캐시된 리포트 최신 품목 통제 규칙으로 정규화
+        $preloaded_ai_report_markdown = llm_report_trade_sanitize_report_json(
+            $preloaded_ai_report_markdown,
+            $preloaded_ai_source_context,
+            array(
+                'bzc_cd' => trim((string)($company['BZC_CD'] ?? '')),
+                'bzc_nm' => $industry_name,
+                'sido' => trim((string)mb_substr((string)($company['LOC_ADDRA'] ?? ''), 0, 3)),
+                'keywords' => $seed_tags,
+            ),
+            ((int)$preload_trade_type === 2)
+        );
     }
 }
 
@@ -484,6 +541,7 @@ window.PRELOADED_AI_REPORT = {
 	markdown: <?php echo json_encode($preloaded_ai_report_markdown, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>,
 	once_key: <?php echo json_encode($preloaded_ai_once_key, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>
 };
+window.PRELOADED_AI_SOURCE_CONTEXT = <?php echo json_encode($preloaded_ai_source_context, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
 </script>
 <script src="/ko/js/badges.js?ver=<?php echo $badges_js_ver; ?>"></script>
 <script src="/ko/js/company-detail-left.js?ver=<?php echo $company_detail_left_js_ver; ?>"></script>
