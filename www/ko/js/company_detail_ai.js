@@ -1259,23 +1259,21 @@
                 if (!data || typeof data !== 'object') return '';
                 var buyItems = arrOrEmpty(data.buy_items);
                 var sellItems = arrOrEmpty(data.sell_items);
+                var tradeLabel = String(data.trade_label || '').trim();
+                var showBuyItems = tradeLabel !== '판매처';
+                var primaryItems = showBuyItems ? buyItems : sellItems;
+                var primaryLabel = showBuyItems ? '구매 가능 품목' : '판매 가능 품목';
                 var reasons = arrOrEmpty(data.reasons);
                 var scenarios = arrOrEmpty(data.trade_scenarios);
                 var actions = arrOrEmpty(data.first_touch_actions);
                 var considerations = arrOrEmpty(data.considerations);
                 var html = '';
                 html += '<h1>' + esc(data.title || '거래 가능성 분석') + '</h1>';
-                html += '<blockquote>추천 유형: ' + esc(data.trade_label || '') + ' | 점수: ' + esc(data.score || '') + ' | 연결: ' + esc(data.connection_type || '') + '</blockquote>';
-                if (buyItems.length || sellItems.length) {
+                html += '<blockquote>추천 유형: ' + esc(tradeLabel || '') + ' | 점수: ' + esc(data.score || '') + ' | 연결: ' + esc(data.connection_type || '') + '</blockquote>';
+                if (primaryItems.length) {
                     html += '<h2>거래 품목 요약</h2>';
-                    if (buyItems.length) {
-                        html += '<h3>구매 가능 품목</h3>';
-                        html += '<p>' + esc(buyItems.map(function (item, idx) { return String.fromCharCode(9312 + idx) + ' ' + item; }).join('  ')) + '</p>';
-                    }
-                    if (sellItems.length) {
-                        html += '<h3>판매 가능 품목</h3>';
-                        html += '<p>' + esc(sellItems.map(function (item, idx) { return String.fromCharCode(9312 + idx) + ' ' + item; }).join('  ')) + '</p>';
-                    }
+                    html += '<h3>' + esc(primaryLabel) + '</h3>';
+                    html += '<p>' + esc(primaryItems.map(function (item, idx) { return String.fromCharCode(9312 + idx) + ' ' + item; }).join('  ')) + '</p>';
                 }
                 html += '<h2>핵심 추천 사유</h2>';
                 html += '<ul>' + (reasons.length ? reasons : ['미확인']).map(function (item) { return '<li>' + esc(item) + '</li>'; }).join('') + '</ul>';
