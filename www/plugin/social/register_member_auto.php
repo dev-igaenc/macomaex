@@ -85,6 +85,14 @@ if( !$result ){
     alert('소셜 회원 자동가입 중 오류가 발생했습니다. 다시 로그인해 주세요.', G5_BBS_URL.'/login.php');
 }
 
+// 일반 가입과 동일하게 사업자 미등록 회원용 임시 회사 코드만 연결한다.
+$mb_id_sql = sql_real_escape_string($mb_id);
+$registered_member = sql_fetch("select mb_no from {$g5['member_table']} where mb_id = '{$mb_id_sql}'");
+if (!empty($registered_member['mb_no'])) {
+    $temporary_company_code = 'M'.sprintf('%09d', (int)$registered_member['mb_no']);
+    sql_query("update {$g5['member_table']} set mb_company='".sql_real_escape_string($temporary_company_code)."' where mb_no='".(int)$registered_member['mb_no']."'");
+}
+
 $mb = get_member($mb_id);
 
 // 소셜 프로필 매핑 테이블을 갱신합니다.

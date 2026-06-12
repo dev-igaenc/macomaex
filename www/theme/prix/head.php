@@ -1037,8 +1037,12 @@ function closeAiGuideModal() {
 			openGuide("추천 진입 오류", "사업자번호 보안 토큰을 생성하지 못했습니다.", "새로고침 후 다시 시도해 주세요.");
 			return false;
 		}
+		var tradeType = (window.currentSearchTradeType === 2) ? 2 : 1;
+		var type = tradeType === 2 ? "seller" : "buyer";
 		window.location.href = "/recommendations?bizno=" + encodeURIComponent(biznoToken) +
-			"&type=buyer&trade_type=1&recommendation_action=skip&trace_id=" + encodeURIComponent(String(window.currentRecommendTraceId || ""));
+			"&type=" + encodeURIComponent(type) +
+			"&trade_type=" + encodeURIComponent(String(tradeType)) +
+			"&recommendation_action=skip&trace_id=" + encodeURIComponent(String(window.currentRecommendTraceId || ""));
 		return true;
 	}
 

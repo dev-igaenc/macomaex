@@ -162,6 +162,12 @@ $sql = " insert into {$g5['member_table']}
 $result = sql_query($sql, false);
 
 if($result) {
+    // 일반 가입과 동일하게 사업자 미등록 회원용 임시 회사 코드만 연결한다.
+    $registered_member = sql_fetch("select mb_no from {$g5['member_table']} where mb_id = '{$mb_id_sql}'");
+    if (!empty($registered_member['mb_no'])) {
+        $temporary_company_code = 'M'.sprintf('%09d', (int)$registered_member['mb_no']);
+        sql_query("update {$g5['member_table']} set mb_company='".sql_real_escape_string($temporary_company_code)."' where mb_no='".(int)$registered_member['mb_no']."'");
+    }
 
     // 회원가입 포인트 부여
     insert_point($mb_id, $config['cf_register_point'], '회원가입 축하', '@member', $mb_id, '회원가입');
