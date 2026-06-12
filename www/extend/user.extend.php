@@ -1,6 +1,8 @@
 <?php
 if (!defined('_GNUBOARD_')) exit; // 개별 페이지 접근 불가
 
+include_once(G5_LIB_PATH . '/kodata.lib.php');
+
 //암호화 복호화
 function simple_crypt( $string, $action = 'e' ) {
     // 아래값을 임의로 수정해주세요.
@@ -684,75 +686,9 @@ function getKindString($kind){
 }
 
 function getKODATA($comnum){ // 한국평가데이터 정보 가져오기 API
-
-		if($comnum) {
-			$comnum=str_replace("-","",$comnum);
-			//사용자 토큰 받기
-			$TOKEN_URL = "https://218.55.37.214:6059/enpinfo?userid=igaenconl&process=S&bzno={$comnum}&pidagryn=Y&jmno=ig001&format=XML&Length=10000";
-			//----------curl 변수 세팅----------
-			 $agent = 'Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.0)'; //cURL 옵션에 넣을 Agent 정보
-			 $cookie_nm = './cookie.txt'; 
-			//----------curl 옵션 세팅----------
-			 $ch = curl_init();  //curl 형태 초기화
-			 curl_setopt ($ch, CURLOPT_URL,$TOKEN_URL); //접속할 URL 주소 
-			 curl_setopt ($ch, CURLOPT_SSL_VERIFYPEER, FALSE); 
-			 curl_setopt ($ch, CURLOPT_SSLVERSION,1); 
-			 curl_setopt ($ch, CURLOPT_HEADER, 0); 
-			 curl_setopt ($ch, CURLOPT_FOLLOWLOCATION, 1);
-			 curl_setopt ($ch, CURLOPT_COOKIEJAR, $cookie_nm);
-			 curl_setopt ($ch, CURLOPT_COOKIEFILE, $cookie_nm); 
-			 curl_setopt ($ch, CURLOPT_USERAGENT, $agent); 
-			 curl_setopt ($ch, CURLOPT_TIMEOUT, 30); 
-			 curl_setopt ($ch, CURLOPT_RETURNTRANSFER, 1);
-
-			//----------curl 실행----------
-			 $html_ori = curl_exec($ch);  //cURL 함수 실행 후 XML을 String으로 리턴
-			 $curl_error = curl_error($ch);
-			 $curl_errno = curl_errno($ch);
-			 curl_close($ch);
-
-			 if ($html_ori === false) {
-			 	macomaex_kodata_log('curl_failed', array(
-			 		'context' => 'getKODATA',
-			 		'comnum' => $comnum,
-			 		'curl_errno' => $curl_errno,
-			 		'curl_error' => $curl_error,
-			 	));
-
-			 	return "500|CURL_ERROR|기업 정보 조회 중 통신 오류가 발생했습니다.";
-			 }
-
-			 $parsed = macomaex_parse_kodata_xml($html_ori, array(
-			 	'context' => 'getKODATA',
-			 	'comnum' => $comnum,
-			 ));
-
-			 if (!$parsed['success']) {
-			 	return "500|".$parsed['error_code']."|".$parsed['error_message'];
-			 }
-
-			  $xml = $parsed['xml'];
-			  $json = $parsed['json'];
-			  $header = $xml -> HEADER;
-			  if($header->errcd!="00") {
-				  $error=$header->errctt;
-				  RETURN "500|".$header->errcd."|".$error;
-				  exit;
-			  }
-			 $arr = $xml -> CONTENTS ;
-			//print_r($xml);
-			//print_r($arr);
-			foreach($arr as $row){
-				$bzc_cd=$row->ENPintr0000->bzc_cd;
-				//$bzc_cd=substr($bzc_cd,1);
-				//echo "select * from kssc where k_code='$bzc_cd'";
-				$info = sql_fetch("select * from kssc where k_code='$bzc_cd'");
-				//echo "1000|".$row->ENPintr0000->enp_nm_trd." / ".$info['k_code_name'];
-				RETURN "1000|".$json;
-			}
-			 exit;
-		}
-
+	$result = macomaex_kodata_fetch_live($comnum, 'getKODATA');
+	if (!empty($result['success'])) return "1000|" . $result['json'];
+	return "500|" . ($result['error_code'] ?? 'KODATA_ERROR') . "|" . ($result['message'] ?? '기업 정보 조회에 실패했습니다.');
 }
 
 function updateKODATA($comnum){ // 한국평가데이터 정보 업데이트 API

@@ -769,52 +769,12 @@ if (!$has_comnum) {
     $comnum = str_replace('-', '', $bzno);
     $cominfo = '';
 
-    $log_chk = sql_fetch("
-        SELECT * FROM company_api_log
-        WHERE  c_bizno = '{$comnum}'
-          AND  DATE(c_datetime) = '" . date("Y-m-d") . "'
-    ");
-
-    if (empty($log_chk['c_content'])) {
-        // 외부 API 호출
-        $TOKEN_URL = "https://218.55.37.214:6059/enpinfo?userid=igaenconl&process=S&bzno={$comnum}&pidagryn=Y&jmno=ig001&format=XML&Length=10000";
-        $cookie_nm = './cookie.txt';
-
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL,            $TOKEN_URL);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-        curl_setopt($ch, CURLOPT_SSLVERSION,     1);
-        curl_setopt($ch, CURLOPT_HEADER,         0);
-        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);
-        curl_setopt($ch, CURLOPT_COOKIEJAR,      $cookie_nm);
-        curl_setopt($ch, CURLOPT_COOKIEFILE,     $cookie_nm);
-        curl_setopt($ch, CURLOPT_USERAGENT,      'Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.0)');
-        curl_setopt($ch, CURLOPT_TIMEOUT,        30);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-        $html_ori = curl_exec($ch);
-        curl_close($ch);
-
-        if ($html_ori) {
-            $xml = @simplexml_load_string($html_ori, null, LIBXML_NOCDATA);
-            if ($xml && (string)$xml->HEADER->errcd === "00") {
-                $json  = json_encode($xml, JSON_UNESCAPED_UNICODE);
-                $kedcd = '';
-                foreach ($xml->CONTENTS as $row) {
-                    $kedcd = (string)$row->ENPintr0000->kedcd;
-                }
-                sql_query("
-                    INSERT INTO company_api_log
-                    SET c_bizno    = '{$comnum}',
-                        c_kedcd    = '{$kedcd}',
-                        c_content  = '" . addslashes($json) . "',
-                        c_datetime = NOW(),
-                        c_ip       = '{$_SERVER['REMOTE_ADDR']}'
-                ");
-                $cominfo = $json;
-            }
-        }
-    } else {
-        $cominfo = $log_chk['c_content'];
+    $resolved_company = macomaex_kodata_resolve_company($comnum, array(
+        'persist_company' => false,
+        'context' => 'matching_list',
+    ));
+    if (!empty($resolved_company['success']) && !empty($resolved_company['json'])) {
+        $cominfo = $resolved_company['json'];
     }
 
     // 7-2-2. company 테이블 기본 정보 조회 (없으면 API 결과로 보강)

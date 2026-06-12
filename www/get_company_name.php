@@ -25,71 +25,16 @@ $sql = "SELECT
         WHERE A.BZNO = '{$comnum}'";
 $comp = sql_fetch($sql);
 
-$log_chk = sql_fetch("
-    select *
-    from company_api_log
-    where c_bizno='{$comnum}'
-      and c_content!=''
-      and c_datetime >= date_sub(now(), interval 1 month)
-    order by c_datetime desc
-    limit 1
-");
-$cominfo_json = !empty($log_chk['c_content']) ? $log_chk['c_content'] : '';
+$resolved_company = macomaex_kodata_resolve_company($comnum, array(
+    'persist_company' => false,
+    'context' => 'get_company_name',
+));
+$cominfo_json = !empty($resolved_company['json']) ? $resolved_company['json'] : '';
 $fail_code = '';
 $fail_message = '';
-
-// 한 달 이내 KODATA 캐시가 없으면 최신 기업정보를 직접 조회한다.
-if (empty($cominfo_json)) {
-    $TOKEN_URL = "https://218.55.37.214:6059/enpinfo?userid=igaenconl&process=S&bzno={$comnum}&pidagryn=Y&jmno=ig001&format=XML&Length=10000";
-    $agent = 'Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.0)';
-    $cookie_nm = './cookie.txt';
-
-    $ch = curl_init();
-    curl_setopt($ch, CURLOPT_URL, $TOKEN_URL);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
-    curl_setopt($ch, CURLOPT_HEADER, 0);
-    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);
-    curl_setopt($ch, CURLOPT_COOKIEJAR, $cookie_nm);
-    curl_setopt($ch, CURLOPT_COOKIEFILE, $cookie_nm);
-    curl_setopt($ch, CURLOPT_USERAGENT, $agent);
-    curl_setopt($ch, CURLOPT_TIMEOUT, 30);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-    $html_ori = curl_exec($ch);
-    $curl_error = curl_error($ch);
-    $curl_errno = curl_errno($ch);
-    curl_close($ch);
-
-    if ($html_ori === false) {
-        macomaex_kodata_log('curl_failed', array(
-            'context' => 'get_company_name',
-            'comnum' => $comnum,
-            'curl_errno' => $curl_errno,
-            'curl_error' => $curl_error,
-        ));
-        $fail_code = ($curl_errno === 28) ? 'timeout' : 'curl_error';
-        $fail_message = ($curl_errno === 28)
-            ? '기업 정보 조회 시간이 초과되었습니다.'
-            : '기업 정보 조회 중 통신 오류가 발생했습니다.';
-    } else {
-        $parsed = macomaex_parse_kodata_xml($html_ori, array(
-            'context' => 'get_company_name',
-            'comnum' => $comnum,
-        ));
-
-        if (!empty($parsed['success'])) {
-            $xml = $parsed['xml'];
-            if ((string)$xml->HEADER->errcd === '00') {
-                $json = $parsed['json'];
-                $kedcd = '';
-                foreach ($xml->CONTENTS as $row) {
-                    $kedcd = (string)$row->ENPintr0000->kedcd;
-                }
-                sql_query("insert company_api_log set c_bizno='{$comnum}', c_kedcd='{$kedcd}', c_content='" . addslashes($json) . "', c_datetime=now(), c_ip='{$_SERVER['REMOTE_ADDR']}'");
-                $cominfo_json = $json;
-            }
-        }
-    }
+if (empty($resolved_company['success'])) {
+    $fail_code = (string)($resolved_company['error_code'] ?? 'company_not_found');
+    $fail_message = (string)($resolved_company['message'] ?? '기업 정보를 찾지 못했습니다.');
 }
 
 if (!empty($cominfo_json)) {
@@ -130,7 +75,7 @@ if (!empty($cominfo_json)) {
             'bizno_token' => simple_crypt($comnum, 'e'),
             'kedcd' => $kedcd,
             'cominfo' => $cominfo_json,
-            'source' => !empty($log_chk['c_content']) ? 'kodata_cache_1m' : 'kodata_live'
+            'source' => (string)($resolved_company['source'] ?? '')
         ), JSON_UNESCAPED_UNICODE);
         exit;
     }

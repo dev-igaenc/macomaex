@@ -224,11 +224,22 @@ switch ($type) {
 				exit;
 			}
 
+			$resolved_company = macomaex_kodata_resolve_company($comnum, array(
+				'persist_company' => false,
+				'context' => 'get_set_main_comp_chk',
+			));
+			if (!empty($resolved_company['success'])) {
+				echo "1000|" . (string)($resolved_company['json'] ?? '');
+			} else {
+				echo "500|" . (string)($resolved_company['error_code'] ?? 'COMPANY_NOT_FOUND') . "|" . (string)($resolved_company['message'] ?? '기업 정보를 찾지 못했습니다.');
+			}
+			exit;
+
 			// 한 달 이내 KODATA 캐시가 있으면 사용하고, 없으면 최신 정보를 조회한다.
 			$log_chk=sql_fetch("select * from company_api_log where c_bizno='{$comnum}' and c_content!='' and c_datetime >= date_sub(now(), interval 1 month) order by c_datetime desc limit 1");
 			if(empty($log_chk['c_content'])){
 				//사용자 토큰 받기
-				$TOKEN_URL = "https://218.55.37.214:6059/enpinfo?userid=igaenconl&process=S&bzno={$comnum}&pidagryn=Y&jmno=ig001&format=XML&Length=10000";
+				$TOKEN_URL = macomaex_kodata_build_url($comnum);
 				//----------curl 변수 세팅----------
 				 $agent = 'Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.0)'; //cURL 옵션에 넣을 Agent 정보
 				 $cookie_nm = './cookie.txt'; 
@@ -310,6 +321,27 @@ switch ($type) {
 			header('X-Join-Log-Path: ' . ($log_file_path ? $log_file_path : 'NOT_WRITABLE'));
 			header('X-Join-G5-Path: ' . G5_PATH);
 		}
+		$resolved_company = macomaex_kodata_resolve_company($comnum, array(
+			'persist_company' => true,
+			'context' => 'join_comp_chk',
+		));
+		if (!empty($resolved_company['success']) && !empty($resolved_company['company']['KEDCD'])) {
+			$resolved_company_name = trim((string)($resolved_company['company']['ENP_NM_TRD'] ?? ''));
+			if ($resolved_company_name === '') {
+				$resolved_company_name = trim((string)($resolved_company['company']['ENP_NM'] ?? ''));
+			}
+			echo "1000|" . $resolved_company_name . "|" . $resolved_company['company']['KEDCD'];
+			exit;
+		}
+		macomaex_join_comp_chk_log_write(array(
+			'stage' => 'common_resolve_failed',
+			'normalized_comnum' => $comnum,
+			'error_code' => $resolved_company['error_code'] ?? '',
+			'message' => $resolved_company['message'] ?? '',
+		));
+		echo "501";
+		exit;
+
 		macomaex_join_comp_chk_log_write(array(
 			'stage' => 'request_enter',
 			'type' => $type,
@@ -360,7 +392,7 @@ switch ($type) {
 										'stage' => 'api_call_start',
 										'comnum' => $comnum,
 									));
-									$TOKEN_URL = "https://218.55.37.214:6059/enpinfo?userid=igaenconl&process=S&bzno={$comnum}&pidagryn=Y&jmno=ig001&format=XML&Length=10000";
+									$TOKEN_URL = macomaex_kodata_build_url($comnum);
 								$agent = 'Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.0)';
 								$cookie_nm = './cookie.txt';
 

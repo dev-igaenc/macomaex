@@ -138,76 +138,9 @@ function trade_request_bzno_resolve_log($priority, $source, $status, $bzno, $con
 
 function trade_request_fetch_kodata_company_json($bzno) {
 	$bzno = trade_request_normalize_bzno($bzno);
-	if (!preg_match('/^[0-9]{10}$/', $bzno)) {
-		return array('success' => false, 'error_code' => 'invalid_bzno', 'message' => '사업자등록번호 형식을 확인해 주세요.');
-	}
-
-	$tokenUrl = "https://218.55.37.214:6059/enpinfo?userid=igaenconl&process=S&bzno={$bzno}&pidagryn=Y&jmno=ig001&format=XML&Length=10000";
-	$agent = 'Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.0)';
-	$cookieNm = G5_DATA_PATH . '/cookie_trade_request.txt';
-
-	$ch = curl_init();
-	curl_setopt($ch, CURLOPT_URL, $tokenUrl);
-	curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-	curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
-	curl_setopt($ch, CURLOPT_HEADER, 0);
-	curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);
-	curl_setopt($ch, CURLOPT_COOKIEJAR, $cookieNm);
-	curl_setopt($ch, CURLOPT_COOKIEFILE, $cookieNm);
-	curl_setopt($ch, CURLOPT_USERAGENT, $agent);
-	// 외부 API가 지연되어도 현재 요청 안에서 3, 4순위 fallback을 수행할 수 있게 제한한다.
-	curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 3);
-	curl_setopt($ch, CURLOPT_TIMEOUT, 10);
-	curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-	$raw = curl_exec($ch);
-	$curlError = curl_error($ch);
-	$curlErrno = curl_errno($ch);
-	curl_close($ch);
-
-	if ($raw === false) {
-		if (function_exists('macomaex_kodata_log')) {
-			macomaex_kodata_log('curl_failed', array(
-				'context' => 'trade_request_modal',
-				'bzno' => $bzno,
-				'curl_errno' => $curlErrno,
-				'curl_error' => $curlError,
-			));
-		}
-		return array(
-			'success' => false,
-			'error_code' => 'kodata_curl_failed',
-			'curl_errno' => $curlErrno,
-			'curl_error' => $curlError,
-			'message' => '기업 정보 조회 중 통신 오류가 발생했습니다.',
-		);
-	}
-
-	$parsed = function_exists('macomaex_parse_kodata_xml')
-		? macomaex_parse_kodata_xml($raw, array('context' => 'trade_request_modal', 'bzno' => $bzno))
-		: array('success' => false, 'error_message' => 'KODATA 파서 함수를 찾을 수 없습니다.');
-
-	if (empty($parsed['success'])) {
-		return array(
-			'success' => false,
-			'error_code' => $parsed['error_code'] ?? 'kodata_parse_failed',
-			'message' => $parsed['error_message'] ?? '기업 정보 파싱 중 오류가 발생했습니다.',
-		);
-	}
-
-	$xml = $parsed['xml'];
-	if ((string)($xml->HEADER->errcd ?? '') !== '00') {
-		return array(
-			'success' => false,
-			'error_code' => 'kodata_response_error',
-			'kodata_error_code' => (string)($xml->HEADER->errcd ?? ''),
-			'message' => (string)($xml->HEADER->errctt ?? '기업 정보 조회에 실패했습니다.'),
-		);
-	}
-
-	return array(
-		'success' => true,
-		'json' => $parsed['json'],
-	);
+	$result = macomaex_kodata_fetch_live($bzno, 'trade_request_modal');
+	if (!empty($result['success'])) return array('success' => true, 'json' => $result['json']);
+	return $result;
 }
 
 // 사업자번호의 최신 정상 KODATA 캐시를 조회한다.
@@ -347,104 +280,34 @@ function trade_request_resolve_company_data_from_kodata_json($bzno, $jsonText, $
 // 거래 요청용 기업정보를 최근 캐시, KODATA, 전체 캐시, company 테이블 순서로 조회한다.
 function trade_request_resolve_company_data_by_bzno($bzno, $options = array()) {
 	$bzno = trade_request_normalize_bzno($bzno);
-	// persist=false: 모달 확인용(미리보기만), persist=true: 최종 제출 성공 후 DB 확정 저장
 	$persist = !empty($options['persist']);
-	if (!preg_match('/^[0-9]{10}$/', $bzno)) {
-		return array('success' => false, 'message' => '사업자등록번호 형식을 확인해 주세요.');
-	}
-
-	// 1) 최근 1개월 이내 KODATA 캐시
-	$recentDiagnostics = array();
-	$recentLog = trade_request_find_company_api_log($bzno, true, $recentDiagnostics);
-	$recentJson = trim((string)($recentLog['c_content'] ?? ''));
-	if ($recentJson !== '') {
-		$resolved = trade_request_resolve_company_data_from_kodata_json($bzno, $recentJson, $persist, 'company_api_log_1m');
-		if (!empty($resolved['success'])) {
-			trade_request_bzno_resolve_log(1, 'company_api_log_1m', 'success', $bzno, array(
-				'persist' => $persist,
-				'rows_scanned' => (int)($recentDiagnostics['rows_scanned'] ?? 0),
-			));
-			return $resolved;
-		}
-		$recentDiagnostics['status'] = 'fail';
-		$recentDiagnostics['reason'] = 'cache_payload_resolve_failed';
-	}
-	trade_request_bzno_resolve_log(1, 'company_api_log_1m', $recentDiagnostics['status'] ?? 'miss', $bzno, array(
-		'persist' => $persist,
-		'reason' => $recentDiagnostics['reason'] ?? 'cache_not_found',
-		'rows_scanned' => (int)($recentDiagnostics['rows_scanned'] ?? 0),
+	$resolved = macomaex_kodata_resolve_company($bzno, array(
+		'persist_company' => $persist,
+		'context' => 'trade_request_modal',
 	));
-
-	// 2) 최근 캐시가 없거나 사용할 수 없으면 KODATA 최신 정보 조회
-	$fetched = trade_request_fetch_kodata_company_json($bzno);
-	if (!empty($fetched['success'])) {
-		$fetchedJson = trim((string)($fetched['json'] ?? ''));
-		// 모달 확인 단계에서도 즉시 캐시해 최종 제출 시 외부 API 재호출을 방지한다.
-		$cacheSaved = trade_request_save_company_api_log($bzno, $fetchedJson);
-		$resolved = trade_request_resolve_company_data_from_kodata_json($bzno, $fetchedJson, $persist, 'kodata_live');
-		if (!empty($resolved['success'])) {
-			trade_request_bzno_resolve_log(2, 'kodata_live', 'success', $bzno, array(
-				'persist' => $persist,
-				'cache_saved' => $cacheSaved,
-			));
-			return $resolved;
-		}
-		trade_request_bzno_resolve_log(2, 'kodata_live', 'fail', $bzno, array(
+	if (empty($resolved['success'])) {
+		trade_request_bzno_resolve_log(0, 'all_sources', 'fail', $bzno, array(
 			'persist' => $persist,
-			'reason' => 'kodata_payload_resolve_failed',
-			'cache_saved' => $cacheSaved,
+			'reason' => $resolved['error_code'] ?? 'all_fallbacks_exhausted',
 		));
-	} else {
-		trade_request_bzno_resolve_log(2, 'kodata_live', 'fail', $bzno, array(
-			'persist' => $persist,
-			'reason' => $fetched['error_code'] ?? 'kodata_request_failed',
-			'kodata_error_code' => $fetched['kodata_error_code'] ?? '',
-			'curl_errno' => (int)($fetched['curl_errno'] ?? 0),
-			'error_message' => $fetched['message'] ?? '',
-		));
+		return array(
+			'success' => false,
+			'message' => $resolved['message'] ?? '입력하신 사업자번호로 기업 정보를 확인하지 못했습니다. 사업자번호를 다시 확인하거나 잠시 후 다시 시도해 주세요.',
+		);
 	}
 
-	// 3) KODATA 조회 실패 시 기간 제한 없는 최신 정상 캐시
-	$latestDiagnostics = array();
-	$latestLog = trade_request_find_company_api_log($bzno, false, $latestDiagnostics);
-	$latestJson = trim((string)($latestLog['c_content'] ?? ''));
-	if ($latestJson !== '') {
-		$resolved = trade_request_resolve_company_data_from_kodata_json($bzno, $latestJson, $persist, 'company_api_log_latest');
-		if (!empty($resolved['success'])) {
-			trade_request_bzno_resolve_log(3, 'company_api_log_latest', 'success', $bzno, array(
-				'persist' => $persist,
-				'rows_scanned' => (int)($latestDiagnostics['rows_scanned'] ?? 0),
-			));
-			return $resolved;
-		}
-		$latestDiagnostics['status'] = 'fail';
-		$latestDiagnostics['reason'] = 'cache_payload_resolve_failed';
+	$source = trim((string)($resolved['source'] ?? ''));
+	$payload = array();
+	if ($persist || $source === 'company') {
+		$payload = trade_request_member_company_data($bzno);
+	} else if (!empty($resolved['json'])) {
+		$payload = trade_request_company_payload_from_kodata_json($resolved['json']);
+		if (empty($payload['bzno'])) $payload['bzno'] = licenseNum($bzno);
 	}
-	trade_request_bzno_resolve_log(3, 'company_api_log_latest', $latestDiagnostics['status'] ?? 'miss', $bzno, array(
-		'persist' => $persist,
-		'reason' => $latestDiagnostics['reason'] ?? 'cache_not_found',
-		'rows_scanned' => (int)($latestDiagnostics['rows_scanned'] ?? 0),
-	));
-
-	// 4) 캐시까지 없으면 company 테이블을 마지막 수단으로 사용
-	$companyDiagnostics = array();
-	$payload = trade_request_member_company_data($bzno, $companyDiagnostics);
-	if (!empty($payload['company'])) {
-		trade_request_bzno_resolve_log(4, 'company', 'success', $bzno, array('persist' => $persist));
-		return array('success' => true, 'company' => $payload, 'bzno' => $bzno, 'source' => 'company');
+	if (empty($payload['company'])) {
+		return array('success' => false, 'message' => '기업 정보 응답을 화면에 표시하지 못했습니다.');
 	}
 
-	trade_request_bzno_resolve_log(4, 'company', $companyDiagnostics['status'] ?? 'miss', $bzno, array(
-		'persist' => $persist,
-		'reason' => $companyDiagnostics['reason'] ?? 'company_not_found',
-	));
-	trade_request_bzno_resolve_log(0, 'all_sources', 'fail', $bzno, array(
-		'persist' => $persist,
-		'reason' => 'all_fallbacks_exhausted',
-	));
-
-	return array(
-		'success' => false,
-		'message' => '입력하신 사업자번호로 기업 정보를 확인하지 못했습니다. 사업자번호를 다시 확인하거나 잠시 후 다시 시도해 주세요.',
-	);
+	trade_request_bzno_resolve_log(0, $source, 'success', $bzno, array('persist' => $persist));
+	return array('success' => true, 'company' => $payload, 'bzno' => $bzno, 'source' => $source);
 }
