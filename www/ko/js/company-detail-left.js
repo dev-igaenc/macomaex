@@ -50,7 +50,7 @@ function renderDetailLeftCard(co, scoreHtml) {
     var homepageClass = isUnlocked ? '' : ' class="info-masked"';
 
     var tagsHtml = '';
-    (Array.isArray(co.tags) ? co.tags : []).forEach(function(t) {
+    (Array.isArray(co.tags) ? co.tags : []).forEach(function (t) {
         tagsHtml += '<span class="tag-pill">' + _esc(t) + '</span>';
     });
     if (!tagsHtml) {
@@ -67,8 +67,8 @@ function renderDetailLeftCard(co, scoreHtml) {
     var creditDt =
         '재무상태 ' +
         '<span class="credit-q-wrap">' +
-            '<span class="credit-q" aria-label="도움말">?</span>' +
-            '<span class="credit-q-tooltip">' + creditTooltip + '</span>' +
+        '<span class="credit-q" aria-label="도움말">?</span>' +
+        '<span class="credit-q-tooltip">' + creditTooltip + '</span>' +
         '</span>';
 
     var badgesHtml = (typeof companyBadgesHtml === 'function') ? companyBadgesHtml(co) : '';
@@ -77,19 +77,19 @@ function renderDetailLeftCard(co, scoreHtml) {
         '<div class="card-title-row"><span class="card-title-label">기업 핵심 정보</span></div>' +
         badgesHtml +
         '<div class="profile-head"><div>' +
-            '<h1>' + titleHtml + '</h1>' +
-            '<p class="sub">' + _esc(co.sub) + '</p>' +
+        '<h1>' + titleHtml + '</h1>' +
+        '<p class="sub">' + _esc(co.sub) + '</p>' +
         '</div></div>' +
         '<div class="industry-tags">' + tagsHtml + '</div>' +
         scoreHtml +
         '<dl class="info-grid">' +
-            '<dt>설립</dt><dd>' + _esc(co.founded) + '</dd>' +
-            '<dt>고용인원</dt><dd>' + _esc(co.employees) + '</dd>' +
-            '<dt>기업유형</dt><dd>' + _esc(co.corp_type || '법인기업') + '</dd>' +
-            '<dt>주요제품</dt><dd class="info-product-line">' + _esc(co.product_line) + '</dd>' +
-            '<dt>' + creditDt + '</dt><dd>' + _esc(co.credit) + '</dd>' +
-            '<dt>주소</dt><dd' + addressClass + '>' + addressHtml + '</dd>' +
-            '<dt>홈페이지</dt><dd' + homepageClass + '>' + homepageHtml + '</dd>' +
+        '<dt>설립</dt><dd>' + _esc(co.founded) + '</dd>' +
+        '<dt>고용인원</dt><dd>' + _esc(co.employees) + '</dd>' +
+        '<dt>기업유형</dt><dd>' + _esc(co.corp_type || '법인기업') + '</dd>' +
+        '<dt>주요제품</dt><dd class="info-product-line">' + _esc(co.product_line) + '</dd>' +
+        '<dt>' + creditDt + '</dt><dd>' + _esc(co.credit) + '</dd>' +
+        '<dt>주소</dt><dd' + addressClass + '>' + addressHtml + '</dd>' +
+        '<dt>홈페이지</dt><dd' + homepageClass + '>' + homepageHtml + '</dd>' +
         '</dl>' +
-        (isUnlocked ? '' : '<p class="info-mask-notice">거래 요청 및 수락 시 *** 으로 표시된 정보가 공개됩니다.</p>');
+        (isUnlocked ? '' : '<p class="info-mask-notice">거래 요청 시 *** 으로 표시된 정보가 공개됩니다.</p>');
 }

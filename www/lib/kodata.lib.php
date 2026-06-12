@@ -3,7 +3,13 @@ if (!defined('_GNUBOARD_')) exit;
 
 if (!function_exists('macomaex_kodata_normalize_bzno')) {
 	function macomaex_kodata_normalize_bzno($value) {
-		return preg_replace('/[^0-9]/', '', (string)$value);
+		return preg_replace('/[^0-9]/', '', is_scalar($value) ? (string)$value : '');
+	}
+}
+
+if (!function_exists('macomaex_kodata_scalar')) {
+	function macomaex_kodata_scalar($value) {
+		return is_scalar($value) ? trim((string)$value) : '';
 	}
 }
 
@@ -24,27 +30,70 @@ if (!function_exists('macomaex_kodata_build_url')) {
 if (!function_exists('macomaex_kodata_company_from_json')) {
 	function macomaex_kodata_company_from_json($json_text, $fallback_bzno = '') {
 		$decoded = json_decode((string)$json_text);
-		if (!is_object($decoded) || empty($decoded->CONTENTS->ENPintr0000)) return array();
+		if (!is_object($decoded) || empty($decoded->CONTENTS)) return array();
 
-		$intr = $decoded->CONTENTS->ENPintr0000;
-		$bzno = macomaex_kodata_normalize_bzno((string)($intr->bzno ?? $intr->bsno ?? $fallback_bzno));
-		$name = trim((string)($intr->enp_nm_trd ?? ''));
-		if ($name === '') $name = trim((string)($intr->enp_nm ?? ''));
+		$intr = null;
+		if (is_object($decoded->CONTENTS) && !empty($decoded->CONTENTS->ENPintr0000)) {
+			$intr = $decoded->CONTENTS->ENPintr0000;
+		} else if (is_array($decoded->CONTENTS)) {
+			foreach ($decoded->CONTENTS as $content) {
+				if (is_object($content) && !empty($content->ENPintr0000)) {
+					$intr = $content->ENPintr0000;
+					break;
+				}
+			}
+		}
+		if (!is_object($intr)) return array();
+
+		$bzno_value = macomaex_kodata_scalar($intr->bzno ?? '');
+		if ($bzno_value === '') $bzno_value = macomaex_kodata_scalar($intr->bsno ?? '');
+		$bzno = macomaex_kodata_normalize_bzno($bzno_value);
+		if ($bzno === '') $bzno = macomaex_kodata_normalize_bzno($fallback_bzno);
+		$name = macomaex_kodata_scalar($intr->enp_nm_trd ?? '');
+		if ($name === '') $name = macomaex_kodata_scalar($intr->enp_nm ?? '');
 
 		return array(
-			'KEDCD' => trim((string)($intr->kedcd ?? '')),
-			'ENP_NM' => trim((string)($intr->enp_nm ?? '')),
+			'KEDCD' => macomaex_kodata_scalar($intr->kedcd ?? ''),
+			'ENP_NM' => macomaex_kodata_scalar($intr->enp_nm ?? ''),
 			'ENP_NM_TRD' => $name,
 			'BZNO' => $bzno,
-			'BZC_CD' => trim((string)($intr->bzc_cd ?? '')),
-			'ENP_TYP' => trim((string)($intr->enp_typ ?? '')),
-			'ESTB_DT' => trim((string)($intr->estb_dt ?? '')),
-			'LABORER_SUM' => trim((string)($intr->laborer_sum ?? '')),
-			'PD_NM' => trim((string)($intr->mpd ?? '')),
-			'HPAGE_URL' => trim((string)($intr->hpage_url ?? '')),
-			'LOC_ADDRA' => trim((string)($intr->loc_addra ?? '')),
-			'LOC_ADDRB' => trim((string)($intr->loc_addrb ?? '')),
+			'BZC_CD' => macomaex_kodata_scalar($intr->bzc_cd ?? ''),
+			'ENP_TYP' => macomaex_kodata_scalar($intr->enp_typ ?? ''),
+			'ESTB_DT' => macomaex_kodata_scalar($intr->estb_dt ?? ''),
+			'LABORER_SUM' => macomaex_kodata_scalar($intr->laborer_sum ?? ''),
+			'PD_NM' => macomaex_kodata_scalar($intr->mpd ?? ''),
+			'HPAGE_URL' => macomaex_kodata_scalar($intr->hpage_url ?? ''),
+			'LOC_ADDRA' => macomaex_kodata_scalar($intr->loc_addra ?? ''),
+			'LOC_ADDRB' => macomaex_kodata_scalar($intr->loc_addrb ?? ''),
 		);
+	}
+}
+
+if (!function_exists('macomaex_kodata_company_to_json')) {
+	function macomaex_kodata_company_to_json($company) {
+		if (!is_array($company) || empty($company['KEDCD'])) return '';
+
+		$field_map = array(
+			'KEDCD' => 'kedcd',
+			'ENP_NM' => 'enp_nm',
+			'ENP_NM_TRD' => 'enp_nm_trd',
+			'BZNO' => 'bzno',
+			'BZC_CD' => 'bzc_cd',
+			'ENP_TYP' => 'enp_typ',
+			'ESTB_DT' => 'estb_dt',
+			'LABORER_SUM' => 'laborer_sum',
+			'PD_NM' => 'mpd',
+			'HPAGE_URL' => 'hpage_url',
+			'LOC_ADDRA' => 'loc_addra',
+			'LOC_ADDRB' => 'loc_addrb',
+		);
+		$intr = array();
+		foreach ($field_map as $company_field => $json_field) {
+			$intr[$json_field] = (string)($company[$company_field] ?? '');
+		}
+
+		$json = json_encode(array('CONTENTS' => array('ENPintr0000' => $intr)), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+		return is_string($json) ? $json : '';
 	}
 }
 
@@ -58,14 +107,14 @@ if (!function_exists('macomaex_kodata_find_cache')) {
 			"select * from company_api_log
 			 where c_bizno='" . sql_escape_string($bzno) . "'
 			   and c_content!=''{$recent_sql}
-			 order by c_datetime desc
-			 limit 20",
+			 order by c_datetime desc",
 			false
 		);
 		if (!$result) return array();
 
 		while ($row = sql_fetch_array($result)) {
-			if (!empty(macomaex_kodata_company_from_json($row['c_content'] ?? '', $bzno))) return $row;
+			$company = macomaex_kodata_company_from_json($row['c_content'] ?? '', $bzno);
+			if (!empty($company['KEDCD']) && !empty($company['ENP_NM_TRD']) && (string)$company['BZNO'] === $bzno) return $row;
 		}
 		return array();
 	}
@@ -75,7 +124,7 @@ if (!function_exists('macomaex_kodata_save_cache')) {
 	function macomaex_kodata_save_cache($bzno, $json_text) {
 		$bzno = macomaex_kodata_normalize_bzno($bzno);
 		$company = macomaex_kodata_company_from_json($json_text, $bzno);
-		if (!preg_match('/^[0-9]{10}$/', $bzno) || empty($company['KEDCD'])) return false;
+		if (!preg_match('/^[0-9]{10}$/', $bzno) || empty($company['KEDCD']) || (string)$company['BZNO'] !== $bzno) return false;
 
 		return (bool)sql_query(
 			"insert company_api_log set
@@ -90,14 +139,17 @@ if (!function_exists('macomaex_kodata_save_cache')) {
 }
 
 if (!function_exists('macomaex_kodata_fetch_live')) {
-	function macomaex_kodata_fetch_live($bzno, $context = '') {
+	function macomaex_kodata_fetch_live($bzno, $context = '', $options = array()) {
 		$bzno = macomaex_kodata_normalize_bzno($bzno);
 		if (!preg_match('/^[0-9]{10}$/', $bzno)) {
 			return array('success' => false, 'error_code' => 'INVALID_BIZNO', 'message' => '사업자등록번호 형식을 확인해 주세요.');
 		}
 
-		$connect_timeout = function_exists('macomaex_env') ? (int)macomaex_env('KODATA_CONNECT_TIMEOUT', 3) : 3;
-		$timeout = function_exists('macomaex_env') ? (int)macomaex_env('KODATA_TIMEOUT', 30) : 30;
+		$options = is_array($options) ? $options : array();
+		$default_connect_timeout = function_exists('macomaex_env') ? (int)macomaex_env('KODATA_CONNECT_TIMEOUT', 3) : 3;
+		$default_timeout = function_exists('macomaex_env') ? (int)macomaex_env('KODATA_TIMEOUT', 30) : 30;
+		$connect_timeout = isset($options['connect_timeout']) ? (int)$options['connect_timeout'] : $default_connect_timeout;
+		$timeout = isset($options['timeout']) ? (int)$options['timeout'] : $default_timeout;
 		if ($connect_timeout < 1) $connect_timeout = 3;
 		if ($timeout < $connect_timeout) $timeout = max(30, $connect_timeout);
 
@@ -158,7 +210,7 @@ if (!function_exists('macomaex_kodata_fetch_live')) {
 		}
 
 		$company = macomaex_kodata_company_from_json($parsed['json'], $bzno);
-		if (empty($company['KEDCD']) || empty($company['ENP_NM_TRD'])) {
+		if (empty($company['KEDCD']) || empty($company['ENP_NM_TRD']) || (string)$company['BZNO'] !== $bzno) {
 			return array('success' => false, 'error_code' => 'INVALID_PAYLOAD', 'message' => '기업 정보 응답에 필수 정보가 없습니다.');
 		}
 
@@ -168,21 +220,41 @@ if (!function_exists('macomaex_kodata_fetch_live')) {
 
 if (!function_exists('macomaex_kodata_upsert_company')) {
 	function macomaex_kodata_upsert_company($bzno, $json_text) {
+		$bzno = macomaex_kodata_normalize_bzno($bzno);
 		$company = macomaex_kodata_company_from_json($json_text, $bzno);
-		if (empty($company['KEDCD'])) return false;
+		if (empty($company['KEDCD']) || (string)$company['BZNO'] !== $bzno) return false;
 
-		$fields = array();
+		$insert_fields = array();
+		$update_fields = array();
 		foreach ($company as $name => $value) {
-			$fields[] = $name . "='" . sql_escape_string((string)$value) . "'";
+			$escaped_value = sql_escape_string((string)$value);
+			$insert_fields[] = $name . "='" . $escaped_value . "'";
+			if ((string)$value !== '' && !in_array($name, array('KEDCD', 'BZNO'), true)) {
+				$update_fields[] = $name . "='" . $escaped_value . "'";
+			}
 		}
-		$fields[] = "ext_1='API 입력'";
+		$insert_fields[] = "ext_1='API 입력'";
+		$update_fields[] = "ext_1='API 입력'";
 
-		$exists = sql_fetch("select KEDCD from company where KEDCD='" . sql_escape_string($company['KEDCD']) . "' or BZNO='" . sql_escape_string($company['BZNO']) . "' limit 1");
+		$exists = sql_fetch("select KEDCD, BZNO from company where KEDCD='" . sql_escape_string($company['KEDCD']) . "' or BZNO='" . sql_escape_string($company['BZNO']) . "' limit 1");
 		if (!empty($exists['KEDCD'])) {
-			return (bool)sql_query("update company set " . implode(', ', $fields) . " where KEDCD='" . sql_escape_string($exists['KEDCD']) . "'", false);
+			$existing_bzno = macomaex_kodata_normalize_bzno($exists['BZNO'] ?? '');
+			if ((string)$exists['KEDCD'] !== (string)$company['KEDCD'] || ($existing_bzno !== '' && $existing_bzno !== (string)$company['BZNO'])) {
+				if (function_exists('macomaex_kodata_log')) {
+					macomaex_kodata_log('company_identity_conflict', array(
+						'requested_bzno' => $bzno,
+						'existing_kedcd' => (string)$exists['KEDCD'],
+						'existing_bzno' => $existing_bzno,
+						'kodata_kedcd' => (string)$company['KEDCD'],
+						'kodata_bzno' => (string)$company['BZNO'],
+					));
+				}
+				return false;
+			}
+			return (bool)sql_query("update company set " . implode(', ', $update_fields) . " where KEDCD='" . sql_escape_string($exists['KEDCD']) . "'", false);
 		}
 
-		return (bool)sql_query("insert company set " . implode(', ', $fields), false);
+		return (bool)sql_query("insert company set " . implode(', ', $insert_fields), false);
 	}
 }
 
@@ -205,10 +277,12 @@ if (!function_exists('macomaex_kodata_resolve_company')) {
 		}
 
 		$live = $allow_live
-			? macomaex_kodata_fetch_live($bzno, $context)
+			? macomaex_kodata_fetch_live($bzno, $context, $options)
 			: array('success' => false, 'error_code' => 'KODATA_LIVE_DISABLED', 'message' => 'KODATA 실시간 조회가 비활성화되어 있습니다.');
 		if (!empty($live['success'])) {
-			macomaex_kodata_save_cache($bzno, $live['json']);
+			if (!macomaex_kodata_save_cache($bzno, $live['json']) && function_exists('macomaex_kodata_log')) {
+				macomaex_kodata_log('cache_save_failed', array('context' => $context, 'bzno' => $bzno));
+			}
 			if ($persist_company && !macomaex_kodata_upsert_company($bzno, $live['json'])) {
 				return array('success' => false, 'error_code' => 'COMPANY_SAVE_FAILED', 'message' => '기업 정보 저장에 실패했습니다.');
 			}

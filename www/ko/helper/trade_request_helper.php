@@ -136,147 +136,6 @@ function trade_request_bzno_resolve_log($priority, $source, $status, $bzno, $con
 	error_log('[trade_request_bzno_resolve] ' . json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
 }
 
-function trade_request_fetch_kodata_company_json($bzno) {
-	$bzno = trade_request_normalize_bzno($bzno);
-	$result = macomaex_kodata_fetch_live($bzno, 'trade_request_modal');
-	if (!empty($result['success'])) return array('success' => true, 'json' => $result['json']);
-	return $result;
-}
-
-// 사업자번호의 최신 정상 KODATA 캐시를 조회한다.
-// recentOnly=true이면 최근 1개월 이내 캐시만 대상으로 하며, 손상된 JSON은 건너뛴다.
-function trade_request_find_company_api_log($bzno, $recentOnly = false, &$diagnostics = null) {
-	$bzno = trade_request_normalize_bzno($bzno);
-	$diagnostics = array(
-		'status' => 'miss',
-		'reason' => 'cache_not_found',
-		'rows_scanned' => 0,
-	);
-	if (!preg_match('/^[0-9]{10}$/', $bzno)) {
-		$diagnostics['status'] = 'fail';
-		$diagnostics['reason'] = 'invalid_bzno';
-		return array();
-	}
-
-	$recentCondition = $recentOnly
-		? " AND c_datetime >= date_sub(now(), interval 1 month)"
-		: '';
-
-	$result = sql_query("
-		SELECT *
-		FROM company_api_log
-		WHERE c_bizno='" . sql_escape_string($bzno) . "'
-			AND c_content!=''
-			{$recentCondition}
-		ORDER BY c_datetime DESC
-	", false);
-	if (!$result) {
-		$diagnostics['status'] = 'fail';
-		$diagnostics['reason'] = 'cache_query_failed';
-		return array();
-	}
-
-	while ($row = sql_fetch_array($result)) {
-		$diagnostics['rows_scanned']++;
-		$payload = trade_request_company_payload_from_kodata_json($row['c_content'] ?? '');
-		if (!empty($payload['company'])) {
-			$diagnostics['status'] = 'hit';
-			$diagnostics['reason'] = 'valid_cache_found';
-			return $row;
-		}
-	}
-
-	if ($diagnostics['rows_scanned'] > 0) {
-		$diagnostics['reason'] = 'valid_cache_not_found';
-	}
-	return array();
-}
-
-// KODATA 실시간 조회 결과가 모달에서 사용할 수 있는 정상 데이터인 경우 캐시에 저장한다.
-function trade_request_save_company_api_log($bzno, $jsonText) {
-	$bzno = trade_request_normalize_bzno($bzno);
-	$jsonText = trim((string)$jsonText);
-	if (!preg_match('/^[0-9]{10}$/', $bzno) || $jsonText === '') return false;
-
-	$payload = trade_request_company_payload_from_kodata_json($jsonText);
-	if (empty($payload['company'])) return false;
-
-	return (bool)sql_query("INSERT INTO company_api_log SET c_bizno='" . sql_escape_string($bzno) . "', c_kedcd='" . sql_escape_string($payload['kedcd'] ?? '') . "', c_content='" . sql_escape_string($jsonText) . "', c_datetime=now(), c_ip='" . sql_escape_string($_SERVER['REMOTE_ADDR'] ?? '') . "'", false);
-}
-
-function trade_request_upsert_company_from_kodata_json($bzno, $jsonText) {
-	$bzno = trade_request_normalize_bzno($bzno);
-	$jsonText = (string)$jsonText;
-	$comInfo = json_decode($jsonText);
-	if (!is_object($comInfo) || empty($comInfo->CONTENTS->ENPintr0000)) {
-		return false;
-	}
-
-	$intr = $comInfo->CONTENTS->ENPintr0000;
-	$kedcd = trim((string)($intr->kedcd ?? ''));
-	if ($kedcd === '') return false;
-
-	$bzcCd = trim((string)($intr->bzc_cd ?? ''));
-	$estbDt = trim((string)($intr->estb_dt ?? ''));
-	$laborerSum = trim((string)($intr->laborer_sum ?? ''));
-	$enpTyp = trim((string)($intr->enp_typ ?? ''));
-	$pdNm = trim((string)($intr->mpd ?? ''));
-	$hpageUrl = trim((string)($intr->hpage_url ?? ''));
-	$enpNm = addslashes(trim((string)($intr->enp_nm ?? '')));
-	$enpNmTrd = addslashes(trim((string)($intr->enp_nm_trd ?? '')));
-	$locAddra = addslashes(trim((string)($intr->loc_addra ?? '')));
-	$locAddrb = addslashes(trim((string)($intr->loc_addrb ?? '')));
-
-	if ($enpNmTrd === '') $enpNmTrd = $enpNm;
-
-	$exists = sql_fetch("SELECT KEDCD FROM company WHERE BZNO='" . sql_escape_string($bzno) . "' LIMIT 1");
-	if (!empty($exists['KEDCD'])) return true;
-
-	$sql = "INSERT INTO company SET
-		KEDCD='" . sql_escape_string($kedcd) . "',
-		ENP_NM='{$enpNm}',
-		ENP_NM_TRD='{$enpNmTrd}',
-		BZNO='" . sql_escape_string($bzno) . "',
-		BZC_CD='" . sql_escape_string($bzcCd) . "',
-		ESTB_DT='" . sql_escape_string($estbDt) . "',
-		LABORER_SUM='" . sql_escape_string($laborerSum) . "',
-		ENP_TYP='" . sql_escape_string($enpTyp) . "',
-		PD_NM='{$pdNm}',
-		HPAGE_URL='" . sql_escape_string($hpageUrl) . "',
-		LOC_ADDRA='{$locAddra}',
-		LOC_ADDRB='{$locAddrb}',
-		ext_1='API 입력'";
-
-	return (bool)sql_query($sql, false);
-}
-
-// KODATA 또는 캐시 JSON을 공통 응답으로 변환하고, 최종 제출 단계에서는 company 테이블에 적재한다.
-function trade_request_resolve_company_data_from_kodata_json($bzno, $jsonText, $persist, $source) {
-	if ($persist) {
-		if (!trade_request_upsert_company_from_kodata_json($bzno, $jsonText)) {
-			return array('success' => false, 'message' => '기업 정보 저장에 실패했습니다. 잠시 후 다시 시도해 주세요.');
-		}
-
-		$payload = trade_request_member_company_data($bzno);
-		if (empty($payload['company'])) {
-			return array('success' => false, 'message' => '저장된 기업 정보를 확인하지 못했습니다. 잠시 후 다시 시도해 주세요.');
-		}
-	} else {
-		$payload = trade_request_company_payload_from_kodata_json($jsonText);
-		if (empty($payload['company'])) return array();
-		if (empty($payload['bzno'])) {
-			$payload['bzno'] = licenseNum($bzno);
-		}
-	}
-
-	return array(
-		'success' => true,
-		'company' => $payload,
-		'bzno' => $bzno,
-		'source' => $source,
-	);
-}
-
 // 거래 요청용 기업정보를 최근 캐시, KODATA, 전체 캐시, company 테이블 순서로 조회한다.
 function trade_request_resolve_company_data_by_bzno($bzno, $options = array()) {
 	$bzno = trade_request_normalize_bzno($bzno);
@@ -284,6 +143,8 @@ function trade_request_resolve_company_data_by_bzno($bzno, $options = array()) {
 	$resolved = macomaex_kodata_resolve_company($bzno, array(
 		'persist_company' => $persist,
 		'context' => 'trade_request_modal',
+		'connect_timeout' => 3,
+		'timeout' => 10,
 	));
 	if (empty($resolved['success'])) {
 		trade_request_bzno_resolve_log(0, 'all_sources', 'fail', $bzno, array(
