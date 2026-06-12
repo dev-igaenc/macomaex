@@ -13,17 +13,25 @@ $board['bo_9']="1"; // 2뎁스
 //로그인 체크
 login_chk();
 
-$cd=$member['mb_company'];
-
-if($cd){
-	$com=sql_fetch("SELECT * from company where KEDCD='$cd'");
-	$major_service=sql_fetch("SELECT * from g5_member where mb_company='$cd'");
-}else{
-	ALERT("정상적으로 이용하세요.","/");
+$cd=trim((string)$member['mb_company']);
+$com=array();
+$major_service=array();
+if($cd && !preg_match('/^M[0-9]{9}$/', $cd)){
+	$cd_sql=sql_escape_string($cd);
+	$com=sql_fetch("SELECT * from company where KEDCD='{$cd_sql}'");
+	if(!empty($com['KEDCD'])) $major_service=sql_fetch("SELECT * from g5_member where mb_company='{$cd_sql}'");
 }
+$has_linked_company=!empty($com['KEDCD']);
 
 include_once(G5_THEME_PATH.'/head.php');
 
+if(!$has_linked_company){
+	$my_company_connect_token=bin2hex(random_bytes(24));
+	set_session('ss_my_company_connect_token', $my_company_connect_token);
+	include_once(G5_PATH.'/ko/my_company_onboarding.php');
+	include_once(G5_THEME_PATH.'/tail.php');
+	exit;
+}
 
 $view_chk="true";
 

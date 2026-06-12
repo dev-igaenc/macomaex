@@ -660,6 +660,74 @@ if (!function_exists('company_list_ai_resolve_base_payload_by_bizno')) {
             );
         }
 
+        $common_resolved = macomaex_kodata_resolve_company($bizno, array(
+            'persist_company' => false,
+            'allow_live' => $allow_kodata,
+            'context' => 'company_list_ai',
+        ));
+        if (empty($common_resolved['success'])) {
+            company_list_ai_write_event_log('bizno_resolve', 'fail', array(
+                'trace_id' => $resolve_trace_id,
+                'trade_type' => $resolve_trade_type,
+                'action' => 'resolve_base_payload',
+                'bizno' => $bizno,
+                'reason' => $common_resolved['error_code'] ?? 'all_fallbacks_exhausted',
+                'source' => 'none',
+                'error_code' => $common_resolved['error_code'] ?? 'all_fallbacks_exhausted',
+            ), $common_resolved['message'] ?? 'Kodata 및 저장된 기업정보 조회에 실패했습니다.');
+            return array(
+                'ok' => false,
+                'status' => 502,
+                'error' => $common_resolved['message'] ?? 'Kodata 및 저장된 기업정보 조회에 실패했습니다.',
+                'base_payload' => array(),
+            );
+        }
+
+        $common_source = (string)($common_resolved['source'] ?? '');
+        if (!empty($common_resolved['json'])) {
+            $parsed = company_list_ai_build_base_payload_from_kodata_json($common_resolved['json'], $common_resolved['company']['KEDCD'] ?? '');
+        } else {
+            $company_row = is_array($common_resolved['company'] ?? null) ? $common_resolved['company'] : array();
+            $parsed = array(
+                'ok' => !empty($company_row['KEDCD']),
+                'error' => empty($company_row['KEDCD']) ? 'company fallback payload 생성 실패' : '',
+                'base_payload' => company_list_ai_build_base_payload(array(
+                    'kedcd' => $company_row['KEDCD'] ?? '',
+                    'bzc_cd' => $company_row['BZC_CD'] ?? '',
+                    'sido' => $company_row['LOC_ADDRA'] ?? '',
+                    'sze' => $company_row['ENP_SZE'] ?? 0,
+                    'estb_dt' => $company_row['ESTB_DT'] ?? '',
+                    'mpd' => $company_row['PD_NM'] ?? '',
+                    'sales' => $company_row['SALES'] ?? 0,
+                )),
+            );
+        }
+        if (empty($parsed['ok'])) {
+            return array(
+                'ok' => false,
+                'status' => 502,
+                'error' => $parsed['error'] ?? '기업정보 payload 생성 실패',
+                'base_payload' => array(),
+            );
+        }
+
+        company_list_ai_write_event_log('bizno_resolve', 'success', array(
+            'trace_id' => $resolve_trace_id,
+            'trade_type' => $resolve_trade_type,
+            'action' => 'resolve_base_payload',
+            'bizno' => $bizno,
+            'kedcd' => (string)($parsed['base_payload']['kedcd'] ?? ''),
+            'source' => $common_source,
+            'from_cache' => ($common_source === 'kodata_live') ? 0 : 1,
+        ));
+        return array(
+            'ok' => true,
+            'status' => 200,
+            'error' => '',
+            'source' => $common_source,
+            'base_payload' => $parsed['base_payload'],
+        );
+
         // 1) 최근 1개월 캐시
         $recent_row = company_list_ai_pick_company_api_log($bizno, false, 1);
         if (is_array($recent_row) && !empty($recent_row['c_content'])) {

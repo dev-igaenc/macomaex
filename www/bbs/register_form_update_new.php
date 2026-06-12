@@ -262,17 +262,12 @@ if ($w == '') {
     sql_query($sql);
 
 
-	// 회사정보 추가
-	if(!$mb_company){
-			//검색된 회사정보가 없다면 신규 회사 DB 추가함
-			$lastid=sql_fetch("select * from {$g5['member_table']} where mb_id = '{$mb_id}'");
-			$kedcd="M".sprintf('%09d',$lastid['mb_no']);
-			$new_comp_q="insert company set KEDCD='{$kedcd}',";
-			$new_comp_q.="ENP_NM='{$mb_name}',";
-			$new_comp_q.="BZNO='{$comnum}'";
-			sql_query($new_comp_q);
-			sql_query("update {$g5['member_table']}  set mb_company='$kedcd' where mb_no='{$lastid['mb_no']}'");
-	}
+		// 사업자 정보가 없는 신규 회원은 company 행을 만들지 않고 임시 회사 코드만 연결한다.
+		if(!$mb_company){
+				$lastid=sql_fetch("select * from {$g5['member_table']} where mb_id = '{$mb_id}'");
+				$kedcd="M".sprintf('%09d',$lastid['mb_no']);
+				sql_query("update {$g5['member_table']}  set mb_company='$kedcd' where mb_no='{$lastid['mb_no']}'");
+		}
 	
 
 
