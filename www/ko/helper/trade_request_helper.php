@@ -32,38 +32,41 @@ function trade_request_company_payload($companyRow, $industryName = '') {
 	);
 }
 
-function trade_request_company_payload_from_kodata_json($jsonText) {
+function trade_request_company_payload_from_kodata_json($jsonText, $expectedBzno = '') {
 	$comInfo = json_decode((string)$jsonText);
-	if (!is_object($comInfo) || empty($comInfo->CONTENTS->ENPintr0000)) return array();
-	$intr = $comInfo->CONTENTS->ENPintr0000;
+	$intr = macomaex_kodata_find_intr($comInfo, $expectedBzno);
+	if (!is_object($intr)) return array();
 
 	$founded = '';
-	$estbDt = trim((string)($intr->estb_dt ?? ''));
+	$estbDt = macomaex_kodata_scalar($intr->estb_dt ?? '');
 	if ($estbDt !== '' && strlen($estbDt) >= 4) {
 		$founded = substr($estbDt, 0, 4) . '년';
 	}
 
 	$corpType = '';
-	$enpTyp = trim((string)($intr->enp_typ ?? ''));
+	$enpTyp = macomaex_kodata_scalar($intr->enp_typ ?? '');
 	if ($enpTyp !== '' && isset($GLOBALS['enp_typt'][$enpTyp])) {
 		$corpType = $GLOBALS['enp_typt'][$enpTyp];
 	}
 
-	$bzno = trade_request_normalize_bzno((string)($intr->bzno ?? ''));
+	$bzno = trade_request_normalize_bzno(macomaex_kodata_scalar($intr->bzno ?? ''));
 	if ($bzno === '') {
-		$bzno = trade_request_normalize_bzno((string)($intr->bsno ?? ''));
+		$bzno = trade_request_normalize_bzno(macomaex_kodata_scalar($intr->bsno ?? ''));
 	}
+	$companyName = macomaex_kodata_scalar($intr->enp_nm_trd ?? '');
+	if ($companyName === '') $companyName = macomaex_kodata_scalar($intr->enp_nm ?? '');
+	$laborerSum = macomaex_kodata_scalar($intr->laborer_sum ?? '');
 
 	return array(
-		'kedcd' => trim((string)($intr->kedcd ?? '')),
-		'company' => trim((string)($intr->enp_nm_trd ?? $intr->enp_nm ?? '')),
+		'kedcd' => macomaex_kodata_scalar($intr->kedcd ?? ''),
+		'company' => $companyName,
 		'bzno' => $bzno !== '' ? licenseNum($bzno) : '',
 		'founded' => $founded,
-		'employees' => !empty($intr->laborer_sum) ? number_format((float)$intr->laborer_sum) . '명' : '',
+		'employees' => $laborerSum !== '' ? number_format((float)$laborerSum) . '명' : '',
 		'corpType' => $corpType,
-		'industry' => trim((string)($intr->bzc_nm ?? '')),
-		'product' => trim((string)($intr->mpd ?? '')),
-		'homepage' => trim((string)($intr->hpage_url ?? '')),
+		'industry' => macomaex_kodata_scalar($intr->bzc_nm ?? ''),
+		'product' => macomaex_kodata_scalar($intr->mpd ?? ''),
+		'homepage' => macomaex_kodata_scalar($intr->hpage_url ?? ''),
 	);
 }
 
@@ -162,7 +165,7 @@ function trade_request_resolve_company_data_by_bzno($bzno, $options = array()) {
 	if ($persist || $source === 'company') {
 		$payload = trade_request_member_company_data($bzno);
 	} else if (!empty($resolved['json'])) {
-		$payload = trade_request_company_payload_from_kodata_json($resolved['json']);
+		$payload = trade_request_company_payload_from_kodata_json($resolved['json'], $bzno);
 		if (empty($payload['bzno'])) $payload['bzno'] = licenseNum($bzno);
 	}
 	if (empty($payload['company'])) {
@@ -170,5 +173,12 @@ function trade_request_resolve_company_data_by_bzno($bzno, $options = array()) {
 	}
 
 	trade_request_bzno_resolve_log(0, $source, 'success', $bzno, array('persist' => $persist));
-	return array('success' => true, 'company' => $payload, 'bzno' => $bzno, 'source' => $source);
+	return array(
+		'success' => true,
+		'company' => $payload,
+		'bzno' => $bzno,
+		'source' => $source,
+		'cache_saved' => $resolved['cache_saved'] ?? null,
+		'fallback_error_code' => $resolved['fallback_error_code'] ?? '',
+	);
 }

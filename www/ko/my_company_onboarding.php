@@ -100,7 +100,16 @@ if (!defined('_GNUBOARD_')) exit;
 			headers: {"Content-Type": "application/x-www-form-urlencoded;charset=UTF-8"},
 			body: new URLSearchParams({action: action, bizno: bizno, csrf_token: csrfToken}).toString()
 		}).then(function(response) {
-			return response.json().catch(function() { return {}; }).then(function(data) {
+			return response.text().then(function(raw) {
+				var data = {};
+				try {
+					data = JSON.parse(raw);
+				} catch (error) {
+					console.error("[my_company_connect] invalid JSON response", {
+						status: response.status,
+						body: raw.slice(0, 1000)
+					});
+				}
 				if (!response.ok || !data.success) throw new Error(data.message || "처리 중 오류가 발생했습니다.");
 				return data;
 			});

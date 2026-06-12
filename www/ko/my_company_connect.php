@@ -48,7 +48,24 @@ if ($persist) {
 	sql_query('START TRANSACTION');
 }
 
-$resolved = trade_request_resolve_company_data_by_bzno($bizno, array('persist' => $persist));
+try {
+	$resolved = trade_request_resolve_company_data_by_bzno($bizno, array('persist' => $persist));
+} catch (Throwable $e) {
+	if ($persist) {
+		sql_query('ROLLBACK');
+	}
+	error_log('[my_company_connect] ' . json_encode(array(
+		'action' => $action,
+		'bizno' => $bizno,
+		'error' => $e->getMessage(),
+		'file' => $e->getFile(),
+		'line' => $e->getLine(),
+	), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+	my_company_connect_response(500, array(
+		'success' => false,
+		'message' => '기업 정보 확인 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.',
+	));
+}
 if (empty($resolved['success']) || empty($resolved['company'])) {
 	if ($persist) {
 		sql_query('ROLLBACK');
@@ -65,6 +82,8 @@ if (!$persist) {
 		'success' => true,
 		'company' => $company,
 		'source' => (string)($resolved['source'] ?? ''),
+		'cache_saved' => $resolved['cache_saved'] ?? null,
+		'fallback_error_code' => (string)($resolved['fallback_error_code'] ?? ''),
 	));
 }
 
