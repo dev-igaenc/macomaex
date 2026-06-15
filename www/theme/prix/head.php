@@ -441,7 +441,7 @@ window.__AUTH_SESSION_GUARD_CONFIG__ = {
         </div>
 
         <div id="modal_verify_pd_wrap">
-            <p class="modal_verify_pd_title" id="modal_pd_title">구매할 품목을 선택해주세요</p>
+            <p class="modal_verify_pd_title">찾고 싶은 거래품목을 선택해주세요</p>
             <div class="modal_pd_trade_toggle">
                 <button type="button" class="modal_pd_trade_btn active" id="modal_pd_trade_buy">
                     <svg class="modal_pd_trade_icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -461,14 +461,14 @@ window.__AUTH_SESSION_GUARD_CONFIG__ = {
                     판매처 찾기
                 </button>
             </div>
-            <p class="modal_pd_trade_desc" id="modal_pd_trade_desc">추천 기업으로부터 구매하려는 품목을 선택하세요 <span class="modal_pd_multi_hint">복수 선택 가능</span></p>
+            <p class="modal_pd_trade_desc" id="modal_pd_trade_desc">귀사가 구매하려는 품목을 선택하세요 <span class="modal_pd_multi_hint">복수 선택 가능</span></p>
             <div class="modal_pd_grid" id="modal_pd_grid" aria-live="polite">
                 <span class="modal_pd_empty">추천 키워드를 불러올 준비 중입니다.</span>
             </div>
             <div class="modal_pd_custom">
-                <p class="modal_pd_custom_title" id="modal_pd_custom_title">찾는 구매 품목이 없나요? 직접 입력해보세요</p>
+                <p class="modal_pd_custom_title">찾는 품목이 없나요? 직접 입력해보세요</p>
                 <div class="modal_pd_custom_row">
-                    <input type="text" class="modal_pd_custom_input" id="modal_pd_custom_input" maxlength="30" autocomplete="off" placeholder="구매 품목을 입력하세요" aria-controls="modal_pd_custom_results" aria-autocomplete="list">
+                    <input type="text" class="modal_pd_custom_input" id="modal_pd_custom_input" maxlength="30" autocomplete="off" placeholder="품목명을 입력하세요" aria-controls="modal_pd_custom_results" aria-autocomplete="list">
                     <button type="button" class="modal_pd_custom_add" id="modal_pd_custom_add" disabled><span aria-hidden="true">+</span> 추가</button>
                 </div>
                 <div class="modal_pd_custom_results" id="modal_pd_custom_results" role="listbox" aria-live="polite" hidden></div>
@@ -476,7 +476,7 @@ window.__AUTH_SESSION_GUARD_CONFIG__ = {
             <div class="modal_pd_bar">
                 <div class="modal_pd_bar_info">
                     <span><b id="modal_pd_count">0</b>개 선택됨</span>
-                    <div id="modal_pd_preview"><span class="modal_pd_empty">구매 품목을 선택하면 여기에 표시됩니다</span></div>
+                    <div id="modal_pd_preview"><span class="modal_pd_empty">품목을 선택하면 여기에 표시됩니다</span></div>
                 </div>
                 <button type="button" class="modal_pd_btn_confirm" id="modal_pd_btn_confirm" disabled>
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M12 5l7 7-7 7"></path></svg>
@@ -699,7 +699,7 @@ function openCreditShortageGuide(opts) {
 			if (typeEl) typeEl.textContent = data.enp_type || "";
 		$("#modal_pd_trade_buy").toggleClass("active", initialTradeType === 1);
 		$("#modal_pd_trade_sell").toggleClass("active", initialTradeType === 2);
-		syncPartnerSelectionCopy(initialTradeType);
+		$("#modal_pd_trade_desc").html((initialTradeType === 1 ? "귀사가 구매하려는 품목을 선택하세요" : "귀사가 판매하려는 품목을 선택하세요") + ' <span class="modal_pd_multi_hint">복수 선택 가능</span>');
 
 		if (overlay) {
 			overlay.classList.add("is_open");
@@ -753,39 +753,6 @@ function closeAiGuideModal() {
 	window.currentCustomKeywordRequestSeq = 0;
 	window.currentPartnerKeywordRequestSeq = 0;
 
-	// 거래 방향별 선택 항목의 의미를 UI 전반에서 동일하게 유지한다.
-	// 구매처 찾기는 구매 품목, 판매처 찾기는 판매할 품목이 아닌 희망 판매채널·거래처 유형을 선택한다.
-	function getPartnerSelectionCopy(tradeType) {
-		if (tradeType === 2) {
-			return {
-				title: "희망 판매채널·거래처 유형을 선택해주세요",
-				description: "귀사의 제품을 판매하고 싶은 채널·거래처 유형을 선택하세요",
-				customTitle: "찾는 판매채널·거래처 유형이 없나요? 직접 입력해보세요",
-				placeholder: "판매채널·거래처 유형을 입력하세요",
-				previewEmpty: "판매채널·거래처 유형을 선택하면 여기에 표시됩니다"
-			};
-		}
-		return {
-			title: "구매할 품목을 선택해주세요",
-			description: "추천 기업으로부터 구매하려는 품목을 선택하세요",
-			customTitle: "찾는 구매 품목이 없나요? 직접 입력해보세요",
-			placeholder: "구매 품목을 입력하세요",
-			previewEmpty: "구매 품목을 선택하면 여기에 표시됩니다"
-		};
-	}
-
-	function syncPartnerSelectionCopy(tradeType) {
-		var copy = getPartnerSelectionCopy(tradeType);
-		var titleEl = document.getElementById("modal_pd_title");
-		var descEl = document.getElementById("modal_pd_trade_desc");
-		var customTitleEl = document.getElementById("modal_pd_custom_title");
-		var customInputEl = document.getElementById("modal_pd_custom_input");
-		if (titleEl) titleEl.textContent = copy.title;
-		if (descEl) descEl.innerHTML = escapeModalText(copy.description) + ' <span class="modal_pd_multi_hint">복수 선택 가능</span>';
-		if (customTitleEl) customTitleEl.textContent = copy.customTitle;
-		if (customInputEl) customInputEl.setAttribute("placeholder", copy.placeholder);
-	}
-
 	function escapeModalText(text) {
 		var div = document.createElement("div");
 		div.textContent = (text == null) ? "" : String(text);
@@ -799,7 +766,7 @@ function closeAiGuideModal() {
 		var previewEl = document.getElementById("modal_pd_preview");
 		var confirmBtn = document.getElementById("modal_pd_btn_confirm");
 		if (countEl) countEl.textContent = "0";
-		if (previewEl) previewEl.innerHTML = '<span class="modal_pd_empty">' + escapeModalText(getPartnerSelectionCopy(window.currentSearchTradeType).previewEmpty) + '</span>';
+		if (previewEl) previewEl.innerHTML = '<span class="modal_pd_empty">품목을 선택하면 여기에 표시됩니다</span>';
 		if (confirmBtn) confirmBtn.disabled = true;
 	}
 
@@ -868,8 +835,8 @@ function closeAiGuideModal() {
 		if (!results) return;
 		if (!window.currentCustomKeywordItems.length) {
 			results.innerHTML = canExpand
-				? '<div class="modal_pd_custom_expand"><span>현재 업종과 관련된 항목을 찾지 못했어요.</span><button type="button" id="modal_pd_custom_expand">검색 범위 넓히기</button></div>'
-				: '<span class="modal_pd_custom_empty">전체 업종에서도 일치하는 항목이 없어요</span>';
+				? '<div class="modal_pd_custom_expand"><span>현재 업종과 관련된 품목을 찾지 못했어요.</span><button type="button" id="modal_pd_custom_expand">검색 범위 넓히기</button></div>'
+				: '<span class="modal_pd_custom_empty">전체 업종에서도 일치하는 품목이 없어요</span>';
 			results.hidden = false;
 			if (addBtn) addBtn.disabled = true;
 			return;
@@ -919,7 +886,7 @@ function closeAiGuideModal() {
 	}
 
 	function addCustomKeywordItem(item, query) {
-		// 검색 결과가 기존 추천 칩이면 기존 칩만 선택하고, 새 항목만 중단 영역에 추가해 최대 5개로 제한한다.
+		// 검색 결과가 기존 추천 칩이면 기존 칩만 선택하고, 새 품목만 중단 영역에 추가해 최대 5개로 제한한다.
 		if (!item) return;
 		var selected = window.currentSelectedPartnerBzcItems || [];
 		var allItems = window.currentPartnerBzcItems || [];
@@ -941,11 +908,11 @@ function closeAiGuideModal() {
 			return existingItem.selection_source === "custom";
 		}).length;
 		if (findSelectedPartnerKeywordIndex(item) >= 0) {
-			showRecommendationToast("이미 선택한 항목입니다.");
+			showRecommendationToast("이미 선택한 품목입니다.");
 			return;
 		}
 		if (!matchingItem && customCount >= 5) {
-			showRecommendationToast("직접 검색한 항목은 최대 5개까지 추가할 수 있습니다.");
+			showRecommendationToast("직접 검색한 품목은 최대 5개까지 추가할 수 있습니다.");
 			return;
 		}
 
@@ -982,7 +949,7 @@ function closeAiGuideModal() {
 		if (countEl) countEl.textContent = String(selected.length);
 		if (previewEl) {
 			if (!selected.length) {
-				previewEl.innerHTML = '<span class="modal_pd_empty">' + escapeModalText(getPartnerSelectionCopy(window.currentSearchTradeType).previewEmpty) + '</span>';
+				previewEl.innerHTML = '<span class="modal_pd_empty">품목을 선택하면 여기에 표시됩니다</span>';
 			} else {
 				var showItems = selected.slice(0, 4).map(function(item) {
 					return '<span class="modal_pd_preview_chip">' + escapeModalText(item.label || "") + '</span>';
@@ -1259,7 +1226,7 @@ function requestMainCompCheck(comnum, $form, opts) {
 		var isBuy = this.id === "modal_pd_trade_buy";
 		$("#modal_pd_trade_buy").toggleClass("active", isBuy);
 		$("#modal_pd_trade_sell").toggleClass("active", !isBuy);
-		syncPartnerSelectionCopy(isBuy ? 1 : 2);
+		$("#modal_pd_trade_desc").html((isBuy ? "귀사가 구매하려는 품목을 선택하세요" : "귀사가 판매하려는 품목을 선택하세요") + ' <span class="modal_pd_multi_hint">복수 선택 가능</span>');
 		loadPartnerKeywordChips(isBuy ? 1 : 2);
 	});
 
@@ -1304,7 +1271,7 @@ function requestMainCompCheck(comnum, $form, opts) {
 				if (requestSeq !== window.currentCustomKeywordRequestSeq || (xhr && xhr.statusText === "abort")) return;
 				var error = xhr && xhr.responseJSON ? xhr.responseJSON.error : "";
 				renderCustomKeywordResults([], query, false);
-				if (error === "invalid_query") showRecommendationToast("검색어는 2~30자의 한글, 영문, 숫자로 입력해주세요.");
+				if (error === "invalid_query") showRecommendationToast("품목명은 2~30자의 한글, 영문, 숫자로 입력해주세요.");
 			}).always(function() {
 				if (window.currentCustomKeywordRequest === request) window.currentCustomKeywordRequest = null;
 			});
