@@ -90,6 +90,19 @@
         var demoId = /^\d{10}$/.test(queryKedcd) ? queryKedcd : contextKedcd;
         var pageTradeType = parseInt(params.get('trade_type') || '1', 10);
         if (pageTradeType !== 2) pageTradeType = 1;
+        var pageRecommendationContext = (window.MATCH_REQUEST_CONTEXT && window.MATCH_REQUEST_CONTEXT.recommendationContext) || {};
+        function contextList(paramName, contextName) {
+            var fromQuery = String(params.get(paramName) || '').split(',').map(function (value) { return value.trim(); }).filter(Boolean);
+            if (fromQuery.length) return fromQuery;
+            return Array.isArray(pageRecommendationContext[contextName])
+                ? pageRecommendationContext[contextName].map(function (value) { return String(value || '').trim(); }).filter(Boolean)
+                : [];
+        }
+        var selectedTargetKeywords = contextList('selected_keyword', 'selected_target_keywords');
+        var selectedPartnerBzcCds = contextList('partner_bzc', 'selected_partner_bzc_cds');
+        var recommendationMode = String(params.get('recommendation_mode') || pageRecommendationContext.recommendation_mode || 'full').trim();
+        if (recommendationMode !== 'keyword') recommendationMode = 'full';
+        var recommendationTraceId = String(params.get('trace_id') || pageRecommendationContext.trace_id || '').trim();
         var srcKedcdParam = String(params.get('src_kedcd') || '').replace(/\D/g, '');
         if (srcKedcdParam.length !== 10) {
             srcKedcdParam = String((window.MATCH_REQUEST_CONTEXT && window.MATCH_REQUEST_CONTEXT.sourceKedcd) || '').replace(/\D/g, '');
@@ -376,6 +389,10 @@
                     var snapshot = Object.assign({}, currentCard || {}, {
                         kedcd: targetKedcd,
                         src_kedcd: srcKedcd,
+                        selected_target_keywords: selectedTargetKeywords,
+                        selected_partner_bzc_cds: selectedPartnerBzcCds,
+                        recommendation_mode: recommendationMode,
+                        trace_id: recommendationTraceId,
                         title: String(found.enp_nm || co.title || ''),
                         // 상세 보고서 payload에서 쓰는 카드 메타 필드
                         industry: String(found.bzc_cd || ''),
@@ -1413,6 +1430,17 @@
                 var sourceCustNames = sourceArray('_aiCustNames', 'source_cust_names');
                 var sourceSuppNames = sourceArray('_aiSuppNames', 'source_supp_names');
                 var isSell = (card.trade_type === 2);
+                // 상세 URL/PHP 컨텍스트가 현재 추천 실행을 나타내므로, 이전 세션 카드보다 우선한다.
+                var cardSelectedTargetKeywords = selectedTargetKeywords.length
+                    ? selectedTargetKeywords
+                    : (Array.isArray(card.selected_target_keywords)
+                        ? card.selected_target_keywords.map(function (item) { return String(item || '').trim(); }).filter(Boolean)
+                        : []);
+                var cardSelectedPartnerBzcCds = selectedPartnerBzcCds.length
+                    ? selectedPartnerBzcCds
+                    : (Array.isArray(card.selected_partner_bzc_cds)
+                        ? card.selected_partner_bzc_cds.map(function (item) { return String(item || '').trim(); }).filter(Boolean)
+                        : []);
                 var recKeywords = Array.isArray(card.tags) && card.tags.length
                     ? card.tags.filter(Boolean)
                     : parseTagListFromLine(card.product_line || '');
@@ -1445,6 +1473,10 @@
                 var payload = {
                     data: {
                         trade_type: card.trade_type || 1,
+                        selected_target_keywords: cardSelectedTargetKeywords,
+                        selected_partner_bzc_cds: cardSelectedPartnerBzcCds,
+                        recommendation_mode: String(recommendationMode || card.recommendation_mode || 'full'),
+                        trace_id: String(recommendationTraceId || card.trace_id || ''),
                         // 서버 once_key 생성용 식별값
                         source_kedcd: card.src_kedcd || tryGet('_aiSrcKedcd') || String(preloadedSourceContext.source_kedcd || ''),
                         target_kedcd: card.kedcd || '',

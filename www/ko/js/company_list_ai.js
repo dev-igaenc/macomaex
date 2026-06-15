@@ -541,6 +541,10 @@
         return {
             kedcd: kedcd,
             src_kedcd: srcKedcd,
+            selected_target_keywords: String(linkEl.getAttribute('data-selected-keywords') || '').split(',').map(function (value) { return value.trim(); }).filter(Boolean),
+            selected_partner_bzc_cds: String(linkEl.getAttribute('data-partner-bzc-cds') || '').split(',').map(function (value) { return value.trim(); }).filter(Boolean),
+            recommendation_mode: String(linkEl.getAttribute('data-recommendation-mode') || 'full').trim() || 'full',
+            trace_id: String(linkEl.getAttribute('data-trace-id') || '').trim(),
             title: titleEl ? String(titleEl.textContent || '').trim() : '',
             industry: bzcCd,
             industry_nm: bzcNm,
