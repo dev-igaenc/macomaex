@@ -25,8 +25,10 @@ if (!function_exists('llm_report_trade_allowed_items')) {
             llm_report_trade_exact_items($sourceData['source_mpd'] ?? '')
         )));
         $recItems = llm_report_trade_exact_items(is_array($rec) ? ($rec['keywords'] ?? array()) : array());
-        $buyItems = $isSell ? $srcItems : $recItems;
-        $sellItems = $isSell ? $recItems : $srcItems;
+        // 구매처 찾기는 추천 기업의 공급 품목을, 판매처 찾기는 의뢰사의 공급 품목을 사용한다.
+        // 반대 방향 배열은 비워 리포트가 거래 주체를 뒤섞지 않도록 한다.
+        $buyItems = $isSell ? array() : $recItems;
+        $sellItems = $isSell ? $srcItems : array();
         return array('buy_items' => $buyItems, 'sell_items' => $sellItems);
     }
 }
