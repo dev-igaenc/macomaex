@@ -712,7 +712,7 @@
                 '<dt>주소</dt><dd' + addressClass + '>' + addressHtml + '</dd>' +
                 '<dt>홈페이지</dt><dd' + homepageClass + '>' + homepageHtml + '</dd>' +
                 '</dl>' +
-                (isUnlocked ? '' : '<p class="info-mask-notice">거래 요청 및 수락 시 *** 으로 표시된 정보가 공개됩니다.</p>');
+                (isUnlocked ? '' : '<p class="info-mask-notice">거래 요청 시 *** 으로 표시된 정보가 공개됩니다.</p>');
         }
 
         /* 별점 HTML */
@@ -1506,58 +1506,58 @@
                         var rendered = renderMarkdownToSafeHtml(res.report || '');
                         showAnalysisHtml(rendered);
                     })
-	                    .catch(function (err) {
-	                        clearStepTimers();
-	                        var errMsg = String(err && err.message ? err.message : '알 수 없는 오류');
-	                        var genericAiErrorTitle = 'AI 분석 안내';
-	                        var genericAiErrorMessage = 'AI 분석 중 일시적인 오류가 발생했습니다.';
-	                        var genericAiErrorSubMessage = '잠시 후 다시 시도해 주세요.';
-	                        var isCreditError = !!(err && err.planRequired)
-	                            || Number(err && err.httpStatus) === 402
-	                            || /크레딧.*부족/.test(errMsg)
-	                            || /credit/i.test(errMsg);
+                    .catch(function (err) {
+                        clearStepTimers();
+                        var errMsg = String(err && err.message ? err.message : '알 수 없는 오류');
+                        var genericAiErrorTitle = 'AI 분석 안내';
+                        var genericAiErrorMessage = 'AI 분석 중 일시적인 오류가 발생했습니다.';
+                        var genericAiErrorSubMessage = '잠시 후 다시 시도해 주세요.';
+                        var isCreditError = !!(err && err.planRequired)
+                            || Number(err && err.httpStatus) === 402
+                            || /크레딧.*부족/.test(errMsg)
+                            || /credit/i.test(errMsg);
 
-	                        if (blurBg) blurBg.style.display = '';
-	                        if (ctaOverlay) ctaOverlay.style.display = '';
-	                        body.style.display = 'none';
-	                        body.classList.remove('ai-analysis-result-ready');
-	                        body.innerHTML = '';
-	                        btn.disabled = false;
+                        if (blurBg) blurBg.style.display = '';
+                        if (ctaOverlay) ctaOverlay.style.display = '';
+                        body.style.display = 'none';
+                        body.classList.remove('ai-analysis-result-ready');
+                        body.innerHTML = '';
+                        btn.disabled = false;
 
-	                        if (isCreditError && (typeof window.openCreditShortageGuide === 'function' || typeof window.openAiGuideModal === 'function')) {
-	                            if (typeof window.openCreditShortageGuide === 'function') {
-	                                window.openCreditShortageGuide({
-	                                    text: 'AI 분석 가능 크레딧이 부족합니다.',
-	                                    text2: '크레딧 충전 후 다시 시도해 주세요.'
+                        if (isCreditError && (typeof window.openCreditShortageGuide === 'function' || typeof window.openAiGuideModal === 'function')) {
+                            if (typeof window.openCreditShortageGuide === 'function') {
+                                window.openCreditShortageGuide({
+                                    text: 'AI 분석 가능 크레딧이 부족합니다.',
+                                    text2: '크레딧 충전 후 다시 시도해 주세요.'
                                 });
-	                            } else {
-	                                window.openAiGuideModal({
-	                                    title: '크레딧 부족 안내',
-	                                    text: 'AI 분석 가능 크레딧이 부족합니다.',
-	                                    text2: '크레딧 충전 후 다시 시도해 주세요.',
-	                                    okText: '닫기',
-	                                    okVariant: 'outline',
-	                                    secondaryText: '크레딧 충전하러 가기',
-		                                    secondaryHref: '/ko/plan.php'
-		                                });
-		                            }
-		                            return;
-		                        }
+                            } else {
+                                window.openAiGuideModal({
+                                    title: '크레딧 부족 안내',
+                                    text: 'AI 분석 가능 크레딧이 부족합니다.',
+                                    text2: '크레딧 충전 후 다시 시도해 주세요.',
+                                    okText: '닫기',
+                                    okVariant: 'outline',
+                                    secondaryText: '크레딧 충전하러 가기',
+                                    secondaryHref: '/ko/plan.php'
+                                });
+                            }
+                            return;
+                        }
 
-	                        if (typeof window.openAiGuideModal === 'function') {
-	                            window.openAiGuideModal({
-	                                title: genericAiErrorTitle,
-	                                text: genericAiErrorMessage,
-	                                text2: genericAiErrorSubMessage,
-	                                okText: '확인했어요',
-	                                okVariant: 'outline',
-	                                hideSecondary: true
-	                            });
-	                            return;
-	                        }
+                        if (typeof window.openAiGuideModal === 'function') {
+                            window.openAiGuideModal({
+                                title: genericAiErrorTitle,
+                                text: genericAiErrorMessage,
+                                text2: genericAiErrorSubMessage,
+                                okText: '확인했어요',
+                                okVariant: 'outline',
+                                hideSecondary: true
+                            });
+                            return;
+                        }
 
-	                        window.alert(genericAiErrorMessage + ' ' + genericAiErrorSubMessage);
-	                    });
+                        window.alert(genericAiErrorMessage + ' ' + genericAiErrorSubMessage);
+                    });
             }
 
             if (showPreloadedAnalysisIfAny()) return;

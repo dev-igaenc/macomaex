@@ -229,7 +229,15 @@ switch ($type) {
 				'context' => 'get_set_main_comp_chk',
 			));
 			if (!empty($resolved_company['success'])) {
-				echo "1000|" . (string)($resolved_company['json'] ?? '');
+				$resolved_json = (string)($resolved_company['json'] ?? '');
+				if ($resolved_json === '' && !empty($resolved_company['company'])) {
+					$resolved_json = macomaex_kodata_company_to_json($resolved_company['company']);
+				}
+				if ($resolved_json === '') {
+					echo "500|INVALID_PAYLOAD|기업 정보 응답을 구성하지 못했습니다.";
+					exit;
+				}
+				echo "1000|" . $resolved_json;
 			} else {
 				echo "500|" . (string)($resolved_company['error_code'] ?? 'COMPANY_NOT_FOUND') . "|" . (string)($resolved_company['message'] ?? '기업 정보를 찾지 못했습니다.');
 			}
