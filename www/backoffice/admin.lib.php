@@ -125,7 +125,6 @@ function get_skin_dir($skin, $skin_path = G5_SKIN_PATH)
     global $g5;
     $result_array = array();
 
-	$dirname2=$skintype;
     $dirname = $skin_path . '/' . $skin . '/';
     if (!is_dir($dirname)) {
         return array();
@@ -153,7 +152,6 @@ function get_adminskin_dir($skin, $skin_path = G5_SKIN_PATH)
     global $g5;
     $result_array = array();
 
-	$dirname2=$skintype;
     $dirname = $skin_path . '/' . $skin . '/';
     if (!is_dir($dirname)) {
         return array();

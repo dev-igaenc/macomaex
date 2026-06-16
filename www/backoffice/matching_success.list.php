@@ -268,9 +268,7 @@ $rnumber=($total_count-($page-1)*$rows)+1;
 			<?}?>
 			</td>
 
-        <!--td class="td_mng td_mng_l">
-            <a href="./matching_success_update.php?w=d&amp;no=<?php echo $v['no']; ?>&amp;<?=$qstr?>" onclick="return delete_confirm(this);" class="btn btn_02"><span class="sound_only"><?php echo htmlspecialchars2($v['title']); ?> </span>삭제</a>
-        </td-->
+        <?php /* legacy delete action removed */ ?>
     </tr>
     <?php
     }

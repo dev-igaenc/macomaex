@@ -18,28 +18,36 @@ include_once('./admin.head.php');
 <?php
 $directory = array();
 $dl = array('file', 'editor');
+$opened_dir_count = 0;
 
 if (defined('G5_USE_SHOP') && G5_USE_SHOP) {
     $dl[] = 'item';
 }
 
 foreach($dl as $val) {
-    if($handle = opendir(G5_DATA_PATH.'/'.$val)) {
+    $base_path = G5_DATA_PATH.'/'.$val;
+    if (!is_dir($base_path)) {
+        continue;
+    }
+
+    if($handle = @opendir($base_path)) {
+        $opened_dir_count++;
         while(false !== ($entry = readdir($handle))) {
             if($entry == '.' || $entry == '..')
                 continue;
 
-            $path = G5_DATA_PATH.'/'.$val.'/'.$entry;
+            $path = $base_path.'/'.$entry;
 
             if(is_dir($path))
                 $directory[] = $path;
         }
+        closedir($handle);
     }
 }
 
 flush();
 
-if (empty($directory)) {
+if ($opened_dir_count === 0) {
     echo '<p>썸네일디렉토리를 열지못했습니다.</p>';
 }
 
