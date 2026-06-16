@@ -1263,6 +1263,32 @@
                     : [];
             }
 
+            function renderContextLine(label, value, desc) {
+                var text = Array.isArray(value) ? value.join(', ') : String(value || '').trim();
+                if (!text) text = '확인 필요';
+                var html = '<li><strong>' + esc(label) + ':</strong> ' + esc(text);
+                if (desc) html += '<br><span>' + esc(desc) + '</span>';
+                return html + '</li>';
+            }
+
+            function renderTradeContextHtml(data, tradeLabel, primaryItems) {
+                var ctx = data && typeof data.selection_context === 'object' ? data.selection_context : {};
+                var selectedKeywords = arrOrEmpty(ctx.selected_target_keywords);
+                var recItems = arrOrEmpty(ctx.recommended_company_items);
+                var sourceItems = arrOrEmpty(ctx.source_company_items);
+                var html = '<h2>추천 조건 및 품목 근거</h2><ul>';
+                if (tradeLabel === '판매처') {
+                    html += renderContextLine('선택 키워드', selectedKeywords, '귀사가 찾고 싶은 판매 채널 또는 거래처 업종 조건입니다.');
+                    html += renderContextLine('추천 기업 품목', recItems, '해당 기업이 어떤 업종 또는 품목 태그를 가진 곳인지 보여주는 매칭 근거입니다.');
+                    html += renderContextLine('판매 가능 품목', primaryItems.length ? primaryItems : sourceItems, '귀사가 해당 기업에 제안할 수 있는 자사 품목 기준입니다.');
+                } else {
+                    html += renderContextLine('선택 키워드', selectedKeywords, '귀사가 구매하고 싶은 품목 또는 업종 조건입니다.');
+                    html += renderContextLine('추천 기업 품목', recItems.length ? recItems : primaryItems, '해당 기업이 공급할 수 있는 품목 기준입니다.');
+                    html += renderContextLine('구매 검토 품목', primaryItems.length ? primaryItems : recItems, '추천 기업으로부터 구매 가능성을 검토할 품목입니다.');
+                }
+                return html + '</ul>';
+            }
+
             function parseTradeJson(raw) {
                 if (!raw || typeof raw !== 'string') return null;
                 var cleaned = raw.trim();
@@ -1296,6 +1322,7 @@
                     html += '<h3>' + esc(primaryLabel) + '</h3>';
                     html += '<p>' + esc(primaryItems.map(function (item, idx) { return String.fromCharCode(9312 + idx) + ' ' + item; }).join('  ')) + '</p>';
                 }
+                html += renderTradeContextHtml(data, tradeLabel, primaryItems);
                 html += '<h2>핵심 추천 사유</h2>';
                 html += '<ul>' + (reasons.length ? reasons : ['미확인']).map(function (item) { return '<li>' + esc(item) + '</li>'; }).join('') + '</ul>';
                 html += '<h2>1. 어떤 거래처인가</h2>';

@@ -45,6 +45,13 @@ if (!function_exists('llm_report_trade_selection_context')) {
     function llm_report_trade_selection_context($sourceData, $rec, $isSell, $buyItems, $sellItems) {
         $selectedKeywords = llm_report_trade_exact_items($sourceData['selected_target_keywords'] ?? array());
         $selectedPartnerBzcCds = llm_report_trade_exact_items($sourceData['selected_partner_bzc_cds'] ?? array());
+        $recItems = llm_report_trade_filter_analysis_items(
+            llm_report_trade_exact_items(is_array($rec) ? ($rec['keywords'] ?? array()) : array())
+        );
+        $sourceItems = llm_report_trade_filter_analysis_items(array_merge(
+            llm_report_trade_exact_items($sourceData['src_keywords'] ?? array()),
+            llm_report_trade_exact_items($sourceData['source_mpd'] ?? '')
+        ));
         $primaryItems = $isSell ? $sellItems : $buyItems;
         $industryCandidate = trim((string)($isSell
             ? ($sourceData['source_bzc_nm'] ?? $sourceData['source_bzc_cd'] ?? '')
@@ -73,6 +80,8 @@ if (!function_exists('llm_report_trade_selection_context')) {
             'item_evidence' => $itemEvidence,
             'item_evidence_level' => !empty($primaryItems) ? 'actual' : (!empty($inferredItems) ? 'industry_inferred' : 'insufficient'),
             'inferred_items' => $inferredItems,
+            'recommended_company_items' => $recItems,
+            'source_company_items' => $sourceItems,
         );
     }
 }
@@ -113,9 +122,9 @@ if (!function_exists('llm_report_trade_reason_line')) {
         $primary = llm_report_trade_primary_meta($buyItems, $sellItems, $tradeLabel, '');
         if ($primary['list'] !== '') {
             if ($primary['is_sell_trade']) {
-                return "귀사가 제공할 수 있는 {$primary['list']} 관련 거래 가능성을 우선 검토할 수 있는 기업으로 분석되었습니다.";
+                return "귀사가 제공할 수 있는 품목 범위를 기준으로 해당 기업과의 거래 가능성을 우선 검토할 수 있습니다.";
             }
-            return "귀사가 필요로 하는 {$primary['list']} 관련 거래 가능성을 우선 검토할 수 있는 기업으로 분석되었습니다.";
+            return "귀사가 필요로 하는 품목 범위를 기준으로 해당 기업과의 구매 가능성을 우선 검토할 수 있습니다.";
         }
         return "원본 품목 정보가 부족하여 품목 요약은 생략하고 거래 가능성 중심으로 분석했습니다.";
     }
@@ -160,8 +169,8 @@ if (!function_exists('llm_report_trade_build_reasons')) {
             );
         }
         $focusLine = $primary['is_sell_trade']
-            ? "원본 품목 기준으로 보면 {$primary['list']} 중심으로 실제 공급 가능 범위를 검토할 수 있어 거래 제안의 구체성을 높일 수 있습니다."
-            : "원본 품목 기준으로 보면 {$primary['list']} 중심으로 실제 구매 수요를 구체화할 수 있어 거래 검토의 우선순위를 빠르게 정리할 수 있습니다.";
+            ? "상단의 판매 가능 품목 범위를 기준으로 실제 공급 가능 범위와 제안 우선순위를 좁혀볼 수 있습니다."
+            : "상단의 구매 가능 품목 범위를 기준으로 실제 구매 수요와 검토 우선순위를 좁혀볼 수 있습니다.";
         $selectionBackground = trim((string)($selectionContext['recommendation_background'] ?? ''));
         if (!empty($selectionContext['selected_target_keywords']) && $selectionBackground !== '') {
             return array(
@@ -204,10 +213,10 @@ if (!function_exists('llm_report_trade_build_detail')) {
             return "{$base} 따라서 거래 요청 전 실제 공급·수요 품목과 취급 범위를 먼저 확인하는 것이 적절합니다.";
         }
         if ($primary['is_sell_trade']) {
-            return "판매처 관점에서 우선 확인할 판매 가능 품목은 {$primary['list']}입니다. 따라서 초기 논의는 위 원본 품목의 공급 가능 범위, 발주 단위, 납기 조건을 중심으로 구체화하는 것이 적절합니다.";
+            return "판매처 관점에서는 상단에 정리된 판매 가능 품목을 기준으로 초기 제안을 구성하는 것이 적절합니다. 초기 논의는 공급 가능 범위, 발주 단위, 납기 조건을 중심으로 구체화하는 것이 좋습니다.";
         }
 
-        return "구매처 관점에서 우선 확인할 구매 가능 품목은 {$primary['list']}입니다. 따라서 초기 논의는 위 원본 품목의 발주 단위, 납기 조건, 공급 가능 범위를 중심으로 구체화하는 것이 적절합니다.";
+        return "구매처 관점에서는 상단에 정리된 구매 가능 품목을 기준으로 실제 공급 가능 여부를 확인하는 것이 적절합니다. 초기 논의는 발주 단위, 납기 조건, 공급 가능 범위를 중심으로 구체화하는 것이 좋습니다.";
     }
 }
 
@@ -222,11 +231,11 @@ if (!function_exists('llm_report_trade_build_connection_background')) {
             $sentence .= " " . trim((string)($selectionContext['item_evidence'] ?? '실제 거래 품목은 첫 접점에서 확인하는 것이 적절합니다.'));
             return trim($sentence);
         }
-        $sentence = "귀사는 {$sourceIndustry}, 해당 기업은 {$recIndustry} 업종 기반으로 해석할 수 있습니다. 원본 품목 기준으로 보면 {$primary['list']}를 중심으로 거래 접점을 좁혀볼 수 있습니다.";
+        $sentence = "귀사는 {$sourceIndustry}, 해당 기업은 {$recIndustry} 업종 기반으로 해석할 수 있습니다. 상단에 정리된 품목 범위를 기준으로 거래 접점을 좁혀볼 수 있습니다.";
         if ($connectionText !== '') {
-            $sentence .= " 연결 방식이 {$connectionText}로 제시된 만큼, 실제 검토도 위 원본 품목 범위 안에서 시작하는 것이 적절합니다.";
+            $sentence .= " 연결 방식이 {$connectionText}로 제시된 만큼, 실제 검토도 상단 품목 범위 안에서 시작하는 것이 적절합니다.";
         } else {
-            $sentence .= " 실제 검토도 위 원본 품목 범위 안에서 시작하는 것이 적절합니다.";
+            $sentence .= " 실제 검토도 상단 품목 범위 안에서 시작하는 것이 적절합니다.";
         }
         return $sentence;
     }
@@ -272,8 +281,8 @@ if (!function_exists('llm_report_trade_build_supply_chain_fit')) {
             $sentence = "구체적인 실제 품목 정보는 부족하지만, {$inferred} 범위와 추천 연결 지표를 바탕으로 초기 거래 가능성을 검토할 수 있습니다.";
         } else {
             $sentence = $primary['is_sell_trade']
-                ? "원본 품목 기준으로 보면 {$primary['list']} 공급 가능 범위가 실제 제안 가능한 거래 단위와 연결됩니다."
-                : "원본 품목 기준으로 보면 {$primary['list']} 수요 범위가 실제 검토 대상 거래 단위와 연결됩니다.";
+                ? "상단의 판매 가능 품목 범위가 실제 제안 가능한 거래 단위와 연결됩니다."
+                : "상단의 구매 가능 품목 범위가 실제 검토 대상 거래 단위와 연결됩니다.";
         }
         if ($radarSummary !== '') {
             $sentence .= " 레이더에서는 {$radarSummary} 축이 상대적으로 높게 나타나, 거래 연결성과 실행 가능성을 검토하는 근거로 활용할 수 있습니다.";
@@ -295,13 +304,13 @@ if (!function_exists('llm_report_trade_build_scenarios')) {
         }
         if ($primary['is_sell_trade']) {
             return array(
-                "{$primary['list']} 중심으로 소량 견적 또는 샘플 제안부터 시작해 실제 공급 조건을 확인할 수 있습니다.",
-                "초기 검증이 끝나면 {$primary['list']}의 정기 공급 가능성과 납기 안정성을 검토해 지속 거래 여부를 판단할 수 있습니다.",
+                "상단의 판매 가능 품목 범위 안에서 소량 견적 또는 샘플 제안부터 시작해 실제 공급 조건을 확인할 수 있습니다.",
+                "초기 검증이 끝나면 정기 공급 가능성과 납기 안정성을 검토해 지속 거래 여부를 판단할 수 있습니다.",
             );
         }
         return array(
-            "{$primary['list']} 중심으로 소량 견적 문의 또는 샘플 검토부터 시작해 실제 구매 조건을 확인할 수 있습니다.",
-            "초기 검증이 끝나면 {$primary['list']}의 반복 발주 가능성과 납기 안정성을 검토해 지속 거래 여부를 판단할 수 있습니다.",
+            "상단의 구매 가능 품목 범위 안에서 소량 견적 문의 또는 샘플 검토부터 시작해 실제 구매 조건을 확인할 수 있습니다.",
+            "초기 검증이 끝나면 반복 발주 가능성과 납기 안정성을 검토해 지속 거래 여부를 판단할 수 있습니다.",
         );
     }
 }
@@ -317,12 +326,12 @@ if (!function_exists('llm_report_trade_build_first_touch_actions')) {
         }
         if ($primary['is_sell_trade']) {
             return array(
-                "첫 연락에서는 {$primary['list']} 중 실제 제안할 품목을 1~2개로 먼저 좁혀 문의하는 것이 좋습니다.",
+                "첫 연락에서는 상단 품목 중 실제 제안할 대상을 1~2개로 먼저 좁혀 문의하는 것이 좋습니다.",
                 "견적, 최소 발주 수량, 납기 가능 일정, 품질 기준을 함께 안내해 초기 검토 범위를 명확히 하는 것이 좋습니다.",
             );
         }
         return array(
-            "첫 연락에서는 {$primary['list']} 중 실제 검토할 품목을 1~2개로 먼저 좁혀 문의하는 것이 좋습니다.",
+            "첫 연락에서는 상단 품목 중 실제 검토할 대상을 1~2개로 먼저 좁혀 문의하는 것이 좋습니다.",
             "견적, 최소 발주 수량, 납기 가능 일정, 품질 기준을 함께 요청해 초기 검토 범위를 명확히 하는 것이 좋습니다.",
         );
     }
