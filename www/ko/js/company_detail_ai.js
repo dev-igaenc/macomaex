@@ -90,6 +90,19 @@
         var demoId = /^\d{10}$/.test(queryKedcd) ? queryKedcd : contextKedcd;
         var pageTradeType = parseInt(params.get('trade_type') || '1', 10);
         if (pageTradeType !== 2) pageTradeType = 1;
+        var pageRecommendationContext = (window.MATCH_REQUEST_CONTEXT && window.MATCH_REQUEST_CONTEXT.recommendationContext) || {};
+        function contextList(paramName, contextName) {
+            var fromQuery = String(params.get(paramName) || '').split(',').map(function (value) { return value.trim(); }).filter(Boolean);
+            if (fromQuery.length) return fromQuery;
+            return Array.isArray(pageRecommendationContext[contextName])
+                ? pageRecommendationContext[contextName].map(function (value) { return String(value || '').trim(); }).filter(Boolean)
+                : [];
+        }
+        var selectedTargetKeywords = contextList('selected_keyword', 'selected_target_keywords');
+        var selectedPartnerBzcCds = contextList('partner_bzc', 'selected_partner_bzc_cds');
+        var recommendationMode = String(params.get('recommendation_mode') || pageRecommendationContext.recommendation_mode || 'full').trim();
+        if (recommendationMode !== 'keyword') recommendationMode = 'full';
+        var recommendationTraceId = String(params.get('trace_id') || pageRecommendationContext.trace_id || '').trim();
         var srcKedcdParam = String(params.get('src_kedcd') || '').replace(/\D/g, '');
         if (srcKedcdParam.length !== 10) {
             srcKedcdParam = String((window.MATCH_REQUEST_CONTEXT && window.MATCH_REQUEST_CONTEXT.sourceKedcd) || '').replace(/\D/g, '');
@@ -376,6 +389,10 @@
                     var snapshot = Object.assign({}, currentCard || {}, {
                         kedcd: targetKedcd,
                         src_kedcd: srcKedcd,
+                        selected_target_keywords: selectedTargetKeywords,
+                        selected_partner_bzc_cds: selectedPartnerBzcCds,
+                        recommendation_mode: recommendationMode,
+                        trace_id: recommendationTraceId,
                         title: String(found.enp_nm || co.title || ''),
                         // 상세 보고서 payload에서 쓰는 카드 메타 필드
                         industry: String(found.bzc_cd || ''),
@@ -409,6 +426,10 @@
                         });
                     }
                     if (foundTags.length) snapshot.tags = foundTags;
+                    if (foundTags.length) {
+                        snapshot.analysis_tags = foundTags;
+                        snapshot.tag_source = String(found.tag_source || snapshot.tag_source || 'actual');
+                    }
 
                     var foundTagTotalCount = Number(found.tag_total_count || found.keyword_count || 0);
                     if (!Number.isFinite(foundTagTotalCount) || foundTagTotalCount <= 0) {
@@ -1242,6 +1263,32 @@
                     : [];
             }
 
+            function renderContextLine(label, value, desc) {
+                var text = Array.isArray(value) ? value.join(', ') : String(value || '').trim();
+                if (!text) text = '확인 필요';
+                var html = '<li><strong>' + esc(label) + ':</strong> ' + esc(text);
+                if (desc) html += '<br><span>' + esc(desc) + '</span>';
+                return html + '</li>';
+            }
+
+            function renderTradeContextHtml(data, tradeLabel, primaryItems) {
+                var ctx = data && typeof data.selection_context === 'object' ? data.selection_context : {};
+                var selectedKeywords = arrOrEmpty(ctx.selected_target_keywords);
+                var recItems = arrOrEmpty(ctx.recommended_company_items);
+                var sourceItems = arrOrEmpty(ctx.source_company_items);
+                var html = '<h2>추천 조건 및 품목 근거</h2><ul>';
+                if (tradeLabel === '판매처') {
+                    html += renderContextLine('선택 키워드', selectedKeywords, '귀사가 찾고 싶은 판매 채널 또는 거래처 업종 조건입니다.');
+                    html += renderContextLine('추천 기업 품목', recItems, '해당 기업이 어떤 업종 또는 품목 태그를 가진 곳인지 보여주는 매칭 근거입니다.');
+                    html += renderContextLine('판매 가능 품목', primaryItems.length ? primaryItems : sourceItems, '귀사가 해당 기업에 제안할 수 있는 자사 품목 기준입니다.');
+                } else {
+                    html += renderContextLine('선택 키워드', selectedKeywords, '귀사가 구매하고 싶은 품목 또는 업종 조건입니다.');
+                    html += renderContextLine('추천 기업 품목', recItems.length ? recItems : primaryItems, '해당 기업이 공급할 수 있는 품목 기준입니다.');
+                    html += renderContextLine('구매 검토 품목', primaryItems.length ? primaryItems : recItems, '추천 기업으로부터 구매 가능성을 검토할 품목입니다.');
+                }
+                return html + '</ul>';
+            }
+
             function parseTradeJson(raw) {
                 if (!raw || typeof raw !== 'string') return null;
                 var cleaned = raw.trim();
@@ -1275,6 +1322,7 @@
                     html += '<h3>' + esc(primaryLabel) + '</h3>';
                     html += '<p>' + esc(primaryItems.map(function (item, idx) { return String.fromCharCode(9312 + idx) + ' ' + item; }).join('  ')) + '</p>';
                 }
+                html += renderTradeContextHtml(data, tradeLabel, primaryItems);
                 html += '<h2>핵심 추천 사유</h2>';
                 html += '<ul>' + (reasons.length ? reasons : ['미확인']).map(function (item) { return '<li>' + esc(item) + '</li>'; }).join('') + '</ul>';
                 html += '<h2>1. 어떤 거래처인가</h2>';
@@ -1413,9 +1461,22 @@
                 var sourceCustNames = sourceArray('_aiCustNames', 'source_cust_names');
                 var sourceSuppNames = sourceArray('_aiSuppNames', 'source_supp_names');
                 var isSell = (card.trade_type === 2);
-                var recKeywords = Array.isArray(card.tags) && card.tags.length
-                    ? card.tags.filter(Boolean)
-                    : parseTagListFromLine(card.product_line || '');
+                // 상세 URL/PHP 컨텍스트가 현재 추천 실행을 나타내므로, 이전 세션 카드보다 우선한다.
+                var cardSelectedTargetKeywords = selectedTargetKeywords.length
+                    ? selectedTargetKeywords
+                    : (Array.isArray(card.selected_target_keywords)
+                        ? card.selected_target_keywords.map(function (item) { return String(item || '').trim(); }).filter(Boolean)
+                        : []);
+                var cardSelectedPartnerBzcCds = selectedPartnerBzcCds.length
+                    ? selectedPartnerBzcCds
+                    : (Array.isArray(card.selected_partner_bzc_cds)
+                        ? card.selected_partner_bzc_cds.map(function (item) { return String(item || '').trim(); }).filter(Boolean)
+                        : []);
+                var recKeywords = Array.isArray(card.analysis_tags)
+                    ? card.analysis_tags.filter(Boolean)
+                    : (String(card.tag_source || '') === 'actual' && Array.isArray(card.tags)
+                        ? card.tags.filter(Boolean)
+                        : []);
                 // 상세 preload에 실제 키워드 배열이 있으면 그것을 우선하고, 없을 때만 기존 세션/mpd fallback을 사용한다.
                 var preloadedSrcKeywords = Array.isArray(preloadedSourceContext.src_keywords)
                     ? preloadedSourceContext.src_keywords.map(function (item) { return String(item || '').trim(); }).filter(Boolean)
@@ -1438,13 +1499,18 @@
                     debt_ratio_pct: card.debt_ratio_pct != null ? card.debt_ratio_pct : null,
                     consec_profit_2y: card.consec_profit_2y != null ? card.consec_profit_2y : null,
                     capital_negative: card.capital_negative || 0,
-                    keywords: recKeywords
+                    keywords: recKeywords,
+                    keyword_source: String(card.tag_source || (recKeywords.length ? 'actual' : 'none'))
                 };
 
                 // EC2/ML 추천 카드 + 의뢰사 세션값을 합쳐 LLM 보고서 요청 payload 구성
                 var payload = {
                     data: {
                         trade_type: card.trade_type || 1,
+                        selected_target_keywords: cardSelectedTargetKeywords,
+                        selected_partner_bzc_cds: cardSelectedPartnerBzcCds,
+                        recommendation_mode: String(recommendationMode || card.recommendation_mode || 'full'),
+                        trace_id: String(recommendationTraceId || card.trace_id || ''),
                         // 서버 once_key 생성용 식별값
                         source_kedcd: card.src_kedcd || tryGet('_aiSrcKedcd') || String(preloadedSourceContext.source_kedcd || ''),
                         target_kedcd: card.kedcd || '',

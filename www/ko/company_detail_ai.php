@@ -97,6 +97,15 @@ if (strlen($kedcd) !== 10 || preg_match('/^0+$/', $kedcd)) {
 $detail_trade_type = isset($_GET['trade_type']) ? (int)$_GET['trade_type'] : 1;
 if ($detail_trade_type !== 2) $detail_trade_type = 1;
 $detail_trade_type_label = ($detail_trade_type === 2) ? '판매처 추천' : '구매처 추천';
+$detail_selected_target_keywords = array_values(array_filter(array_map('trim', preg_split('/\s*,\s*/u', (string)($_GET['selected_keyword'] ?? ''), -1, PREG_SPLIT_NO_EMPTY))));
+$detail_selected_partner_bzc_cds = array_values(array_filter(array_map(function ($value) {
+    return strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', (string)$value), 0, 10));
+}, preg_split('/\s*,\s*/', (string)($_GET['partner_bzc'] ?? ''), -1, PREG_SPLIT_NO_EMPTY))));
+$detail_recommendation_mode = trim((string)($_GET['recommendation_mode'] ?? 'full'));
+if (!in_array($detail_recommendation_mode, array('keyword', 'full'), true)) $detail_recommendation_mode = 'full';
+$detail_trace_id = function_exists('company_list_ai_normalize_trace_id')
+    ? company_list_ai_normalize_trace_id($_GET['trace_id'] ?? '')
+    : substr(preg_replace('/[^A-Za-z0-9_-]/', '', (string)($_GET['trace_id'] ?? '')), 0, 64);
 
 $company = array();
 // 상세 기본 정보 조회
@@ -235,6 +244,10 @@ if (!empty($member['mb_id'])) {
                 'source_cust_names' => array(),
                 'source_supp_names' => array(),
                 'src_keywords' => $preload_source_keywords,
+                'selected_target_keywords' => $detail_selected_target_keywords,
+                'selected_partner_bzc_cds' => $detail_selected_partner_bzc_cds,
+                'recommendation_mode' => $detail_recommendation_mode,
+                'trace_id' => $detail_trace_id,
             );
             if ($preloaded_ai_source_context['source_mpd'] === '' && !empty($preload_source_keywords)) {
                 $preloaded_ai_source_context['source_mpd'] = implode(', ', $preload_source_keywords);
@@ -536,6 +549,12 @@ window.MATCH_REQUEST_CONTEXT = {
 		product: <?php echo json_encode($company_seed['product_line'] ?? '', JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>
 	},
 	sourceKedcd: <?php echo json_encode($preload_src_kedcd, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>,
+	recommendationContext: {
+		selected_target_keywords: <?php echo json_encode($detail_selected_target_keywords, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>,
+		selected_partner_bzc_cds: <?php echo json_encode($detail_selected_partner_bzc_cds, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>,
+		recommendation_mode: <?php echo json_encode($detail_recommendation_mode, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>,
+		trace_id: <?php echo json_encode($detail_trace_id, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>
+	},
 	seedCompany: <?php echo json_encode($company_seed, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>
 };
 window.PRELOADED_AI_REPORT = {

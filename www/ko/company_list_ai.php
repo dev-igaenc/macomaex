@@ -328,19 +328,23 @@ function company_list_ai_ml_item_to_card($item)
     $badges = $badge_fields['badges'];
 
     $tags = array();
+    $tag_source = 'none';
     if (isset($item['keywords_json'])) {
         if (is_array($item['keywords_json'])) {
             $tags = company_list_ai_normalize_tags($item['keywords_json']);
         } else {
             $tags = company_list_ai_parse_keywords_json((string)$item['keywords_json']);
         }
+        if (!empty($tags)) $tag_source = 'actual';
     }
     if (empty($tags) && isset($item['tags']) && is_array($item['tags'])) {
         $tags = company_list_ai_normalize_tags($item['tags']);
+        if (!empty($tags)) $tag_source = 'actual';
     } else if (empty($tags) && isset($item['tags']) && is_string($item['tags']) && trim($item['tags']) !== '') {
         $tags_from_json = company_list_ai_parse_keywords_json((string)$item['tags']);
         if (!empty($tags_from_json)) {
             $tags = $tags_from_json;
+            $tag_source = 'actual';
         } else {
             $parts = preg_split('/\s*,\s*/u', trim((string)$item['tags']));
             foreach ($parts as $tag) {
@@ -348,17 +352,24 @@ function company_list_ai_ml_item_to_card($item)
                 if ($t === '' || in_array($t, $tags, true)) continue;
                 $tags[] = $t;
             }
+            if (!empty($tags)) $tag_source = 'actual';
         }
     }
     if (empty($tags)) {
         $biz_category = trim((string)($item['biz_category'] ?? ''));
         if ($biz_category !== '') {
             $tags[] = $biz_category;
+            $tag_source = 'industry_inferred';
         } else {
             $tags = company_list_ai_get_item_tags_by_industry($bzc_nm, $bzc_cd, $kedcd);
+            $tag_source = 'generic_fallback';
         }
     }
-    if (empty($tags)) $tags[] = 'AI추천';
+    if (empty($tags)) {
+        $tags[] = 'AI추천';
+        $tag_source = 'generic_fallback';
+    }
+    $analysis_tags = $tags;
     $tag_total_count = company_list_ai_resolve_tag_total_count($item['keyword_count'] ?? 0, $tags);
 
     return array(
@@ -390,6 +401,8 @@ function company_list_ai_ml_item_to_card($item)
         'badge_stability' => $badge_fields['badge_stability'],
         'badge_venture' => $badge_fields['badge_venture'],
         'tags' => $tags,
+        'analysis_tags' => $analysis_tags,
+        'tag_source' => $tag_source,
         'tag_total_count' => $tag_total_count,
         'radar' => company_list_ai_translate_radar(isset($item['radar']) ? $item['radar'] : array()),
     );
@@ -733,7 +746,7 @@ function company_list_ai_render_rank_medal($rank)
     '</span>';
 }
 
-function company_list_ai_render_card($card, $trade_type, $rank = 0, $src_kedcd = '')
+function company_list_ai_render_card($card, $trade_type, $rank = 0, $src_kedcd = '', $recommendation_context = array())
 {
     $kedcd = htmlspecialchars($card['kedcd'], ENT_QUOTES, 'UTF-8');
     // 상세에서 동일 추천 컨텍스트를 복원할 수 있도록 기준기업(src) kedcd를 함께 전달
@@ -760,6 +773,8 @@ function company_list_ai_render_card($card, $trade_type, $rank = 0, $src_kedcd =
     $consec_profit_attr = (isset($card['consec_profit_2y']) && $card['consec_profit_2y'] !== null && $card['consec_profit_2y'] !== '') ? ((int)$card['consec_profit_2y'] ? '1' : '0') : '';
     $capital_negative_attr = (isset($card['capital_negative']) && $card['capital_negative'] !== null && $card['capital_negative'] !== '') ? ((int)$card['capital_negative'] ? '1' : '0') : '';
     $one_line_attr = htmlspecialchars((string)($card['one_line'] ?? ''), ENT_QUOTES, 'UTF-8');
+    $analysis_tags_attr = htmlspecialchars(implode(',', (array)($card['analysis_tags'] ?? array())), ENT_QUOTES, 'UTF-8');
+    $tag_source_attr = htmlspecialchars((string)($card['tag_source'] ?? 'none'), ENT_QUOTES, 'UTF-8');
     $trade_q = (int)$trade_type;
     $card_cd = simple_crypt((string)$card['kedcd'], 'e');
     $url = '/recommendations/detail?id=' . rawurlencode((string)$card_cd) . '&trade_type=' . $trade_q;
@@ -767,6 +782,29 @@ function company_list_ai_render_card($card, $trade_type, $rank = 0, $src_kedcd =
         $src_cd = simple_crypt((string)$src_kedcd_raw, 'e');
         $url .= '&src_cd=' . rawurlencode((string)$src_cd);
     }
+    $selected_target_keywords = isset($recommendation_context['selected_target_keywords']) && is_array($recommendation_context['selected_target_keywords'])
+        ? array_values(array_filter(array_map('trim', $recommendation_context['selected_target_keywords'])))
+        : array();
+    $selected_partner_bzc_cds = isset($recommendation_context['selected_partner_bzc_cds']) && is_array($recommendation_context['selected_partner_bzc_cds'])
+        ? array_values(array_filter(array_map('trim', $recommendation_context['selected_partner_bzc_cds'])))
+        : array();
+    $recommendation_mode = trim((string)($recommendation_context['recommendation_mode'] ?? 'full'));
+    if (!in_array($recommendation_mode, array('keyword', 'full'), true)) $recommendation_mode = 'full';
+    $context_trace_id = company_list_ai_normalize_trace_id($recommendation_context['trace_id'] ?? '');
+    if (!empty($selected_target_keywords)) {
+        $url .= '&selected_keyword=' . rawurlencode(implode(',', $selected_target_keywords));
+    }
+    if (!empty($selected_partner_bzc_cds)) {
+        $url .= '&partner_bzc=' . rawurlencode(implode(',', $selected_partner_bzc_cds));
+    }
+    $url .= '&recommendation_mode=' . rawurlencode($recommendation_mode);
+    if ($context_trace_id !== '') {
+        $url .= '&trace_id=' . rawurlencode($context_trace_id);
+    }
+    $selected_keywords_attr = htmlspecialchars(implode(',', $selected_target_keywords), ENT_QUOTES, 'UTF-8');
+    $partner_bzc_attr = htmlspecialchars(implode(',', $selected_partner_bzc_cds), ENT_QUOTES, 'UTF-8');
+    $recommendation_mode_attr = htmlspecialchars($recommendation_mode, ENT_QUOTES, 'UTF-8');
+    $trace_id_attr = htmlspecialchars($context_trace_id, ENT_QUOTES, 'UTF-8');
     $is_top3 = ($rank > 0);
 
     $tags_html = '';
@@ -792,7 +830,7 @@ function company_list_ai_render_card($card, $trade_type, $rank = 0, $src_kedcd =
     $radar_tags = company_list_ai_render_radar_tags($card['radar'] ?? []);
     $html = '<div class="swiper-slide">';
     if ($is_top3) $html .= company_list_ai_render_rank_medal($rank);
-    $html .= '<a href="' . $url . '" class="company-ai-link" data-kedcd="' . $kedcd . '" data-src-kedcd="' . $src_kedcd_attr . '" data-trade-type="' . $trade_q . '" data-score="' . $score . '" data-candidate-type="' . $candidate_type . '" data-bzc-cd="' . $industry . '" data-bzc-nm="' . $industry_nm . '" data-sido="' . $region . '" data-sze="' . $sze_attr . '" data-company-age="' . $company_age_attr . '" data-sales-growth-pct="' . htmlspecialchars($sales_growth_attr, ENT_QUOTES, 'UTF-8') . '" data-debt-ratio-pct="' . htmlspecialchars($debt_ratio_attr, ENT_QUOTES, 'UTF-8') . '" data-consec-profit-2y="' . $consec_profit_attr . '" data-capital-negative="' . $capital_negative_attr . '" data-one-line="' . $one_line_attr . '" style="text-decoration:none;color:inherit;">';
+    $html .= '<a href="' . $url . '" class="company-ai-link" data-kedcd="' . $kedcd . '" data-src-kedcd="' . $src_kedcd_attr . '" data-trade-type="' . $trade_q . '" data-selected-keywords="' . $selected_keywords_attr . '" data-partner-bzc-cds="' . $partner_bzc_attr . '" data-recommendation-mode="' . $recommendation_mode_attr . '" data-trace-id="' . $trace_id_attr . '" data-analysis-tags="' . $analysis_tags_attr . '" data-tag-source="' . $tag_source_attr . '" data-score="' . $score . '" data-candidate-type="' . $candidate_type . '" data-bzc-cd="' . $industry . '" data-bzc-nm="' . $industry_nm . '" data-sido="' . $region . '" data-sze="' . $sze_attr . '" data-company-age="' . $company_age_attr . '" data-sales-growth-pct="' . htmlspecialchars($sales_growth_attr, ENT_QUOTES, 'UTF-8') . '" data-debt-ratio-pct="' . htmlspecialchars($debt_ratio_attr, ENT_QUOTES, 'UTF-8') . '" data-consec-profit-2y="' . $consec_profit_attr . '" data-capital-negative="' . $capital_negative_attr . '" data-one-line="' . $one_line_attr . '" style="text-decoration:none;color:inherit;">';
     $html .= '<div class="mCompanyCard company-ai-card" style="position:relative;">';
     $html .= '<div class="mCompanyCard_content">';
     $html .= '<div class="mCompanyCard_ai_match"><span class="mCompanyCard_ai_match_label">AI 추천점수</span><span><span class="mCompanyCard_ai_match_value">' . $score . '</span><span class="mCompanyCard_ai_match_unit">    점</span></span></div>';
@@ -812,13 +850,13 @@ function company_list_ai_render_card($card, $trade_type, $rank = 0, $src_kedcd =
     return $html;
 }
 
-function company_list_ai_build_slide_sets($cards, $trade_type = 1, $src_kedcd = '')
+function company_list_ai_build_slide_sets($cards, $trade_type = 1, $src_kedcd = '', $recommendation_context = array())
 {
     $top3 = array();
     $rest = array();
     foreach ($cards as $idx => $card) {
-        if ($idx < 3) $top3[] = company_list_ai_render_card($card, $trade_type, $idx + 1, $src_kedcd);
-        else $rest[] = company_list_ai_render_card($card, $trade_type, 0, $src_kedcd);
+        if ($idx < 3) $top3[] = company_list_ai_render_card($card, $trade_type, $idx + 1, $src_kedcd, $recommendation_context);
+        else $rest[] = company_list_ai_render_card($card, $trade_type, 0, $src_kedcd, $recommendation_context);
     }
     return array('top3' => $top3, 'rest' => $rest);
 }
@@ -1331,8 +1369,14 @@ $sell_pool = $sell_live_ok ? $seller_cards : array();
 $buy_pool = company_list_ai_apply_unlock_state($buy_pool, $unlocked_kedcd_map);
 $sell_pool = company_list_ai_apply_unlock_state($sell_pool, $unlocked_kedcd_map);
 
-$buy_slides = company_list_ai_build_slide_sets($buy_pool, 1, $source_kedcd_for_detail);
-$sell_slides = company_list_ai_build_slide_sets($sell_pool, 2, $source_kedcd_for_detail);
+$detail_recommendation_context = array(
+    'selected_target_keywords' => $selected_keywords,
+    'selected_partner_bzc_cds' => $partner_bzc_filters,
+    'recommendation_mode' => $has_partner_bzc_filters ? 'keyword' : 'full',
+    'trace_id' => $trace_id,
+);
+$buy_slides = company_list_ai_build_slide_sets($buy_pool, 1, $source_kedcd_for_detail, $detail_recommendation_context);
+$sell_slides = company_list_ai_build_slide_sets($sell_pool, 2, $source_kedcd_for_detail, $detail_recommendation_context);
 
 $buy_top3 = isset($buy_slides['top3']) ? $buy_slides['top3'] : array();
 $buy_rest_pool = isset($buy_slides['rest']) ? $buy_slides['rest'] : array();

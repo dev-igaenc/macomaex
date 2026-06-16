@@ -19,15 +19,70 @@ if (!function_exists('llm_report_trade_exact_items')) {
 }
 
 if (!function_exists('llm_report_trade_allowed_items')) {
+    function llm_report_trade_filter_analysis_items($items) {
+        return array_values(array_filter(array_unique((array)$items), function ($item) {
+            return trim((string)$item) !== '';
+        }));
+    }
+
     function llm_report_trade_allowed_items($sourceData, $rec, $isSell) {
-        $srcItems = array_values(array_unique(array_merge(
+        $srcItems = llm_report_trade_filter_analysis_items(array_merge(
             llm_report_trade_exact_items($sourceData['src_keywords'] ?? array()),
             llm_report_trade_exact_items($sourceData['source_mpd'] ?? '')
-        )));
-        $recItems = llm_report_trade_exact_items(is_array($rec) ? ($rec['keywords'] ?? array()) : array());
-        $buyItems = $isSell ? $srcItems : $recItems;
-        $sellItems = $isSell ? $recItems : $srcItems;
+        ));
+        $recItems = llm_report_trade_filter_analysis_items(
+            llm_report_trade_exact_items(is_array($rec) ? ($rec['keywords'] ?? array()) : array())
+        );
+        // 구매처 찾기는 추천 기업의 공급 품목을, 판매처 찾기는 의뢰사의 공급 품목을 사용한다.
+        // 반대 방향 배열은 비워 리포트가 거래 주체를 뒤섞지 않도록 한다.
+        $buyItems = $isSell ? array() : $recItems;
+        $sellItems = $isSell ? $srcItems : array();
         return array('buy_items' => $buyItems, 'sell_items' => $sellItems);
+    }
+}
+
+if (!function_exists('llm_report_trade_selection_context')) {
+    function llm_report_trade_selection_context($sourceData, $rec, $isSell, $buyItems, $sellItems) {
+        $selectedKeywords = llm_report_trade_exact_items($sourceData['selected_target_keywords'] ?? array());
+        $selectedPartnerBzcCds = llm_report_trade_exact_items($sourceData['selected_partner_bzc_cds'] ?? array());
+        $recItems = llm_report_trade_filter_analysis_items(
+            llm_report_trade_exact_items(is_array($rec) ? ($rec['keywords'] ?? array()) : array())
+        );
+        $sourceItems = llm_report_trade_filter_analysis_items(array_merge(
+            llm_report_trade_exact_items($sourceData['src_keywords'] ?? array()),
+            llm_report_trade_exact_items($sourceData['source_mpd'] ?? '')
+        ));
+        $primaryItems = $isSell ? $sellItems : $buyItems;
+        $industryCandidate = trim((string)($isSell
+            ? ($sourceData['source_bzc_nm'] ?? $sourceData['source_bzc_cd'] ?? '')
+            : ($rec['bzc_nm'] ?? $rec['bzc_cd'] ?? '')));
+        $inferredItems = empty($primaryItems) && $industryCandidate !== ''
+            ? array($industryCandidate)
+            : array();
+        $keywordList = llm_report_trade_join_items($selectedKeywords, '');
+        $recommendationBackground = $keywordList !== ''
+            ? "사용자가 선택한 {$keywordList} 기준과 연결된 업종코드를 바탕으로 해당 기업이 추천되었습니다."
+            : "귀사와 추천 기업의 업종 및 거래 데이터를 바탕으로 해당 기업이 추천되었습니다.";
+        if ($keywordList !== '') {
+            $recommendationBackground .= " 선택 항목은 추천 대상을 찾기 위한 기준이며, 실제 거래 품목을 의미하지는 않습니다.";
+        }
+        $itemEvidence = !empty($primaryItems)
+            ? '실제 등록 품목 정보를 기준으로 분석했습니다.'
+            : ($industryCandidate !== ''
+                ? "구체적인 실제 품목 정보가 부족하여 {$industryCandidate} 업종을 거래 가능성 검토의 참고 범위로 사용했습니다."
+                : '구체적인 실제 품목 정보가 부족하여 선택 기준과 업종 적합성을 중심으로 분석했습니다.');
+
+        return array(
+            'selected_target_keywords' => $selectedKeywords,
+            'selected_partner_bzc_cds' => $selectedPartnerBzcCds,
+            'recommendation_mode' => trim((string)($sourceData['recommendation_mode'] ?? 'full')) ?: 'full',
+            'recommendation_background' => $recommendationBackground,
+            'item_evidence' => $itemEvidence,
+            'item_evidence_level' => !empty($primaryItems) ? 'actual' : (!empty($inferredItems) ? 'industry_inferred' : 'insufficient'),
+            'inferred_items' => $inferredItems,
+            'recommended_company_items' => $recItems,
+            'source_company_items' => $sourceItems,
+        );
     }
 }
 
@@ -67,9 +122,9 @@ if (!function_exists('llm_report_trade_reason_line')) {
         $primary = llm_report_trade_primary_meta($buyItems, $sellItems, $tradeLabel, '');
         if ($primary['list'] !== '') {
             if ($primary['is_sell_trade']) {
-                return "귀사가 제공할 수 있는 {$primary['list']} 관련 거래 가능성을 우선 검토할 수 있는 기업으로 분석되었습니다.";
+                return "귀사가 제공할 수 있는 품목 범위를 기준으로 해당 기업과의 거래 가능성을 우선 검토할 수 있습니다.";
             }
-            return "귀사가 필요로 하는 {$primary['list']} 관련 거래 가능성을 우선 검토할 수 있는 기업으로 분석되었습니다.";
+            return "귀사가 필요로 하는 품목 범위를 기준으로 해당 기업과의 구매 가능성을 우선 검토할 수 있습니다.";
         }
         return "원본 품목 정보가 부족하여 품목 요약은 생략하고 거래 가능성 중심으로 분석했습니다.";
     }
@@ -101,12 +156,29 @@ if (!function_exists('llm_report_trade_decode_json_object')) {
 }
 
 if (!function_exists('llm_report_trade_build_reasons')) {
-    function llm_report_trade_build_reasons($buyItems, $sellItems, $tradeLabel, $connectionType) {
+    function llm_report_trade_build_reasons($buyItems, $sellItems, $tradeLabel, $connectionType, $selectionContext = array()) {
         $primary = llm_report_trade_primary_meta($buyItems, $sellItems, $tradeLabel);
         $connectionType = trim((string)$connectionType);
+        if (empty($primary['items'])) {
+            return array(
+                trim((string)($selectionContext['recommendation_background'] ?? '선택 기준과 업종 적합성을 바탕으로 추천된 기업입니다.')),
+                trim((string)($selectionContext['item_evidence'] ?? '구체적인 실제 품목 정보가 부족하여 거래 가능 품목 확인이 필요합니다.')),
+                $connectionType !== ''
+                    ? "연결 방식은 {$connectionType}로 제시되어 있어, 첫 접점에서 실제 취급 품목과 거래 가능 범위를 확인하는 것이 적절합니다."
+                    : "첫 접점에서 실제 취급 품목과 거래 가능 범위를 확인하는 것이 적절합니다.",
+            );
+        }
         $focusLine = $primary['is_sell_trade']
-            ? "원본 품목 기준으로 보면 {$primary['list']} 중심으로 실제 공급 가능 범위를 검토할 수 있어 거래 제안의 구체성을 높일 수 있습니다."
-            : "원본 품목 기준으로 보면 {$primary['list']} 중심으로 실제 구매 수요를 구체화할 수 있어 거래 검토의 우선순위를 빠르게 정리할 수 있습니다.";
+            ? "상단의 판매 가능 품목 범위를 기준으로 실제 공급 가능 범위와 제안 우선순위를 좁혀볼 수 있습니다."
+            : "상단의 구매 가능 품목 범위를 기준으로 실제 구매 수요와 검토 우선순위를 좁혀볼 수 있습니다.";
+        $selectionBackground = trim((string)($selectionContext['recommendation_background'] ?? ''));
+        if (!empty($selectionContext['selected_target_keywords']) && $selectionBackground !== '') {
+            return array(
+                $selectionBackground,
+                llm_report_trade_reason_line($buyItems, $sellItems, $tradeLabel),
+                $focusLine,
+            );
+        }
         return array(
             llm_report_trade_reason_line($buyItems, $sellItems, $tradeLabel),
             $focusLine,
@@ -122,7 +194,7 @@ if (!function_exists('llm_report_trade_build_positioning')) {
         $recIndustry = trim((string)($rec['bzc_nm'] ?? $rec['bzc_cd'] ?? '해당 업종'));
         $recRegion = trim((string)($rec['sido'] ?? ''));
         $recScale = trim((string)($rec['sze'] ?? ''));
-        $sourceIndustry = trim((string)($sourceData['source_bzc_nm'] ?? $sourceData['source_bzc_cd'] ?? '의뢰사 업종'));
+        $sourceIndustry = trim((string)($sourceData['source_bzc_nm'] ?? $sourceData['source_bzc_cd'] ?? '귀사 업종'));
         $regionText = ($recRegion !== '' && $recRegion !== '-') ? ($recRegion . ' 거점을 바탕으로 ') : '';
         $scaleText = ($recScale !== '' && $recScale !== '-') ? ('규모는 ' . $recScale . ' 수준으로 파악되며, ') : '';
         return "해당 기업은 **{$recIndustry}** 성격의 기업으로 해석할 수 있습니다. {$regionText}{$tradeLabel} 검토 범위를 넓힐 수 있는 후보입니다. {$scaleText}{$sourceIndustry}과의 거래 접점을 품목 단위로 확인하는 접근이 적절합니다.";
@@ -130,40 +202,47 @@ if (!function_exists('llm_report_trade_build_positioning')) {
 }
 
 if (!function_exists('llm_report_trade_build_detail')) {
-    function llm_report_trade_build_detail($buyItems, $sellItems, $tradeLabel) {
+    function llm_report_trade_build_detail($buyItems, $sellItems, $tradeLabel, $selectionContext = array()) {
         $primary = llm_report_trade_primary_meta($buyItems, $sellItems, $tradeLabel);
-        if ($primary['is_sell_trade']) {
-            if ($primary['list'] === '원본 품목 정보') {
-                return "판매처 관점에서 우선 확인할 판매 가능 품목 원본 정보가 부족합니다. 따라서 초기 논의에서는 실제 공급 가능 범위와 납기 조건부터 우선 확인하는 것이 적절합니다.";
+        if (empty($primary['items'])) {
+            $inferred = llm_report_trade_join_items($selectionContext['inferred_items'] ?? array(), '');
+            $base = trim((string)($selectionContext['item_evidence'] ?? '구체적인 실제 품목 정보가 부족합니다.'));
+            if ($inferred !== '') {
+                return "{$base} 따라서 {$inferred} 범위에서 취급 가능 품목을 먼저 확인하고, 거래 요청 시 실제 공급·수요 품목을 구체화하는 것이 적절합니다.";
             }
-            return "판매처 관점에서 우선 확인할 판매 가능 품목은 {$primary['list']}입니다. 따라서 초기 논의는 위 원본 품목의 공급 가능 범위, 발주 단위, 납기 조건을 중심으로 구체화하는 것이 적절합니다.";
+            return "{$base} 따라서 거래 요청 전 실제 공급·수요 품목과 취급 범위를 먼저 확인하는 것이 적절합니다.";
+        }
+        if ($primary['is_sell_trade']) {
+            return "판매처 관점에서는 상단에 정리된 판매 가능 품목을 기준으로 초기 제안을 구성하는 것이 적절합니다. 초기 논의는 공급 가능 범위, 발주 단위, 납기 조건을 중심으로 구체화하는 것이 좋습니다.";
         }
 
-        if ($primary['list'] === '원본 품목 정보') {
-            return "구매처 관점에서 우선 확인할 구매 가능 품목 원본 정보가 부족합니다. 따라서 초기 논의에서는 실제 수요 품목과 발주 조건부터 우선 확인하는 것이 적절합니다.";
-        }
-        return "구매처 관점에서 우선 확인할 구매 가능 품목은 {$primary['list']}입니다. 따라서 초기 논의는 위 원본 품목의 발주 단위, 납기 조건, 공급 가능 범위를 중심으로 구체화하는 것이 적절합니다.";
+        return "구매처 관점에서는 상단에 정리된 구매 가능 품목을 기준으로 실제 공급 가능 여부를 확인하는 것이 적절합니다. 초기 논의는 발주 단위, 납기 조건, 공급 가능 범위를 중심으로 구체화하는 것이 좋습니다.";
     }
 }
 
 if (!function_exists('llm_report_trade_build_connection_background')) {
-    function llm_report_trade_build_connection_background($sourceData, $rec, $buyItems, $sellItems, $connectionType, $tradeLabel) {
-        $sourceIndustry = trim((string)($sourceData['source_bzc_nm'] ?? $sourceData['source_bzc_cd'] ?? '의뢰사 업종'));
+    function llm_report_trade_build_connection_background($sourceData, $rec, $buyItems, $sellItems, $connectionType, $tradeLabel, $selectionContext = array()) {
+        $sourceIndustry = trim((string)($sourceData['source_bzc_nm'] ?? $sourceData['source_bzc_cd'] ?? '귀사 업종'));
         $recIndustry = trim((string)($rec['bzc_nm'] ?? $rec['bzc_cd'] ?? '해당 업종'));
         $primary = llm_report_trade_primary_meta($buyItems, $sellItems, $tradeLabel);
         $connectionText = trim((string)$connectionType);
-        $sentence = "의뢰사는 {$sourceIndustry}, 해당 기업은 {$recIndustry} 업종 기반으로 해석할 수 있습니다. 원본 품목 기준으로 보면 {$primary['list']}를 중심으로 거래 접점을 좁혀볼 수 있습니다.";
+        if (empty($primary['items'])) {
+            $sentence = trim((string)($selectionContext['recommendation_background'] ?? "귀사는 {$sourceIndustry}, 해당 기업은 {$recIndustry} 업종 기반으로 추천되었습니다."));
+            $sentence .= " " . trim((string)($selectionContext['item_evidence'] ?? '실제 거래 품목은 첫 접점에서 확인하는 것이 적절합니다.'));
+            return trim($sentence);
+        }
+        $sentence = "귀사는 {$sourceIndustry}, 해당 기업은 {$recIndustry} 업종 기반으로 해석할 수 있습니다. 상단에 정리된 품목 범위를 기준으로 거래 접점을 좁혀볼 수 있습니다.";
         if ($connectionText !== '') {
-            $sentence .= " 연결 방식이 {$connectionText}로 제시된 만큼, 실제 검토도 위 원본 품목 범위 안에서 시작하는 것이 적절합니다.";
+            $sentence .= " 연결 방식이 {$connectionText}로 제시된 만큼, 실제 검토도 상단 품목 범위 안에서 시작하는 것이 적절합니다.";
         } else {
-            $sentence .= " 실제 검토도 위 원본 품목 범위 안에서 시작하는 것이 적절합니다.";
+            $sentence .= " 실제 검토도 상단 품목 범위 안에서 시작하는 것이 적절합니다.";
         }
         return $sentence;
     }
 }
 
 if (!function_exists('llm_report_trade_build_supply_chain_fit')) {
-    function llm_report_trade_build_supply_chain_fit($rec, $buyItems, $sellItems, $tradeLabel) {
+    function llm_report_trade_build_supply_chain_fit($rec, $buyItems, $sellItems, $tradeLabel, $selectionContext = array()) {
         $primary = llm_report_trade_primary_meta($buyItems, $sellItems, $tradeLabel);
         $radarSummary = '';
         if (!empty($rec['radar']) && is_array($rec['radar'])) {
@@ -197,9 +276,14 @@ if (!function_exists('llm_report_trade_build_supply_chain_fit')) {
                 $radarSummary = implode(', ', $topLabels);
             }
         }
-        $sentence = $primary['is_sell_trade']
-            ? "원본 품목 기준으로 보면 {$primary['list']} 공급 가능 범위가 실제 제안 가능한 거래 단위와 연결됩니다."
-            : "원본 품목 기준으로 보면 {$primary['list']} 수요 범위가 실제 검토 대상 거래 단위와 연결됩니다.";
+        if (empty($primary['items'])) {
+            $inferred = llm_report_trade_join_items($selectionContext['inferred_items'] ?? array(), '해당 업종');
+            $sentence = "구체적인 실제 품목 정보는 부족하지만, {$inferred} 범위와 추천 연결 지표를 바탕으로 초기 거래 가능성을 검토할 수 있습니다.";
+        } else {
+            $sentence = $primary['is_sell_trade']
+                ? "상단의 판매 가능 품목 범위가 실제 제안 가능한 거래 단위와 연결됩니다."
+                : "상단의 구매 가능 품목 범위가 실제 검토 대상 거래 단위와 연결됩니다.";
+        }
         if ($radarSummary !== '') {
             $sentence .= " 레이더에서는 {$radarSummary} 축이 상대적으로 높게 나타나, 거래 연결성과 실행 가능성을 검토하는 근거로 활용할 수 있습니다.";
         }
@@ -209,39 +293,59 @@ if (!function_exists('llm_report_trade_build_supply_chain_fit')) {
 }
 
 if (!function_exists('llm_report_trade_build_scenarios')) {
-    function llm_report_trade_build_scenarios($buyItems, $sellItems, $tradeLabel) {
+    function llm_report_trade_build_scenarios($buyItems, $sellItems, $tradeLabel, $selectionContext = array()) {
         $primary = llm_report_trade_primary_meta($buyItems, $sellItems, $tradeLabel);
+        if (empty($primary['items'])) {
+            $inferred = llm_report_trade_join_items($selectionContext['inferred_items'] ?? array(), '해당 업종');
+            return array(
+                "{$inferred} 범위에서 실제 취급 품목과 거래 가능 여부를 확인하는 탐색성 거래 요청을 보낼 수 있습니다.",
+                "취급 품목이 확인되면 견적, 샘플, 발주 단위와 납기 조건을 구체화해 후속 거래를 검토할 수 있습니다.",
+            );
+        }
         if ($primary['is_sell_trade']) {
             return array(
-                "{$primary['list']} 중심으로 소량 견적 또는 샘플 제안부터 시작해 실제 공급 조건을 확인할 수 있습니다.",
-                "초기 검증이 끝나면 {$primary['list']}의 정기 공급 가능성과 납기 안정성을 검토해 지속 거래 여부를 판단할 수 있습니다.",
+                "상단의 판매 가능 품목 범위 안에서 소량 견적 또는 샘플 제안부터 시작해 실제 공급 조건을 확인할 수 있습니다.",
+                "초기 검증이 끝나면 정기 공급 가능성과 납기 안정성을 검토해 지속 거래 여부를 판단할 수 있습니다.",
             );
         }
         return array(
-            "{$primary['list']} 중심으로 소량 견적 문의 또는 샘플 검토부터 시작해 실제 구매 조건을 확인할 수 있습니다.",
-            "초기 검증이 끝나면 {$primary['list']}의 반복 발주 가능성과 납기 안정성을 검토해 지속 거래 여부를 판단할 수 있습니다.",
+            "상단의 구매 가능 품목 범위 안에서 소량 견적 문의 또는 샘플 검토부터 시작해 실제 구매 조건을 확인할 수 있습니다.",
+            "초기 검증이 끝나면 반복 발주 가능성과 납기 안정성을 검토해 지속 거래 여부를 판단할 수 있습니다.",
         );
     }
 }
 
 if (!function_exists('llm_report_trade_build_first_touch_actions')) {
-    function llm_report_trade_build_first_touch_actions($buyItems, $sellItems, $tradeLabel) {
+    function llm_report_trade_build_first_touch_actions($buyItems, $sellItems, $tradeLabel, $selectionContext = array()) {
         $primary = llm_report_trade_primary_meta($buyItems, $sellItems, $tradeLabel);
+        if (empty($primary['items'])) {
+            return array(
+                "첫 연락에서는 선택한 추천 기준을 언급하고, 실제 취급 품목과 거래 가능한 범위를 문의하는 것이 좋습니다.",
+                "품목 카탈로그, 주요 취급 브랜드, 최소 발주 수량과 납기 조건을 함께 확인하는 것이 좋습니다.",
+            );
+        }
         if ($primary['is_sell_trade']) {
             return array(
-                "첫 연락에서는 {$primary['list']} 중 실제 제안할 품목을 1~2개로 먼저 좁혀 문의하는 것이 좋습니다.",
+                "첫 연락에서는 상단 품목 중 실제 제안할 대상을 1~2개로 먼저 좁혀 문의하는 것이 좋습니다.",
                 "견적, 최소 발주 수량, 납기 가능 일정, 품질 기준을 함께 안내해 초기 검토 범위를 명확히 하는 것이 좋습니다.",
             );
         }
         return array(
-            "첫 연락에서는 {$primary['list']} 중 실제 검토할 품목을 1~2개로 먼저 좁혀 문의하는 것이 좋습니다.",
+            "첫 연락에서는 상단 품목 중 실제 검토할 대상을 1~2개로 먼저 좁혀 문의하는 것이 좋습니다.",
             "견적, 최소 발주 수량, 납기 가능 일정, 품질 기준을 함께 요청해 초기 검토 범위를 명확히 하는 것이 좋습니다.",
         );
     }
 }
 
 if (!function_exists('llm_report_trade_build_considerations')) {
-    function llm_report_trade_build_considerations() {
+    function llm_report_trade_build_considerations($buyItems = array(), $sellItems = array(), $tradeLabel = '', $selectionContext = array()) {
+        $primary = llm_report_trade_primary_meta($buyItems, $sellItems, $tradeLabel);
+        if (empty($primary['items'])) {
+            return array(
+                "선택한 추천 기준은 추천 기업을 찾기 위한 대분류이며, 실제 거래 품목과 취급 범위는 거래 전 확인이 필요합니다.",
+                "업종 기반 제안 후보를 참고하되, 품목 카탈로그, 발주 단위, 납기, 결제 조건과 품질 기준을 반드시 확인해야 합니다.",
+            );
+        }
         return array(
             "원본 품목 범위를 벗어난 확장 제안은 초기 접점에서 제외하고, 현재 확인된 품목부터 검토하는 것이 좋습니다.",
             "발주 단위, 납기, 결제 조건, 품질 기준은 거래 전 단계에서 반드시 명확히 확인해야 합니다.",
@@ -257,29 +361,32 @@ if (!function_exists('llm_report_trade_sanitize_report_json')) {
         // 품목 배열은 항상 서버가 계산한 허용 원본값으로 다시 고정
         $tradeLabel = $isSell ? '판매처' : '구매처';
         $allowed = llm_report_trade_allowed_items($sourceData, $rec, $isSell);
+        $selectionContext = llm_report_trade_selection_context($sourceData, $rec, $isSell, $allowed['buy_items'], $allowed['sell_items']);
         $connectionType = trim((string)($decoded['connection_type'] ?? ''));
         if ($connectionType === '') {
             $connectionType = llm_report_trade_connection_type_desc($rec['candidate_type'] ?? '');
         }
 
-        $decoded['trade_label'] = trim((string)($decoded['trade_label'] ?? '')) ?: $tradeLabel;
+        // 요청 거래 방향을 최종 기준으로 고정해 모델 응답이나 과거 캐시의 잘못된 라벨이 품목 방향을 뒤집지 않게 한다.
+        $decoded['trade_label'] = $tradeLabel;
         $decoded['title'] = trim((string)($decoded['title'] ?? '')) ?: ($decoded['trade_label'] . ' 거래 가능성 분석');
         $decoded['connection_type'] = $connectionType;
         $decoded['buy_items'] = $allowed['buy_items'];
         $decoded['sell_items'] = $allowed['sell_items'];
+        $decoded['selection_context'] = $selectionContext;
         if ($decoded['trade_label'] === '판매처') {
             $decoded['buy_items'] = array();
         } else {
             $decoded['sell_items'] = array();
         }
-        $decoded['reasons'] = llm_report_trade_build_reasons($decoded['buy_items'], $decoded['sell_items'], $decoded['trade_label'], $connectionType);
+        $decoded['reasons'] = llm_report_trade_build_reasons($decoded['buy_items'], $decoded['sell_items'], $decoded['trade_label'], $connectionType, $selectionContext);
         $decoded['positioning'] = llm_report_trade_build_positioning($sourceData, $rec, $decoded['trade_label']);
-        $decoded['tradable_items_detail'] = llm_report_trade_build_detail($decoded['buy_items'], $decoded['sell_items'], $decoded['trade_label']);
-        $decoded['connection_background'] = llm_report_trade_build_connection_background($sourceData, $rec, $decoded['buy_items'], $decoded['sell_items'], $connectionType, $decoded['trade_label']);
-        $decoded['supply_chain_fit'] = llm_report_trade_build_supply_chain_fit($rec, $decoded['buy_items'], $decoded['sell_items'], $decoded['trade_label']);
-        $decoded['trade_scenarios'] = llm_report_trade_build_scenarios($decoded['buy_items'], $decoded['sell_items'], $decoded['trade_label']);
-        $decoded['first_touch_actions'] = llm_report_trade_build_first_touch_actions($decoded['buy_items'], $decoded['sell_items'], $decoded['trade_label']);
-        $decoded['considerations'] = llm_report_trade_build_considerations();
+        $decoded['tradable_items_detail'] = llm_report_trade_build_detail($decoded['buy_items'], $decoded['sell_items'], $decoded['trade_label'], $selectionContext);
+        $decoded['connection_background'] = llm_report_trade_build_connection_background($sourceData, $rec, $decoded['buy_items'], $decoded['sell_items'], $connectionType, $decoded['trade_label'], $selectionContext);
+        $decoded['supply_chain_fit'] = llm_report_trade_build_supply_chain_fit($rec, $decoded['buy_items'], $decoded['sell_items'], $decoded['trade_label'], $selectionContext);
+        $decoded['trade_scenarios'] = llm_report_trade_build_scenarios($decoded['buy_items'], $decoded['sell_items'], $decoded['trade_label'], $selectionContext);
+        $decoded['first_touch_actions'] = llm_report_trade_build_first_touch_actions($decoded['buy_items'], $decoded['sell_items'], $decoded['trade_label'], $selectionContext);
+        $decoded['considerations'] = llm_report_trade_build_considerations($decoded['buy_items'], $decoded['sell_items'], $decoded['trade_label'], $selectionContext);
 
         $encoded = json_encode($decoded, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         return ($encoded === false) ? $reportText : $encoded;
