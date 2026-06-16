@@ -1422,24 +1422,26 @@
                 }
 
                 function sourceValue(sessionKey, contextKey, fallback) {
-                    var sessionVal = tryGet(sessionKey);
-                    if (sessionVal !== '') return sessionVal;
                     if (Object.prototype.hasOwnProperty.call(preloadedSourceContext, contextKey)) {
                         var ctxVal = preloadedSourceContext[contextKey];
                         if (ctxVal != null && ctxVal !== '') return ctxVal;
                     }
+                    var sessionVal = tryGet(sessionKey);
+                    if (sessionVal !== '') return sessionVal;
                     return fallback;
                 }
 
                 function sourceArray(sessionKey, contextKey) {
+                    var ctxVal = preloadedSourceContext[contextKey];
+                    if (Array.isArray(ctxVal)) {
+                        var contextItems = ctxVal.map(function (item) { return String(item || '').trim(); }).filter(Boolean);
+                        if (contextItems.length) return contextItems;
+                    }
                     var sessionVal = tryGet(sessionKey);
                     if (sessionVal !== '') {
                         return sessionVal.split('|').map(function (item) { return String(item || '').trim(); }).filter(Boolean);
                     }
-                    var ctxVal = preloadedSourceContext[contextKey];
-                    return Array.isArray(ctxVal)
-                        ? ctxVal.map(function (item) { return String(item || '').trim(); }).filter(Boolean)
-                        : [];
+                    return [];
                 }
 
                 var card = getCardSnapshotForDemo(demoId);
