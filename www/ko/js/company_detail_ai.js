@@ -426,6 +426,13 @@
                         });
                     }
                     if (foundTags.length) snapshot.tags = foundTags;
+                    if (foundTags.length) {
+                        var genericFallbackTags = ['납품용역', 'B2B소재', '산업부품', '제조부품', '산업소재', 'AI추천', '정보 준비중'];
+                        snapshot.analysis_tags = foundTags.filter(function (tag) {
+                            return genericFallbackTags.indexOf(String(tag || '').trim()) === -1;
+                        });
+                        snapshot.tag_source = snapshot.analysis_tags.length ? 'actual' : 'generic_fallback';
+                    }
 
                     var foundTagTotalCount = Number(found.tag_total_count || found.keyword_count || 0);
                     if (!Number.isFinite(foundTagTotalCount) || foundTagTotalCount <= 0) {
@@ -1441,9 +1448,11 @@
                     : (Array.isArray(card.selected_partner_bzc_cds)
                         ? card.selected_partner_bzc_cds.map(function (item) { return String(item || '').trim(); }).filter(Boolean)
                         : []);
-                var recKeywords = Array.isArray(card.tags) && card.tags.length
-                    ? card.tags.filter(Boolean)
-                    : parseTagListFromLine(card.product_line || '');
+                var recKeywords = Array.isArray(card.analysis_tags)
+                    ? card.analysis_tags.filter(Boolean)
+                    : (String(card.tag_source || '') === 'actual' && Array.isArray(card.tags)
+                        ? card.tags.filter(Boolean)
+                        : []);
                 // 상세 preload에 실제 키워드 배열이 있으면 그것을 우선하고, 없을 때만 기존 세션/mpd fallback을 사용한다.
                 var preloadedSrcKeywords = Array.isArray(preloadedSourceContext.src_keywords)
                     ? preloadedSourceContext.src_keywords.map(function (item) { return String(item || '').trim(); }).filter(Boolean)
@@ -1466,7 +1475,8 @@
                     debt_ratio_pct: card.debt_ratio_pct != null ? card.debt_ratio_pct : null,
                     consec_profit_2y: card.consec_profit_2y != null ? card.consec_profit_2y : null,
                     capital_negative: card.capital_negative || 0,
-                    keywords: recKeywords
+                    keywords: recKeywords,
+                    keyword_source: String(card.tag_source || (recKeywords.length ? 'actual' : 'none'))
                 };
 
                 // EC2/ML 추천 카드 + 의뢰사 세션값을 합쳐 LLM 보고서 요청 payload 구성

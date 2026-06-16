@@ -545,6 +545,8 @@
             selected_partner_bzc_cds: String(linkEl.getAttribute('data-partner-bzc-cds') || '').split(',').map(function (value) { return value.trim(); }).filter(Boolean),
             recommendation_mode: String(linkEl.getAttribute('data-recommendation-mode') || 'full').trim() || 'full',
             trace_id: String(linkEl.getAttribute('data-trace-id') || '').trim(),
+            analysis_tags: String(linkEl.getAttribute('data-analysis-tags') || '').split(',').map(function (value) { return value.trim(); }).filter(Boolean),
+            tag_source: String(linkEl.getAttribute('data-tag-source') || 'none').trim() || 'none',
             title: titleEl ? String(titleEl.textContent || '').trim() : '',
             industry: bzcCd,
             industry_nm: bzcNm,

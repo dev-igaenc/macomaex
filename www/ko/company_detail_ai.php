@@ -244,6 +244,10 @@ if (!empty($member['mb_id'])) {
                 'source_cust_names' => array(),
                 'source_supp_names' => array(),
                 'src_keywords' => $preload_source_keywords,
+                'selected_target_keywords' => $detail_selected_target_keywords,
+                'selected_partner_bzc_cds' => $detail_selected_partner_bzc_cds,
+                'recommendation_mode' => $detail_recommendation_mode,
+                'trace_id' => $detail_trace_id,
             );
             if ($preloaded_ai_source_context['source_mpd'] === '' && !empty($preload_source_keywords)) {
                 $preloaded_ai_source_context['source_mpd'] = implode(', ', $preload_source_keywords);
