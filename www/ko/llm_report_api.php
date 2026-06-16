@@ -667,7 +667,7 @@ function _rec_radar_full($rec, $axisDesc) {
 
 $axisDesc = _axis_desc();
 
-$srcNm    = (string)($d['source_enp_nm'] ?? '(의뢰사)');
+$srcNm    = (string)($d['source_enp_nm'] ?? '(귀사)');
 $srcBzc   = _bzc_full(array(
     'bzc_nm' => (string)($d['source_bzc_nm'] ?? ''),
     'bzc_cd' => (string)($d['source_bzc_cd'] ?? ''),
@@ -698,8 +698,8 @@ $recP2y    = (isset($rec['consec_profit_2y']) && $rec['consec_profit_2y'] !== nu
 $recKeywords = !empty($rec['keywords']) && is_array($rec['keywords']) ? implode(', ', $rec['keywords']) : '';
 $srcKeywords = !empty($d['src_keywords']) && is_array($d['src_keywords']) ? implode(', ', $d['src_keywords']) : '';
 $tradeDir = $isSell
-    ? '의뢰사가 해당 기업에 판매할 수 있는 품목·서비스'
-    : '의뢰사가 해당 기업으로부터 구매할 수 있는 품목·서비스';
+    ? '귀사가 해당 기업에 판매할 수 있는 품목·서비스'
+    : '귀사가 해당 기업으로부터 구매할 수 있는 품목·서비스';
 $tradeAction = $isSell ? '어떤 제품·서비스를 판매할 수 있는지' : '어떤 품목·소재·서비스를 구매할 수 있는지';
 $allowedTradeItems = llm_report_trade_allowed_items($d, $rec, $isSell);
 $buyItemHint = !empty($allowedTradeItems['buy_items']) ? implode(', ', $allowedTradeItems['buy_items']) : '없음';
@@ -740,6 +740,7 @@ $cachedReport = llm_report_pick_recent_cached_report($analysisOnceKey, $tradeTyp
 if (!empty($cachedReport['report'])) {
     // 과거 캐시도 현재 원본 품목 통제 규칙으로 맞춰서 반환
     $cachedReportText = llm_report_trade_sanitize_report_json((string)$cachedReport['report'], $d, $rec, $isSell);
+    $cachedReportText = str_replace('의뢰사', '귀사', $cachedReportText);
     llm_report_write_daily_file_log($sourceKedcd, $targetKedcd, $tradeType, $analysisOnceKey, 'SKIP', array(
         'stage' => 'cache_hit',
         'provider' => (string)($cachedReport['provider'] ?? ''),
@@ -812,7 +813,7 @@ $userContent = <<<USR
 ## ※ 사용 가능한 데이터 (이 목록 외 정보는 존재하지 않습니다)
 
 ---
-## [의뢰사: {$srcNm}]
+## [귀사: {$srcNm}]
 
 | 항목 | 값 |
 |------|-----|
@@ -889,7 +890,7 @@ $userContent = <<<USR
 ## 2. 왜 우리 회사와 연결되는가
 
 ### 2-1. 거래 연결 배경
-(ML 연결 방식({$recType})이 말해주는 두 기업의 관계. 의뢰사 업종과 추천 기업 업종이 공급망에서 어떻게 만나는지 3~4문장으로 구체적으로 서술)
+(ML 연결 방식({$recType})이 말해주는 두 기업의 관계. 귀사 업종과 추천 기업 업종이 공급망에서 어떻게 만나는지 3~4문장으로 구체적으로 서술)
 
 ### 2-2. 공급망·공정 연결성
 (두 기업이 실제 공급망에서 어느 단계에 위치하는지, 어떤 공정·거래 흐름으로 연결 가능한지 구체적으로 서술.
@@ -897,7 +898,7 @@ $userContent = <<<USR
 
 ### 2-3. 거래 시나리오
 (이 거래가 실제로 성사되었을 때의 구체적인 거래 흐름 2~3가지를 서술.
-의뢰사가 얻는 실질적 이익과 추천 기업이 얻는 이익을 각각 명시)
+귀사가 얻는 실질적 이익과 추천 기업이 얻는 이익을 각각 명시)
 
 ---
 
@@ -1247,6 +1248,7 @@ $reportText = str_replace('__', '', $reportText);
 $reportText = preg_replace('/\s*\(추론\)/', '', $reportText);
 // 모델이 생성한 JSON에서 허용 품목과 핵심 거래 문장을 최종 보정한다.
 $reportText = llm_report_trade_sanitize_report_json($reportText, $d, $rec, $isSell);
+$reportText = str_replace('의뢰사', '귀사', $reportText);
 if (!$hasRecentUse) {
     $creditTx = llm_report_consume_credit_once($memberId, $sourceKedcd, $targetKedcd, $tradeType, $creditCost);
     if (empty($creditTx['success'])) {

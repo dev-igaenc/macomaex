@@ -427,11 +427,8 @@
                     }
                     if (foundTags.length) snapshot.tags = foundTags;
                     if (foundTags.length) {
-                        var genericFallbackTags = ['납품용역', 'B2B소재', '산업부품', '제조부품', '산업소재', 'AI추천', '정보 준비중'];
-                        snapshot.analysis_tags = foundTags.filter(function (tag) {
-                            return genericFallbackTags.indexOf(String(tag || '').trim()) === -1;
-                        });
-                        snapshot.tag_source = snapshot.analysis_tags.length ? 'actual' : 'generic_fallback';
+                        snapshot.analysis_tags = foundTags;
+                        snapshot.tag_source = String(found.tag_source || snapshot.tag_source || 'actual');
                     }
 
                     var foundTagTotalCount = Number(found.tag_total_count || found.keyword_count || 0);

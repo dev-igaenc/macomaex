@@ -19,22 +19,9 @@ if (!function_exists('llm_report_trade_exact_items')) {
 }
 
 if (!function_exists('llm_report_trade_allowed_items')) {
-    function llm_report_trade_is_generic_fallback_item($item) {
-        static $genericItems = array(
-            '납품용역',
-            'B2B소재',
-            '산업부품',
-            '제조부품',
-            '산업소재',
-            'AI추천',
-            '정보 준비중',
-        );
-        return in_array(trim((string)$item), $genericItems, true);
-    }
-
     function llm_report_trade_filter_analysis_items($items) {
         return array_values(array_filter(array_unique((array)$items), function ($item) {
-            return trim((string)$item) !== '' && !llm_report_trade_is_generic_fallback_item($item);
+            return trim((string)$item) !== '';
         }));
     }
 
@@ -68,7 +55,7 @@ if (!function_exists('llm_report_trade_selection_context')) {
         $keywordList = llm_report_trade_join_items($selectedKeywords, '');
         $recommendationBackground = $keywordList !== ''
             ? "사용자가 선택한 {$keywordList} 기준과 연결된 업종코드를 바탕으로 해당 기업이 추천되었습니다."
-            : "의뢰사와 추천 기업의 업종 및 거래 데이터를 바탕으로 해당 기업이 추천되었습니다.";
+            : "귀사와 추천 기업의 업종 및 거래 데이터를 바탕으로 해당 기업이 추천되었습니다.";
         if ($keywordList !== '') {
             $recommendationBackground .= " 선택 항목은 추천 대상을 찾기 위한 기준이며, 실제 거래 품목을 의미하지는 않습니다.";
         }
@@ -198,7 +185,7 @@ if (!function_exists('llm_report_trade_build_positioning')) {
         $recIndustry = trim((string)($rec['bzc_nm'] ?? $rec['bzc_cd'] ?? '해당 업종'));
         $recRegion = trim((string)($rec['sido'] ?? ''));
         $recScale = trim((string)($rec['sze'] ?? ''));
-        $sourceIndustry = trim((string)($sourceData['source_bzc_nm'] ?? $sourceData['source_bzc_cd'] ?? '의뢰사 업종'));
+        $sourceIndustry = trim((string)($sourceData['source_bzc_nm'] ?? $sourceData['source_bzc_cd'] ?? '귀사 업종'));
         $regionText = ($recRegion !== '' && $recRegion !== '-') ? ($recRegion . ' 거점을 바탕으로 ') : '';
         $scaleText = ($recScale !== '' && $recScale !== '-') ? ('규모는 ' . $recScale . ' 수준으로 파악되며, ') : '';
         return "해당 기업은 **{$recIndustry}** 성격의 기업으로 해석할 수 있습니다. {$regionText}{$tradeLabel} 검토 범위를 넓힐 수 있는 후보입니다. {$scaleText}{$sourceIndustry}과의 거래 접점을 품목 단위로 확인하는 접근이 적절합니다.";
@@ -226,16 +213,16 @@ if (!function_exists('llm_report_trade_build_detail')) {
 
 if (!function_exists('llm_report_trade_build_connection_background')) {
     function llm_report_trade_build_connection_background($sourceData, $rec, $buyItems, $sellItems, $connectionType, $tradeLabel, $selectionContext = array()) {
-        $sourceIndustry = trim((string)($sourceData['source_bzc_nm'] ?? $sourceData['source_bzc_cd'] ?? '의뢰사 업종'));
+        $sourceIndustry = trim((string)($sourceData['source_bzc_nm'] ?? $sourceData['source_bzc_cd'] ?? '귀사 업종'));
         $recIndustry = trim((string)($rec['bzc_nm'] ?? $rec['bzc_cd'] ?? '해당 업종'));
         $primary = llm_report_trade_primary_meta($buyItems, $sellItems, $tradeLabel);
         $connectionText = trim((string)$connectionType);
         if (empty($primary['items'])) {
-            $sentence = trim((string)($selectionContext['recommendation_background'] ?? "의뢰사는 {$sourceIndustry}, 해당 기업은 {$recIndustry} 업종 기반으로 추천되었습니다."));
+            $sentence = trim((string)($selectionContext['recommendation_background'] ?? "귀사는 {$sourceIndustry}, 해당 기업은 {$recIndustry} 업종 기반으로 추천되었습니다."));
             $sentence .= " " . trim((string)($selectionContext['item_evidence'] ?? '실제 거래 품목은 첫 접점에서 확인하는 것이 적절합니다.'));
             return trim($sentence);
         }
-        $sentence = "의뢰사는 {$sourceIndustry}, 해당 기업은 {$recIndustry} 업종 기반으로 해석할 수 있습니다. 원본 품목 기준으로 보면 {$primary['list']}를 중심으로 거래 접점을 좁혀볼 수 있습니다.";
+        $sentence = "귀사는 {$sourceIndustry}, 해당 기업은 {$recIndustry} 업종 기반으로 해석할 수 있습니다. 원본 품목 기준으로 보면 {$primary['list']}를 중심으로 거래 접점을 좁혀볼 수 있습니다.";
         if ($connectionText !== '') {
             $sentence .= " 연결 방식이 {$connectionText}로 제시된 만큼, 실제 검토도 위 원본 품목 범위 안에서 시작하는 것이 적절합니다.";
         } else {

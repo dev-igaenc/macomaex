@@ -369,7 +369,7 @@ function company_list_ai_ml_item_to_card($item)
         $tags[] = 'AI추천';
         $tag_source = 'generic_fallback';
     }
-    $analysis_tags = $tag_source === 'actual' ? $tags : array();
+    $analysis_tags = $tags;
     $tag_total_count = company_list_ai_resolve_tag_total_count($item['keyword_count'] ?? 0, $tags);
 
     return array(
