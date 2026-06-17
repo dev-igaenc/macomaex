@@ -311,11 +311,17 @@ add_javascript(G5_POSTCODE_JS, 0);    //다음 주소 js
 									$chk_txt2 = '';
 									$chk = in_array($value2[0], $mb_auth, true);
 									$chk2 = false;
-									foreach($mb_auth as $val){
-										if(substr((string)$val,0,3)==substr((string)$value[0][0],0,3)) {
+									foreach($value as $group_menu){
+										if (!isset($group_menu[0]) || $group_menu === $value[0]) {
+											continue;
+										}
+										if (in_array($group_menu[0], $mb_auth, true)) {
 											$chk2 = true;
 											break;
 										}
+									}
+									if (!$chk2 && $chk && $key2 === 0) {
+										$chk2 = true;
 									}
 									if($chk) $chk_txt="checked";
 
