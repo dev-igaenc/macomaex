@@ -264,9 +264,11 @@ if (!empty($_COOKIE['g5_admin_btn_gnb'])) {
 			$idx_v["결제"]="fa-credit-card";
 			$idx_v["배너관리"]="fa-picture-o";
 			$idx_v["공지사항"]="fa-exclamation-circle";
+			$idx_v["고객문의"]="fa-commenting-o";
 			$idx_v["기업홍보관"]="fa-building-o";
 			$idx_v["쿠폰관리"]="fa-tag";
 			$idx_v["알림톡 설정"]="fa-commenting-o";
+			$idx_v["개발/운영도구"]="fa-wrench";
 			//print_r($menu);
 			//print_r($amenu);
 			//print_r($auth_menu);
@@ -306,31 +308,7 @@ if (!empty($_COOKIE['g5_admin_btn_gnb'])) {
 	            <?php
 	                $jj++;
 	            }     //end foreach
-					$mail_log_can_view = ($is_admin == 'super' || isset($auth['500100']));
-					if ($mail_log_can_view) {
-						$mail_log_current_class = '';
-						if (isset($_SERVER['SCRIPT_NAME']) && basename((string)$_SERVER['SCRIPT_NAME']) === 'mail_log_list.php') {
-							$mail_log_current_class = ' current-page';
-						}
 	            ?>
-	                  <li class="<?=$mail_log_current_class?>"><a href="<?=G5_ADMIN_URL?>/mail_log_list.php"><i class="fa fa-envelope-o"></i> 메일 발송 이력</a></li>
-	            <?php
-					}
-					if ($is_admin == 'super') {
-						$audit_current_class = '';
-						if (isset($_SERVER['SCRIPT_NAME']) && basename((string)$_SERVER['SCRIPT_NAME']) === 'audit_log_list.php') {
-						$audit_current_class = ' current-page';
-					}
-					$error_current_class = '';
-					if (isset($_SERVER['SCRIPT_NAME']) && basename((string)$_SERVER['SCRIPT_NAME']) === 'system_error_list.php') {
-						$error_current_class = ' current-page';
-					}
-            ?>
-                  <li class="<?=$audit_current_class?>"><a href="<?=G5_ADMIN_URL?>/audit_log_list.php"><i class="fa fa-list-alt"></i> 감사로그</a></li>
-                  <li class="<?=$error_current_class?>"><a href="<?=G5_ADMIN_URL?>/system_error_list.php"><i class="fa fa-bug"></i> 시스템에러</a></li>
-            <?php
-				}
-            ?>
                 </ul>
               </div>
 

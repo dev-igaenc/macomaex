@@ -819,11 +819,14 @@ unset($amenu);
 //DB에서 메뉴 불러오기
 	$mb_auth=explode("|",$member['mb_auth']);
 	array_unshift($mb_auth, '' );
-    $sql = " select DISTINCT me_gr from g5_admin_menu order by me_code asc";
+    $sql = " select me_gr, MIN(me_order) as sort_order, MIN(me_code) as sort_code
+                from g5_admin_menu
+            group by me_gr
+            order by sort_order asc, sort_code asc ";
     $result = sql_query($sql);
     for ($i = 0; $row = sql_fetch_array($result); $i++) {
 		$amenu[str_replace("menu","",$row['me_gr'])]="";
-		$sql2 = " select * from g5_admin_menu where me_gr='{$row['me_gr']}' order by me_code asc";
+		$sql2 = " select * from g5_admin_menu where me_gr='{$row['me_gr']}' order by me_order asc, me_code asc";
 		$result2 = sql_query($sql2);
 		for ($i2 = 0; $row2 = sql_fetch_array($result2); $i2++) {
 			$tmp=array();
@@ -847,168 +850,6 @@ unset($amenu);
 			if($key2)  {  $menu[$row['me_gr']][]=$tmp; }
 		}
 	    }
-
-// 결제 메뉴명 표준화: 정기결제 관리 -> 결제 관리
-if (isset($menu) && is_array($menu)) {
-	foreach ($menu as $menu_key => $menu_rows) {
-		if (!is_array($menu_rows)) continue;
-		foreach ($menu_rows as $idx => $menu_row) {
-			if (!is_array($menu_row)) continue;
-			if (isset($menu_row[0]) && (string)$menu_row[0] === '700100') {
-				$menu[$menu_key][$idx][1] = '결제 관리';
-			}
-			// 결제 하위 700400(membership_list.php) 메뉴명 통일
-			if (isset($menu_row[0]) && (string)$menu_row[0] === '700400') {
-				$menu[$menu_key][$idx][1] = '플랜 관리';
-			}
-		}
-	}
-}
-
-// 결제 하위에 크레딧 모니터링 메뉴를 코드로 보강
-if (isset($menu) && is_array($menu)) {
-	foreach ($menu as $menu_key => $menu_rows) {
-		if (!isset($menu_rows[0][1]) || trim((string)$menu_rows[0][1]) !== '결제') {
-			continue;
-		}
-
-		$credit_menu_link = G5_ADMIN_URL . '/credit_monitor.list.php';
-		$already_exists = false;
-		foreach ($menu_rows as $menu_row) {
-			if (isset($menu_row[2]) && trim((string)$menu_row[2]) === $credit_menu_link) {
-				$already_exists = true;
-				break;
-			}
-		}
-
-		if (!$already_exists) {
-			$menu[$menu_key][] = array(
-				'700200',
-				'크레딧 모니터링',
-				$credit_menu_link,
-				'credit_monitor',
-				1
-			);
-		}
-		break;
-	}
-}
-
-// 회원 하위에 회사별 회원 메뉴 보강
-if (isset($menu) && is_array($menu)) {
-	foreach ($menu as $menu_key => $menu_rows) {
-		if (!isset($menu_rows[0][1]) || trim((string)$menu_rows[0][1]) !== '회원') {
-			continue;
-		}
-
-		$company_member_link = G5_ADMIN_URL . '/company_member_list.php';
-		$already_exists = false;
-		foreach ($menu_rows as $menu_row) {
-			if (isset($menu_row[2]) && trim((string)$menu_row[2]) === $company_member_link) {
-				$already_exists = true;
-				break;
-			}
-		}
-
-		if (!$already_exists) {
-			$menu[$menu_key][] = array(
-				'200120',
-				'회사별 회원',
-				$company_member_link,
-				'mb_list'
-			);
-		}
-		break;
-	}
-}
-
-// 결제 하위 순서 통일: 플랜 관리 -> 결제 관리 -> 크레딧 모니터링
-if (isset($menu) && is_array($menu)) {
-	foreach ($menu as $menu_key => $menu_rows) {
-		if (!isset($menu_rows[0][1]) || trim((string)$menu_rows[0][1]) !== '결제') {
-			continue;
-		}
-		if (!is_array($menu_rows) || count($menu_rows) < 2) {
-			break;
-		}
-
-		$head = $menu_rows[0];
-		$children = array_slice($menu_rows, 1);
-		$decorated = array();
-		foreach ($children as $child_idx => $child_row) {
-			$code = isset($child_row[0]) ? (string)$child_row[0] : '';
-			$priority = 1000;
-			if ($code === '700400') $priority = 10;
-			else if ($code === '700100') $priority = 20;
-			else if ($code === '700200') $priority = 30;
-
-			$decorated[] = array(
-				'priority' => $priority,
-				'idx' => $child_idx,
-				'row' => $child_row
-			);
-		}
-
-		usort($decorated, function($a, $b) {
-			if ($a['priority'] === $b['priority']) {
-				return $a['idx'] - $b['idx'];
-			}
-			return $a['priority'] - $b['priority'];
-		});
-
-		$sorted_rows = array($head);
-		foreach ($decorated as $d) {
-			$sorted_rows[] = $d['row'];
-		}
-		$menu[$menu_key] = $sorted_rows;
-		break;
-	}
-}
-
-// 회원 하위 순서 고정
-if (isset($menu) && is_array($menu)) {
-	foreach ($menu as $menu_key => $menu_rows) {
-		if (!isset($menu_rows[0][1]) || trim((string)$menu_rows[0][1]) !== '회원') {
-			continue;
-		}
-		if (!is_array($menu_rows) || count($menu_rows) < 2) {
-			break;
-		}
-
-		$head = $menu_rows[0];
-		$children = array_slice($menu_rows, 1);
-		$decorated = array();
-		foreach ($children as $child_idx => $child_row) {
-			$label = isset($child_row[1]) ? trim((string)$child_row[1]) : '';
-			$priority = 1000;
-			if ($label === '관리자관리') $priority = 10;
-			else if ($label === '회원관리') $priority = 20;
-			else if ($label === '회사별 회원') $priority = 30;
-			else if ($label === '셀렉티드관리') $priority = 40;
-
-			$decorated[] = array(
-				'priority' => $priority,
-				'idx' => $child_idx,
-				'row' => $child_row
-			);
-		}
-
-		usort($decorated, function($a, $b) {
-			if ($a['priority'] === $b['priority']) {
-				return $a['idx'] - $b['idx'];
-			}
-			return $a['priority'] - $b['priority'];
-		});
-
-		$sorted_rows = array($head);
-		foreach ($decorated as $d) {
-			$sorted_rows[] = $d['row'];
-		}
-		$menu[$menu_key] = $sorted_rows;
-		break;
-	}
-}
-
 
 if (isset($menu) && $menu) {
     $menu = run_replace('admin_menu', $menu);
