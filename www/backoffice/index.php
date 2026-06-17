@@ -437,42 +437,8 @@ $total = sql_fetch($sql);
           </div>
 	<?}?>
 
-          <div class="row">
-            <div class="col-md-12 col-sm-12 ">
-              <div class="btm_info">
-
-                <div class="row x_title">
-                  <div class="col-md-12">
-                    <h2>PRIX 고객센터 안내 <small>CUSTOMER CENTER</small></h2>
-                  </div>
-                </div>
-				
-				<div class="col-md-4 col-sm-4">
-						<dl class="tel">
-							<dt>문의전화</dt>
-							<dd><a href="tel:02-3478-0711"><strong>02-3478-0711</strong></a></dd>
-						</dl>
-				</div>
-				<div class="col-md-4 col-sm-4">
-						<dl class="time">
-							<dt>상담가능시간</dt>
-							<dd>평일 10:00 ~ 18:00 (점심 12:00 ~ 13:00)</dd>
-							<dd>주말 및 공휴일 휴무</dd>
-						</dl>
-				</div>
-				<div class="col-md-4 col-sm-4">
-						<div class="counsel pull-right">
-							<a href="mailto:info@prix.co.kr">유지보수 신청</a>
-						</div>
-                </div>
-
-                <div class="clearfix"></div>
-              </div>
-            </div>
-
-          </div>
-		</div>
-        <!-- /page content -->
+			</div>
+	        <!-- /page content -->
 
     <?php
 } //endif
