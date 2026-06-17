@@ -24,422 +24,469 @@ if ($addtional_content_before) {
 }
 
 if ($is_admin == 'super') {
-    $sql_common = " from {$g5['member_table']} ";
+    $member_sql_common = " from {$g5['member_table']} where (1) ";
 
-    $sql_search = " where (1) ";
+    $total_count = (int) sql_fetch(" select count(*) as cnt {$member_sql_common} ")['cnt'];
+    $leave_count = (int) sql_fetch(" select count(*) as cnt {$member_sql_common} and mb_leave_date <> '' ")['cnt'];
+    $intercept_count = (int) sql_fetch(" select count(*) as cnt {$member_sql_common} and mb_intercept_date <> '' ")['cnt'];
+    $member_live_count = (int) sql_fetch(" select count(*) as cnt {$member_sql_common} and mb_leave_date = '' and mb_intercept_date = '' and mb_level < 10 ")['cnt'];
+    $member_today_count = (int) sql_fetch(" select count(*) as cnt {$member_sql_common} and DATE(mb_datetime) = '" . G5_TIME_YMD . "' ")['cnt'];
 
-    if ($is_admin != 'super') {
-        $sql_search .= " and mb_level <= '{$member['mb_level']}' ";
+    $day_7ago = date("Y-m-d", strtotime("-6 day"));
+    $day_1mago = date("Y-m-d", strtotime("-30 day"));
+    $now_date = date("Y-m-d");
+
+    $visit_result = sql_query(" select * from g5_visit_sum where vs_date >= '{$day_7ago}' and vs_date <= '{$now_date}' order by vs_date asc ");
+    $chart_date = array();
+    $chart_value = array();
+    for ($i = 0; $row = sql_fetch_array($visit_result); $i++) {
+        $chart_date[] = $row['vs_date'];
+        $chart_value[] = (int) $row['vs_count'];
+    }
+    $chart_label_json = json_encode($chart_date);
+    $chart_value_json = json_encode($chart_value);
+
+    $today = sql_fetch(" select sum(vs_count) as total, avg(vs_count) as avg from g5_visit_sum where vs_date >= '{$now_date}' ");
+    $week = sql_fetch(" select sum(vs_count) as total, avg(vs_count) as avg from g5_visit_sum where vs_date >= '{$day_7ago}' and vs_date <= '{$now_date}' ");
+    $mon_ago = sql_fetch(" select sum(vs_count) as total, avg(vs_count) as avg from g5_visit_sum where vs_date >= '{$day_1mago}' and vs_date <= '{$now_date}' ");
+    $total = sql_fetch(" select sum(vs_count) as total, avg(vs_count) as avg from g5_visit_sum ");
+
+    $result1 = sql_query(" SELECT bo_table FROM {$g5['board_table']} ");
+    $board_count = sql_num_rows($result1);
+    $all_art = 0;
+    $today_art = 0;
+    $week_art = 0;
+    $month_art = 0;
+    for ($i = 0; $row2 = sql_fetch_array($result1); $i++) {
+        $article = sql_fetch(" select count(wr_id) as ctt from g5_write_{$row2['bo_table']} where wr_is_comment = '0' ");
+        $article2 = sql_fetch(" select count(wr_id) as ctt from g5_write_{$row2['bo_table']} where wr_is_comment = '0' and DATE(wr_datetime) = '{$now_date}' ");
+        $article3 = sql_fetch(" select count(wr_id) as ctt from g5_write_{$row2['bo_table']} where wr_is_comment = '0' and DATE(wr_datetime) >= '{$day_7ago}' and DATE(wr_datetime) <= '{$now_date}' ");
+        $article4 = sql_fetch(" select count(wr_id) as ctt from g5_write_{$row2['bo_table']} where wr_is_comment = '0' and DATE(wr_datetime) >= '{$day_1mago}' and DATE(wr_datetime) <= '{$now_date}' ");
+
+        $all_art += (int) $article['ctt'];
+        $today_art += (int) $article2['ctt'];
+        $week_art += (int) $article3['ctt'];
+        $month_art += (int) $article4['ctt'];
+    }
+    $allavg_art = $board_count ? ($all_art / $board_count) : 0;
+    $weekavg_art = $week_art / 7;
+    $monthavg_art = $month_art / 30;
+
+    $contact_table = $g5['write_prefix'] . 'Contact';
+    $contact_table_exists = false;
+    $contact_check = sql_query(" show tables like '{$contact_table}' ", false);
+    if ($contact_check && sql_num_rows($contact_check)) {
+        $contact_table_exists = true;
     }
 
-    if (!$sst) {
-        $sst = "mb_datetime";
-        $sod = "desc";
+    $contact_total_count = 0;
+    $contact_today_count = 0;
+    $contact_pending_count = 0;
+    $recent_contacts = false;
+    if ($contact_table_exists) {
+        $contact_total_count = (int) sql_fetch(" select count(*) as cnt from {$contact_table} where wr_is_comment = '0' ")['cnt'];
+        $contact_today_count = (int) sql_fetch(" select count(*) as cnt from {$contact_table} where wr_is_comment = '0' and DATE(wr_datetime) = '{$now_date}' ")['cnt'];
+        $contact_pending_count = (int) sql_fetch(" select count(*) as cnt
+            from {$contact_table} a
+            where a.wr_is_comment = '0'
+              and not exists (
+                  select 1
+                  from {$contact_table} c
+                  where c.wr_parent = a.wr_id
+                    and c.wr_is_comment = '1'
+              ) ")['cnt'];
+        $recent_contacts = sql_query(" select a.wr_id, a.wr_subject, a.wr_name, a.wr_datetime,
+            (
+                select count(*)
+                from {$contact_table} c
+                where c.wr_parent = a.wr_id
+                  and c.wr_is_comment = '1'
+            ) as comment_cnt
+            from {$contact_table} a
+            where a.wr_is_comment = '0'
+            order by a.wr_id desc
+            limit 4 ");
     }
 
-    $sql_order = " order by {$sst} {$sod} ";
-
-    $sql = " SELECT count(*) as cnt {$sql_common} {$sql_search} {$sql_order} ";
-    $row = sql_fetch($sql);
-    $total_count = $row['cnt'];
-
-    // 탈퇴회원수
-    $sql = " select count(*) as cnt {$sql_common} {$sql_search} and mb_leave_date <> '' {$sql_order} ";
-    $row = sql_fetch($sql);
-    $leave_count = $row['cnt'];
-
-    // 차단회원수
-    $sql = " SELECT count(*) as cnt {$sql_common} {$sql_search} and mb_intercept_date <> '' {$sql_order} ";
-    $row = sql_fetch($sql);
-    $intercept_count = $row['cnt'];
-
-    $sql = " SELECT * {$sql_common} {$sql_search} {$sql_order} limit {$new_member_rows} ";
-    $result = sql_query($sql);
-
-    $colspan = 12;
-    ?>
-
-          <!-- page content -->
-<?
-
-//print_r($menu);
-		foreach($menu as $key => $value) {
-			//print_r($value);
-			//echo count($value)."<br>";
-			foreach($value as $key2 => $value2) {
-				//$sql="Insert into g5_admin_menu SET me_gr='$key', me_code='$value2[0]', me_name='$value2[1]', me_link='$value2[2]', me_diff='$value2[3]', me_css='$value2[4]'";
-				//$result = sql_query($sql);
-				//echo $sql."<br>";
-			}
-		}
-?>
-<style>
-.btm_info{
-    background-color: #00b0bf;
-    color: #fff;
-    padding: 30px;
-    margin-top: 30px;
-    border-radius: 20px;
-    position: relative;
-}
-.btm_info dl dt {
-	font-size: 17px;
-	margin-bottom:20px;
-}
-.btm_info dl dd {
-   margin:0px;
-}
-.btm_info .tel dd a {
-    color: #fff;
-    font-size: 30px;
-    line-height: 1;
-}
-.btm_info .time dd {
-    font-size: 15px;
-    line-height: 1.5;
-	margin:0px;
-}
-.btm_info .counsel a {
-    width: 200px;
-    height: 100px;
-    background-color: #0a828d;
-    font-weight: bold;
-    font-size: 16px;
-    color: #fff !important;
-    text-align: center;
-    border-radius: 10px;
-    display: flex;
-    flex-flow: column wrap;
-    justify-content: center;
-    text-shadow: 3px 3px 3px rgba(255,255,255,0.3);
-    box-shadow: 3px 3px 0 rgba(255,255,255,0.3);
-    transition: all .3s ease-out;
-}
-</style>
-
-
-          <div class="row">
-
-<?
-//일주일 접속통계구하기
-$day_7ago = date("Y-m-d", strtotime("-6 Day"));
-$day_1mago = date("Y-m-d", strtotime("-30 Day"));
-$now_date = date("Y-m-d");
-
-$sql="select * from g5_visit_sum where vs_date >=  '".$day_7ago."' and vs_date <= '".$now_date."' order by vs_date desc";
-$result = sql_query($sql);
-$chart_date = array();
-$chart_value = array();
-for ($i=0; $row=sql_fetch_array($result); $i++) {
-		$chart_date[]=$row['vs_date'];
-		$chart_value[]=$row['vs_count'];
-}
-$c_date="'".str_replace(",","','",implode(",",$chart_date))."'";
-$c_value=implode(",",$chart_value);
-
-?>
-            <div class="col-md-6 col-sm-6 ">
-              <div class="x_panel tile fixed_height_500">
-                <div class="x_title">
-                  <h2>최근 일주일 방문 건수</h2>
-                  <ul class="nav navbar-right panel_toolbox">
-                    <li><a class="collapse-link"><i class="fa fa-chevron-up"></i></a>
-                    </li>
-                    <li><a class="close-link"><i class="fa fa-close"></i></a>
-                    </li>
-                  </ul>
-                  <div class="clearfix"></div>
-                </div>
-				<div class="x_content">
-                  <h4>( <?=$day_7ago?> ~ <?=$now_date?>)</h4>
-					<canvas id="7Chart" style="height:374px; width:100%;"></canvas>
-				</div>
-              </div>
-            </div>
-
-<script>
-$(function(){
-	var ctx = document.getElementById("7Chart");
-	var mybarChart = new Chart(ctx, {
-		type: 'bar',
-		data: {
-			labels: [<?=$c_date?>],
-			datasets: [{
-				label: '방문수',
-				backgroundColor: "#26B99A",
-				data: [<?=$c_value?>]
-			}]
-		},
-		options: {
-			responsive: false,
-			scales: {
-				yAxes: [{
-					ticks: {
-						beginAtZero: true
-					}
-				}]
-			}
-		}
-	});
-});
-</script>
-
-<?
-//일주일 접속통계구하기
-$sql="select sum(vs_count)  as total, avg(vs_count) as avg from g5_visit_sum where vs_date >= '".$now_date."'";
-$today = sql_fetch($sql);
-
-$sql="select sum(vs_count)  as total, avg(vs_count) as avg from g5_visit_sum where vs_date >=  '".$day_7ago."' and vs_date <= '".$now_date."'";
-$week = sql_fetch($sql);
-
-$sql="select sum(vs_count)  as total, avg(vs_count) as avg from g5_visit_sum where vs_date >=  '".$day_1mago."' and vs_date <= '".$now_date."'";
-$mon_ago = sql_fetch($sql);
-
-$sql="select sum(vs_count)  as total, avg(vs_count) as avg from g5_visit_sum";
-$total = sql_fetch($sql);
-
-
-
-//전체 게시물수 뽑기
- $sql = "SELECT * FROM {$g5['board_table']}";
- $result1 = sql_query($sql);
- $all_com = 0;
- $all_art= 0;
- $today_art = 0;
- $week_art=0;
- $month_art = 0;
- $allavg_art = 0;
- $weekavg_art = 0;
- $monthavg_art = 0;
-		 $t_cnt =  mysqli_num_rows($result1);
-	     for ($i=0; $row2=sql_fetch_array($result1); $i++) {
-		//전체 게시물
-		$gul_su="select count(wr_id) as ctt, avg(wr_id) as avg from g5_write_{$row2['bo_table']} where wr_is_comment='0' ";
-		$article = sql_fetch($gul_su);
-		$article_su=$article['ctt'];
-		$all_art= $all_art +$article_su;
-		if($t_cnt > 0) $allavg_art= $all_art / $t_cnt;
-
-		//오늘
-		$gul_su="select count(wr_id) as ctt, avg(wr_id) as avg from g5_write_{$row2['bo_table']} where wr_is_comment='0' and DATE(wr_datetime) = '".$now_date."'";
-		$article2 = sql_fetch($gul_su);
-		$article_su=$article2['ctt'];
-		$today_art= $today_art +$article_su;
-
-		//최근 7일
-		$gul_su="select count(wr_id) as ctt, avg(wr_id) as avg from g5_write_{$row2['bo_table']} where wr_is_comment='0' and DATE(wr_datetime) >=  '".$day_7ago."' and DATE(wr_datetime) <= '".$now_date."'";
-		$article3 = sql_fetch($gul_su);
-		$article_su =$article3['ctt'];
-		$week_art= $week_art +$article_su;
-		$weekavg_art= $week_art/7;
-
-		//최근 30일
-		$gul_su="select count(wr_id) as ctt, avg(wr_id) as avg from g5_write_{$row2['bo_table']} where wr_is_comment='0' and DATE(wr_datetime) >=  '".$day_1mago."' and DATE(wr_datetime) <= '".$now_date."'";
-		$article4 = sql_fetch($gul_su);
-		$article_su =$article4['ctt'];
-		$month_art= $month_art +$article_su;
-		$monthavg_art= $month_art/30;
-	 	}
-
-
-
-?>
-  <div class="col-md-6 col-sm-6 ">
-                <div class="x_panel fixed_height_500" >
-                  <div class="x_title">
-                    <h2>기간별 현황</h2>
-                    <ul class="nav navbar-right panel_toolbox">
-                      <li><a class="collapse-link"><i class="fa fa-chevron-up"></i></a>
-                      </li>
-                      <li><a class="close-link"><i class="fa fa-close"></i></a>
-                      </li>
-                    </ul>
-                    <div class="clearfix"></div>
-                  </div>
-
-                  <div class="x_content">
-					<h4></h4>
-                    <div class="table-responsive">
-                      <table class="table table-striped jambo_table bulk_action">
-                        <thead>
-                          <tr class="headings">
-                            <th class="column-title">날짜 </th>
-                            <th class="column-title">방문수 </th>
-                            <th class="column-title">게시물 등록수 </th>
-                            </th>
-                          </tr>
-                        </thead>
-
-                        <tbody>
-                          <tr class="even pointer">
-                            <td class=" "><?=str_replace("-",".",substr($now_date,5))?> (오늘)</td>
-                            <td class=" "><?=number_format($today['total'])?> 건</td>
-                            <td class=" "><?=number_format($today_art)?> 건</td>
-                            </td>
-                          </tr>
-                          <tr class="odd pointer">
-                            <td class=" ">최근 7일 합계</td>
-                            <td class=" "><?=number_format($week['total'])?> 건</td>
-                            <td class=" "><?=number_format($week_art)?> 건</td>
-                            </td>
-                          </tr>
-                          <tr class="even pointer">
-                            <td class=" ">최근 7일 평균</td>
-                            <td class=" "><?=number_format($week['avg'])?> 건</td>
-                            <td class=" "><?=number_format($weekavg_art)?>  건</td>
-                            </td>
-                          </tr>
-                          <tr class="odd pointer">
-                            <td class=" ">최근 30일 합계</td>
-                            <td class=" "><?=number_format($mon_ago['total'])?> 건</td>
-                            <td class=" "><?=number_format($month_art)?> 건</td>
-                            </td>
-                          </tr>
-                          <tr class="even pointer">
-                            <td class=" ">최근30일 평균</td>
-                            <td class=" "><?=number_format($mon_ago['avg'])?> 건</td>
-                            <td class=" "><?=number_format($monthavg_art)?> 건</td>
-                            </td>
-                          </tr>
-                          <tr class="odd pointer">
-                            <td class=" ">전체</td>
-                            <td class=" "><?=number_format($total['total'])?> 건</td>
-                            <td class=" "><?=number_format($all_art)?> 건</td>
-                            </td>
-                          </tr>
-                          <tr class="even pointer">
-                            <td class=" ">전체 평균</td>
-                            <td class=" "><?=number_format($total['avg'])?> 건</td>
-                            <td class=" "><?=number_format($allavg_art)?> 건</td>
-                            </td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    </div>
-							
-						
-                  </div>
-                </div>
-              </div>
-          </div>
-<?
-	if (!auth_check_menu($auth, '300100', 'r', true)) {
-
-    $sql_common = " from {$g5['board_new_table']} a, {$g5['board_table']} b, {$g5['group_table']} c where a.bo_table = b.bo_table and b.gr_id = c.gr_id ";
-
-    if ($gr_id) {
-        $sql_common .= " and b.gr_id = '{$gr_id}' ";
+    $payment_table_exists = false;
+    $payment_check = sql_query(" show tables like 'g5_membership_payment' ", false);
+    if ($payment_check && sql_num_rows($payment_check)) {
+        $payment_table_exists = true;
     }
-    if (isset($view) && $view) {
-        if ($view == 'w') {
-            $sql_common .= " and a.wr_id = a.wr_parent ";
-        } elseif ($view == 'c') {
-            $sql_common .= " and a.wr_id <> a.wr_parent ";
+
+    $payment_complete_count = 0;
+    $payment_today_count = 0;
+    $payment_today_amount = 0;
+    $recent_payments = false;
+    if ($payment_table_exists) {
+        $payment_summary = sql_fetch(" select
+                sum(case when complete_yn = 'Y' then 1 else 0 end) as complete_cnt,
+                sum(case when complete_yn = 'Y' and DATE(IFNULL(complete_date, regdate)) = '{$now_date}' then 1 else 0 end) as today_cnt,
+                sum(case when complete_yn = 'Y' and DATE(IFNULL(complete_date, regdate)) = '{$now_date}' then cast(replace(ifnull(price, '0'), ',', '') as unsigned) else 0 end) as today_amount
+            from g5_membership_payment ");
+        $payment_complete_count = (int) $payment_summary['complete_cnt'];
+        $payment_today_count = (int) $payment_summary['today_cnt'];
+        $payment_today_amount = (int) $payment_summary['today_amount'];
+        $recent_payments = sql_query(" select *,
+                (select title from g5_membership_manage where no = membership_parent_no) as title
+            from g5_membership_payment
+            order by no desc
+            limit 4 ");
+    }
+
+    $error_table = function_exists('system_error_log_table_name') ? system_error_log_table_name() : (G5_TABLE_PREFIX . 'system_error_log');
+    $error_table_exists = function_exists('system_error_log_table_exists') ? system_error_log_table_exists() : false;
+    if (!$error_table_exists) {
+        $error_check = sql_query(" show tables like '{$error_table}' ", false);
+        if ($error_check && sql_num_rows($error_check)) {
+            $error_table_exists = true;
         }
     }
-    $sql_order = " order by a.bn_id desc ";
 
-    $sql = " SELECT count(*) as cnt {$sql_common} ";
-    $row = sql_fetch($sql);
-    $total_count = $row['cnt'];
+    $error_total_week_count = 0;
+    $error_pending_count = 0;
+    if ($error_table_exists) {
+        $error_summary = sql_fetch(" select
+                count(*) as total_cnt,
+                sum(case when ifnull(el_resolved, 0) = 0 then 1 else 0 end) as unresolved_cnt,
+                sum(case when el_datetime >= '{$day_7ago} 00:00:00' then 1 else 0 end) as week_cnt
+            from {$error_table} ");
+        $error_total_week_count = (int) $error_summary['week_cnt'];
+        $error_pending_count = (int) $error_summary['unresolved_cnt'];
+    }
+    ?>
 
-    $colspan = 5;
+    <style>
+    .admin-summary-row {
+        margin: 0 -10px 18px;
+    }
+    .admin-summary-col {
+        padding: 0 10px;
+    }
+    .admin-summary-card {
+        border: 1px solid #e3e7ec;
+        border-radius: 12px;
+        background: #fff;
+        padding: 18px 20px;
+        min-height: 126px;
+    }
+    .admin-summary-card h3 {
+        margin: 0 0 10px;
+        font-size: 13px;
+        font-weight: 700;
+        color: #667482;
+    }
+    .admin-summary-card strong {
+        display: block;
+        font-size: 28px;
+        line-height: 1.1;
+        color: #2a3f54;
+    }
+    .admin-summary-card p {
+        margin: 10px 0 0;
+        font-size: 12px;
+        color: #7b8894;
+        line-height: 1.6;
+    }
+    .admin-summary-card.is-accent {
+        border-top: 3px solid #26b99a;
+    }
+    .admin-mini-table th,
+    .admin-mini-table td {
+        padding-top: 10px !important;
+        padding-bottom: 10px !important;
+        vertical-align: middle !important;
+    }
+    .admin-mini-table .td_status,
+    .admin-mini-table .td_datetime,
+    .admin-mini-table .td_num {
+        white-space: nowrap;
+    }
+    .admin-mini-badge {
+        display: inline-block;
+        min-width: 44px;
+        padding: 4px 8px;
+        border-radius: 4px;
+        color: #fff;
+        font-size: 11px;
+        font-weight: 700;
+        line-height: 1.2;
+        text-align: center;
+        white-space: nowrap;
+    }
+    .admin-mini-badge.is-wait {
+        background: #f0ad4e;
+    }
+    .admin-mini-badge.is-done {
+        background: #26b99a;
+    }
+    .admin-mini-badge.is-idle {
+        background: #9aa7b4;
+    }
+    @media (max-width: 1199px) {
+        .admin-summary-col { margin-bottom: 16px; }
+    }
+    @media (max-width: 767px) {
+        .admin-summary-card { min-height: 0; }
+    }
+    </style>
 
- ?>
-
-
-          <div class="row">
-            <div class="col-md-12 col-sm-12 ">
-	  
-			  <div class="x_panel tile">
-                <div class="x_title">
-					<div class="col-md-6">
-						<h2>최근게시물</h2>
-					</div>
-                  <div class="col-md-6">
-					 <a href="./bbs/board.php" class="pull-right buttonPrevious btn btn-primary">게시물 관리</a>
-                  </div>
-					<div class="tbl_head01 tbl_wrap">
-						<table>
-							<caption>최근게시물</caption>
-							<thead>
-								<tr>
-									<th scope="col">그룹</th>
-									<th scope="col">게시판</th>
-									<th scope="col">제목</th>
-									<th scope="col">이름</th>
-									<th scope="col">일시</th>
-								</tr>
-							</thead>
-							<tbody>
-								<?php
-								$sql = " SELECT a.*, b.bo_subject, c.gr_subject, c.gr_id {$sql_common} {$sql_order} limit {$new_write_rows} ";
-								$result = sql_query($sql);
-								for ($i = 0; $row = sql_fetch_array($result); $i++) {
-									$tmp_write_table = $g5['write_prefix'] . $row['bo_table'];
-
-									if ($row['wr_id'] == $row['wr_parent']) {
-										// 원글
-										$comment = "";
-										$comment_link = "";
-										$row2 = sql_fetch(" SELECT * from {$tmp_write_table} where wr_id = '{$row['wr_id']}' ");
-
-										$name = get_sideview($row2['mb_id'], get_text(cut_str($row2['wr_name'], $config['cf_cut_name'])), $row2['wr_email'], $row2['wr_homepage']);
-										// 당일인 경우 시간으로 표시함
-										$datetime = substr($row2['wr_datetime'], 0, 10);
-										$datetime2 = $row2['wr_datetime'];
-										if ($datetime == G5_TIME_YMD) {
-											$datetime2 = substr($datetime2, 11, 5);
-										} else {
-											$datetime2 = substr($datetime2, 5, 5);
-										}
-									} else {
-										// 코멘트
-										$comment = '댓글. ';
-										$comment_link = '#c_' . $row['wr_id'];
-										$row2 = sql_fetch(" SELECT * from {$tmp_write_table} where wr_id = '{$row['wr_parent']}' ");
-										$row3 = sql_fetch(" SELECT mb_id, wr_name, wr_email, wr_homepage, wr_datetime from {$tmp_write_table} where wr_id = '{$row['wr_id']}' ");
-
-										$name = get_sideview($row3['mb_id'], get_text(cut_str($row3['wr_name'], $config['cf_cut_name'])), $row3['wr_email'], $row3['wr_homepage']);
-										// 당일인 경우 시간으로 표시함
-										$datetime = substr($row3['wr_datetime'], 0, 10);
-										$datetime2 = $row3['wr_datetime'];
-										if ($datetime == G5_TIME_YMD) {
-											$datetime2 = substr($datetime2, 11, 5);
-										} else {
-											$datetime2 = substr($datetime2, 5, 5);
-										}
-									}
-									?>
-
-									<tr>
-										<td class="td_category"><?php echo cut_str($row['gr_subject'], 10) ?></td>
-										<td class="td_category"><a href="./bbs/<?php echo get_pretty_url($row['bo_table']) ?>"><?php echo cut_str($row['bo_subject'], 20) ?></a></td>
-										<td><a href="./bbs/<?php echo get_pretty_url($row['bo_table'], $row2['wr_id']); ?><?php echo $comment_link ?>"><?php echo $comment ?><?php echo conv_subject($row2['wr_subject'], 100) ?></a></td>
-										<td class="td_mbname">
-											<div><?php echo $name ?></div>
-										</td>
-										<td class="td_datetime"><?php echo $datetime ?></td>
-									</tr>
-
-									<?php
-								}
-								if ($i == 0) {
-									echo '<tr><td colspan="' . $colspan . '" class="empty_table">자료가 없습니다.</td></tr>';
-								}
-								?>
-							</tbody>
-						</table>
-					 </div>
-                </div>
-              </div>
+    <div class="row admin-summary-row">
+        <div class="col-md-3 col-sm-6 col-xs-12 admin-summary-col">
+            <div class="admin-summary-card is-accent">
+                <h3>회원 현황</h3>
+                <strong><?php echo number_format($member_live_count); ?></strong>
+                <p>전체 <?php echo number_format($total_count); ?>명 · 오늘 가입 <?php echo number_format($member_today_count); ?>명 · 차단 <?php echo number_format($intercept_count); ?>명</p>
             </div>
-          </div>
-	<?}?>
+        </div>
+        <div class="col-md-3 col-sm-6 col-xs-12 admin-summary-col">
+            <div class="admin-summary-card">
+                <h3>방문 현황</h3>
+                <strong><?php echo number_format((int) $today['total']); ?></strong>
+                <p>최근 7일 평균 <?php echo number_format((float) $week['avg'], 1); ?>건 · 전체 누적 <?php echo number_format((int) $total['total']); ?>건</p>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6 col-xs-12 admin-summary-col">
+            <div class="admin-summary-card">
+                <h3>고객 문의</h3>
+                <strong><?php echo number_format($contact_total_count); ?></strong>
+                <p>미답변 <?php echo number_format($contact_pending_count); ?>건 · 오늘 등록 <?php echo number_format($contact_today_count); ?>건</p>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6 col-xs-12 admin-summary-col">
+            <div class="admin-summary-card">
+                <h3>결제 / 오류</h3>
+                <strong><?php echo number_format($payment_today_count); ?></strong>
+                <p>오늘 결제 <?php echo number_format($payment_today_amount); ?>원 · 미해결 에러 <?php echo number_format($error_pending_count); ?>건</p>
+            </div>
+        </div>
+    </div>
 
-			</div>
-	        <!-- /page content -->
+    <div class="row">
+        <div class="col-md-6 col-sm-6 ">
+            <div class="x_panel tile fixed_height_500">
+                <div class="x_title">
+                    <h2>최근 일주일 방문 건수</h2>
+                    <ul class="nav navbar-right panel_toolbox">
+                        <li><a class="collapse-link"><i class="fa fa-chevron-up"></i></a></li>
+                        <li><a class="close-link"><i class="fa fa-close"></i></a></li>
+                    </ul>
+                    <div class="clearfix"></div>
+                </div>
+                <div class="x_content">
+                    <h4>( <?php echo $day_7ago; ?> ~ <?php echo $now_date; ?> )</h4>
+                    <canvas id="dashboardVisitChart" style="height:374px; width:100%;"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 col-sm-6 ">
+            <div class="x_panel fixed_height_500">
+                <div class="x_title">
+                    <h2>기간별 현황</h2>
+                    <ul class="nav navbar-right panel_toolbox">
+                        <li><a class="collapse-link"><i class="fa fa-chevron-up"></i></a></li>
+                        <li><a class="close-link"><i class="fa fa-close"></i></a></li>
+                    </ul>
+                    <div class="clearfix"></div>
+                </div>
+                <div class="x_content">
+                    <div class="table-responsive">
+                        <table class="table table-striped jambo_table bulk_action">
+                            <thead>
+                            <tr class="headings">
+                                <th class="column-title">날짜</th>
+                                <th class="column-title">방문수</th>
+                                <th class="column-title">게시물 등록수</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr class="even pointer">
+                                <td><?php echo str_replace("-", ".", substr($now_date, 5)); ?> (오늘)</td>
+                                <td><?php echo number_format((int) $today['total']); ?> 건</td>
+                                <td><?php echo number_format($today_art); ?> 건</td>
+                            </tr>
+                            <tr class="odd pointer">
+                                <td>최근 7일 합계</td>
+                                <td><?php echo number_format((int) $week['total']); ?> 건</td>
+                                <td><?php echo number_format($week_art); ?> 건</td>
+                            </tr>
+                            <tr class="even pointer">
+                                <td>최근 7일 평균</td>
+                                <td><?php echo number_format((float) $week['avg'], 1); ?> 건</td>
+                                <td><?php echo number_format($weekavg_art, 1); ?> 건</td>
+                            </tr>
+                            <tr class="odd pointer">
+                                <td>최근 30일 합계</td>
+                                <td><?php echo number_format((int) $mon_ago['total']); ?> 건</td>
+                                <td><?php echo number_format($month_art); ?> 건</td>
+                            </tr>
+                            <tr class="even pointer">
+                                <td>최근 30일 평균</td>
+                                <td><?php echo number_format((float) $mon_ago['avg'], 1); ?> 건</td>
+                                <td><?php echo number_format($monthavg_art, 1); ?> 건</td>
+                            </tr>
+                            <tr class="odd pointer">
+                                <td>전체</td>
+                                <td><?php echo number_format((int) $total['total']); ?> 건</td>
+                                <td><?php echo number_format($all_art); ?> 건</td>
+                            </tr>
+                            <tr class="even pointer">
+                                <td>전체 평균</td>
+                                <td><?php echo number_format((float) $total['avg'], 1); ?> 건</td>
+                                <td><?php echo number_format($allavg_art, 1); ?> 건</td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
+    <div class="row">
+        <div class="col-md-6 col-sm-12">
+            <div class="x_panel tile">
+                <div class="x_title">
+                    <div class="col-md-6">
+                        <h2>최근 고객 문의</h2>
+                    </div>
+                    <div class="col-md-6">
+                        <a href="./bbs/board.php?bo_table=Contact" class="pull-right buttonPrevious btn btn-primary">문의 관리</a>
+                    </div>
+                    <div class="clearfix"></div>
+                </div>
+                <div class="x_content">
+                    <div class="tbl_head01 tbl_wrap">
+                        <table class="admin-mini-table">
+                            <caption>최근 고객 문의</caption>
+                            <thead>
+                            <tr>
+                                <th scope="col">제목</th>
+                                <th scope="col">작성자</th>
+                                <th scope="col">답변</th>
+                                <th scope="col">일시</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <?php if ($contact_table_exists) { ?>
+                                <?php for ($i = 0; $row = sql_fetch_array($recent_contacts); $i++) { ?>
+                                    <tr>
+                                        <td>
+                                            <a href="./bbs/board.php?bo_table=Contact&amp;wr_id=<?php echo (int) $row['wr_id']; ?>">
+                                                <?php echo htmlspecialchars2(cut_str($row['wr_subject'], 60)); ?>
+                                            </a>
+                                        </td>
+                                        <td class="td_name"><?php echo htmlspecialchars2($row['wr_name']); ?></td>
+                                        <td class="td_status">
+                                            <?php if ((int) $row['comment_cnt'] > 0) { ?>
+                                                <span class="admin-mini-badge is-done">완료</span>
+                                            <?php } else { ?>
+                                                <span class="admin-mini-badge is-wait">대기</span>
+                                            <?php } ?>
+                                        </td>
+                                        <td class="td_datetime"><?php echo substr($row['wr_datetime'], 0, 10); ?></td>
+                                    </tr>
+                                <?php } ?>
+                                <?php if ($i == 0) { ?>
+                                    <tr><td colspan="4" class="empty_table">문의가 없습니다.</td></tr>
+                                <?php } ?>
+                            <?php } else { ?>
+                                <tr><td colspan="4" class="empty_table">문의 게시판을 찾을 수 없습니다.</td></tr>
+                            <?php } ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 col-sm-12">
+            <div class="x_panel tile">
+                <div class="x_title">
+                    <div class="col-md-6">
+                        <h2>최근 결제</h2>
+                    </div>
+                    <div class="col-md-6">
+                        <a href="./payment.list.php" class="pull-right buttonPrevious btn btn-primary">결제 관리</a>
+                    </div>
+                    <div class="clearfix"></div>
+                </div>
+                <div class="x_content">
+                    <div class="tbl_head01 tbl_wrap">
+                        <table class="admin-mini-table">
+                            <caption>최근 결제</caption>
+                            <thead>
+                            <tr>
+                                <th scope="col">아이디</th>
+                                <th scope="col">상품</th>
+                                <th scope="col">금액</th>
+                                <th scope="col">상태</th>
+                                <th scope="col">일시</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <?php if ($payment_table_exists) { ?>
+                                <?php for ($i = 0; $row = sql_fetch_array($recent_payments); $i++) { ?>
+                                    <tr>
+                                        <td class="td_name">
+                                            <a href="./payment.view.php?no=<?php echo (int) $row['no']; ?>">
+                                                <?php echo htmlspecialchars2($row['uid'] ? $row['uid'] : $row['buyer_name']); ?>
+                                            </a>
+                                        </td>
+                                        <td><?php echo htmlspecialchars2(cut_str($row['title'], 28)); ?></td>
+                                        <td class="td_num"><?php echo number_format((int) str_replace(',', '', (string) $row['price'])); ?>원</td>
+                                        <td class="td_status">
+                                            <?php if ($row['complete_yn'] === 'Y') { ?>
+                                                <span class="admin-mini-badge is-done">승인</span>
+                                            <?php } else { ?>
+                                                <span class="admin-mini-badge is-idle">대기</span>
+                                            <?php } ?>
+                                        </td>
+                                        <td class="td_datetime"><?php echo substr($row['regdate'], 0, 10); ?></td>
+                                    </tr>
+                                <?php } ?>
+                                <?php if ($i == 0) { ?>
+                                    <tr><td colspan="5" class="empty_table">결제 내역이 없습니다.</td></tr>
+                                <?php } ?>
+                            <?php } else { ?>
+                                <tr><td colspan="5" class="empty_table">결제 테이블을 찾을 수 없습니다.</td></tr>
+                            <?php } ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+    $(function () {
+        var ctx = document.getElementById("dashboardVisitChart");
+        if (!ctx) {
+            return;
+        }
+
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: <?php echo $chart_label_json ? $chart_label_json : '[]'; ?>,
+                datasets: [{
+                    label: '방문수',
+                    data: <?php echo $chart_value_json ? $chart_value_json : '[]'; ?>,
+                    backgroundColor: '#26B99A'
+                }]
+            },
+            options: {
+                responsive: false,
+                scales: {
+                    yAxes: [{
+                        ticks: {
+                            beginAtZero: true
+                        }
+                    }]
+                }
+            }
+        });
+    });
+    </script>
     <?php
 } //endif
 
