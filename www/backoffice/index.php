@@ -14,10 +14,6 @@ if (function_exists('social_log_file_delete')) {
 $g5['title'] = '관리자메인';
 require_once './admin.head.php';
 
-$new_member_rows = 5;
-$new_point_rows = 5;
-$new_write_rows = 5;
-
 $addtional_content_before = run_replace('adm_index_addtional_content_before', '', $is_admin, $auth, $member);
 if ($addtional_content_before) {
     echo $addtional_content_before;
@@ -114,17 +110,14 @@ if ($is_admin == 'super') {
         $payment_table_exists = true;
     }
 
-    $payment_complete_count = 0;
     $payment_today_count = 0;
     $payment_today_amount = 0;
     $recent_payments = false;
     if ($payment_table_exists) {
         $payment_summary = sql_fetch(" select
-                sum(case when complete_yn = 'Y' then 1 else 0 end) as complete_cnt,
                 sum(case when complete_yn = 'Y' and DATE(IFNULL(complete_date, regdate)) = '{$now_date}' then 1 else 0 end) as today_cnt,
                 sum(case when complete_yn = 'Y' and DATE(IFNULL(complete_date, regdate)) = '{$now_date}' then cast(replace(ifnull(price, '0'), ',', '') as unsigned) else 0 end) as today_amount
             from g5_membership_payment ");
-        $payment_complete_count = (int) $payment_summary['complete_cnt'];
         $payment_today_count = (int) $payment_summary['today_cnt'];
         $payment_today_amount = (int) $payment_summary['today_amount'];
         $recent_payments = sql_query(" select *,
@@ -143,15 +136,11 @@ if ($is_admin == 'super') {
         }
     }
 
-    $error_total_week_count = 0;
     $error_pending_count = 0;
     if ($error_table_exists) {
         $error_summary = sql_fetch(" select
-                count(*) as total_cnt,
-                sum(case when ifnull(el_resolved, 0) = 0 then 1 else 0 end) as unresolved_cnt,
-                sum(case when el_datetime >= '{$day_7ago} 00:00:00' then 1 else 0 end) as week_cnt
+                sum(case when ifnull(el_resolved, 0) = 0 then 1 else 0 end) as unresolved_cnt
             from {$error_table} ");
-        $error_total_week_count = (int) $error_summary['week_cnt'];
         $error_pending_count = (int) $error_summary['unresolved_cnt'];
     }
     ?>
@@ -189,7 +178,7 @@ if ($is_admin == 'super') {
         line-height: 1.6;
     }
     .admin-summary-card.is-accent {
-        border-top: 3px solid #26b99a;
+        border-top: 3px solid #73c9f5;
     }
     .admin-mini-table th,
     .admin-mini-table td {
@@ -218,7 +207,7 @@ if ($is_admin == 'super') {
         background: #f0ad4e;
     }
     .admin-mini-badge.is-done {
-        background: #26b99a;
+        background: #73c9f5;
     }
     .admin-mini-badge.is-idle {
         background: #9aa7b4;
@@ -471,7 +460,7 @@ if ($is_admin == 'super') {
                 datasets: [{
                     label: '방문수',
                     data: <?php echo $chart_value_json ? $chart_value_json : '[]'; ?>,
-                    backgroundColor: '#26B99A'
+                    backgroundColor: '#73c9f5'
                 }]
             },
             options: {
