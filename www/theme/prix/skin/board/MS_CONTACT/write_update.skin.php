@@ -7,6 +7,22 @@ sql_query($sql1);
 if($_POST['wr_email'])  sql_query("update $write_table set wr_email = '{$_POST['wr_email']}' where wr_id = '$wr_id' ");
 if($_POST['wr_name'])  sql_query("update $write_table set wr_name = '{$_POST['wr_name']}' where wr_id = '$wr_id' ");
 if ($w == '' ) {
+	$contact_email = contact_slack_join_value(isset($_POST['wr_email']) ? $_POST['wr_email'] : '', '@');
+	$contact_phone = contact_slack_join_value(isset($_POST['w_10']) ? $_POST['w_10'] : (isset($_POST['wr_10']) ? $_POST['wr_10'] : ''), '-');
+	if (function_exists('contact_slack_notify')) {
+		contact_slack_notify(array(
+			'board_subject' => $board['bo_subject'],
+			'subject' => isset($wr_subject) ? $wr_subject : '',
+			'name' => isset($_POST['wr_name']) ? $_POST['wr_name'] : $wr_name,
+			'company' => isset($_POST['wr_1']) ? $_POST['wr_1'] : '',
+			'position' => isset($_POST['wr_2']) ? $_POST['wr_2'] : '',
+			'email' => $contact_email,
+			'phone' => $contact_phone,
+			'content' => isset($wr_content) ? $wr_content : (isset($_POST['wr_content']) ? $_POST['wr_content'] : ''),
+			'created_at' => date('Y-m-d H:i:s'),
+		));
+	}
+
 	//alert('감사합니다. Contact가 등록되었습니다.', G5_URL);
 
 	/* 단일 메일(회원 => 최고관리자에게 메일감)
