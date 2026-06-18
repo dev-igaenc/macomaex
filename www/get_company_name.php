@@ -47,7 +47,26 @@ if (!empty($cominfo_json)) {
 
     $company_name = isset($node['enp_nm_trd']) ? $node['enp_nm_trd'] : (isset($node['enp_nm']) ? $node['enp_nm'] : '');
     $kedcd = isset($node['kedcd']) ? $node['kedcd'] : '';
-    $bzc_cd = isset($node['bzc_cd']) ? $node['bzc_cd'] : '';
+    $original_bzc_cd = isset($node['bzc_cd']) ? (is_scalar($node['bzc_cd']) ? trim((string)$node['bzc_cd']) : '') : '';
+    $bzc_cd = $original_bzc_cd;
+    $bzc_resolved = 0;
+    $bzc_resolve_source = $bzc_cd !== '' ? (string)($resolved_company['source'] ?? '') : '';
+    $keyword_scope = 'related';
+    $fallback_reason = '';
+    if ($bzc_cd === '') {
+        $company_bzc_row = sql_fetch("SELECT BZC_CD FROM company WHERE BZNO = '{$comnum}' AND BZC_CD<>'' LIMIT 1");
+        $company_bzc_cd = isset($company_bzc_row['BZC_CD']) ? strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', (string)$company_bzc_row['BZC_CD']), 0, 10)) : '';
+        if ($company_bzc_cd !== '') {
+            $bzc_cd = $company_bzc_cd;
+            $bzc_resolved = 1;
+            $bzc_resolve_source = 'company';
+            $fallback_reason = 'company_bzc_found';
+        } else {
+            $keyword_scope = 'all';
+            $bzc_resolve_source = 'none';
+            $fallback_reason = 'missing_bzc_cd';
+        }
+    }
     $bzc_name = isset($node['bzc_nm']) ? $node['bzc_nm'] : '';
     $enp_typ = isset($node['enp_typ']) ? $node['enp_typ'] : '';
 
@@ -71,6 +90,12 @@ if (!empty($cominfo_json)) {
             'enp_type' => $enp_type_text,
             'enp_type_code' => $enp_typ,
             'bzc_cd' => $bzc_cd,
+            'original_bzc_cd' => $original_bzc_cd,
+            'source_bzc_missing' => $original_bzc_cd === '' ? 1 : 0,
+            'source_bzc_resolved' => $bzc_resolved,
+            'source_bzc_resolve_source' => $bzc_resolve_source,
+            'keyword_scope' => $keyword_scope,
+            'fallback_reason' => $fallback_reason,
             'bizno' => $comnum,
             'bizno_token' => simple_crypt($comnum, 'e'),
             'kedcd' => $kedcd,
@@ -100,6 +125,12 @@ if ($comp) {
         'enp_type' => $enp_type_text,
         'enp_type_code' => $comp['ENP_TYP'],
         'bzc_cd' => $comp['BZC_CD'],
+        'original_bzc_cd' => $comp['BZC_CD'],
+        'source_bzc_missing' => $comp['BZC_CD'] ? 0 : 1,
+        'source_bzc_resolved' => 0,
+        'source_bzc_resolve_source' => $comp['BZC_CD'] ? 'company' : 'none',
+        'keyword_scope' => $comp['BZC_CD'] ? 'related' : 'all',
+        'fallback_reason' => $comp['BZC_CD'] ? '' : 'missing_bzc_cd',
         'bizno' => $comnum,
         'bizno_token' => simple_crypt($comnum, 'e'),
         'kedcd' => $comp['KEDCD'],

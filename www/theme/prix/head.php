@@ -690,6 +690,12 @@ function openCreditShortageGuide(opts) {
 		window.currentSearchBizno = data.bizno || window.currentSearchBizno || "";
 		window.currentSearchBiznoToken = data.bizno_token || window.currentSearchBiznoToken || "";
 			window.currentSearchBzcCd = data.bzc_cd || "";
+			window.currentOriginalSearchBzcCd = data.original_bzc_cd || data.bzc_cd || "";
+			window.currentSearchKeywordScope = data.keyword_scope || (data.bzc_cd ? "related" : "all");
+			window.currentSearchBzcMissing = Number(data.source_bzc_missing || 0) ? 1 : 0;
+			window.currentSearchBzcResolved = Number(data.source_bzc_resolved || 0) ? 1 : 0;
+			window.currentSearchBzcResolveSource = data.source_bzc_resolve_source || "";
+			window.currentSearchBzcFallbackReason = data.fallback_reason || "";
 			window.currentSearchKedcd = data.kedcd || "";
 			window.currentSearchTradeType = initialTradeType;
 
@@ -827,6 +833,7 @@ function closeAiGuideModal() {
 		if (matchType === "exact") return " exact";
 		if (matchType === "prefix_5") return " prefix_5";
 		if (matchType === "prefix_4") return " prefix_4";
+		if (matchType === "global_all") return " all";
 		return " all";
 	}
 
@@ -934,9 +941,13 @@ function closeAiGuideModal() {
 			label: item.label || "",
 			partner_cd: item.partner_cd || "",
 			match_type: item.match_type || "custom_keyword",
-			scope: item.match_type === "all" ? "all" : "related",
+			scope: item.match_type === "all" || item.match_type === "global_all" ? "all" : (window.currentSearchKeywordScope || "related"),
 			bzc_cd: window.currentSearchBzcCd || "",
 			trade_type: window.currentSearchTradeType || 0,
+			source_bzc_missing: window.currentSearchBzcMissing || 0,
+			source_bzc_resolved: window.currentSearchBzcResolved || 0,
+			source_bzc_resolve_source: window.currentSearchBzcResolveSource || "",
+			fallback_reason: window.currentSearchBzcFallbackReason || "",
 			trace_id: window.currentRecommendTraceId || ""
 		});
 		resetCustomKeywordSearch();
@@ -987,6 +998,7 @@ function closeAiGuideModal() {
 		// KODATA에서 확인한 기준 업종코드와 사용자가 선택한 구매/판매 방향으로 키워드 후보를 요청한다.
 		var grid = document.getElementById("modal_pd_grid");
 		var bzcCd = window.currentSearchBzcCd || "";
+		var keywordScope = window.currentSearchKeywordScope || (bzcCd ? "related" : "all");
 		var requestSeq = ++window.currentPartnerKeywordRequestSeq;
 		tradeType = (tradeType === 2) ? 2 : 1;
 		window.currentSearchTradeType = tradeType;
@@ -996,18 +1008,15 @@ function closeAiGuideModal() {
 			grid.classList.add("is_loading");
 			grid.setAttribute("aria-busy", "true");
 		}
-		if (!bzcCd) {
-			if (grid) {
-				grid.classList.remove("is_loading");
-				grid.removeAttribute("aria-busy");
-				grid.innerHTML = '<span class="modal_pd_empty">업종코드가 없어 전체 추천만 이용할 수 있습니다.</span>';
-			}
-			return;
-		}
 		// 동일 trace_id와 trade_type을 다음 화면까지 전달해 키워드 조회부터 카드 출력까지 추적한다.
 		$.getJSON("<?php echo G5_URL; ?>/ko/bzc_trade_rec_keywords.php", {
 			bzc_cd: bzcCd,
 			trade_type: tradeType,
+			scope: keywordScope,
+			source_bzc_missing: window.currentSearchBzcMissing || 0,
+			source_bzc_resolved: window.currentSearchBzcResolved || 0,
+			source_bzc_resolve_source: window.currentSearchBzcResolveSource || "",
+			fallback_reason: window.currentSearchBzcFallbackReason || "",
 			trace_id: window.currentRecommendTraceId || ""
 		}).done(function(data) {
 			// 빠르게 탭을 전환했을 때 이전 방향의 늦은 응답이 현재 키워드를 덮어쓰지 않도록 무시한다.
@@ -1016,7 +1025,7 @@ function closeAiGuideModal() {
 				grid.classList.remove("is_loading");
 				grid.removeAttribute("aria-busy");
 			}
-			if (data && data.ok) {
+			if (data && data.ok && data.items && data.items.length) {
 				renderPartnerKeywordChips(data.items || []);
 				return;
 			}
@@ -1257,11 +1266,16 @@ function requestMainCompCheck(comnum, $form, opts) {
 			var requestSeq = ++window.currentCustomKeywordRequestSeq;
 			var requestTradeType = window.currentSearchTradeType;
 			var requestBzcCd = window.currentSearchBzcCd || "";
+			var requestScope = window.currentSearchKeywordScope || (requestBzcCd ? "related" : "all");
 			var request = $.getJSON("<?php echo G5_URL; ?>/ko/bzc_trade_rec_keyword_search.php", {
 				query: query,
 				bzc_cd: requestBzcCd,
 				trade_type: requestTradeType,
-				scope: "related",
+				scope: requestScope,
+				source_bzc_missing: window.currentSearchBzcMissing || 0,
+				source_bzc_resolved: window.currentSearchBzcResolved || 0,
+				source_bzc_resolve_source: window.currentSearchBzcResolveSource || "",
+				fallback_reason: window.currentSearchBzcFallbackReason || "",
 				trace_id: window.currentRecommendTraceId || ""
 			});
 			window.currentCustomKeywordRequest = request;
@@ -1301,6 +1315,10 @@ function requestMainCompCheck(comnum, $form, opts) {
 				bzc_cd: requestBzcCd,
 				trade_type: requestTradeType,
 				scope: "all",
+				source_bzc_missing: window.currentSearchBzcMissing || 0,
+				source_bzc_resolved: window.currentSearchBzcResolved || 0,
+				source_bzc_resolve_source: window.currentSearchBzcResolveSource || "",
+				fallback_reason: window.currentSearchBzcFallbackReason || "",
 				trace_id: window.currentRecommendTraceId || ""
 			}
 		});
@@ -1400,6 +1418,7 @@ function requestMainCompCheck(comnum, $form, opts) {
 			return;
 		}
 		// 선택 키워드, 원본 업종코드, 가중치를 함께 보내 EC2 요청과 캐시 키를 재현할 수 있게 한다.
+		var keywordScope = window.currentSearchKeywordScope || (window.currentSearchBzcCd ? "related" : "all");
 		var url = "/recommendations?bizno=" + encodeURIComponent(biznoToken) +
 			"&type=" + encodeURIComponent(type) +
 			"&trade_type=" + encodeURIComponent(String(tradeType)) +
@@ -1408,6 +1427,11 @@ function requestMainCompCheck(comnum, $form, opts) {
 			"&selected_keyword=" + encodeURIComponent(selectedKeywords.join(",")) +
 			"&keyword_source_bzc=" + encodeURIComponent(keywordSourceBzcCodes.join(",")) +
 			"&keyword_match_type=" + encodeURIComponent(keywordMatchTypes.join(",")) +
+			"&keyword_scope=" + encodeURIComponent(keywordScope) +
+			"&source_bzc_missing=" + encodeURIComponent(String(window.currentSearchBzcMissing || 0)) +
+			"&source_bzc_resolved=" + encodeURIComponent(String(window.currentSearchBzcResolved || 0)) +
+			"&source_bzc_resolve_source=" + encodeURIComponent(String(window.currentSearchBzcResolveSource || "")) +
+			"&fallback_reason=" + encodeURIComponent(String(window.currentSearchBzcFallbackReason || "")) +
 			"&recommendation_action=keyword_select" +
 			"&trace_id=" + encodeURIComponent(String(window.currentRecommendTraceId || ""));
 		if (typeof showAiLoading === "function") {

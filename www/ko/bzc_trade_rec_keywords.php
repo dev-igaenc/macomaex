@@ -34,8 +34,13 @@ $bzc_cd = strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', (string)($_GET['b
 $trade_type = (int)($_GET['trade_type'] ?? 1);
 if (!in_array($trade_type, array(1, 2), true)) $trade_type = 1;
 $trace_id = company_list_ai_normalize_trace_id($_GET['trace_id'] ?? '');
+$keyword_scope = trim((string)($_GET['scope'] ?? 'related')) === 'all' ? 'all' : 'related';
+$source_bzc_missing = (int)($_GET['source_bzc_missing'] ?? 0) ? 1 : 0;
+$source_bzc_resolved = (int)($_GET['source_bzc_resolved'] ?? 0) ? 1 : 0;
+$source_bzc_resolve_source = trim((string)($_GET['source_bzc_resolve_source'] ?? ''));
+$fallback_reason = trim((string)($_GET['fallback_reason'] ?? ''));
 
-if ($bzc_cd === '') {
+if ($bzc_cd === '' && $keyword_scope !== 'all') {
     company_list_ai_write_event_log('keyword_lookup', 'fail', array(
         'action' => 'lookup_keywords',
         'trace_id' => $trace_id,
@@ -45,6 +50,7 @@ if ($bzc_cd === '') {
         'trade_type' => $trade_type,
         'reason' => 'missing_bzc_cd',
         'error_code' => 'missing_bzc_cd',
+        'keyword_scope' => $keyword_scope,
     ), '추천 키워드 조회에 업종코드가 필요합니다.');
     bzc_trade_rec_json_response(array(
         'ok' => false,
@@ -93,39 +99,11 @@ function bzc_trade_rec_rows_have_keywords($rows)
     return false;
 }
 
-// [1단계: 업종코드 완전 일치 조회]
-// exact는 기준 업종코드 전체가 완전히 같은 행을 뜻한다.
-// 예: 기준 코드가 C10710이면 먼저 c_source_bzc = 'C10710'만 조회한다.
-$rows = bzc_trade_rec_fetch_rows("c_source_bzc = '{$bzc_cd_sql}'", $trade_type_sql);
-if ($rows === false) {
-    company_list_ai_write_event_log('keyword_lookup', 'fail', array(
-        'action' => 'lookup_keywords',
-        'trace_id' => $trace_id,
-        'stage' => 'keyword_lookup',
-        'source' => 'bzc_trade_rec',
-        'recommendation_mode' => 'keyword',
-        'trade_type' => $trade_type,
-        'source_bzc_cd' => $bzc_cd,
-        'match_type' => 'exact',
-        'reason' => 'query_failed',
-        'error_code' => 'query_failed',
-    ), '추천 키워드 exact 조회 실패');
-    bzc_trade_rec_json_response(array(
-        'ok' => false,
-        'error' => 'query failed',
-        'bzc_cd' => $bzc_cd,
-        'trade_type' => $trade_type,
-        'items' => array(),
-    ));
-}
-
 $match_type = 'exact';
-if (!bzc_trade_rec_rows_have_keywords($rows) && strlen($bzc_cd) >= 5) {
-    // [2단계: 앞 5자리 fallback]
-    // 완전 일치 행에 사용할 키워드가 없으면 같은 5자리 분류로 범위를 넓힌다.
-    // 예: C10710 -> c_source_bzc LIKE 'C1071%'
-    $prefix_sql = sql_real_escape_string(substr($bzc_cd, 0, 5) . '%');
-    $rows = bzc_trade_rec_fetch_rows("c_source_bzc LIKE '{$prefix_sql}'", $trade_type_sql);
+if ($keyword_scope === 'all') {
+    // 기준 업종코드가 없을 때는 전체 업종에서 거래량 기준 후보를 제시한다.
+    $rows = bzc_trade_rec_fetch_rows("1=1", $trade_type_sql);
+    $match_type = 'global_all';
     if ($rows === false) {
         company_list_ai_write_event_log('keyword_lookup', 'fail', array(
             'action' => 'lookup_keywords',
@@ -135,49 +113,112 @@ if (!bzc_trade_rec_rows_have_keywords($rows) && strlen($bzc_cd) >= 5) {
             'recommendation_mode' => 'keyword',
             'trade_type' => $trade_type,
             'source_bzc_cd' => $bzc_cd,
-            'match_type' => 'prefix_5',
+            'match_type' => $match_type,
+            'keyword_scope' => $keyword_scope,
+            'source_bzc_missing' => $source_bzc_missing,
+            'source_bzc_resolved' => $source_bzc_resolved,
+            'source_bzc_resolve_source' => $source_bzc_resolve_source,
+            'fallback_reason' => $fallback_reason,
             'reason' => 'query_failed',
             'error_code' => 'query_failed',
-        ), '추천 키워드 5자리 fallback 조회 실패');
+        ), '전체 업종 추천 키워드 조회 실패');
         bzc_trade_rec_json_response(array(
             'ok' => false,
-            'error' => '5-digit fallback query failed',
+            'error' => 'all-scope query failed',
             'bzc_cd' => $bzc_cd,
             'trade_type' => $trade_type,
             'items' => array(),
         ));
     }
-    $match_type = 'prefix_5';
-}
+} else {
+    // [1단계: 업종코드 완전 일치 조회]
+    // exact는 기준 업종코드 전체가 완전히 같은 행을 뜻한다.
+    // 예: 기준 코드가 C10710이면 먼저 c_source_bzc = 'C10710'만 조회한다.
+    $rows = bzc_trade_rec_fetch_rows("c_source_bzc = '{$bzc_cd_sql}'", $trade_type_sql);
+    if ($rows === false) {
+        company_list_ai_write_event_log('keyword_lookup', 'fail', array(
+            'action' => 'lookup_keywords',
+            'trace_id' => $trace_id,
+            'stage' => 'keyword_lookup',
+            'source' => 'bzc_trade_rec',
+            'recommendation_mode' => 'keyword',
+            'trade_type' => $trade_type,
+            'source_bzc_cd' => $bzc_cd,
+            'match_type' => 'exact',
+            'keyword_scope' => $keyword_scope,
+            'reason' => 'query_failed',
+            'error_code' => 'query_failed',
+        ), '추천 키워드 exact 조회 실패');
+        bzc_trade_rec_json_response(array(
+            'ok' => false,
+            'error' => 'query failed',
+            'bzc_cd' => $bzc_cd,
+            'trade_type' => $trade_type,
+            'items' => array(),
+        ));
+    }
 
-if (!bzc_trade_rec_rows_have_keywords($rows) && strlen($bzc_cd) >= 4) {
-    // [3단계: 앞 4자리 fallback]
-    // 5자리 범위에도 키워드가 없을 때 마지막으로 같은 4자리 분류까지 확장한다.
-    // 예: C10710 -> c_source_bzc LIKE 'C107%'
-    $prefix_sql = sql_real_escape_string(substr($bzc_cd, 0, 4) . '%');
-    $rows = bzc_trade_rec_fetch_rows("c_source_bzc LIKE '{$prefix_sql}'", $trade_type_sql);
-    if ($rows === false) {
-        company_list_ai_write_event_log('keyword_lookup', 'fail', array(
-            'action' => 'lookup_keywords',
-            'trace_id' => $trace_id,
-            'stage' => 'keyword_lookup',
-            'source' => 'bzc_trade_rec',
-            'recommendation_mode' => 'keyword',
-            'trade_type' => $trade_type,
-            'source_bzc_cd' => $bzc_cd,
-            'match_type' => 'prefix_4',
-            'reason' => 'query_failed',
-            'error_code' => 'query_failed',
-        ), '추천 키워드 4자리 fallback 조회 실패');
-        bzc_trade_rec_json_response(array(
-            'ok' => false,
-            'error' => '4-digit fallback query failed',
-            'bzc_cd' => $bzc_cd,
-            'trade_type' => $trade_type,
-            'items' => array(),
-        ));
+    if (!bzc_trade_rec_rows_have_keywords($rows) && strlen($bzc_cd) >= 5) {
+        // [2단계: 앞 5자리 fallback]
+        // 완전 일치 행에 사용할 키워드가 없으면 같은 5자리 분류로 범위를 넓힌다.
+        // 예: C10710 -> c_source_bzc LIKE 'C1071%'
+        $prefix_sql = sql_real_escape_string(substr($bzc_cd, 0, 5) . '%');
+        $rows = bzc_trade_rec_fetch_rows("c_source_bzc LIKE '{$prefix_sql}'", $trade_type_sql);
+        if ($rows === false) {
+            company_list_ai_write_event_log('keyword_lookup', 'fail', array(
+                'action' => 'lookup_keywords',
+                'trace_id' => $trace_id,
+                'stage' => 'keyword_lookup',
+                'source' => 'bzc_trade_rec',
+                'recommendation_mode' => 'keyword',
+                'trade_type' => $trade_type,
+                'source_bzc_cd' => $bzc_cd,
+                'match_type' => 'prefix_5',
+                'keyword_scope' => $keyword_scope,
+                'reason' => 'query_failed',
+                'error_code' => 'query_failed',
+            ), '추천 키워드 5자리 fallback 조회 실패');
+            bzc_trade_rec_json_response(array(
+                'ok' => false,
+                'error' => '5-digit fallback query failed',
+                'bzc_cd' => $bzc_cd,
+                'trade_type' => $trade_type,
+                'items' => array(),
+            ));
+        }
+        $match_type = 'prefix_5';
     }
-    $match_type = 'prefix_4';
+
+    if (!bzc_trade_rec_rows_have_keywords($rows) && strlen($bzc_cd) >= 4) {
+        // [3단계: 앞 4자리 fallback]
+        // 5자리 범위에도 키워드가 없을 때 마지막으로 같은 4자리 분류까지 확장한다.
+        // 예: C10710 -> c_source_bzc LIKE 'C107%'
+        $prefix_sql = sql_real_escape_string(substr($bzc_cd, 0, 4) . '%');
+        $rows = bzc_trade_rec_fetch_rows("c_source_bzc LIKE '{$prefix_sql}'", $trade_type_sql);
+        if ($rows === false) {
+            company_list_ai_write_event_log('keyword_lookup', 'fail', array(
+                'action' => 'lookup_keywords',
+                'trace_id' => $trace_id,
+                'stage' => 'keyword_lookup',
+                'source' => 'bzc_trade_rec',
+                'recommendation_mode' => 'keyword',
+                'trade_type' => $trade_type,
+                'source_bzc_cd' => $bzc_cd,
+                'match_type' => 'prefix_4',
+                'keyword_scope' => $keyword_scope,
+                'reason' => 'query_failed',
+                'error_code' => 'query_failed',
+            ), '추천 키워드 4자리 fallback 조회 실패');
+            bzc_trade_rec_json_response(array(
+                'ok' => false,
+                'error' => '4-digit fallback query failed',
+                'bzc_cd' => $bzc_cd,
+                'trade_type' => $trade_type,
+                'items' => array(),
+            ));
+        }
+        $match_type = 'prefix_4';
+    }
 }
 
 $items = array();
@@ -212,15 +253,38 @@ foreach ($rows as $row) {
             'trade_cnt' => (int)($row['c_trade_cnt'] ?? 0),
             // 사용자가 추천 버튼을 누를 때 실제 선택 키워드의 fallback 단계를 서버 로그까지 전달한다.
             'match_type' => $match_type,
+            'relevance_label' => $match_type === 'global_all' ? '전체 업종' : '',
         );
         if (count($items) >= 15) break 2;
     }
+}
+
+if ($keyword_scope === 'all') {
+    company_list_ai_write_event_log('keyword_lookup', 'success', array(
+        'action' => 'lookup_keywords',
+        'trace_id' => $trace_id,
+        'stage' => 'keyword_lookup',
+        'source' => 'bzc_trade_rec',
+        'recommendation_mode' => 'keyword',
+        'trade_type' => $trade_type,
+        'source_bzc_cd' => $bzc_cd,
+        'match_type' => $match_type,
+        'keyword_scope' => $keyword_scope,
+        'source_bzc_missing' => $source_bzc_missing,
+        'source_bzc_resolved' => $source_bzc_resolved,
+        'source_bzc_resolve_source' => $source_bzc_resolve_source,
+        'fallback_reason' => $fallback_reason,
+        'result_count' => count($items),
+        'matched_source_bzc_cds' => implode(',', $matched_source_bzc_cds),
+        'keywords' => implode(',', $matched_keywords),
+    ), '업종코드 누락으로 전체 업종 기준 추천 키워드 조회');
 }
 
 bzc_trade_rec_json_response(array(
     'ok' => true,
     'bzc_cd' => $bzc_cd,
     'trade_type' => $trade_type,
+    'keyword_scope' => $keyword_scope,
     'limit' => 15,
     'trace_id' => $trace_id,
     'match_type' => $match_type,
