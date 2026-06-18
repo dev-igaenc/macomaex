@@ -4,6 +4,15 @@ include_once('./_common.php');
 
 auth_check_menu($auth, $sub_menu, 'r');
 
+if (!isset($fr_date) || !is_string($fr_date)) $fr_date = '';
+if (!isset($to_date) || !is_string($to_date)) $to_date = '';
+if (!isset($sst) || !is_string($sst)) $sst = '';
+if (!isset($sod) || !is_string($sod)) $sod = '';
+if (!isset($page) || !is_numeric($page)) $page = 1;
+$page = (int)$page > 0 ? (int)$page : 1;
+$where = array();
+$sql_search = '';
+
 if(! preg_match("/^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[1-2][0-9]|3[0-1])$/", $fr_date) ) $fr_date = '';
 if(! preg_match("/^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[1-2][0-9]|3[0-1])$/", $to_date) ) $to_date = '';
 
@@ -14,7 +23,7 @@ if ($fr_date && $to_date) {
     $where[] = " nc_datetime between '$fr_date 00:00:00' and '$to_date 23:59:59' ";
 }
 
-if ($where) {
+if (!empty($where)) {
     $sql_search = ' where '.implode(' and ', $where);
 }
 
@@ -29,9 +38,9 @@ $sql = " select count(*) as cnt {$sql_common} {$sql_search} {$sql_order} ";
 $row = sql_fetch($sql);
 $total_count = $row['cnt'];
 
-$rows = $config['cf_page_rows'];
+$rows = isset($config['cf_page_rows']) ? (int)$config['cf_page_rows'] : 0;
+$rows = $rows > 0 ? $rows : 30;
 $total_page  = ceil($total_count / $rows);  // 전체 페이지 계산
-if ($page < 1) { $page = 1; } // 페이지가 없으면 첫 페이지 (1 페이지)
 $from_record = ($page - 1) * $rows; // 시작 열을 구함
 
 $listall = '<a href="'.$_SERVER['SCRIPT_NAME'].'" class="ov_listall">전체목록</a>';
@@ -121,7 +130,7 @@ add_javascript('<script src="'.G5_JS_URL.'/remodal/remodal.js"></script>', 10).P
             $num = ($rows * ($page-1)) + $i+1;
         ?>
 
-        <tr class="paygate-info-js" data-bo_table="<?php echo $row['bo_table'];?>" data-nc_id="<?php echo $row['nc_id'];?>" data-nc_message_id="<?php echo $row['nc_message_id'];?>" data-nc_request_id="<?php echo $row['nc_request_id'];?>">
+        <tr class="paygate-info-js" data-nc_id="<?php echo $row['nc_id'];?>" data-nc_message_id="<?php echo $row['nc_message_id'];?>" data-nc_request_id="<?php echo $row['nc_request_id'];?>">
             <td class="td_chk">
                 <input type="hidden" name="nc_id[<?php echo $i ?>]" value="<?php echo $row['nc_id'] ?>" id="nc_id_<?php echo $i ?>">
                 <label for="chk_<?php echo $i; ?>" class="sound_only"><?php echo get_text($row['nc_id']) ?></label>

@@ -10,7 +10,7 @@ include_once (G5_ADMIN_PATH.'/admin.head.php');
 
 $colspan = 4;
 
-$channelId = $channelId; // 카카오채널
+$channelId = isset($channelId) ? trim((string)$channelId) : ''; // 카카오채널
 
 add_stylesheet('<link rel="stylesheet" href="http://code.jquery.com/ui/1.11.0/themes/smoothness/jquery-ui.css">', 0);
 add_stylesheet('<link rel="stylesheet" href="'.G5_ADMIN_URL.'/gw_alimtalk_admin/css/jquery-ui-timepicker-addon.css">', 0);
