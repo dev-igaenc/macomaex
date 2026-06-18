@@ -316,6 +316,48 @@ if (!empty($_COOKIE['g5_admin_btn_gnb'])) {
     .site_title i {
         border-color: rgba(255, 255, 255, 0.55) !important;
     }
+    .admin-menu-toggle {
+        display: inline-flex !important;
+        align-items: center;
+        gap: 8px;
+        min-height: 44px;
+        padding: 0 14px !important;
+        border-radius: 999px;
+        color: #1f3f5f !important;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background-color 0.2s ease, color 0.2s ease;
+    }
+    .admin-menu-toggle:hover,
+    .admin-menu-toggle:focus {
+        background: rgba(31, 63, 95, 0.08);
+        color: #16324d !important;
+        text-decoration: none;
+    }
+    .admin-menu-toggle i {
+        font-size: 18px;
+    }
+    .admin-menu-toggle .toggle-label {
+        font-size: 14px;
+        line-height: 1;
+    }
+    @media (min-width: 992px) {
+        .admin-menu-toggle .toggle-label {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            border: 0;
+        }
+        .admin-menu-toggle {
+            min-width: 44px;
+            padding: 0 12px !important;
+            justify-content: center;
+        }
+    }
     </style>
 
 
@@ -440,9 +482,12 @@ if (!empty($_COOKIE['g5_admin_btn_gnb'])) {
 
         <!-- top navigation -->
         <div class="top_nav">
-          <div class="nav_menu">
+              <div class="nav_menu">
               <div class="nav toggle">
-                <a id="menu_toggle"><i class="fa fa-bars"></i></a>
+                <a id="menu_toggle" class="admin-menu-toggle" role="button" aria-label="관리자 메뉴 열기">
+                    <i class="fa fa-bars" aria-hidden="true"></i>
+                    <span class="toggle-label">메뉴</span>
+                </a>
               </div>
               <nav class="nav navbar-nav">
               <ul class=" navbar-right">

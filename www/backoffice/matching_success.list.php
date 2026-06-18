@@ -244,19 +244,170 @@ for ($ri = 0; $ri < count($rows_list); $ri++) {
 
 $rnumber=($total_count-($page-1)*$rows)+1;
 
-?>
-  <style>
-.throu {text-decoration:line-through; text-decoration-color: red;}
-</style>
- <h2><?php echo $g5['title']; ?></h2>
+	?>
+	  <style>
+	.throu {text-decoration:line-through; text-decoration-color: red;}
+	.matching-success-page {
+		width: 100%;
+	}
+	.matching-success-toolbar {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 8px;
+		min-width: 0 !important;
+		width: 100%;
+	}
+	.matching-success-toolbar > * {
+		flex: 0 0 auto;
+	}
+	.matching-success-toolbar .ov_listall,
+	.matching-success-toolbar .btn_ov01 {
+		margin: 0;
+		white-space: nowrap;
+	}
+	.matching-success-excel {
+		margin-left: auto;
+		white-space: nowrap;
+	}
+	.matching-success-search {
+		display: flex;
+		align-items: center;
+		flex-wrap: wrap;
+		gap: 8px;
+		min-width: 0 !important;
+	}
+	.matching-success-search select,
+	.matching-success-search .frm_input {
+		min-height: 38px;
+	}
+	.matching-success-search .frm_input {
+		min-width: 220px;
+	}
+	.matching-success-search .btn_submit {
+		width: auto !important;
+		min-width: 68px;
+		min-height: 38px;
+		padding: 0 16px !important;
+		background: #17a2b8 !important;
+		color: #fff !important;
+		text-indent: 0 !important;
+		overflow: visible !important;
+		border-radius: 4px;
+	}
+	.matching-success-table {
+		overflow-x: auto;
+		-webkit-overflow-scrolling: touch;
+		width: 100%;
+	}
+	.matching-success-table table {
+		min-width: 1760px;
+	}
+	.matching-success-table th,
+	.matching-success-table td {
+		white-space: nowrap;
+	}
+	.matching-success-table td:nth-child(17) {
+		white-space: normal;
+		min-width: 200px;
+		word-break: break-word;
+	}
+	.matching-success-table .btn,
+	.matching-success-table #chk_k {
+		white-space: nowrap;
+	}
+	@media (max-width: 991px) {
+		.matching-success-page > h2 {
+			font-size: 22px;
+			margin-bottom: 14px;
+		}
+		.matching-success-toolbar {
+			display: grid;
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+			align-items: stretch;
+			gap: 10px;
+		}
+		.matching-success-toolbar > * {
+			min-width: 0;
+		}
+		.matching-success-toolbar .ov_listall,
+		.matching-success-toolbar .btn_ov01,
+		.matching-success-excel {
+			width: 100%;
+			max-width: 100%;
+			margin: 0;
+		}
+		.matching-success-toolbar .ov_listall {
+			grid-column: 1 / -1;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			min-height: 42px;
+			padding: 10px 12px;
+			text-align: center;
+		}
+		.matching-success-toolbar .btn_ov01 {
+			display: flex;
+			align-items: stretch;
+			height: auto;
+			min-height: 44px;
+			line-height: 1.3;
+			overflow: hidden;
+		}
+		.matching-success-toolbar .btn_ov01 .ov_txt,
+		.matching-success-toolbar .btn_ov01 .ov_num {
+			float: none;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			min-width: 0;
+			padding: 10px 8px;
+			text-align: center;
+			white-space: normal;
+			word-break: keep-all;
+			font-size: 12px;
+		}
+		.matching-success-excel {
+			grid-column: 1 / -1;
+			min-height: 42px;
+		}
+		.matching-success-search {
+			display: grid;
+			grid-template-columns: 1fr;
+			gap: 10px;
+		}
+		.matching-success-search select,
+		.matching-success-search .frm_input,
+		.matching-success-search .btn_submit {
+			width: 100%;
+			margin: 0 !important;
+		}
+		.matching-success-table {
+			margin: 0 -10px;
+			padding: 0 10px 10px;
+			width: calc(100% + 20px);
+		}
+		.matching-success-table table {
+			min-width: 1500px;
+		}
+		.matching-success-table th,
+		.matching-success-table td {
+			font-size: 12px;
+			padding-left: 6px;
+			padding-right: 6px;
+		}
+	}
+	</style>
+	<div class="matching-success-page">
+	 <h2><?php echo $g5['title']; ?></h2>
 
-<div class="local_ov01 local_ov">
-    <?php if ($page > 1) {?><a href="<?php echo $_SERVER['SCRIPT_NAME']; ?>">처음으로</a><?php } ?>
-    <span class="btn_ov01"><span class="ov_txt">전체 내용</span><span class="ov_num"> <?php echo $display_count; ?>건</span></span>
-	&ensp;<button type="button" class="btn btn-primary btn-sm pull-right" id="exl_download" onclick="$('#fsearch').attr('action','./matching_excel.php').submit();$('#fsearch').attr('action','');"><i class="fa fa-file-excel-o" aria-hidden="true"></i> 엑셀 다운로드</button>
+<div class="local_ov01 local_ov matching-success-toolbar">
+	    <?php if ($page > 1) {?><a href="<?php echo $_SERVER['SCRIPT_NAME']; ?>" class="ov_listall">처음으로</a><?php } ?>
+	    <span class="btn_ov01"><span class="ov_txt">전체 내용</span><span class="ov_num"> <?php echo $display_count; ?>건</span></span>
+		<button type="button" class="btn btn-primary btn-sm matching-success-excel" id="exl_download" onclick="$('#fsearch').attr('action','./matching_excel.php').submit();$('#fsearch').attr('action','');"><i class="fa fa-file-excel-o" aria-hidden="true"></i> 엑셀 다운로드</button>
 </div>
 
-<form id="fsearch" name="fsearch" class="local_sch01 local_sch" method="get">
+<form id="fsearch" name="fsearch" class="local_sch01 local_sch matching-success-search" method="get">
 
 <label for="sfl" class="sound_only">검색대상</label>
 <select name="sfl" id="sfl">
@@ -272,7 +423,7 @@ $rnumber=($total_count-($page-1)*$rows)+1;
 
 </form>
 
-<div class="tbl_head01 tbl_wrap">
+<div class="tbl_head01 tbl_wrap matching-success-table">
     <table>
     <caption><?php echo $g5['title']; ?> 목록</caption>
     <thead>
@@ -415,8 +566,9 @@ $("body").on("click","#chk_k",function(){
 				}
 			});
 		}
-})
+	})
 </script>
-<?
-include_once (G5_ADMIN_PATH.'/admin.tail.php');
-?>
+</div>
+	<?
+	include_once (G5_ADMIN_PATH.'/admin.tail.php');
+	?>
