@@ -1039,6 +1039,7 @@ if (($has_kedcd_query && strlen($kedcd_query) === 10 && !preg_match('/^0+$/', $k
 }
 
 if (!empty($resolved_base_payload['kedcd'])) {
+    // bzc_meta는 로그/화면 흐름 전용이다. 실제 EC2 payload에는 내부 추적값을 보내지 않는다.
     $bzc_meta = isset($resolved_base_payload['_bzc_meta']) && is_array($resolved_base_payload['_bzc_meta'])
         ? $resolved_base_payload['_bzc_meta']
         : array();
@@ -1050,6 +1051,7 @@ if (!empty($resolved_base_payload['kedcd'])) {
     if ($requested_source_bzc_resolved) $bzc_meta['source_bzc_resolved'] = 1;
     if ($requested_source_bzc_resolve_source !== '') $bzc_meta['source_bzc_resolve_source'] = $requested_source_bzc_resolve_source;
     if ($requested_fallback_reason !== '') $bzc_meta['fallback_reason'] = $requested_fallback_reason;
+    // URL로 넘어온 scope가 있으면 우선 적용해 키워드 조회 단계와 최종 추천 로그를 같은 기준으로 묶는다.
     $keyword_scope = in_array((string)($bzc_meta['keyword_scope'] ?? ''), array('related', 'all'), true)
         ? (string)$bzc_meta['keyword_scope']
         : (!empty($resolved_base_payload['bzc_cd']) ? 'related' : 'all');
@@ -1065,6 +1067,7 @@ if (!empty($resolved_base_payload['kedcd'])) {
     // 구매처 찾기는 trade_type=1 payload만, 판매처 찾기는 trade_type=2 payload만 실제 조회한다.
     // 키워드 추천이면 사용자가 고른 상대 업종코드와 선택 횟수 기반 가중치를 해당 방향 payload에 추가한다.
     $base_payload = $resolved_base_payload;
+    // 내부 fallback 메타는 request_received/external 로그에만 남기고 EC2 추천 요청에서는 제거한다.
     unset($base_payload['_bzc_meta']);
     $buy_payload = $base_payload;
     $buy_payload['trade_type'] = 1;
@@ -1088,6 +1091,7 @@ if (!empty($resolved_base_payload['kedcd'])) {
     if ($recommendation_mode === 'full') {
         $recommendation_match_type = $recommendation_action === 'skip' ? 'skip' : 'full';
     } else if ($keyword_scope === 'all' && empty($unique_keyword_match_types)) {
+        // 과거 링크처럼 match_type이 없더라도 전체 업종 fallback 추천임을 명확히 기록한다.
         $recommendation_match_type = 'global_all';
     } else if (count($unique_keyword_match_types) === 1) {
         $recommendation_match_type = $unique_keyword_match_types[0];

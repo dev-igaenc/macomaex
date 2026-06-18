@@ -47,6 +47,7 @@ if (!empty($cominfo_json)) {
 
     $company_name = isset($node['enp_nm_trd']) ? $node['enp_nm_trd'] : (isset($node['enp_nm']) ? $node['enp_nm'] : '');
     $kedcd = isset($node['kedcd']) ? $node['kedcd'] : '';
+    // KODATA가 성공해도 업종코드를 빈 태그({})로 줄 수 있어 원본/보강값을 분리한다.
     $original_bzc_cd = isset($node['bzc_cd']) ? (is_scalar($node['bzc_cd']) ? trim((string)$node['bzc_cd']) : '') : '';
     $bzc_cd = $original_bzc_cd;
     $bzc_resolved = 0;
@@ -54,6 +55,7 @@ if (!empty($cominfo_json)) {
     $keyword_scope = 'related';
     $fallback_reason = '';
     if ($bzc_cd === '') {
+        // 원본 업종코드가 없으면 기존 company 테이블 값을 우선 사용하고, 없을 때만 전체 업종 검색으로 보낸다.
         $company_bzc_row = sql_fetch("SELECT BZC_CD FROM company WHERE BZNO = '{$comnum}' AND BZC_CD<>'' LIMIT 1");
         $company_bzc_cd = isset($company_bzc_row['BZC_CD']) ? strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', (string)$company_bzc_row['BZC_CD']), 0, 10)) : '';
         if ($company_bzc_cd !== '') {

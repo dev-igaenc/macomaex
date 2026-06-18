@@ -642,6 +642,7 @@ if (!function_exists('company_list_ai_normalize_bzc_cd')) {
 
 if (!function_exists('company_list_ai_fetch_company_bzc_by_bizno')) {
 	function company_list_ai_fetch_company_bzc_by_bizno($bizno) {
+		// KODATA 원문에 업종코드가 없을 때만 쓰는 보강 조회다.
 		$bizno = preg_replace('/\D/', '', (string)$bizno);
 		if (strlen($bizno) !== 10) return '';
 		$row = sql_fetch("select BZC_CD from company where BZNO='" . sql_real_escape_string($bizno) . "' and BZC_CD<>'' limit 1");
@@ -651,6 +652,7 @@ if (!function_exists('company_list_ai_fetch_company_bzc_by_bizno')) {
 
 if (!function_exists('company_list_ai_apply_bzc_resolution_meta')) {
 	function company_list_ai_apply_bzc_resolution_meta($base_payload, $bizno, $source = '') {
+		// 추천은 계속 성공 흐름으로 진행하되, 업종코드 보강/전체 업종 fallback 흔적은 로그에 남긴다.
 		$base_payload = is_array($base_payload) ? $base_payload : array();
 		$original_bzc = company_list_ai_normalize_bzc_cd($base_payload['bzc_cd'] ?? '');
 		$final_bzc = $original_bzc;
@@ -660,6 +662,7 @@ if (!function_exists('company_list_ai_apply_bzc_resolution_meta')) {
 		$fallback_reason = '';
 
 		if ($missing) {
+			// company 테이블 보강 실패 시 bzc_cd를 EC2 payload에 넣지 않고 keyword_scope=all로 전환한다.
 			$company_bzc = company_list_ai_fetch_company_bzc_by_bizno($bizno);
 			if ($company_bzc !== '') {
 				$final_bzc = $company_bzc;

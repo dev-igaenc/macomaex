@@ -687,10 +687,11 @@ function openCreditShortageGuide(opts) {
 			var cominfoVal = data.cominfo ? data.cominfo : "";
 		var initialTradeType = Number(data.trade_type) === 2 ? 2 : 1;
 
-		window.currentSearchBizno = data.bizno || window.currentSearchBizno || "";
-		window.currentSearchBiznoToken = data.bizno_token || window.currentSearchBiznoToken || "";
-			window.currentSearchBzcCd = data.bzc_cd || "";
-			window.currentOriginalSearchBzcCd = data.original_bzc_cd || data.bzc_cd || "";
+			window.currentSearchBizno = data.bizno || window.currentSearchBizno || "";
+			window.currentSearchBiznoToken = data.bizno_token || window.currentSearchBiznoToken || "";
+				window.currentSearchBzcCd = data.bzc_cd || "";
+				// 업종코드 보강/전체 업종 fallback 상태를 이후 키워드 조회와 추천 진입까지 유지한다.
+				window.currentOriginalSearchBzcCd = data.original_bzc_cd || data.bzc_cd || "";
 			window.currentSearchKeywordScope = data.keyword_scope || (data.bzc_cd ? "related" : "all");
 			window.currentSearchBzcMissing = Number(data.source_bzc_missing || 0) ? 1 : 0;
 			window.currentSearchBzcResolved = Number(data.source_bzc_resolved || 0) ? 1 : 0;
@@ -998,7 +999,8 @@ function closeAiGuideModal() {
 		// KODATA에서 확인한 기준 업종코드와 사용자가 선택한 구매/판매 방향으로 키워드 후보를 요청한다.
 		var grid = document.getElementById("modal_pd_grid");
 		var bzcCd = window.currentSearchBzcCd || "";
-		var keywordScope = window.currentSearchKeywordScope || (bzcCd ? "related" : "all");
+			// 업종코드가 없으면 서버가 scope=all로 전체 업종 후보를 조회한다.
+			var keywordScope = window.currentSearchKeywordScope || (bzcCd ? "related" : "all");
 		var requestSeq = ++window.currentPartnerKeywordRequestSeq;
 		tradeType = (tradeType === 2) ? 2 : 1;
 		window.currentSearchTradeType = tradeType;
@@ -1266,6 +1268,7 @@ function requestMainCompCheck(comnum, $form, opts) {
 			var requestSeq = ++window.currentCustomKeywordRequestSeq;
 			var requestTradeType = window.currentSearchTradeType;
 			var requestBzcCd = window.currentSearchBzcCd || "";
+			// 직접 입력 검색도 추천 키워드 조회와 같은 fallback 범위를 사용한다.
 			var requestScope = window.currentSearchKeywordScope || (requestBzcCd ? "related" : "all");
 			var request = $.getJSON("<?php echo G5_URL; ?>/ko/bzc_trade_rec_keyword_search.php", {
 				query: query,
@@ -1418,6 +1421,7 @@ function requestMainCompCheck(comnum, $form, opts) {
 			return;
 		}
 		// 선택 키워드, 원본 업종코드, 가중치를 함께 보내 EC2 요청과 캐시 키를 재현할 수 있게 한다.
+		// 선택 키워드 추천 진입 시에도 scope/fallback 메타를 URL에 싣고 서버 로그까지 연결한다.
 		var keywordScope = window.currentSearchKeywordScope || (window.currentSearchBzcCd ? "related" : "all");
 		var url = "/recommendations?bizno=" + encodeURIComponent(biznoToken) +
 			"&type=" + encodeURIComponent(type) +

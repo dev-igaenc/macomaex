@@ -34,6 +34,7 @@ $bzc_cd = strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', (string)($_GET['b
 $trade_type = (int)($_GET['trade_type'] ?? 1);
 if (!in_array($trade_type, array(1, 2), true)) $trade_type = 1;
 $trace_id = company_list_ai_normalize_trace_id($_GET['trace_id'] ?? '');
+// 업종코드가 비어도 scope=all이면 성공한 예외 흐름으로 전체 업종 후보를 조회한다.
 $keyword_scope = trim((string)($_GET['scope'] ?? 'related')) === 'all' ? 'all' : 'related';
 $source_bzc_missing = (int)($_GET['source_bzc_missing'] ?? 0) ? 1 : 0;
 $source_bzc_resolved = (int)($_GET['source_bzc_resolved'] ?? 0) ? 1 : 0;
@@ -260,6 +261,7 @@ foreach ($rows as $row) {
 }
 
 if ($keyword_scope === 'all') {
+    // 실패 로그가 아니라 성공 로그에 fallback 메타를 남겨 운영에서 API 성공+업종코드 누락을 구분한다.
     company_list_ai_write_event_log('keyword_lookup', 'success', array(
         'action' => 'lookup_keywords',
         'trace_id' => $trace_id,

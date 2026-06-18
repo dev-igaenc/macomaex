@@ -131,6 +131,7 @@ $source_bzc = strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', (string)($_PO
 $trade_type = (int)($_POST['trade_type'] ?? $_GET['trade_type'] ?? 0);
 $search_scope = trim((string)($_POST['scope'] ?? $_GET['scope'] ?? 'related')) === 'all' ? 'all' : 'related';
 $trace_id = company_list_ai_normalize_trace_id($_POST['trace_id'] ?? $_GET['trace_id'] ?? '');
+// 추천 키워드 조회와 같은 fallback 메타를 직접 입력 검색/선택 로그에도 이어 붙인다.
 $source_bzc_missing = (int)($_POST['source_bzc_missing'] ?? $_GET['source_bzc_missing'] ?? 0) ? 1 : 0;
 $source_bzc_resolved = (int)($_POST['source_bzc_resolved'] ?? $_GET['source_bzc_resolved'] ?? 0) ? 1 : 0;
 $source_bzc_resolve_source = trim((string)($_POST['source_bzc_resolve_source'] ?? $_GET['source_bzc_resolve_source'] ?? ''));
@@ -155,6 +156,7 @@ if ($action === 'select') {
         bzc_trade_rec_search_response(422, array('ok' => false, 'error' => 'invalid_selection'));
     }
     if ($source_bzc === '' && $search_scope === 'all') {
+        // 빈 업종코드로 전체 업종 품목을 선택한 사실을 성공 이벤트로 남긴다.
         company_list_ai_write_event_log('custom_keyword_search', 'success', array(
             'action' => 'select_custom_keyword',
             'trace_id' => $trace_id,
@@ -245,6 +247,7 @@ $match_types = array_values(array_unique(array_map(function ($item) {
 $log_match_type = empty($match_types) ? 'no_match' : ($search_scope === 'all' ? 'all' : (count($match_types) > 1 ? 'related_mixed' : $match_types[0]));
 $log_recorded = false;
 if ($search_scope === 'all' && $source_bzc === '') {
+    // API 성공+업종코드 결손 케이스는 fail이 아니라 global_all 검색 성공으로 추적한다.
     company_list_ai_write_event_log('custom_keyword_search', 'success', array(
         'action' => 'search_custom_keyword',
         'trace_id' => $trace_id,
