@@ -806,6 +806,12 @@ if (isset($auth) && is_array($auth)) {
     if (isset($auth['200110']) && !isset($auth['200120'])) {
         $auth['200120'] = $auth['200110'];
     }
+    if (isset($auth['810100']) && !isset($auth['810000'])) {
+        $auth['810000'] = $auth['810100'];
+    }
+    if (isset($auth['810000']) && !isset($auth['810100'])) {
+        $auth['810100'] = $auth['810000'];
+    }
     @ksort($auth);
 } else {
     $auth = array();

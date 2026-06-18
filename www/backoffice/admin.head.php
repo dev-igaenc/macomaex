@@ -117,6 +117,7 @@ function print_menu2($key, $no = '')
         return $str;
     }
     $hidden_trade_submenus = array('500200', '500300', '500400');
+    $hidden_duplicate_submenus = array('810100');
     $hidden_payment_menu_links = array(
         '/payment.list.php',
         '/payment.membership.list.php'
@@ -128,6 +129,11 @@ function print_menu2($key, $no = '')
 
         // 거래(menu500)에서는 거래현황(500100)만 노출하고 제조사/유통사/기타는 숨김
         if ($key === 'menu500' && in_array((string)$menu[$key][$i][0], $hidden_trade_submenus, true)) {
+            continue;
+        }
+
+        // 중복 노출되는 쿠폰 생성관리 메뉴는 숨기고 쿠폰관리 하나만 사용
+        if (in_array((string)$menu[$key][$i][0], $hidden_duplicate_submenus, true)) {
             continue;
         }
 
@@ -426,9 +432,20 @@ if (!empty($_COOKIE['g5_admin_btn_gnb'])) {
                 }
 
                 $current_class = "";
-                if (isset($sub_menu) && (substr($sub_menu, 0, 3) == substr($menu['menu' . $key][0][0], 0, 3))) {
-                    $current_class = " on";
+                $active_menu = isset($current_menu) && $current_menu ? $current_menu : $sub_menu;
+                if ($active_menu && isset($menu['menu' . $key]) && is_array($menu['menu' . $key])) {
+                    foreach ($menu['menu' . $key] as $menu_item) {
+                        if (!isset($menu_item[0])) {
+                            continue;
+                        }
+                        if ((string) $menu_item[0] === (string) $active_menu) {
+                            $current_class = " on";
+                            break;
+                        }
+                    }
                 }
+                $menu_item_class = $current_class ? 'active current-page' : '';
+                $child_menu_style = $current_class ? ' style="display: block;"' : '';
 
 	                $button_title = $menu['menu' . $key][0][1];
 					$button_link = $menu['menu' . $key][0][2];
@@ -440,8 +457,8 @@ if (!empty($_COOKIE['g5_admin_btn_gnb'])) {
 				//$chk = array_search($menu['menu' . $key][0][0], $mb_auth);
 
             ?>
-	                  <li><a <?=$linkz?>><i class="fa <?=$button_icon?>"></i> <?php echo $button_title; ?> <?if($button_one!=1){?><span class="fa fa-chevron-down"></span><?}?></a>
-                    <ul class="nav child_menu">
+	                  <li class="<?php echo $menu_item_class; ?>"><a <?=$linkz?>><i class="fa <?=$button_icon?>"></i> <?php echo $button_title; ?> <?if($button_one!=1){?><span class="fa fa-chevron-down"></span><?}?></a>
+                    <ul class="nav child_menu"<?php echo $child_menu_style; ?>>
                       <?php echo print_menu1('menu' . $key, 1); ?>
                     </ul>
                   </li>

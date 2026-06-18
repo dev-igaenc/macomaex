@@ -1,5 +1,5 @@
 <?php
-$sub_menu = '810100';
+$sub_menu = '810000';
 include_once('./_common.php');
 include_once (G5_ADMIN_PATH.'/admin.head.php');
 auth_check_menu($auth, $sub_menu, "r");
