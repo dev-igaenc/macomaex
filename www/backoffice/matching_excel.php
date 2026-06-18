@@ -59,24 +59,13 @@ function array_to_excel($headers, $rows, $filename){
 $allowed_search_fields = array(
     'TR.request_company_name' => 'TR.request_company_name',
     'M_req.mb_email' => 'M_req.mb_email',
-    'M_req.mb_8' => 'M_req.mb_8',
+    'C_req.TEL_NO' => 'C_req.TEL_NO',
     'TR.target_company_name' => 'TR.target_company_name',
     'TR.trade_type' => 'TR.trade_type',
 );
 $search_field = isset($allowed_search_fields[$sfl]) ? $allowed_search_fields[$sfl] : 'TR.request_company_name';
 
-$sql_common = " from trade_request TR
-left join g5_member M_req on TR.request_mb_id = M_req.mb_id
-left join (
-    select MM.*
-    from g5_member MM
-    inner join (
-        select mb_company, max(mb_no) as max_mb_no
-        from g5_member
-        where ifnull(mb_company, '') != ''
-        group by mb_company
-    ) MX on MM.mb_company = MX.mb_company and MM.mb_no = MX.max_mb_no
-) M_tgt on M_tgt.mb_company = TR.target_kedcd";
+$sql_common = " from trade_request TR ";
 
 $sql_search = " where 1=1 ";
 if ($stx) {
@@ -94,11 +83,37 @@ if ($stx) {
                 $sql_search .= " ifnull(TR.trade_type, '') like '%{$stx_sql}%' ";
             }
             break;
+        case 'M_req.mb_email':
+            $sql_search .= " exists (
+                select 1
+                from g5_member M_req
+                where M_req.mb_id = TR.request_mb_id
+                  and M_req.mb_email like '%{$stx_sql}%'
+            ) ";
+            break;
+        case 'C_req.TEL_NO':
+            $sql_search .= " (
+                exists (
+                    select 1
+                    from g5_member M_req
+                    where M_req.mb_id = TR.request_mb_id
+                      and (
+                        ifnull(M_req.mb_hp, '') like '%{$stx_sql}%'
+                        or ifnull(M_req.mb_8, '') like '%{$stx_sql}%'
+                      )
+                )
+                or exists (
+                    select 1
+                    from company C_req
+                    where C_req.BZNO = TR.request_bzno
+                      and C_req.TEL_NO like '%{$stx_sql}%'
+                )
+            ) ";
+            break;
         default :
-            $sql_search .= " ({$search_field} like '%{$stx_sql}%') ";
+            $sql_search .= " {$search_field} like '%{$stx_sql}%' ";
             break;
     }
-    $sql_search .= " ) ";
 }
 
 $sql = "select
@@ -113,32 +128,105 @@ $sql = "select
         TR.target_kedcd,
         TR.message_content,
         TR.adm_chk,
-        M_req.mb_6 as req_manager_name,
-        M_req.mb_7 as req_manager_position,
-        M_req.mb_email as req_manager_email,
-        M_req.mb_8 as req_manager_phone,
-        M_tgt.mb_6 as tgt_manager_name,
-        M_tgt.mb_7 as tgt_manager_position,
-        M_tgt.mb_8 as tgt_manager_phone,
-        M_tgt.mb_email as tgt_manager_email
+        TR.request_mb_id
         $sql_common $sql_search order by TR.tr_no desc";
 
 $result = sql_query($sql);
+$rows_list = array();
+for ($i = 0; $row = sql_fetch_array($result); $i++) {
+    $rows_list[] = $row;
+}
+
+$request_mb_ids = array();
+$request_bznos = array();
+$target_kedcds = array();
+for ($i = 0; $i < count($rows_list); $i++) {
+    $request_mb_id = trim((string)$rows_list[$i]['request_mb_id']);
+    if ($request_mb_id !== '') $request_mb_ids[$request_mb_id] = true;
+
+    $request_bzno = trim((string)$rows_list[$i]['request_bzno']);
+    if ($request_bzno !== '') $request_bznos[$request_bzno] = true;
+
+    $target_kedcd = trim((string)$rows_list[$i]['target_kedcd']);
+    if ($target_kedcd !== '') $target_kedcds[$target_kedcd] = true;
+}
+
+$request_member_map = array();
+if (count($request_mb_ids) > 0) {
+    $request_mb_sql = array();
+    foreach (array_keys($request_mb_ids) as $request_mb_id) {
+        $request_mb_sql[] = "'" . sql_escape_string($request_mb_id) . "'";
+    }
+
+    $request_member_result = sql_query(" select mb_id, mb_email, mb_hp, mb_8
+        from g5_member
+        where mb_id in (" . implode(',', $request_mb_sql) . ") ");
+    for ($i = 0; $row = sql_fetch_array($request_member_result); $i++) {
+        $request_member_map[$row['mb_id']] = $row;
+    }
+}
+
+$request_company_map = array();
+if (count($request_bznos) > 0) {
+    $request_bzno_sql = array();
+    foreach (array_keys($request_bznos) as $request_bzno) {
+        $request_bzno_sql[] = "'" . sql_escape_string($request_bzno) . "'";
+    }
+
+    $request_company_result = sql_query(" select BZNO, TEL_NO
+        from company
+        where BZNO in (" . implode(',', $request_bzno_sql) . ") ");
+    for ($i = 0; $row = sql_fetch_array($request_company_result); $i++) {
+        $request_company_map[$row['BZNO']] = $row;
+    }
+}
+
+$target_company_map = array();
+$target_member_map = array();
+if (count($target_kedcds) > 0) {
+    $target_kedcd_sql = array();
+    foreach (array_keys($target_kedcds) as $target_kedcd) {
+        $target_kedcd_sql[] = "'" . sql_escape_string($target_kedcd) . "'";
+    }
+
+    $target_company_result = sql_query(" select KEDCD, TEL_NO
+        from company
+        where KEDCD in (" . implode(',', $target_kedcd_sql) . ") ");
+    for ($i = 0; $row = sql_fetch_array($target_company_result); $i++) {
+        $target_company_map[$row['KEDCD']] = $row;
+    }
+
+    $target_member_sql = " select
+            MM.mb_company,
+            MM.mb_no,
+            MM.mb_email,
+            MM.mb_hp,
+            MM.mb_8
+        from g5_member MM
+        inner join (
+            select mb_company, max(mb_no) as max_mb_no
+            from g5_member
+            where ifnull(mb_company, '') != ''
+              and mb_company in (" . implode(',', $target_kedcd_sql) . ")
+            group by mb_company
+        ) MX on MM.mb_company = MX.mb_company and MM.mb_no = MX.max_mb_no ";
+    $target_member_result = sql_query($target_member_sql);
+    for ($i = 0; $row = sql_fetch_array($target_member_result); $i++) {
+        $target_member_map[$row['mb_company']] = $row;
+    }
+}
+
 $headers = array(
     '상태',
     '요청 구분',
     '요청 시간',
     'TM 24시간',
-    '요청 업체',
+    '거래 요청 보낸 업체',
     '사업자등록번호',
-    '담당자 이름',
-    '직위',
-    '이메일',
     '연락처',
-    '대상 업체',
+    '이메일',
+    '거래 요청 받은 업체',
     '사업자등록번호',
-    '담당자 이름',
-    '직위',
     '연락처',
     '이메일',
     '메세지',
@@ -146,7 +234,8 @@ $headers = array(
 );
 $rows = array();
 
-for ($i=0; $v=sql_fetch_array($result); $i++) {
+for ($i = 0; $i < count($rows_list); $i++) {
+    $v = $rows_list[$i];
     $request_type = strtoupper(trim((string)$v['trade_type']));
     if($request_type !== "TM") $request_type = "BASIC";
 
@@ -184,6 +273,35 @@ for ($i=0; $v=sql_fetch_array($result); $i++) {
     $adm_chk_text = trim((string)$v['adm_chk']);
     if(!$adm_chk_text) $adm_chk_text = "연락필요";
 
+    $req_member_email = '';
+    $req_member_phone = '';
+    $request_mb_id = trim((string)$v['request_mb_id']);
+    if ($request_mb_id !== '' && isset($request_member_map[$request_mb_id])) {
+        $req_member_email = trim((string)$request_member_map[$request_mb_id]['mb_email']);
+        $req_member_phone = trim((string)$request_member_map[$request_mb_id]['mb_hp']);
+        if ($req_member_phone === '') $req_member_phone = trim((string)$request_member_map[$request_mb_id]['mb_8']);
+    }
+
+    $req_company_phone = '';
+    $request_bzno = trim((string)$v['request_bzno']);
+    if ($request_bzno !== '' && isset($request_company_map[$request_bzno])) {
+        $req_company_phone = trim((string)$request_company_map[$request_bzno]['TEL_NO']);
+    }
+
+    $tgt_member_email = '';
+    $tgt_member_phone = '';
+    $target_kedcd = trim((string)$v['target_kedcd']);
+    if ($target_kedcd !== '' && isset($target_member_map[$target_kedcd])) {
+        $tgt_member_email = trim((string)$target_member_map[$target_kedcd]['mb_email']);
+        $tgt_member_phone = trim((string)$target_member_map[$target_kedcd]['mb_hp']);
+        if ($tgt_member_phone === '') $tgt_member_phone = trim((string)$target_member_map[$target_kedcd]['mb_8']);
+    }
+
+    $tgt_company_phone = '';
+    if ($target_kedcd !== '' && isset($target_company_map[$target_kedcd])) {
+        $tgt_company_phone = trim((string)$target_company_map[$target_kedcd]['TEL_NO']);
+    }
+
     $rows[] = array(
         $status,
         $request_type,
@@ -191,16 +309,12 @@ for ($i=0; $v=sql_fetch_array($result); $i++) {
         $tm_24h_text,
         trim((string)$v['request_company_name']) ? $v['request_company_name'] : '-',
         trim((string)$v['request_bzno']) ? licenseNum($v['request_bzno']) : '-',
-        trim((string)$v['req_manager_name']) ? $v['req_manager_name'] : '-',
-        trim((string)$v['req_manager_position']) ? $v['req_manager_position'] : '-',
-        trim((string)$v['req_manager_email']) ? $v['req_manager_email'] : '-',
-        trim((string)$v['req_manager_phone']) ? $v['req_manager_phone'] : '-',
+        trim((string)$req_member_phone) ? $req_member_phone : (trim((string)$req_company_phone) ? $req_company_phone : '-'),
+        trim((string)$req_member_email) ? $req_member_email : '-',
         trim((string)$v['target_company_name']) ? $v['target_company_name'] : '-',
         trim((string)$v['target_bzno']) ? licenseNum($v['target_bzno']) : '-',
-        trim((string)$v['tgt_manager_name']) ? $v['tgt_manager_name'] : '-',
-        trim((string)$v['tgt_manager_position']) ? $v['tgt_manager_position'] : '-',
-        trim((string)$v['tgt_manager_phone']) ? $v['tgt_manager_phone'] : '-',
-        trim((string)$v['tgt_manager_email']) ? $v['tgt_manager_email'] : '-',
+        trim((string)$tgt_member_phone) ? $tgt_member_phone : (trim((string)$tgt_company_phone) ? $tgt_company_phone : '-'),
+        trim((string)$tgt_member_email) ? $tgt_member_email : '-',
         (string)$v['message_content'],
         $adm_chk_text,
     );
