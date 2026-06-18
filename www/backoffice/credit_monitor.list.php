@@ -1,5 +1,6 @@
 <?php
 $sub_menu = '700200';
+$current_menu = '700500';
 include_once('./_common.php');
 include_once(G5_ADMIN_PATH . '/admin.head.php');
 

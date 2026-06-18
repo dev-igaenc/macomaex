@@ -63,7 +63,8 @@ $check_keys = array(
 for($i=1;$i<=10;$i++){
     $check_keys[] = 'mb_'.$i; 
 }
-$auth_menu=implode("|",$pubMenu);
+$pub_menu = isset($_POST['pubMenu']) && is_array($_POST['pubMenu']) ? $_POST['pubMenu'] : array();
+$auth_menu = implode("|", $pub_menu);
 
 foreach( $check_keys as $key ){
     $posts[$key] = isset($_POST[$key]) ? clean_xss_tags($_POST[$key], 1, 1) : '';
@@ -94,7 +95,7 @@ $sql_common .= "                 mb_sms = '{$posts['mb_sms']}',";
 $sql_common .= "                 mb_open = '{$posts['mb_open']}',";
 $sql_common .= "                 mb_profile = '{$posts['mb_profile']}',";
 $sql_common .= "                 mb_level = '{$posts['mb_level']}',";
-if($auth_menu) $sql_common .= "                 mb_auth = '{$auth_menu}',";
+$sql_common .= "                 mb_auth = '{$auth_menu}',";
 $sql_common .= "                 mb_1 = '{$posts['mb_1']}',";
 $sql_common .= "                 mb_2 = '{$posts['mb_2']}',";
 $sql_common .= "                 mb_3 = '{$posts['mb_3']}',";

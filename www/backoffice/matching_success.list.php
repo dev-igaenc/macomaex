@@ -50,42 +50,54 @@ function normalize_company_phone($raw_phone)
 	return $digits;
 }
 
-$sql_common = " from trade_request TR
-left join g5_member M_req on TR.request_mb_id = M_req.mb_id
-left join company C_req on C_req.BZNO = TR.request_bzno
-left join (
-	select MM.*
-	from g5_member MM
-	inner join (
-		select mb_company, max(mb_no) as max_mb_no
-		from g5_member
-	where ifnull(mb_company, '') != ''
-		group by mb_company
-	) MX on MM.mb_company = MX.mb_company and MM.mb_no = MX.max_mb_no
-) M_tgt on M_tgt.mb_company = TR.target_kedcd
-left join company C_tgt on C_tgt.KEDCD = TR.target_kedcd";
+$sql_common = " from trade_request TR ";
 $sql_search = " where 1=1 ";
 
 if ($stx) {
 	$stx_sql = sql_escape_string($stx);
 	$request_type_keyword = strtoupper(trim((string)$stx));
 	$request_type_normalized = preg_replace('/\s+/', '', $request_type_keyword);
-	$sql_search .= " and ( ";
 	switch ($search_field) {
 		case 'TR.trade_type':
 			if ($request_type_normalized !== '' && (strpos($request_type_normalized, 'TM') !== false || strpos($request_type_normalized, '티엠') !== false)) {
-				$sql_search .= " upper(trim(ifnull(TR.trade_type, ''))) = 'TM' ";
+				$sql_search .= " and upper(trim(ifnull(TR.trade_type, ''))) = 'TM' ";
 			} else if ($request_type_normalized !== '' && (strpos($request_type_normalized, 'BASIC') !== false || strpos($request_type_normalized, '기본') !== false || strpos($request_type_normalized, '일반') !== false)) {
-				$sql_search .= " upper(trim(ifnull(TR.trade_type, ''))) != 'TM' ";
+				$sql_search .= " and upper(trim(ifnull(TR.trade_type, ''))) != 'TM' ";
 			} else {
-				$sql_search .= " ifnull(TR.trade_type, '') like '%{$stx_sql}%' ";
+				$sql_search .= " and ifnull(TR.trade_type, '') like '%{$stx_sql}%' ";
 			}
 			break;
+		case 'M_req.mb_email':
+			$sql_search .= " and exists (
+				select 1
+				from g5_member M_req
+				where M_req.mb_id = TR.request_mb_id
+				  and M_req.mb_email like '%{$stx_sql}%'
+			) ";
+			break;
+		case 'C_req.TEL_NO':
+			$sql_search .= " and (
+				exists (
+					select 1
+					from g5_member M_req
+					where M_req.mb_id = TR.request_mb_id
+					  and (
+						ifnull(M_req.mb_hp, '') like '%{$stx_sql}%'
+						or ifnull(M_req.mb_8, '') like '%{$stx_sql}%'
+					  )
+				)
+				or exists (
+					select 1
+					from company C_req
+					where C_req.BZNO = TR.request_bzno
+					  and C_req.TEL_NO like '%{$stx_sql}%'
+				)
+			) ";
+			break;
 		default :
-			$sql_search .= " ({$search_field} like '%{$stx_sql}%') ";
+			$sql_search .= " and {$search_field} like '%{$stx_sql}%' ";
 			break;
 	}
-	$sql_search .= " ) ";
 }
 
 // 테이블의 전체 레코드수만 얻음
@@ -104,24 +116,23 @@ $sql = "select
 		TR.created_at,
 		TR.trade_type,
 		TR.approval_status,
+		TR.request_mb_id,
 		TR.request_company_name,
 		TR.request_bzno,
-		C_req.TEL_NO as req_manager_phone,
 		TR.target_company_name,
 		TR.target_bzno,
-		C_tgt.TEL_NO as tgt_manager_phone,
 		TR.target_kedcd,
 		TR.message_content,
 		TR.adm_chk,
 		TR.adm_memo,
 		TR.chat_room_id,
-		M_req.mb_6 as req_manager_name,
-		M_req.mb_7 as req_manager_position,
-		M_req.mb_email as req_manager_email,
-		M_tgt.mb_no as tgt_mb_no,
-		M_tgt.mb_6 as tgt_manager_name,
-		M_tgt.mb_7 as tgt_manager_position,
-		M_tgt.mb_email as tgt_manager_email
+		'' as req_member_email,
+		'' as req_member_phone,
+		null as tgt_mb_no,
+		'' as tgt_member_email,
+		'' as tgt_member_phone,
+		'' as req_company_phone,
+		'' as tgt_company_phone
 		$sql_common $sql_search order by TR.tr_no desc limit $from_record, {$config['cf_page_rows']} ";
 $result = sql_query($sql);
 $rows_list = array();
@@ -129,21 +140,327 @@ for ($ri=0; $row=sql_fetch_array($result); $ri++) {
 	$rows_list[] = $row;
 }
 
+$request_mb_ids = array();
+$request_bznos = array();
+$target_kedcds = array();
+for ($ri = 0; $ri < count($rows_list); $ri++) {
+	$request_mb_id = trim((string)$rows_list[$ri]['request_mb_id']);
+	if ($request_mb_id !== '') {
+		$request_mb_ids[$request_mb_id] = true;
+	}
+
+	$request_bzno = trim((string)$rows_list[$ri]['request_bzno']);
+	if ($request_bzno !== '') {
+		$request_bznos[$request_bzno] = true;
+	}
+
+	$target_kedcd = trim((string)$rows_list[$ri]['target_kedcd']);
+	if ($target_kedcd !== '') {
+		$target_kedcds[$target_kedcd] = true;
+	}
+}
+
+$request_member_map = array();
+if (count($request_mb_ids) > 0) {
+	$request_mb_sql = array();
+	foreach (array_keys($request_mb_ids) as $request_mb_id) {
+		$request_mb_sql[] = "'" . sql_escape_string($request_mb_id) . "'";
+	}
+
+	$request_member_result = sql_query(" select mb_id, mb_email, mb_hp, mb_8
+		from g5_member
+		where mb_id in (" . implode(',', $request_mb_sql) . ") ");
+	for ($ri = 0; $row = sql_fetch_array($request_member_result); $ri++) {
+		$request_member_map[$row['mb_id']] = $row;
+	}
+}
+
+$request_company_map = array();
+if (count($request_bznos) > 0) {
+	$request_bzno_sql = array();
+	foreach (array_keys($request_bznos) as $request_bzno) {
+		$request_bzno_sql[] = "'" . sql_escape_string($request_bzno) . "'";
+	}
+
+	$request_company_result = sql_query(" select BZNO, TEL_NO
+		from company
+		where BZNO in (" . implode(',', $request_bzno_sql) . ") ");
+	for ($ri = 0; $row = sql_fetch_array($request_company_result); $ri++) {
+		$request_company_map[$row['BZNO']] = $row;
+	}
+}
+
+$target_company_map = array();
+$target_kedcd_sql = array();
+$target_member_map = array();
+if (count($target_kedcds) > 0) {
+	foreach (array_keys($target_kedcds) as $target_kedcd) {
+		$target_kedcd_sql[] = "'" . sql_escape_string($target_kedcd) . "'";
+	}
+
+	$target_company_result = sql_query(" select KEDCD, TEL_NO
+		from company
+		where KEDCD in (" . implode(',', $target_kedcd_sql) . ") ");
+	for ($ri = 0; $row = sql_fetch_array($target_company_result); $ri++) {
+		$target_company_map[$row['KEDCD']] = $row;
+	}
+
+	$target_member_sql = " select
+			MM.mb_company,
+			MM.mb_no,
+			MM.mb_email,
+			MM.mb_hp,
+			MM.mb_8
+		from g5_member MM
+		inner join (
+			select mb_company, max(mb_no) as max_mb_no
+			from g5_member
+			where ifnull(mb_company, '') != ''
+			  and mb_company in (" . implode(',', $target_kedcd_sql) . ")
+			group by mb_company
+		) MX on MM.mb_company = MX.mb_company and MM.mb_no = MX.max_mb_no ";
+	$target_member_result = sql_query($target_member_sql);
+	for ($ri = 0; $row = sql_fetch_array($target_member_result); $ri++) {
+		$target_member_map[$row['mb_company']] = $row;
+	}
+}
+
+for ($ri = 0; $ri < count($rows_list); $ri++) {
+	$request_mb_id = trim((string)$rows_list[$ri]['request_mb_id']);
+	if ($request_mb_id !== '' && isset($request_member_map[$request_mb_id])) {
+		$rows_list[$ri]['req_member_email'] = $request_member_map[$request_mb_id]['mb_email'];
+		$rows_list[$ri]['req_member_phone'] = trim((string)$request_member_map[$request_mb_id]['mb_hp']) ? $request_member_map[$request_mb_id]['mb_hp'] : $request_member_map[$request_mb_id]['mb_8'];
+	}
+
+	$request_bzno = trim((string)$rows_list[$ri]['request_bzno']);
+	if ($request_bzno !== '' && isset($request_company_map[$request_bzno])) {
+		$rows_list[$ri]['req_company_phone'] = $request_company_map[$request_bzno]['TEL_NO'];
+	}
+
+	$target_kedcd = trim((string)$rows_list[$ri]['target_kedcd']);
+	if ($target_kedcd !== '' && isset($target_company_map[$target_kedcd])) {
+		$rows_list[$ri]['tgt_company_phone'] = $target_company_map[$target_kedcd]['TEL_NO'];
+	}
+
+	if ($target_kedcd !== '' && isset($target_member_map[$target_kedcd])) {
+		$rows_list[$ri]['tgt_mb_no'] = $target_member_map[$target_kedcd]['mb_no'];
+		$rows_list[$ri]['tgt_member_email'] = $target_member_map[$target_kedcd]['mb_email'];
+		$rows_list[$ri]['tgt_member_phone'] = trim((string)$target_member_map[$target_kedcd]['mb_hp']) ? $target_member_map[$target_kedcd]['mb_hp'] : $target_member_map[$target_kedcd]['mb_8'];
+	}
+}
+
 $rnumber=($total_count-($page-1)*$rows)+1;
 
-?>
-  <style>
-.throu {text-decoration:line-through; text-decoration-color: red;}
-</style>
- <h2><?php echo $g5['title']; ?></h2>
+	?>
+	  <style>
+	.throu {text-decoration:line-through; text-decoration-color: red;}
+	.matching-success-page {
+		width: 100%;
+	}
+	.matching-success-toolbar {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 8px;
+		min-width: 0 !important;
+		width: 100%;
+	}
+	.matching-success-toolbar > * {
+		flex: 0 0 auto;
+	}
+	.matching-success-toolbar .ov_listall,
+	.matching-success-toolbar .btn_ov01 {
+		margin: 0;
+		white-space: nowrap;
+	}
+	.matching-success-excel {
+		margin-left: auto;
+		white-space: nowrap;
+	}
+	.matching-success-search {
+		display: flex;
+		align-items: center;
+		flex-wrap: wrap;
+		gap: 8px;
+		min-width: 0 !important;
+	}
+	.matching-success-search select,
+	.matching-success-search .frm_input {
+		min-height: 38px;
+	}
+	.matching-success-search .frm_input {
+		min-width: 220px;
+	}
+	.matching-success-search .btn_submit {
+		width: auto !important;
+		min-width: 68px;
+		min-height: 38px;
+		padding: 0 16px !important;
+		background: #17a2b8 !important;
+		color: #fff !important;
+		text-indent: 0 !important;
+		overflow: visible !important;
+		border-radius: 4px;
+	}
+	.matching-success-table {
+		overflow-x: auto;
+		-webkit-overflow-scrolling: touch;
+		width: 100%;
+	}
+	.matching-success-table table {
+		min-width: 1480px;
+	}
+	.matching-success-table thead .group-head {
+		font-weight: 700;
+		text-align: center;
+	}
+	.matching-success-table thead .group-head--request {
+		background: #dbeafe;
+		color: #1d4ed8;
+	}
+	.matching-success-table thead .group-head--target {
+		background: #dcfce7;
+		color: #15803d;
+	}
+	.matching-success-table th,
+	.matching-success-table td {
+		white-space: nowrap;
+	}
+	.matching-success-table tbody td:nth-child(5),
+	.matching-success-table tbody td:nth-child(6),
+	.matching-success-table tbody td:nth-child(7),
+	.matching-success-table tbody td:nth-child(8) {
+		background: #f8fbff;
+	}
+	.matching-success-table tbody td:nth-child(9),
+	.matching-success-table tbody td:nth-child(10),
+	.matching-success-table tbody td:nth-child(11),
+	.matching-success-table tbody td:nth-child(12) {
+		background: #f6fcf7;
+	}
+	.matching-success-table td:nth-child(13) {
+		white-space: normal;
+		min-width: 200px;
+		word-break: break-word;
+	}
+	.matching-company-label {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		min-width: 42px;
+		height: 22px;
+		margin-right: 6px;
+		padding: 0 8px;
+		border-radius: 999px;
+		font-size: 11px;
+		font-weight: 700;
+		line-height: 1;
+		vertical-align: middle;
+	}
+	.matching-company-label--request {
+		background: #dbeafe;
+		color: #1d4ed8;
+	}
+	.matching-company-label--target {
+		background: #dcfce7;
+		color: #15803d;
+	}
+	.matching-success-table .btn,
+	.matching-success-table #chk_k {
+		white-space: nowrap;
+	}
+	@media (max-width: 991px) {
+		.matching-success-page > h2 {
+			font-size: 22px;
+			margin-bottom: 14px;
+		}
+		.matching-success-toolbar {
+			display: grid;
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+			align-items: stretch;
+			gap: 10px;
+		}
+		.matching-success-toolbar > * {
+			min-width: 0;
+		}
+		.matching-success-toolbar .ov_listall,
+		.matching-success-toolbar .btn_ov01,
+		.matching-success-excel {
+			width: 100%;
+			max-width: 100%;
+			margin: 0;
+		}
+		.matching-success-toolbar .ov_listall {
+			grid-column: 1 / -1;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			min-height: 42px;
+			padding: 10px 12px;
+			text-align: center;
+		}
+		.matching-success-toolbar .btn_ov01 {
+			display: flex;
+			align-items: stretch;
+			height: auto;
+			min-height: 44px;
+			line-height: 1.3;
+			overflow: hidden;
+		}
+		.matching-success-toolbar .btn_ov01 .ov_txt,
+		.matching-success-toolbar .btn_ov01 .ov_num {
+			float: none;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			min-width: 0;
+			padding: 10px 8px;
+			text-align: center;
+			white-space: normal;
+			word-break: keep-all;
+			font-size: 12px;
+		}
+		.matching-success-excel {
+			grid-column: 1 / -1;
+			min-height: 42px;
+		}
+		.matching-success-search {
+			display: grid;
+			grid-template-columns: 1fr;
+			gap: 10px;
+		}
+		.matching-success-search select,
+		.matching-success-search .frm_input,
+		.matching-success-search .btn_submit {
+			width: 100%;
+			margin: 0 !important;
+		}
+		.matching-success-table {
+			margin: 0 -10px;
+			padding: 0 10px 10px;
+			width: calc(100% + 20px);
+		}
+		.matching-success-table table {
+			min-width: 1260px;
+		}
+		.matching-success-table th,
+		.matching-success-table td {
+			font-size: 12px;
+			padding-left: 6px;
+			padding-right: 6px;
+		}
+	}
+	</style>
+	<div class="matching-success-page">
+	 <h2><?php echo $g5['title']; ?></h2>
 
-<div class="local_ov01 local_ov">
-    <?php if ($page > 1) {?><a href="<?php echo $_SERVER['SCRIPT_NAME']; ?>">처음으로</a><?php } ?>
-    <span class="btn_ov01"><span class="ov_txt">전체 내용</span><span class="ov_num"> <?php echo $display_count; ?>건</span></span>
-	&ensp;<button type="button" class="btn btn-primary btn-sm pull-right" id="exl_download" onclick="$('#fsearch').attr('action','./matching_excel.php').submit();$('#fsearch').attr('action','');"><i class="fa fa-file-excel-o" aria-hidden="true"></i> 엑셀 다운로드</button>
+<div class="local_ov01 local_ov matching-success-toolbar">
+	    <?php if ($page > 1) {?><a href="<?php echo $_SERVER['SCRIPT_NAME']; ?>" class="ov_listall">처음으로</a><?php } ?>
+	    <span class="btn_ov01"><span class="ov_txt">전체 내용</span><span class="ov_num"> <?php echo $display_count; ?>건</span></span>
+		<button type="button" class="btn btn-primary btn-sm matching-success-excel" id="exl_download" onclick="$('#fsearch').attr('action','./matching_excel.php').submit();$('#fsearch').attr('action','');"><i class="fa fa-file-excel-o" aria-hidden="true"></i> 엑셀 다운로드</button>
 </div>
 
-<form id="fsearch" name="fsearch" class="local_sch01 local_sch" method="get">
+<form id="fsearch" name="fsearch" class="local_sch01 local_sch matching-success-search" method="get">
 
 <label for="sfl" class="sound_only">검색대상</label>
 <select name="sfl" id="sfl">
@@ -159,32 +476,32 @@ $rnumber=($total_count-($page-1)*$rows)+1;
 
 </form>
 
-<div class="tbl_head01 tbl_wrap">
-    <table>
-    <caption><?php echo $g5['title']; ?> 목록</caption>
-    <thead>
-    <tr>
-        <th scope="col">상태</th>
-		<th scope="col">요청 구분</th>
-		<th scope="col">요청 시간</th>
-		<th scope="col">TM 24시간</th>
-        <th scope="col">요청 업체</th>
-		<th scope="col">사업자등록번호</th>
-		<th scope="col">연락처</th>
-        <th scope="col">담당자 이름</th>
-		<th scope="col">직위</th>
-		<th scope="col">이메일</th>
-        <th scope="col">대상 업체</th>
-        <th scope="col">사업자등록번호</th>
-		<th scope="col">연락처</th>
-		<th scope="col">담당자 이름</th>
-        <th scope="col">직위</th>
-		<th scope="col">이메일</th>
-		<th scope="col" style="width:200px">메세지</th>
-		<th scope="col">체크</th>
-		<!--th scope="col">관리</th-->
-    </tr>
-    </thead>
+<div class="tbl_head01 tbl_wrap matching-success-table">
+	    <table>
+	    <caption><?php echo $g5['title']; ?> 목록</caption>
+	    <thead>
+	    <tr>
+	        <th scope="col" rowspan="2">상태</th>
+			<th scope="col" rowspan="2">요청 구분</th>
+			<th scope="col" rowspan="2">요청 시간</th>
+			<th scope="col" rowspan="2">TM 24시간</th>
+			<th scope="col" colspan="4" class="group-head group-head--request">거래 요청 보낸 기업</th>
+			<th scope="col" colspan="4" class="group-head group-head--target">거래 요청 받은 기업</th>
+			<th scope="col" rowspan="2" style="width:200px">메세지</th>
+			<th scope="col" rowspan="2">체크</th>
+			<!--th scope="col">관리</th-->
+	    </tr>
+	    <tr>
+	        <th scope="col">보낸 업체</th>
+			<th scope="col">사업자등록번호</th>
+			<th scope="col">연락처</th>
+			<th scope="col">이메일</th>
+	        <th scope="col">받은 업체</th>
+	        <th scope="col">사업자등록번호</th>
+			<th scope="col">연락처</th>
+			<th scope="col">이메일</th>
+	    </tr>
+	    </thead>
     <tbody>
 	    <?php for ($i=0; $i<count($rows_list); $i++) {
 				$v = $rows_list[$i];
@@ -246,20 +563,14 @@ $rnumber=($total_count-($page-1)*$rows)+1;
 			<td class="td_center"><span class="<?=$request_type_class?>"><?=$request_type_text?></span></td>
 			<td class="td_center"><?=$request_time?></td>
 			<td class="td_center"><span class="<?=$tm_24h_class?>"><?=$tm_24h_text?></span></td>
-	        <td class="td_center">
-														<?=trim((string)$v['request_company_name']) ? $v['request_company_name'] : '-'?>
-			</td>
+	        <td class="td_center"><span class="matching-company-label matching-company-label--request">보낸</span><?=trim((string)$v['request_company_name']) ? $v['request_company_name'] : '-'?></td>
 			<td class="td_center"><?=trim((string)$v['request_bzno']) ? licenseNum($v['request_bzno']) : '-'?></td>
-			<td class="td_center"><?=normalize_company_phone($v['req_manager_phone'])?></td>
-			<td class="td_center"><?=trim((string)$v['req_manager_name']) ? $v['req_manager_name'] : '-'?></td>
-			<td class="td_center"><?=trim((string)$v['req_manager_position']) ? $v['req_manager_position'] : '-'?></td>
-			<td class="td_center"><?=trim((string)$v['req_manager_email']) ? $v['req_manager_email'] : '-'?></td>
-			<td class="td_center"><?=trim((string)$v['target_company_name']) ? $v['target_company_name'] : '-'?></td>
+			<td class="td_center"><?=normalize_company_phone(trim((string)$v['req_member_phone']) ? $v['req_member_phone'] : $v['req_company_phone'])?></td>
+			<td class="td_center"><?=trim((string)$v['req_member_email']) ? $v['req_member_email'] : '-'?></td>
+			<td class="td_center"><span class="matching-company-label matching-company-label--target">받은</span><?=trim((string)$v['target_company_name']) ? $v['target_company_name'] : '-'?></td>
 			<td class="td_center"><?=trim((string)$v['target_bzno']) ? licenseNum($v['target_bzno']) : '-'?></td>
-			<td class="td_center"><?=normalize_company_phone($v['tgt_manager_phone'])?></td>
-			<td class="td_center"><?=trim((string)$v['tgt_manager_name']) ? $v['tgt_manager_name'] : '-'?></td>
-			<td class="td_center"><?=trim((string)$v['tgt_manager_position']) ? $v['tgt_manager_position'] : '-'?></td>
-			<td class="td_center"><?=trim((string)$v['tgt_manager_email']) ? $v['tgt_manager_email'] : '-'?></td>
+			<td class="td_center"><?=normalize_company_phone(trim((string)$v['tgt_member_phone']) ? $v['tgt_member_phone'] : $v['tgt_company_phone'])?></td>
+			<td class="td_center"><?=trim((string)$v['tgt_member_email']) ? $v['tgt_member_email'] : '-'?></td>
 			<td class="td_center"><?=nl2br(htmlspecialchars((string)$v['message_content'], ENT_QUOTES, 'UTF-8'))?></td>
 			<td class="td_center">
 			<?if($status!="거래진행중" && $status != "거래거절"){?>
@@ -268,14 +579,12 @@ $rnumber=($total_count-($page-1)*$rows)+1;
 			<?}?>
 			</td>
 
-        <!--td class="td_mng td_mng_l">
-            <a href="./matching_success_update.php?w=d&amp;no=<?php echo $v['no']; ?>&amp;<?=$qstr?>" onclick="return delete_confirm(this);" class="btn btn_02"><span class="sound_only"><?php echo htmlspecialchars2($v['title']); ?> </span>삭제</a>
-        </td-->
+        <?php /* legacy delete action removed */ ?>
     </tr>
     <?php
     }
     if ($i == 0) {
-        echo '<tr><td colspan="18" class="empty_table">자료가 한건도 없습니다.</td></tr>';
+        echo '<tr><td colspan="14" class="empty_table">자료가 한건도 없습니다.</td></tr>';
     }
     ?>
     </tbody>
@@ -304,8 +613,9 @@ $("body").on("click","#chk_k",function(){
 				}
 			});
 		}
-})
+	})
 </script>
-<?
-include_once (G5_ADMIN_PATH.'/admin.tail.php');
-?>
+</div>
+	<?
+	include_once (G5_ADMIN_PATH.'/admin.tail.php');
+	?>

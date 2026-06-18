@@ -14,7 +14,7 @@ if(!sql_query(" DESCRIBE ".G5_TABLE_PREFIX."seo ", false)) {
     sql_query($sql);
 }
 
-auth_check($auth[$sub_menu], 'w');
+auth_check_menu($auth, $sub_menu, 'w');
 
 // 디렉토리가 없다면 생성합니다. (퍼미션도 변경하구요.)
 @mkdir(G5_DATA_PATH . '/file/seo/', G5_DIR_PERMISSION);
