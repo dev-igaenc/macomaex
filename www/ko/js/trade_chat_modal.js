@@ -712,6 +712,16 @@
 			}).join('');
 		}
 
+		function showRoomListLanding() {
+			cleanupActiveChannel();
+			state.activeRoomId = 0;
+			modal.classList.remove('chat-demo-modal--mobile-chat');
+			renderRoomList();
+			setMainHeader(null, '연결 대기 중', 'waiting');
+			renderEmptyMessages('채팅방을 선택하면 대화 내용을 불러옵니다.');
+			setComposerEnabled(false, '채팅방을 먼저 선택해 주세요.');
+		}
+
 		async function ensureClient(roomPayload) {
 			var bootstrap = roomPayload || state.bootstrap || {};
 			var StreamChatCtor = window.StreamChat && (window.StreamChat.StreamChat || window.StreamChat);
@@ -870,7 +880,7 @@
 				return true;
 			}
 
-			await bindRoom(state.bootstrap.initialRoomId || initialRoomId || state.bootstrap.rooms[0].roomId);
+			showRoomListLanding();
 			return true;
 		}
 
@@ -912,6 +922,8 @@
 					renderEmptyMessages(error && error.message ? error.message : '채팅 정보를 불러오지 못했습니다.');
 					setComposerEnabled(false, '채팅 정보를 다시 확인해 주세요.');
 				}
+			} else if (state.bootstrap && roomListEl) {
+				showRoomListLanding();
 			}
 		}
 
