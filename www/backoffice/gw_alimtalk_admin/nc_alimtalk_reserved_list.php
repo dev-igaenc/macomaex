@@ -141,7 +141,7 @@ add_stylesheet('<link rel="stylesheet" href="'.G5_ADMIN_URL.'/gw_alimtalk_admin/
 <script>
 function sync_reserve_message() {
 	$.ajax({
-		url: g5_url+'/adm/gw_alimtalk_admin/nc_alimtalk_sync_message.php',
+		url: '<?php echo G5_ADMIN_URL; ?>/gw_alimtalk_admin/nc_alimtalk_sync_message.php',
 		dataType: 'html',
 		type:'post',
 		success:function(req) {
@@ -282,7 +282,7 @@ function initInquireBalance(targetName, statusName, messageStatusName, requestTi
 
 function accountApi(method) {
 	return {
-		paygate: g5_url+"/adm/gw_alimtalk_admin/nc_alimtalk_get_messages.php?method="+method
+		paygate: '<?php echo G5_ADMIN_URL; ?>/gw_alimtalk_admin/nc_alimtalk_get_messages.php?method='+method
 	};
 }
 

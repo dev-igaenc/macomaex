@@ -16,7 +16,6 @@ add_stylesheet('<link rel="stylesheet" href="http://code.jquery.com/ui/1.11.0/th
 add_stylesheet('<link rel="stylesheet" href="'.G5_ADMIN_URL.'/gw_alimtalk_admin/css/jquery-ui-timepicker-addon.css">', 0);
 add_stylesheet('<link rel="stylesheet" href="'.G5_ADMIN_URL.'/gw_alimtalk_admin/css/style.css">', 0);
 add_stylesheet('<link rel="stylesheet" href="'.G5_ADMIN_URL.'/gw_alimtalk_admin/css/alimtalk.css">', 0);
-add_stylesheet('<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css">', 0);
 add_javascript('<script src="//code.jquery.com/ui/1.11.4/jquery-ui.js"></script>', 0);
 add_javascript('<script src="'.G5_ADMIN_URL.'/gw_alimtalk_admin/js/jquery-ui-timepicker-addon.js"></script>', 0);
 add_javascript('<script src="'.G5_ADMIN_URL.'/gw_alimtalk_admin/js/jquery.uniform.min.js"></script>', 0);
@@ -236,10 +235,10 @@ add_javascript('<script src="'.G5_ADMIN_URL.'/gw_alimtalk_admin/js/jquery.unifor
                                         }
                                         ?>
                                         <td>
-                                            <i class="fas fa-plus-circle ulPlus_btn" id="1" onclick="addsend(this)"></i>
+                                            <i class="fa fa-plus-circle ulPlus_btn" id="1" onclick="addsend(this)"></i>
                                         </td>
                                         <td>
-                                            <i class="fas fa-minus-circle ulMinus_btn" onclick="removesend(this.parentNode.parentNode.id)"></i>
+                                            <i class="fa fa-minus-circle ulMinus_btn" onclick="removesend(this.parentNode.parentNode.id)"></i>
                                         </td>
                                     </tr>
                                     <!--list//-->
@@ -377,7 +376,7 @@ add_javascript('<script src="'.G5_ADMIN_URL.'/gw_alimtalk_admin/js/jquery.unifor
         <!-- modal | 발송완료 -->
         <div id="md_sendFinsh" class="modal_wrap">
             <div class="modalPopup w800">
-                <i class="far fa-check-circle pop_far"></i>
+                <i class="fa fa-check-circle-o pop_far"></i>
                 <div class="pop_bottom pdt_10">
                     <div class="loader_txt">
                         <h4 class="Alert">발송완료</h4>
@@ -410,7 +409,7 @@ add_javascript('<script src="'.G5_ADMIN_URL.'/gw_alimtalk_admin/js/jquery.unifor
             <td>
                 <span class="at_button_link"></span>
             </td>
-            <td><a id="delete-record" data-id="0"><i class="fas fa-minus-circle ulMinus_btn"></i></a></td>
+            <td><a id="delete-record" data-id="0"><i class="fa fa-minus-circle ulMinus_btn"></i></a></td>
         </tr>
     </table>
 </div>
@@ -763,7 +762,7 @@ function addsend(elmId){
         }
         }
         ?>
-        "<td><i class=\"fas fa-plus-circle ulPlus_btn\" id=\""+Lcnt+"\" onclick=\"addsend(this)\"></i></td><td><i class=\"fas fa-minus-circle ulMinus_btn\" onclick=\"removesend(this.parentNode.parentNode.id)\"></i></td></tr>";
+        "<td><i class=\"fa fa-plus-circle ulPlus_btn\" id=\""+Lcnt+"\" onclick=\"addsend(this)\"></i></td><td><i class=\"fa fa-minus-circle ulMinus_btn\" onclick=\"removesend(this.parentNode.parentNode.id)\"></i></td></tr>";
     $("#sendlist_"+Tcnt).after(str);
     for(i=1;i<=Lcnt;i++){$(".each_id:eq("+i+")").text(i+1);}
     var f = Lcnt -2;
@@ -795,7 +794,7 @@ function removeck(elm){
                 }
                 }
                 ?>
-                "<td><i class=\"fas fa-plus-circle ulPlus_btn\" id=\"1\" onclick=\"addsend(this)\"></i></td><td><i class=\"fas fa-minus-circle ulMinus_btn\" onclick=\"removesend(this.parentNode.parentNode.id)\"></i></td></tr>";
+                "<td><i class=\"fa fa-plus-circle ulPlus_btn\" id=\"1\" onclick=\"addsend(this)\"></i></td><td><i class=\"fa fa-minus-circle ulMinus_btn\" onclick=\"removesend(this.parentNode.parentNode.id)\"></i></td></tr>";
             $("#Slist").html(str);Lcnt++;
             msgCount();
         }
@@ -906,7 +905,7 @@ function addrList()
                     }
                     }
                     ?>
-                    "<td><i class=\"fas fa-plus-circle ulPlus_btn\" id=\""+i+"\" onclick=\"addsend(this)\"></i></td><td><i class=\"fas fa-minus-circle ulMinus_btn\" onclick=\"removesend(this.parentNode.parentNode.id)\"></i></td></tr>";Lcnt++;
+                    "<td><i class=\"fa fa-plus-circle ulPlus_btn\" id=\""+i+"\" onclick=\"addsend(this)\"></i></td><td><i class=\"fa fa-minus-circle ulMinus_btn\" onclick=\"removesend(this.parentNode.parentNode.id)\"></i></td></tr>";Lcnt++;
             })
             Lcnt=Lcnt-1;
             $("#Slist").html(str);
