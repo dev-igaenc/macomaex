@@ -70,6 +70,12 @@
 		// 데스크톱에서는 room list 폭을 토글하고, 모바일에서는 기존 전환 흐름을 유지한다.
 		function syncSidebarToggleState() {
 			if (!sidebarToggleBtn) return;
+			if (isMobileViewport()) {
+				sidebarToggleBtn.setAttribute('aria-pressed', 'false');
+				sidebarToggleBtn.setAttribute('aria-label', '닫기');
+				sidebarToggleBtn.setAttribute('title', '닫기');
+				return;
+			}
 			var collapsed = modal.classList.contains('chat-demo-modal--sidebar-collapsed');
 			sidebarToggleBtn.setAttribute('aria-pressed', collapsed ? 'true' : 'false');
 			sidebarToggleBtn.setAttribute('aria-label', collapsed ? '목록 펼치기' : '목록 접기');
@@ -965,6 +971,10 @@
 
 		if (sidebarToggleBtn) {
 			sidebarToggleBtn.addEventListener('click', function () {
+				if (isMobileViewport()) {
+					closeModal();
+					return;
+				}
 				toggleSidebarCollapsed();
 			});
 			syncSidebarToggleState();

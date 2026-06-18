@@ -74,6 +74,10 @@
 	background: #e0e7ff;
 }
 
+.chat-sidebar-new__close-icon {
+	display: none;
+}
+
 .chat-demo-modal--sidebar-collapsed .chat-sidebar {
 	width: 56px;
 	min-width: 56px;
@@ -910,7 +914,17 @@
 	}
 
 	.chat-sidebar-new {
+		display: flex;
+		background: #eff3ff;
+		color: #3b5bdb;
+	}
+
+	.chat-sidebar-new__collapse-icon {
 		display: none;
+	}
+
+	.chat-sidebar-new__close-icon {
+		display: block;
 	}
 
 	.chat-main {
