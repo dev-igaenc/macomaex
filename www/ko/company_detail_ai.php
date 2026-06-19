@@ -598,7 +598,7 @@ include_once(G5_THEME_PATH . '/head.php');
 						<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z"/></svg>
 						분석하기
 				    </button>
-				    <p class="ai-cta-benefit" id="aiCtaBenefitText">두 기업 간 시너지, 거래 적합도, 협력 전략까지<br>AI가 심층 분석한 맞춤 리포트를 받아보세요.</p>
+				    <p class="ai-cta-benefit" id="aiCtaBenefitText"><span class="ai-cta-benefit-title">왜 이 기업이 추천되었는지 궁금하신가요?</span><span class="ai-cta-benefit-body"><span class="ai-cta-benefit-intro">AI 분석 리포트에서 아래 정보를 확인할 수 있습니다.</span><span class="ai-cta-benefit-list">✓ 연결 근거 분석<br>✓ 거래 기회 분석<br>✓ 거래 신뢰도 분석<br>✓ 실행 제안 리포트</span></span></p>
 			    </div>
 				<div class="ai-analysis-body" id="aiAnalysisBody" role="region" aria-live="polite" aria-label="AI 분석 결과" style="display:none;"></div>
 				<!-- LLM 보고서 생성 단계 로딩 템플릿 -->

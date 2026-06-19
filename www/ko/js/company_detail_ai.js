@@ -1162,7 +1162,7 @@
 
             function updateBenefitText() {
                 if (!benefitText) return;
-                benefitText.innerHTML = '두 기업 간 시너지, 거래 적합도, 협력 전략까지<br>AI가 심층 분석한 맞춤 리포트를 받아보세요.';
+                benefitText.innerHTML = '<span class="ai-cta-benefit-title">왜 이 기업이 추천되었는지 궁금하신가요?</span><span class="ai-cta-benefit-body"><span class="ai-cta-benefit-intro">AI 분석 리포트에서 아래 정보를 확인할 수 있습니다.</span><span class="ai-cta-benefit-list">✓ 연결 근거 분석<br>✓ 거래 기회 분석<br>✓ 거래 신뢰도 분석<br>✓ 실행 제안 리포트</span></span>';
             }
             function updateTradeTypeText() {
                 if (!tradeTypeText) return;
