@@ -1,5 +1,5 @@
 <?php
-include_once(__DIR__ . '/../_common.php');
+include_once(__DIR__ . '/_common.php');
 include_once(G5_LIB_PATH . '/channel_talk.lib.php');
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
