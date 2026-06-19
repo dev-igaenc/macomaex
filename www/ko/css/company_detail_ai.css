@@ -706,11 +706,45 @@ html.in-iframe { --header-h: 0px; }
 }
 .ai-cta-sub a:hover { text-decoration: underline; }
 .ai-cta-benefit {
-	font-size: 13px;
-	color: #666;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	color: #667085;
 	margin: 0;
-	line-height: 1.6;
+	line-height: 1.55;
 	text-align: center;
+}
+.ai-cta-benefit-title {
+	display: block;
+	margin-bottom: 8px;
+	font-size: 15px;
+	line-height: 1.48;
+	color: #1f2937;
+	font-weight: 700;
+	letter-spacing: -0.02em;
+}
+.ai-cta-benefit-body {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	font-size: 13px;
+	font-weight: 500;
+	color: #667085;
+	letter-spacing: -0.01em;
+	padding: 0 2px;
+}
+.ai-cta-benefit-intro,
+.ai-cta-benefit-outro {
+	display: block;
+	text-align: center;
+}
+.ai-cta-benefit-list {
+	display: inline-block;
+	margin: 10px 0 2px;
+	padding-top: 10px;
+	border-top: 1px solid #e5e7eb;
+	text-align: left;
+	line-height: 1.65;
 }
 .ai-analysis-body {
 	min-height: 120px;
@@ -974,9 +1008,16 @@ html.in-iframe { --header-h: 0px; }
 		max-width: 100%;
 	}
 	.ai-cta-benefit {
+		padding: 0 4px;
+	}
+	.ai-cta-benefit-title {
+		margin-bottom: 5px;
+		font-size: 14px;
+		line-height: 1.4;
+	}
+	.ai-cta-benefit-body {
 		font-size: 12px;
 		line-height: 1.5;
-		padding: 0 4px;
 	}
 	.ai-analysis-body {
 		padding: 16px 14px;

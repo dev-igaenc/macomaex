@@ -18,6 +18,25 @@ if (G5_IS_MOBILE) {
 
 <!-- 하단 시작 { -->
 
+<section id="partner-showcase" aria-label="협력기업 로고 영역">
+    <div class="inConts">
+        <div class="partner-showcase_rows">
+            <div class="partner-showcase_item partner-showcase_item--kodata">
+                <div class="partner-showcase_logo is-kodata">
+                    <img src="/img/KODATA.png" alt="KODATA 로고">
+                </div>
+                <p class="partner-showcase_text">KODATA 기업데이터 기반 AI 추천</p>
+            </div>
+            <div class="partner-showcase_item partner-showcase_item--innobiz">
+                <div class="partner-showcase_logo is-innobiz">
+                    <img src="/img/partner-innobiz-logo-200.png" alt="이노비즈 로고">
+                </div>
+                <p class="partner-showcase_text">이노비즈 협회 회원서비스 운영 기관</p>
+            </div>
+        </div>
+    </div>
+</section>
+
 <div id="footer">
     <div class="inConts">
         <div class="textArea">
