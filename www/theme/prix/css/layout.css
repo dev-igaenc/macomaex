@@ -2040,16 +2040,26 @@ html.sub #quick-menu {
 
 	#partner-showcase .partner-showcase_logo {
 		flex: 0 0 auto;
-		width: 8.8rem;
-		height: 3.4rem;
+		width: 11.5rem;
+		height: 4.4rem;
 		padding: 0;
 	}
 
 	#partner-showcase .partner-showcase_logo.is-kodata img {
-		width: auto;
-		max-width: 100%;
+		width: 16.5rem;
 		height: auto;
-		max-height: 2.4rem;
+		max-width: 100%;
+		max-height: none;
+	}
+
+	#partner-showcase .partner-showcase_logo.is-kodata {
+		width: 16.5rem;
+	}
+
+	#partner-showcase .partner-showcase_logo.is-innobiz img {
+		width: 10.8rem;
+		height: auto;
+		max-width: 100%;
 	}
 
 	#partner-showcase .partner-showcase_item--kodata .partner-showcase_text,
