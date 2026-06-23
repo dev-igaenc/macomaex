@@ -19,49 +19,41 @@ if (!is_array($payload)) {
 $entity = isset($payload['entity']) && is_array($payload['entity']) ? $payload['entity'] : array();
 $personType = channel_talk_extract_person_type($entity);
 $messageText = channel_talk_extract_message_text($entity);
-$memberId = channel_talk_extract_member_id_from_webhook($payload);
-
-if ($memberId === 'guest_unknown') {
-    channel_talk_append_debug_log('member_id_extract_failed', array(
-        'person_type' => $personType,
-        'message_text' => $messageText,
-        'payload' => $payload,
-    ));
-}
+$talkId = channel_talk_extract_talk_id_from_webhook($payload);
 
 if ($messageText === '') {
     channel_talk_json_response(true, '텍스트 메시지가 없어 처리하지 않았습니다.', 200, array(
-        'member_id' => $memberId,
+        'talk_id' => $talkId,
         'person_type' => $personType,
     ));
 }
 
 $meta = array(
     'page_url' => channel_talk_extract_page_url_from_webhook($payload),
-    'referer_url' => channel_talk_referer_uri(),
+    'referer_url' => channel_talk_resolve_referer_url($payload),
     'ip_address' => channel_talk_request_ip(),
     'user_agent' => channel_talk_request_user_agent(),
 );
 
 if ($personType === 'user') {
-    $logId = channel_talk_insert_question_log($memberId, $messageText, $meta);
+    $logId = channel_talk_insert_question_log($talkId, $messageText, $meta);
     channel_talk_json_response(true, '사용자 메시지 로그를 저장했습니다.', 200, array(
-        'member_id' => $memberId,
+        'talk_id' => $talkId,
         'person_type' => $personType,
         'log_id' => $logId,
     ));
 }
 
 if ($personType === 'bot') {
-    $updated = channel_talk_update_latest_answer_log($memberId, $messageText);
+    $updated = channel_talk_update_latest_answer_log($talkId, $messageText);
     channel_talk_json_response(true, $updated ? '봇 응답 로그를 반영했습니다.' : '매칭되는 미응답 로그가 없어 건너뛰었습니다.', 200, array(
-        'member_id' => $memberId,
+        'talk_id' => $talkId,
         'person_type' => $personType,
         'updated' => $updated ? 'Y' : 'N',
     ));
 }
 
 channel_talk_json_response(true, '지원하지 않는 personType이라 처리하지 않았습니다.', 200, array(
-    'member_id' => $memberId,
+    'talk_id' => $talkId,
     'person_type' => $personType,
 ));

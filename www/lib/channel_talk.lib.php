@@ -183,17 +183,6 @@ if (!function_exists('channel_talk_request_uri')) {
     }
 }
 
-if (!function_exists('channel_talk_debug_log_path')) {
-    function channel_talk_debug_log_path()
-    {
-        if (defined('G5_DATA_PATH')) {
-            return rtrim(G5_DATA_PATH, '/\\') . '/log/channel_talk_webhook_debug.log';
-        }
-
-        return '';
-    }
-}
-
 if (!function_exists('channel_talk_referer_uri')) {
     function channel_talk_referer_uri()
     {
@@ -216,36 +205,115 @@ if (!function_exists('channel_talk_string_contains')) {
     }
 }
 
-if (!function_exists('channel_talk_append_debug_log')) {
-    function channel_talk_append_debug_log($title, $data = array())
-    {
-        $logPath = channel_talk_debug_log_path();
-        if ($logPath === '') return false;
-
-        $dir = dirname($logPath);
-        if (!is_dir($dir)) {
-            @mkdir($dir, 0777, true);
-        }
-
-        $entry = array(
-            'logged_at' => date('Y-m-d H:i:s'),
-            'title' => trim((string)$title),
-            'request_uri' => channel_talk_request_uri(),
-            'ip_address' => channel_talk_request_ip(),
-            'user_agent' => channel_talk_request_user_agent(),
-            'data' => is_array($data) ? $data : array('value' => $data),
-        );
-
-        $line = channel_talk_json_encode($entry) . "\n";
-
-        return @file_put_contents($logPath, $line, FILE_APPEND | LOCK_EX) !== false;
-    }
-}
-
 if (!function_exists('channel_talk_db_table_name')) {
     function channel_talk_db_table_name()
     {
         return 'channel_talk_log';
+    }
+}
+
+if (!function_exists('channel_talk_log_directory_path')) {
+    function channel_talk_log_directory_path()
+    {
+        return dirname(__DIR__) . '/logs/channel_talk';
+    }
+}
+
+if (!function_exists('channel_talk_log_file_path')) {
+    function channel_talk_log_file_path($dateYmd = '')
+    {
+        $dateYmd = preg_replace('/[^0-9]/', '', (string)$dateYmd);
+        if ($dateYmd === '') {
+            $dateYmd = date('Ymd');
+        }
+
+        return channel_talk_log_directory_path() . '/channel_talk_log_' . $dateYmd . '.php';
+    }
+}
+
+if (!function_exists('channel_talk_log_default_message')) {
+    function channel_talk_log_default_message($eventType, $status)
+    {
+        $eventType = trim((string)$eventType);
+        $status = trim((string)$status);
+
+        if ($status === 'success') {
+            $map = array(
+                'question_received' => '채널톡 사용자 질문 로그를 저장했습니다.',
+                'answer_updated' => '채널톡 AI 답변 로그를 반영했습니다.',
+                'slack_alert_sent' => '슬랙 알림을 발송했습니다.',
+                'slack_alert_failed' => '슬랙 알림 발송에 실패했습니다.',
+            );
+
+            return $map[$eventType] ?? '채널톡 로그를 기록했습니다.';
+        }
+
+        if ($eventType === 'slack_alert_failed') {
+            return '슬랙 알림 발송에 실패했습니다.';
+        }
+
+        return '채널톡 로그 처리 중 확인이 필요합니다.';
+    }
+}
+
+if (!function_exists('channel_talk_write_daily_file_log')) {
+    function channel_talk_write_daily_file_log($eventType, $status, $payload = array())
+    {
+        $directory = channel_talk_log_directory_path();
+        if (!is_dir($directory)) {
+            @mkdir($directory, 0777, true);
+        }
+        if (!is_dir($directory) || !is_writable($directory)) {
+            return false;
+        }
+
+        $filePath = channel_talk_log_file_path();
+        $isNewFile = !file_exists($filePath);
+        $loggedAt = date('Y-m-d H:i:s');
+        $message = trim((string)($payload['message'] ?? ''));
+        if ($message === '') {
+            $message = channel_talk_log_default_message($eventType, $status);
+        }
+
+        $fields = array(
+            'event_type' => trim((string)$eventType),
+            'event_status' => trim((string)$status),
+            'log_id' => isset($payload['log_id']) ? (int)$payload['log_id'] : '',
+            'talk_id' => trim((string)($payload['talk_id'] ?? '')),
+            'person_type' => trim((string)($payload['person_type'] ?? '')),
+            'route_type' => trim((string)($payload['route_type'] ?? '')),
+            'topic_type' => trim((string)($payload['topic_type'] ?? '')),
+            'risk_level' => trim((string)($payload['risk_level'] ?? '')),
+            'customer_inquiry_yn' => trim((string)($payload['customer_inquiry_yn'] ?? '')),
+            'slack_alert_yn' => trim((string)($payload['slack_alert_yn'] ?? '')),
+            'slack_alert_reason' => trim((string)($payload['slack_alert_reason'] ?? '')),
+            'page_url' => trim((string)($payload['page_url'] ?? '')),
+            'referer_url' => trim((string)($payload['referer_url'] ?? '')),
+            'request_uri' => trim((string)($payload['request_uri'] ?? channel_talk_request_uri())),
+            'client_ip' => trim((string)($payload['ip_address'] ?? channel_talk_request_ip())),
+            'user_agent' => channel_talk_compact_log_message((string)($payload['user_agent'] ?? channel_talk_request_user_agent()), 300),
+            'question' => channel_talk_compact_log_message((string)($payload['question'] ?? ''), 500),
+            'answer' => channel_talk_compact_log_message((string)($payload['answer'] ?? ''), 500),
+            'message' => $message,
+        );
+
+        $allowZeroKeys = array('log_id');
+        $lines = array();
+        if ($isNewFile) {
+            $lines[] = "<?php exit; ?>";
+            $lines[] = '';
+        }
+        $lines[] = '[' . $loggedAt . ']';
+        foreach ($fields as $key => $value) {
+            if ($value === '') continue;
+            if ($value === 0 && !in_array($key, $allowZeroKeys, true)) continue;
+            $lines[] = $key . ': ' . $value;
+        }
+        $lines[] = '---';
+        $lines[] = '';
+
+        $body = implode(PHP_EOL, $lines);
+        return @file_put_contents($filePath, $body, FILE_APPEND | LOCK_EX) !== false;
     }
 }
 
@@ -312,7 +380,7 @@ if (!function_exists('channel_talk_detect_route_bundle')) {
         $riskLevel = 'low';
         $customerInquiryYn = 'N';
         $slackAlertYn = 'N';
-        $slackAlertReason = null;
+        $slackAlertReason = 'not_required';
 
         $customerInquiryTopics = array('refund', 'credit_payment', 'member_account', 'error', 'data_issue');
         if (in_array($topicType, $customerInquiryTopics, true)) {
@@ -374,8 +442,8 @@ if (!function_exists('channel_talk_recursive_find_first')) {
     }
 }
 
-if (!function_exists('channel_talk_extract_member_id_from_webhook')) {
-    function channel_talk_extract_member_id_from_webhook($payload)
+if (!function_exists('channel_talk_extract_talk_id_from_webhook')) {
+    function channel_talk_extract_talk_id_from_webhook($payload)
     {
         $candidateKeys = array(
             'member_id',
@@ -412,7 +480,10 @@ if (!function_exists('channel_talk_extract_member_id_from_webhook')) {
             if ($normalized !== '') return $normalized;
         }
 
-        return 'guest_unknown';
+        $channelLeadId = channel_talk_extract_channel_lead_id($payload);
+        if ($channelLeadId !== '') return $channelLeadId;
+
+        return 'talk_unknown';
     }
 }
 
@@ -438,6 +509,33 @@ if (!function_exists('channel_talk_normalize_member_id_candidate')) {
     }
 }
 
+if (!function_exists('channel_talk_extract_channel_lead_id')) {
+    function channel_talk_extract_channel_lead_id($payload)
+    {
+        if (!is_array($payload)) return '';
+
+        $user = $payload['refers']['user'] ?? array();
+        if (is_array($user)) {
+            $memberId = trim((string)($user['memberId'] ?? ''));
+            if ($memberId !== '') return $memberId;
+
+            $veilId = trim((string)($user['veilId'] ?? ''));
+            if ($veilId !== '') return $veilId;
+
+            $userId = trim((string)($user['id'] ?? ''));
+            if ($userId !== '') return 'channel_user_' . $userId;
+        }
+
+        $userChat = $payload['refers']['userChat'] ?? array();
+        if (is_array($userChat)) {
+            $userId = trim((string)($userChat['userId'] ?? ''));
+            if ($userId !== '') return 'channel_user_' . $userId;
+        }
+
+        return '';
+    }
+}
+
 if (!function_exists('channel_talk_extract_message_text')) {
     function channel_talk_extract_message_text($entity)
     {
@@ -449,12 +547,32 @@ if (!function_exists('channel_talk_extract_message_text')) {
 if (!function_exists('channel_talk_extract_page_url_from_webhook')) {
     function channel_talk_extract_page_url_from_webhook($payload)
     {
-        return trim((string)channel_talk_recursive_find_first($payload, array(
+        $pageUrl = trim((string)channel_talk_recursive_find_first($payload, array(
             'pageUrl',
             'page_url',
             'currentPageUrl',
             'current_page_url',
         )));
+
+        if ($pageUrl !== '') return $pageUrl;
+
+        $sourcePage = trim((string)($payload['refers']['userChat']['source']['page'] ?? ''));
+        if ($sourcePage !== '') return $sourcePage;
+
+        return '';
+    }
+}
+
+if (!function_exists('channel_talk_resolve_referer_url')) {
+    function channel_talk_resolve_referer_url($payload = array())
+    {
+        $refererUrl = channel_talk_referer_uri();
+        if ($refererUrl !== '') return $refererUrl;
+
+        $sourcePage = trim((string)($payload['refers']['userChat']['source']['page'] ?? ''));
+        if ($sourcePage !== '') return $sourcePage;
+
+        return 'channel_webhook';
     }
 }
 
@@ -476,7 +594,7 @@ if (!function_exists('channel_talk_slack_notify')) {
 
         $text = "[ChannelTalk Alert]\n"
             . "- 시각: " . date('Y-m-d H:i:s') . "\n"
-            . "- member_id: " . (($logRow['member_id'] ?? '') !== '' ? $logRow['member_id'] : '-') . "\n"
+            . "- talk_id: " . (($logRow['talk_id'] ?? '') !== '' ? $logRow['talk_id'] : '-') . "\n"
             . "- 유형: " . (($logRow['topic_type'] ?? '') !== '' ? $logRow['topic_type'] : '-') . "\n"
             . "- 분기: " . (($logRow['route_type'] ?? '') !== '' ? $logRow['route_type'] : '-') . "\n"
             . "- 위험도: " . (($logRow['risk_level'] ?? '') !== '' ? $logRow['risk_level'] : '-') . "\n"
@@ -499,17 +617,33 @@ if (!function_exists('channel_talk_slack_notify')) {
         $httpCode = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);
 
-        return !($response === false || $httpCode < 200 || $httpCode >= 300);
+        $success = !($response === false || $httpCode < 200 || $httpCode >= 300);
+        channel_talk_write_daily_file_log($success ? 'slack_alert_sent' : 'slack_alert_failed', $success ? 'success' : 'fail', array(
+            'log_id' => isset($logRow['id']) ? (int)$logRow['id'] : '',
+            'talk_id' => trim((string)($logRow['talk_id'] ?? '')),
+            'route_type' => trim((string)($logRow['route_type'] ?? '')),
+            'topic_type' => trim((string)($logRow['topic_type'] ?? '')),
+            'risk_level' => trim((string)($logRow['risk_level'] ?? '')),
+            'customer_inquiry_yn' => trim((string)($logRow['customer_inquiry_yn'] ?? '')),
+            'slack_alert_yn' => trim((string)($logRow['slack_alert_yn'] ?? '')),
+            'slack_alert_reason' => trim((string)($logRow['slack_alert_reason'] ?? '')),
+            'page_url' => trim((string)($logRow['page_url'] ?? '')),
+            'question' => trim((string)($logRow['question'] ?? '')),
+            'answer' => trim((string)($logRow['answer'] ?? '')),
+            'message' => $success ? '슬랙 알림을 발송했습니다.' : '슬랙 알림 발송에 실패했습니다.',
+        ));
+
+        return $success;
     }
 }
 
 if (!function_exists('channel_talk_insert_question_log')) {
-    function channel_talk_insert_question_log($memberId, $question, $meta = array())
+    function channel_talk_insert_question_log($talkId, $question, $meta = array())
     {
         $table = channel_talk_db_table_name();
-        $memberId = trim((string)$memberId);
+        $talkId = trim((string)$talkId);
         $question = trim((string)$question);
-        if ($memberId === '' || $question === '') return 0;
+        if ($talkId === '' || $question === '') return 0;
 
         $bundle = channel_talk_detect_route_bundle($question);
         $pageUrl = trim((string)($meta['page_url'] ?? ''));
@@ -519,7 +653,7 @@ if (!function_exists('channel_talk_insert_question_log')) {
 
         sql_query("
             INSERT INTO `{$table}`
-            SET member_id='" . sql_escape_string($memberId) . "',
+            SET talk_id='" . sql_escape_string($talkId) . "',
                 question='" . sql_escape_string($question) . "',
                 answer='',
                 route_type='" . sql_escape_string($bundle['route_type']) . "',
@@ -539,14 +673,34 @@ if (!function_exists('channel_talk_insert_question_log')) {
         $idRow = sql_fetch("SELECT LAST_INSERT_ID() AS id");
         $logId = (int)($idRow['id'] ?? 0);
 
+        channel_talk_write_daily_file_log('question_received', 'success', array(
+            'log_id' => $logId,
+            'talk_id' => $talkId,
+            'person_type' => 'user',
+            'route_type' => $bundle['route_type'],
+            'topic_type' => $bundle['topic_type'],
+            'risk_level' => $bundle['risk_level'],
+            'customer_inquiry_yn' => $bundle['customer_inquiry_yn'],
+            'slack_alert_yn' => $bundle['slack_alert_yn'],
+            'slack_alert_reason' => $bundle['slack_alert_reason'],
+            'page_url' => $pageUrl,
+            'referer_url' => $refererUrl,
+            'ip_address' => $ipAddress,
+            'user_agent' => $userAgent,
+            'question' => $question,
+            'answer' => '',
+        ));
+
         if (($bundle['slack_alert_yn'] ?? 'N') === 'Y') {
             channel_talk_slack_notify(array(
-                'member_id' => $memberId,
+                'id' => $logId,
+                'talk_id' => $talkId,
                 'question' => $question,
                 'answer' => '',
                 'route_type' => $bundle['route_type'],
                 'topic_type' => $bundle['topic_type'],
                 'risk_level' => $bundle['risk_level'],
+                'customer_inquiry_yn' => $bundle['customer_inquiry_yn'],
                 'slack_alert_yn' => $bundle['slack_alert_yn'],
                 'slack_alert_reason' => $bundle['slack_alert_reason'],
                 'page_url' => $pageUrl,
@@ -558,17 +712,17 @@ if (!function_exists('channel_talk_insert_question_log')) {
 }
 
 if (!function_exists('channel_talk_update_latest_answer_log')) {
-    function channel_talk_update_latest_answer_log($memberId, $answer)
+    function channel_talk_update_latest_answer_log($talkId, $answer)
     {
         $table = channel_talk_db_table_name();
-        $memberId = trim((string)$memberId);
+        $talkId = trim((string)$talkId);
         $answer = trim((string)$answer);
-        if ($memberId === '' || $answer === '') return false;
+        if ($talkId === '' || $answer === '') return false;
 
         $row = sql_fetch("
             SELECT id, question, route_type, topic_type, risk_level, slack_alert_yn, slack_alert_reason, page_url
             FROM `{$table}`
-            WHERE member_id='" . sql_escape_string($memberId) . "'
+            WHERE talk_id='" . sql_escape_string($talkId) . "'
               AND answer=''
             ORDER BY id DESC
             LIMIT 1
@@ -583,6 +737,22 @@ if (!function_exists('channel_talk_update_latest_answer_log')) {
             WHERE id='" . (int)$row['id'] . "'
             LIMIT 1
         ", false);
+
+        if ($updated) {
+            channel_talk_write_daily_file_log('answer_updated', 'success', array(
+                'log_id' => (int)$row['id'],
+                'talk_id' => $talkId,
+                'person_type' => 'bot',
+                'route_type' => trim((string)($row['route_type'] ?? '')),
+                'topic_type' => trim((string)($row['topic_type'] ?? '')),
+                'risk_level' => trim((string)($row['risk_level'] ?? '')),
+                'slack_alert_yn' => trim((string)($row['slack_alert_yn'] ?? '')),
+                'slack_alert_reason' => trim((string)($row['slack_alert_reason'] ?? '')),
+                'page_url' => trim((string)($row['page_url'] ?? '')),
+                'question' => trim((string)($row['question'] ?? '')),
+                'answer' => $answer,
+            ));
+        }
 
         return (bool)$updated;
     }
