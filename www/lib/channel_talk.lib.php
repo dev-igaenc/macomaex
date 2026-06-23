@@ -183,6 +183,17 @@ if (!function_exists('channel_talk_request_uri')) {
     }
 }
 
+if (!function_exists('channel_talk_debug_log_path')) {
+    function channel_talk_debug_log_path()
+    {
+        if (defined('G5_DATA_PATH')) {
+            return rtrim(G5_DATA_PATH, '/\\') . '/log/channel_talk_webhook_debug.log';
+        }
+
+        return '';
+    }
+}
+
 if (!function_exists('channel_talk_referer_uri')) {
     function channel_talk_referer_uri()
     {
@@ -202,6 +213,32 @@ if (!function_exists('channel_talk_string_contains')) {
         }
 
         return stripos($haystack, $needle) !== false;
+    }
+}
+
+if (!function_exists('channel_talk_append_debug_log')) {
+    function channel_talk_append_debug_log($title, $data = array())
+    {
+        $logPath = channel_talk_debug_log_path();
+        if ($logPath === '') return false;
+
+        $dir = dirname($logPath);
+        if (!is_dir($dir)) {
+            @mkdir($dir, 0777, true);
+        }
+
+        $entry = array(
+            'logged_at' => date('Y-m-d H:i:s'),
+            'title' => trim((string)$title),
+            'request_uri' => channel_talk_request_uri(),
+            'ip_address' => channel_talk_request_ip(),
+            'user_agent' => channel_talk_request_user_agent(),
+            'data' => is_array($data) ? $data : array('value' => $data),
+        );
+
+        $line = channel_talk_json_encode($entry) . "\n";
+
+        return @file_put_contents($logPath, $line, FILE_APPEND | LOCK_EX) !== false;
     }
 }
 
