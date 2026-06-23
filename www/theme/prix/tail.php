@@ -114,6 +114,4 @@ $(function() {
 		//easing: 'ease-out'
 	});
 </script>
-<?php if (isset($_SERVER['REMOTE_ADDR']) && $_SERVER['REMOTE_ADDR'] == '222.107.227.177') { ?>
 <?= channel_talk_boot_script(); ?>
-<?php } ?>
