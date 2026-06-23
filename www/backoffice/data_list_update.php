@@ -1,7 +1,7 @@
 <?php
 set_time_limit(0);
 ini_set('memory_limit', '1000M');
-$sub_menu = '500200';
+$sub_menu = '800200';
 include_once('./_common.php');
 
 if ($w == "u" || $w == "d")

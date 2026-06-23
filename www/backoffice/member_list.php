@@ -74,15 +74,157 @@ $colspan = 7;
 <style>
 tr.leave td {background:#eee !important;}
 .mb_leave_msg {color:#444;}
+.member-list-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    min-width: 0 !important;
+    width: 100%;
+}
+.member-list-toolbar > * {
+    flex: 0 0 auto;
+}
+.member-list-toolbar .ov_listall,
+.member-list-toolbar .btn_ov01 {
+    margin: 0;
+    white-space: nowrap;
+}
+.member-list-excel {
+    margin-left: auto;
+    white-space: nowrap;
+}
+.member-list-search {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    min-width: 0 !important;
+}
+.member-list-search select,
+.member-list-search .frm_input {
+    min-height: 38px;
+}
+.member-list-search .frm_input {
+    min-width: 220px;
+}
+.member-list-search .btn_submit {
+    width: auto !important;
+    min-width: 68px;
+    min-height: 38px;
+    padding: 0 16px !important;
+    background: #17a2b8 !important;
+    color: #fff !important;
+    text-indent: 0 !important;
+    overflow: visible !important;
+    border-radius: 4px;
+}
+.member-list-table {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    width: 100%;
+}
+.member-list-table table {
+    min-width: 760px;
+}
+.member-list-table .btn {
+    white-space: nowrap;
+}
+@media (max-width: 991px) {
+    .member-list-toolbar {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        align-items: stretch;
+        gap: 10px;
+    }
+    .member-list-toolbar > * {
+        min-width: 0;
+    }
+    .member-list-toolbar .ov_listall,
+    .member-list-toolbar .btn_ov01,
+    .member-list-excel {
+        width: 100%;
+        max-width: 100%;
+        margin: 0;
+    }
+    .member-list-toolbar .ov_listall,
+    .member-list-toolbar .btn_ov01 {
+        display: flex;
+        align-items: stretch;
+        height: auto;
+        min-height: 44px;
+        line-height: 1.3;
+        overflow: hidden;
+    }
+    .member-list-toolbar .ov_listall {
+        grid-column: 1 / -1;
+        justify-content: center;
+        align-items: center;
+        min-height: 42px;
+        padding: 10px 12px;
+        text-align: center;
+    }
+    .member-list-toolbar .btn_ov01 .ov_txt,
+    .member-list-toolbar .btn_ov01 .ov_num {
+        float: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 0;
+        padding: 10px 8px;
+        text-align: center;
+        white-space: normal;
+        word-break: keep-all;
+    }
+    .member-list-toolbar .btn_ov01 .ov_txt {
+        flex: 1 1 auto;
+        font-size: 12px;
+    }
+    .member-list-toolbar .btn_ov01 .ov_num {
+        flex: 0 0 auto;
+        font-size: 12px;
+    }
+    .member-list-excel {
+        grid-column: 1 / -1;
+        min-height: 42px;
+    }
+    .member-list-search {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+    .member-list-search select,
+    .member-list-search .frm_input,
+    .member-list-search .btn_submit {
+        width: 100%;
+        margin: 0 !important;
+    }
+    .member-list-table {
+        margin: 0 -10px;
+        padding: 0 10px 10px;
+        width: calc(100% + 20px);
+    }
+    .member-list-table table {
+        min-width: 640px;
+    }
+    .member-list-table th,
+    .member-list-table td {
+        font-size: 12px;
+        padding-left: 6px;
+        padding-right: 6px;
+        word-break: keep-all;
+    }
+}
 </style>
-<div class="local_ov01 local_ov">
+<div class="local_ov01 local_ov member-list-toolbar">
     <?php echo $listall ?>
     <span class="btn_ov01"><span class="ov_txt">총회원수 </span><span class="ov_num"> <?php echo number_format($total_count) ?>명 </span></span>
     <a href="?sst=mb_intercept_date&amp;sod=desc&amp;sfl=<?php echo $sfl ?>&amp;stx=<?php echo $stx ?>" class="btn_ov01" data-tooltip-text="차단된 순으로 정렬합니다.&#xa;전체 데이터를 출력합니다."> <span class="ov_txt">차단 </span><span class="ov_num"><?php echo number_format($intercept_count) ?>명</span></a>
-    <a href="?sst=mb_leave_date&amp;sod=desc&amp;sfl=<?php echo $sfl ?>&amp;stx=<?php echo $stx ?>" class="btn_ov01" data-tooltip-text="탈퇴된 순으로 정렬합니다.&#xa;전체 데이터를 출력합니다."> <span class="ov_txt">탈퇴  </span><span class="ov_num"><?php echo number_format($leave_count) ?>명</span></a>&ensp;<button type="button" class="btn btn-primary btn-sm pull-right" id="exl_download" onclick="$('#fsearch').attr('action','./member_excel.php').submit();$('#fsearch').attr('action','');"><i class="fa fa-file-excel-o" aria-hidden="true"></i> 엑셀 다운로드</button>
+    <a href="?sst=mb_leave_date&amp;sod=desc&amp;sfl=<?php echo $sfl ?>&amp;stx=<?php echo $stx ?>" class="btn_ov01" data-tooltip-text="탈퇴된 순으로 정렬합니다.&#xa;전체 데이터를 출력합니다."> <span class="ov_txt">탈퇴  </span><span class="ov_num"><?php echo number_format($leave_count) ?>명</span></a>
+    <button type="button" class="btn btn-primary btn-sm member-list-excel" id="exl_download" onclick="$('#fsearch').attr('action','./member_excel.php').submit();$('#fsearch').attr('action','');"><i class="fa fa-file-excel-o" aria-hidden="true"></i> 엑셀 다운로드</button>
 </div>
 
-<form id="fsearch" name="fsearch" class="local_sch01 local_sch" method="get">
+<form id="fsearch" name="fsearch" class="local_sch01 local_sch member-list-search" method="get">
 
 <label for="sfl" class="sound_only">검색대상</label>
 <select name="sfl" id="sfl">
@@ -115,7 +257,7 @@ tr.leave td {background:#eee !important;}
 <input type="hidden" name="page" value="<?php echo $page ?>">
 <input type="hidden" name="token" value="">
 
-<div class="tbl_head01 tbl_wrap">
+<div class="tbl_head01 tbl_wrap member-list-table">
     <table>
     <caption><?php echo $g5['title']; ?> 목록</caption>
     <thead>

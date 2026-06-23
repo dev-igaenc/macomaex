@@ -15,6 +15,8 @@ $pg_anchor = '<ul class="anchor">
 </ul>';
 
 $colspan = 6;
+$rows = isset($config['cf_page_rows']) ? (int)$config['cf_page_rows'] : 0;
+$page = (isset($page) && is_numeric($page) && (int)$page > 0) ? (int)$page : 1;
 
 $gw_msg = new NCP_SENS_AT();
 

@@ -69,7 +69,7 @@ function init_sidebar() {
 
     var openUpMenu = function () {
         $SIDEBAR_MENU.find('li').removeClass('active active-sm');
-        $SIDEBAR_MENU.find('li ul').slideUp();
+        $SIDEBAR_MENU.find('li ul').stop(true, true).hide();
     }
 
     $SIDEBAR_MENU.find('a').on('click', function (ev) {
@@ -77,9 +77,8 @@ function init_sidebar() {
 
         if ($li.is('.active')) {
             $li.removeClass('active active-sm');
-            $('ul:first', $li).slideUp(function () {
-                setContentHeight();
-            });
+            $('ul:first', $li).stop(true, true).hide();
+            setContentHeight();
         } else {
             // prevent closing menu if we are on child menu
             if (!$li.parent().is('.child_menu')) {
@@ -94,9 +93,8 @@ function init_sidebar() {
 
             $li.addClass('active');
 
-            $('ul:first', $li).slideDown(function () {
-                setContentHeight();
-            });
+            $('ul:first', $li).stop(true, true).show();
+            setContentHeight();
         }
     });
 
@@ -130,9 +128,9 @@ function init_sidebar() {
 	else	$SIDEBAR_MENU.find('a[href="' + CURRENT_URL + '"]').parent('li').addClass('current-page');
     $SIDEBAR_MENU.find('a').filter(function () {
         return this.href == CURRENT_URL;
-    }).parent('li').addClass('current-page').parents('ul').slideDown(function () {
-        setContentHeight();
-    }).parent().addClass('active');
+    }).parent('li').addClass('current-page').parents('ul').show().parent().addClass('active');
+
+    setContentHeight();
 
     // recompute content when resizing
     $(window).smartresize(function () {

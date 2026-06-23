@@ -6,13 +6,22 @@ auth_check_menu($auth, $sub_menu, 'r');
 
 $g5['title'] = '카카오 알림톡 설정';
 
+if (!isset($fr_date) || !is_string($fr_date)) $fr_date = '';
+if (!isset($to_date) || !is_string($to_date)) $to_date = '';
+if (!isset($sst) || !is_string($sst)) $sst = '';
+if (!isset($sod) || !is_string($sod)) $sod = '';
+if (!isset($page) || !is_numeric($page)) $page = 1;
+$page = (int)$page > 0 ? (int)$page : 1;
+$where = array();
+$sql_search = '';
+
 $sql_common = " from {$g5['nc_alimtalk_history']} ";
 
 // 조건검색
 $where[] = " nc_reserved = '1' ";
 $where[] = " nc_message_id = '' ";
 
-if ($where) {
+if (!empty($where)) {
     $sql_search = ' where '.implode(' and ', $where);
 }
 
@@ -27,9 +36,9 @@ $sql = " select count(*) as cnt {$sql_common} {$sql_search} {$sql_order} ";
 $row = sql_fetch($sql);
 $total_count = $row['cnt'];
 
-$rows = $config['cf_page_rows'];
+$rows = isset($config['cf_page_rows']) ? (int)$config['cf_page_rows'] : 0;
+$rows = $rows > 0 ? $rows : 30;
 $total_page  = ceil($total_count / $rows);  // 전체 페이지 계산
-if ($page < 1) { $page = 1; } // 페이지가 없으면 첫 페이지 (1 페이지)
 $from_record = ($page - 1) * $rows; // 시작 열을 구함
 
 $listall = '<a href="'.$_SERVER['SCRIPT_NAME'].'" class="ov_listall">전체목록</a>';
@@ -94,7 +103,7 @@ add_stylesheet('<link rel="stylesheet" href="'.G5_ADMIN_URL.'/gw_alimtalk_admin/
         $bg = 'bg'.($i%2);
     ?>
 
-	<tr class="paygate-info-js" data-bo_table="<?php echo $row['bo_table'];?>" data-nc_id="<?php echo $row['nc_id'];?>" data-nc_message_id="<?php echo $row['nc_message_id'];?>" data-nc_request_id="<?php echo $row['nc_request_id'];?>">
+	<tr class="paygate-info-js" data-nc_id="<?php echo $row['nc_id'];?>" data-nc_message_id="<?php echo $row['nc_message_id'];?>" data-nc_request_id="<?php echo $row['nc_request_id'];?>">
 		<td class="td_chk">
 			<input type="hidden" name="nc_id[<?php echo $i ?>]" value="<?php echo $row['nc_id'] ?>" id="nc_id_<?php echo $i ?>">
             <label for="chk_<?php echo $i; ?>" class="sound_only"><?php echo get_text($row['nc_id']) ?></label>
@@ -132,7 +141,7 @@ add_stylesheet('<link rel="stylesheet" href="'.G5_ADMIN_URL.'/gw_alimtalk_admin/
 <script>
 function sync_reserve_message() {
 	$.ajax({
-		url: g5_url+'/adm/gw_alimtalk_admin/nc_alimtalk_sync_message.php',
+		url: '<?php echo G5_ADMIN_URL; ?>/gw_alimtalk_admin/nc_alimtalk_sync_message.php',
 		dataType: 'html',
 		type:'post',
 		success:function(req) {
@@ -273,7 +282,7 @@ function initInquireBalance(targetName, statusName, messageStatusName, requestTi
 
 function accountApi(method) {
 	return {
-		paygate: g5_url+"/adm/gw_alimtalk_admin/nc_alimtalk_get_messages.php?method="+method
+		paygate: '<?php echo G5_ADMIN_URL; ?>/gw_alimtalk_admin/nc_alimtalk_get_messages.php?method='+method
 	};
 }
 

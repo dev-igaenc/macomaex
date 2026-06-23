@@ -91,7 +91,7 @@ if(empty($bo_table)) {
     }
 }
 */
-$gr_id = $gr_id?$gr_id:$group['gr_id'];
+$gr_id = $gr_id ? $gr_id : (isset($group['gr_id']) ? $group['gr_id'] : '');
 if ($gr_id) {
     $sql = " SELECT * FROM ".$g5['group_table']." WHERE gr_id = '".$gr_id."' ";
     $group = sql_fetch($sql);

@@ -99,12 +99,13 @@ td {vertical-align:middle !important;}
                         </thead>
 
                         <tbody>
-				<?php
-				for ($i=0; $i<count($list); $i++) {
-						$thumb = get_list_thumbnail($board['bo_table'], $list[$i]['wr_id'],"200","100", false, true);
-						if($thumb['src']) {
-							$img_content = '<img src="'.$thumb['ori'].'" class="ofi alt="'.$thumb['alt'].'" style="width:150px;" />';
-						} else {
+					<?php
+					for ($i=0; $i<count($list); $i++) {
+							$lt_class = '';
+							$thumb = get_list_thumbnail($board['bo_table'], $list[$i]['wr_id'],"200","100", false, true);
+							if($thumb['src']) {
+								$img_content = '<img src="'.$thumb['ori'].'" class="ofi alt="'.$thumb['alt'].'" style="width:150px;" />';
+							} else {
 							$img_content = '<img src="/img/noimage.jpg" class="ofi bg" alt="'.$thumb['alt'].'" style="width:150px;"/>';
 						}
 

@@ -3,6 +3,7 @@ include_once('./_common.php');
 include_once(__DIR__ . '/helper/trade_request_helper.php');
 include_once(__DIR__ . '/helper/company_detail_helper.php');
 include_once(__DIR__ . '/helper/llm_report_trade_helper.php');
+include_once(__DIR__ . '/helper/company_list_ai_helper.php');
 
 $should_open_trade_request_modal = false;
 if (isset($_GET['trade_request_login']) && $_GET['trade_request_login'] === '1') {
@@ -55,6 +56,150 @@ function company_detail_ai_resolve_tag_total_count($keyword_count, $tags)
     $count = (int)$keyword_count;
     if ($count > 0) return $count;
     return count(is_array($tags) ? $tags : array());
+}
+
+function company_detail_ai_lookup_industry_name($bzc_cd)
+{
+    $bzc_cd = strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', (string)$bzc_cd), 0, 10));
+    if ($bzc_cd === '') return '';
+
+    $row = sql_fetch("
+        SELECT k_code_name
+        FROM kssc
+        WHERE k_code = '" . sql_escape_string($bzc_cd) . "'
+        LIMIT 1
+    ");
+
+    return trim((string)($row['k_code_name'] ?? ''));
+}
+
+function company_detail_ai_parse_source_keywords($value)
+{
+    if (function_exists('llm_report_trade_exact_items')) {
+        return llm_report_trade_exact_items($value);
+    }
+
+    $raw_items = is_array($value) ? $value : array($value);
+    $out = array();
+    foreach ($raw_items as $raw) {
+        $raw = trim((string)$raw);
+        if ($raw === '' || $raw === '-' || $raw === '미공개') continue;
+        $parts = preg_split('/\s*(?:,|\/|\||;|\n|\r\n|·|ㆍ)\s*/u', $raw);
+        foreach ($parts as $part) {
+            $part = trim((string)$part);
+            if ($part === '' || $part === '-' || $part === '미공개') continue;
+            if (!in_array($part, $out, true)) $out[] = $part;
+        }
+    }
+
+    return $out;
+}
+
+function company_detail_ai_pick_company_api_log_by_identity($bizno = '', $kedcd = '')
+{
+    $bizno = preg_replace('/\D/', '', (string)$bizno);
+    $kedcd = preg_replace('/\D/', '', (string)$kedcd);
+    $where = array();
+
+    if (strlen($bizno) === 10) {
+        $where[] = "c_bizno='" . sql_escape_string($bizno) . "'";
+    }
+    if (strlen($kedcd) === 10 && !preg_match('/^0+$/', $kedcd)) {
+        $where[] = "c_kedcd='" . sql_escape_string($kedcd) . "'";
+    }
+    if (empty($where)) return null;
+
+    $sql = "
+        SELECT c_bizno, c_kedcd, c_content, c_datetime
+        FROM company_api_log
+        WHERE " . implode(' OR ', $where) . "
+        ORDER BY c_datetime DESC
+        LIMIT 1
+    ";
+    $row = sql_fetch($sql);
+
+    if (!is_array($row) || empty($row['c_content'])) return null;
+    return $row;
+}
+
+function company_detail_ai_enrich_source_context_from_api_log($context, $source_company = array())
+{
+    $context = is_array($context) ? $context : array();
+    $source_company = is_array($source_company) ? $source_company : array();
+
+    $has_source_items = !empty($context['src_keywords']) || trim((string)($context['source_mpd'] ?? '')) !== '';
+    $has_partner_meta = !empty($context['source_cust_names']) || !empty($context['source_supp_names']);
+    $has_source_sales = (int)($context['source_sales'] ?? 0) > 0;
+    if ($has_source_items && $has_partner_meta && $has_source_sales) {
+        return $context;
+    }
+
+    $api_log_row = company_detail_ai_pick_company_api_log_by_identity(
+        $source_company['BZNO'] ?? '',
+        $context['source_kedcd'] ?? ($source_company['KEDCD'] ?? '')
+    );
+    if (!is_array($api_log_row) || empty($api_log_row['c_content'])) {
+        return $context;
+    }
+
+    $parsed = function_exists('company_list_ai_build_base_payload_from_kodata_json')
+        ? company_list_ai_build_base_payload_from_kodata_json($api_log_row['c_content'], $api_log_row['c_kedcd'] ?? ($source_company['KEDCD'] ?? ''))
+        : array('ok' => false, 'base_payload' => array());
+    $payload = (!empty($parsed['ok']) && !empty($parsed['base_payload']) && is_array($parsed['base_payload']))
+        ? $parsed['base_payload']
+        : array();
+
+    $decoded = json_decode((string)$api_log_row['c_content'], true);
+    $contents = (isset($decoded['CONTENTS']) && is_array($decoded['CONTENTS'])) ? $decoded['CONTENTS'] : array();
+    $enp = (isset($contents['ENPintr0000']) && is_array($contents['ENPintr0000'])) ? $contents['ENPintr0000'] : array();
+
+    $api_name = trim((string)(
+        (function_exists('company_list_ai_xml_val') ? company_list_ai_xml_val($enp['enp_nm_trd'] ?? '') : (string)($enp['enp_nm_trd'] ?? ''))
+        ?: (function_exists('company_list_ai_xml_val') ? company_list_ai_xml_val($enp['enp_nm'] ?? '') : (string)($enp['enp_nm'] ?? ''))
+    ));
+
+    if (trim((string)($context['source_enp_nm'] ?? '')) === '' && $api_name !== '') {
+        $context['source_enp_nm'] = $api_name;
+    }
+    if (trim((string)($context['source_bzc_cd'] ?? '')) === '' && !empty($payload['bzc_cd'])) {
+        $context['source_bzc_cd'] = trim((string)$payload['bzc_cd']);
+    }
+    if (trim((string)($context['source_bzc_nm'] ?? '')) === '' && trim((string)($context['source_bzc_cd'] ?? '')) !== '') {
+        $context['source_bzc_nm'] = company_detail_ai_lookup_industry_name($context['source_bzc_cd']);
+    }
+    if (trim((string)($context['source_sido'] ?? '')) === '' && !empty($payload['sido'])) {
+        $context['source_sido'] = trim((string)$payload['sido']);
+    }
+    if ((int)($context['source_sze'] ?? 0) < 1 && !empty($payload['sze'])) {
+        $context['source_sze'] = trim((string)$payload['sze']);
+    }
+    if (trim((string)($context['source_mpd'] ?? '')) === '' && !empty($payload['mpd'])) {
+        $context['source_mpd'] = trim((string)$payload['mpd']);
+    }
+    if ((int)($context['source_sales'] ?? 0) <= 0 && !empty($payload['sales'])) {
+        $context['source_sales'] = (int)$payload['sales'];
+    }
+    if (empty($context['source_cust_names']) && !empty($payload['cust_names']) && is_array($payload['cust_names'])) {
+        $context['source_cust_names'] = array_values(array_filter(array_map('trim', $payload['cust_names'])));
+    }
+    if (empty($context['source_supp_names']) && !empty($payload['supp_names']) && is_array($payload['supp_names'])) {
+        $context['source_supp_names'] = array_values(array_filter(array_map('trim', $payload['supp_names'])));
+    }
+
+    if (empty($context['src_keywords'])) {
+        $keyword_seed = trim((string)($context['source_mpd'] ?? ''));
+        if ($keyword_seed === '' && !empty($payload['mpd'])) {
+            $keyword_seed = trim((string)$payload['mpd']);
+        }
+        if ($keyword_seed !== '') {
+            $context['src_keywords'] = company_detail_ai_parse_source_keywords($keyword_seed);
+        }
+    }
+    if (trim((string)($context['source_mpd'] ?? '')) === '' && !empty($context['src_keywords'])) {
+        $context['source_mpd'] = implode(', ', $context['src_keywords']);
+    }
+
+    return $context;
 }
 
 function company_detail_ai_display_value($value)
@@ -215,22 +360,13 @@ if (!empty($member['mb_id'])) {
         // 상세 재진입 시에도 AI 리포트 입력값울 복원할 수 있게 의뢰사 컨텍스트 준비
         $preload_src_sql = sql_escape_string($preload_src_kedcd);
         $preload_source_company = sql_fetch("
-            SELECT KEDCD, ENP_NM, BZC_CD, ENP_SZE, PD_NM, LOC_ADDRA, keywords_json, keyword_count
+            SELECT KEDCD, ENP_NM, BZNO, BZC_CD, ENP_SZE, PD_NM, LOC_ADDRA, keywords_json, keyword_count
             FROM company
             WHERE KEDCD = '{$preload_src_sql}'
             LIMIT 1
         ");
-        if (!empty($preload_source_company['KEDCD'])) {
-            $preload_source_industry = '';
-            if (!empty($preload_source_company['BZC_CD'])) {
-                $preload_source_industry_row = sql_fetch("
-                    SELECT k_code_name
-                    FROM kssc
-                    WHERE k_code = '" . sql_escape_string((string)$preload_source_company['BZC_CD']) . "'
-                    LIMIT 1
-                ");
-                $preload_source_industry = trim((string)($preload_source_industry_row['k_code_name'] ?? ''));
-            }
+        if (!empty($preload_source_company['KEDCD']) || strlen($preload_src_kedcd) === 10) {
+            $preload_source_industry = company_detail_ai_lookup_industry_name($preload_source_company['BZC_CD'] ?? '');
             $preload_source_keywords = company_detail_ai_parse_keywords_json((string)($preload_source_company['keywords_json'] ?? ''));
             $preloaded_ai_source_context = array(
                 'source_kedcd' => $preload_src_kedcd,
@@ -249,6 +385,7 @@ if (!empty($member['mb_id'])) {
                 'recommendation_mode' => $detail_recommendation_mode,
                 'trace_id' => $detail_trace_id,
             );
+            $preloaded_ai_source_context = company_detail_ai_enrich_source_context_from_api_log($preloaded_ai_source_context, $preload_source_company);
             if ($preloaded_ai_source_context['source_mpd'] === '' && !empty($preload_source_keywords)) {
                 $preloaded_ai_source_context['source_mpd'] = implode(', ', $preload_source_keywords);
             }
@@ -461,7 +598,7 @@ include_once(G5_THEME_PATH . '/head.php');
 						<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z"/></svg>
 						분석하기
 				    </button>
-				    <p class="ai-cta-benefit" id="aiCtaBenefitText">두 기업 간 시너지, 거래 적합도, 협력 전략까지<br>AI가 심층 분석한 맞춤 리포트를 받아보세요.</p>
+				    <p class="ai-cta-benefit" id="aiCtaBenefitText"><span class="ai-cta-benefit-title">왜 이 기업이 추천되었는지 궁금하신가요?</span><span class="ai-cta-benefit-body"><span class="ai-cta-benefit-intro">AI 분석 리포트에서 아래 정보를 확인할 수 있습니다.</span><span class="ai-cta-benefit-list">✓ 연결 근거 분석<br>✓ 거래 기회 분석<br>✓ 거래 신뢰도 분석<br>✓ 실행 제안 리포트</span></span></p>
 			    </div>
 				<div class="ai-analysis-body" id="aiAnalysisBody" role="region" aria-live="polite" aria-label="AI 분석 결과" style="display:none;"></div>
 				<!-- LLM 보고서 생성 단계 로딩 템플릿 -->
