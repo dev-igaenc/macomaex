@@ -68,11 +68,14 @@ if (!function_exists('channel_talk_boot_payload')) {
     function channel_talk_boot_payload($extra = array())
     {
         $memberId = channel_talk_member_id();
+        $isGuest = channel_talk_string_contains($memberId, 'guest_');
         $payload = array(
             'pluginKey' => channel_talk_plugin_key(),
             'memberId' => $memberId,
             'profile' => array(
                 'name' => $memberId,
+                'member_id' => $memberId,
+                'guest_session_id' => $isGuest ? $memberId : '',
             ),
         );
 
@@ -337,13 +340,64 @@ if (!function_exists('channel_talk_recursive_find_first')) {
 if (!function_exists('channel_talk_extract_member_id_from_webhook')) {
     function channel_talk_extract_member_id_from_webhook($payload)
     {
-        $memberId = channel_talk_recursive_find_first($payload, array('memberId', 'member_id'));
-        if ($memberId !== '') return $memberId;
+        $candidateKeys = array(
+            'member_id',
+            'memberId',
+            'guest_session_id',
+            'guestSessionId',
+            'guest_id',
+            'externalId',
+            'external_id',
+            'referenceId',
+            'reference_id',
+        );
 
-        $profileName = channel_talk_recursive_find_first($payload, array('name'));
-        if ($profileName !== '') return $profileName;
+        $priorityCandidates = array();
+        foreach ($candidateKeys as $key) {
+            $found = channel_talk_recursive_find_first($payload, array($key));
+            if ($found !== '') {
+                $priorityCandidates[] = $found;
+            }
+        }
+
+        $profileCandidates = array();
+        $profileKeys = array('name', 'member', 'memberCode', 'member_code');
+        foreach ($profileKeys as $key) {
+            $found = channel_talk_recursive_find_first($payload, array($key));
+            if ($found !== '') {
+                $profileCandidates[] = $found;
+            }
+        }
+
+        $allCandidates = array_merge($priorityCandidates, $profileCandidates);
+        foreach ($allCandidates as $candidate) {
+            $normalized = channel_talk_normalize_member_id_candidate($candidate);
+            if ($normalized !== '') return $normalized;
+        }
 
         return 'guest_unknown';
+    }
+}
+
+if (!function_exists('channel_talk_normalize_member_id_candidate')) {
+    function channel_talk_normalize_member_id_candidate($candidate)
+    {
+        $candidate = trim((string)$candidate);
+        if ($candidate === '') return '';
+
+        if (channel_talk_string_contains($candidate, 'guest_')) {
+            return $candidate;
+        }
+
+        if (preg_match('/^[a-f0-9-]{36}$/i', $candidate)) {
+            return '';
+        }
+
+        if (preg_match('/^[a-zA-Z0-9._-]+$/', $candidate)) {
+            return $candidate;
+        }
+
+        return '';
     }
 }
 
