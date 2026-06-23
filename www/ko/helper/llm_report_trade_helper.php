@@ -43,8 +43,6 @@ if (!function_exists('llm_report_trade_allowed_items')) {
 
 if (!function_exists('llm_report_trade_selection_context')) {
     function llm_report_trade_selection_context($sourceData, $rec, $isSell, $buyItems, $sellItems) {
-        $selectedKeywords = llm_report_trade_exact_items($sourceData['selected_target_keywords'] ?? array());
-        $selectedPartnerBzcCds = llm_report_trade_exact_items($sourceData['selected_partner_bzc_cds'] ?? array());
         $recItems = llm_report_trade_filter_analysis_items(
             llm_report_trade_exact_items(is_array($rec) ? ($rec['keywords'] ?? array()) : array())
         );
@@ -59,23 +57,14 @@ if (!function_exists('llm_report_trade_selection_context')) {
         $inferredItems = empty($primaryItems) && $industryCandidate !== ''
             ? array($industryCandidate)
             : array();
-        $keywordList = llm_report_trade_join_items($selectedKeywords, '');
-        $recommendationBackground = $keywordList !== ''
-            ? "사용자가 선택한 {$keywordList} 기준과 연결된 업종코드를 바탕으로 해당 기업이 추천되었습니다."
-            : "귀사와 추천 기업의 업종 및 거래 데이터를 바탕으로 해당 기업이 추천되었습니다.";
-        if ($keywordList !== '') {
-            $recommendationBackground .= " 선택 항목은 추천 대상을 찾기 위한 기준이며, 실제 거래 품목을 의미하지는 않습니다.";
-        }
+        $recommendationBackground = "귀사와 추천 기업의 업종 및 거래 데이터를 바탕으로 해당 기업이 추천되었습니다.";
         $itemEvidence = !empty($primaryItems)
             ? '실제 등록 품목 정보를 기준으로 분석했습니다.'
             : ($industryCandidate !== ''
                 ? "구체적인 실제 품목 정보가 부족하여 {$industryCandidate} 업종을 거래 가능성 검토의 참고 범위로 사용했습니다."
-                : '구체적인 실제 품목 정보가 부족하여 선택 기준과 업종 적합성을 중심으로 분석했습니다.');
+                : '구체적인 실제 품목 정보가 부족하여 업종 적합성을 중심으로 분석했습니다.');
 
         return array(
-            'selected_target_keywords' => $selectedKeywords,
-            'selected_partner_bzc_cds' => $selectedPartnerBzcCds,
-            'recommendation_mode' => trim((string)($sourceData['recommendation_mode'] ?? 'full')) ?: 'full',
             'recommendation_background' => $recommendationBackground,
             'item_evidence' => $itemEvidence,
             'item_evidence_level' => !empty($primaryItems) ? 'actual' : (!empty($inferredItems) ? 'industry_inferred' : 'insufficient'),
@@ -161,7 +150,7 @@ if (!function_exists('llm_report_trade_build_reasons')) {
         $connectionType = trim((string)$connectionType);
         if (empty($primary['items'])) {
             return array(
-                trim((string)($selectionContext['recommendation_background'] ?? '선택 기준과 업종 적합성을 바탕으로 추천된 기업입니다.')),
+                trim((string)($selectionContext['recommendation_background'] ?? '업종 적합성을 바탕으로 추천된 기업입니다.')),
                 trim((string)($selectionContext['item_evidence'] ?? '구체적인 실제 품목 정보가 부족하여 거래 가능 품목 확인이 필요합니다.')),
                 $connectionType !== ''
                     ? "연결 방식은 {$connectionType}로 제시되어 있어, 첫 접점에서 실제 취급 품목과 거래 가능 범위를 확인하는 것이 적절합니다."
@@ -172,7 +161,7 @@ if (!function_exists('llm_report_trade_build_reasons')) {
             ? "상단의 판매 가능 품목 범위를 기준으로 실제 공급 가능 범위와 제안 우선순위를 좁혀볼 수 있습니다."
             : "상단의 구매 가능 품목 범위를 기준으로 실제 구매 수요와 검토 우선순위를 좁혀볼 수 있습니다.";
         $selectionBackground = trim((string)($selectionContext['recommendation_background'] ?? ''));
-        if (!empty($selectionContext['selected_target_keywords']) && $selectionBackground !== '') {
+        if ($selectionBackground !== '') {
             return array(
                 $selectionBackground,
                 llm_report_trade_reason_line($buyItems, $sellItems, $tradeLabel),

@@ -1268,19 +1268,16 @@
                 return html + '</li>';
             }
 
-            // 추천 조건 섹션은 선택 조건과 거래 품목 근거를 함께 노출
+            // 추천 조건 섹션은 실제 거래 품목과 추천 근거 위주로만 노출
             function renderTradeContextHtml(data, tradeLabel, primaryItems) {
                 var ctx = data && typeof data.selection_context === 'object' ? data.selection_context : {};
-                var selectedKeywords = arrOrEmpty(ctx.selected_target_keywords);
                 var recItems = arrOrEmpty(ctx.recommended_company_items);
                 var sourceItems = arrOrEmpty(ctx.source_company_items);
                 var html = '<h2>추천 조건 및 품목 근거</h2><ul>';
                 if (tradeLabel === '판매처') {
-                    html += renderContextLine('선택 키워드', selectedKeywords, '귀사가 찾고 싶은 판매 채널 또는 거래처 업종 조건입니다.');
                     html += renderContextLine('추천 기업 품목', recItems, '해당 기업이 어떤 업종 또는 품목 태그를 가진 곳인지 보여주는 매칭 근거입니다.');
                     html += renderContextLine('판매 가능 품목', primaryItems.length ? primaryItems : sourceItems, '귀사가 해당 기업에 제안할 수 있는 자사 품목 기준입니다.');
                 } else {
-                    html += renderContextLine('선택 키워드', selectedKeywords, '귀사가 구매하고 싶은 품목 또는 업종 조건입니다.');
                     html += renderContextLine('추천 기업 품목', recItems.length ? recItems : primaryItems, '해당 기업이 공급할 수 있는 품목 기준입니다.');
                     html += renderContextLine('구매 검토 품목', primaryItems.length ? primaryItems : recItems, '추천 기업으로부터 구매 가능성을 검토할 품목입니다.');
                 }
@@ -1824,17 +1821,6 @@
                 var sourceCustNames = sourceArray('_aiCustNames', 'source_cust_names');
                 var sourceSuppNames = sourceArray('_aiSuppNames', 'source_supp_names');
                 var isSell = (card.trade_type === 2);
-                // 상세 URL/PHP 컨텍스트가 현재 추천 실행을 나타내므로, 이전 세션 카드보다 우선한다.
-                var cardSelectedTargetKeywords = selectedTargetKeywords.length
-                    ? selectedTargetKeywords
-                    : (Array.isArray(card.selected_target_keywords)
-                        ? card.selected_target_keywords.map(function (item) { return String(item || '').trim(); }).filter(Boolean)
-                        : []);
-                var cardSelectedPartnerBzcCds = selectedPartnerBzcCds.length
-                    ? selectedPartnerBzcCds
-                    : (Array.isArray(card.selected_partner_bzc_cds)
-                        ? card.selected_partner_bzc_cds.map(function (item) { return String(item || '').trim(); }).filter(Boolean)
-                        : []);
                 var recKeywords = Array.isArray(card.analysis_tags)
                     ? card.analysis_tags.filter(Boolean)
                     : (String(card.tag_source || '') === 'actual' && Array.isArray(card.tags)
@@ -1870,10 +1856,6 @@
                 var payload = {
                     data: {
                         trade_type: card.trade_type || 1,
-                        selected_target_keywords: cardSelectedTargetKeywords,
-                        selected_partner_bzc_cds: cardSelectedPartnerBzcCds,
-                        recommendation_mode: String(recommendationMode || card.recommendation_mode || 'full'),
-                        trace_id: String(recommendationTraceId || card.trace_id || ''),
                         // 서버 once_key 생성용 식별값
                         source_kedcd: card.src_kedcd || tryGet('_aiSrcKedcd') || String(preloadedSourceContext.source_kedcd || ''),
                         target_kedcd: card.kedcd || '',

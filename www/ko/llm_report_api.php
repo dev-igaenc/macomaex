@@ -42,14 +42,6 @@ $d = isset($body['data']) && is_array($body['data']) ? $body['data'] : array();
 
 // 추천 목록에서 선택한 컨텍스트를 상세 분석 요청까지 유지한다.
 // 이 단계에서는 입력을 정규화만 하고, 리포트 내용 및 캐시 키 반영은 후속 단계에서 처리한다.
-$d['selected_target_keywords'] = array_values(array_unique(array_filter(array_map('trim', is_array($d['selected_target_keywords'] ?? null) ? $d['selected_target_keywords'] : array()))));
-$d['selected_partner_bzc_cds'] = array_values(array_unique(array_filter(array_map(function ($value) {
-    return strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', (string)$value), 0, 10));
-}, is_array($d['selected_partner_bzc_cds'] ?? null) ? $d['selected_partner_bzc_cds'] : array()))));
-$d['recommendation_mode'] = trim((string)($d['recommendation_mode'] ?? 'full'));
-if (!in_array($d['recommendation_mode'], array('keyword', 'full'), true)) $d['recommendation_mode'] = 'full';
-$d['trace_id'] = substr(preg_replace('/[^A-Za-z0-9_-]/', '', (string)($d['trace_id'] ?? '')), 0, 64);
-
 $tradeType = (int)($d['trade_type'] ?? 1);
 $isSell = ($tradeType === 2);
 $rec = $isSell ? ($d['sell_top1'] ?? null) : ($d['buy_top1'] ?? null);
