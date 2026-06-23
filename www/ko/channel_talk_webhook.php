@@ -30,7 +30,6 @@ if ($messageText === '') {
 
 $meta = array(
     'page_url' => channel_talk_extract_page_url_from_webhook($payload),
-    'referer_url' => channel_talk_resolve_referer_url($payload),
     'ip_address' => channel_talk_request_ip(),
     'user_agent' => channel_talk_request_user_agent(),
 );
