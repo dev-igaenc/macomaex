@@ -1352,6 +1352,12 @@ html.sub #contact-us {
 	background: #fafbfd;
 }
 
+#partner-showcase .inConts {
+	max-width: 120rem;
+	padding: 0 2.4rem;
+	box-sizing: border-box;
+}
+
 #partner-showcase .partner-showcase_rows {
 	display: flex;
 	align-items: center;
@@ -1396,24 +1402,15 @@ html.sub #contact-us {
 	margin: 0;
 }
 
+#partner-showcase .partner-showcase_logo.is-kodata {
+	padding: 0;
+}
+
 #partner-showcase .partner-showcase_logo.is-kodata img {
 	width: auto;
 	max-width: 100%;
 	height: auto;
-	max-height: 3.2rem;
-}
-
-#partner-showcase .partner-showcase_logo.is-innobiz {
-	flex-basis: 20rem;
-	width: 20rem;
-	padding: 0;
-}
-
-#partner-showcase .partner-showcase_logo.is-innobiz img {
-	width: auto;
-	height: auto;
-	max-width: 100%;
-	max-height: 100%;
+	max-height: 4.2rem;
 }
 
 #partner-showcase .partner-showcase_item--kodata .partner-showcase_text {
@@ -1425,6 +1422,7 @@ html.sub #contact-us {
 	font-size: 1.56rem;
 	line-height: 1.4;
 	white-space: nowrap;
+	margin-right: 0.9rem;
 }
 
 #partner-showcase .partner-showcase_text {
@@ -2030,9 +2028,10 @@ html.sub #quick-menu {
 
 	#partner-showcase .partner-showcase_item {
 		flex: 1 1 0;
-		flex-direction: row;
+		flex-direction: column;
 		align-items: center;
-		gap: 1rem;
+		gap: 0.8rem;
+		text-align: center;
 	}
 
 	#partner-showcase .partner-showcase_item--innobiz {
