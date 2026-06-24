@@ -597,11 +597,6 @@ function _sze_with_sales($sze, $sales) {
     return $label . ' (매출 ' . $formatted . ')';
 }
 
-function _debt_label($debt_ratio_pct, $capital_negative) {
-    if (!empty($capital_negative)) return '자본잠식 (자본총계 음수 — 재무 위험 최고 등급)';
-    return ($debt_ratio_pct !== null && $debt_ratio_pct !== '') ? ($debt_ratio_pct . '%') : '-';
-}
-
 function _bzc_full($rec) {
     $nm = trim((string)($rec['bzc_nm'] ?? ''));
     $cd = trim((string)($rec['bzc_cd'] ?? ''));
@@ -683,7 +678,6 @@ $recAge    = !empty($rec['company_age']) ? ((int)$rec['company_age'] . '년') : 
 $recGrowth = (isset($rec['sales_growth_pct']) && $rec['sales_growth_pct'] !== null)
     ? (((float)$rec['sales_growth_pct'] >= 0 ? '+' : '') . $rec['sales_growth_pct'] . '%')
     : '-';
-$recDebt   = _debt_label($rec['debt_ratio_pct'] ?? null, $rec['capital_negative'] ?? 0);
 $recP2y    = (isset($rec['consec_profit_2y']) && $rec['consec_profit_2y'] !== null)
     ? ((int)$rec['consec_profit_2y'] ? '2년 연속 흑자' : '미확인')
     : '-';
@@ -829,7 +823,6 @@ $userContent = <<<USR
 | 규모 | {$recSze} |
 | 업력 | {$recAge} |
 | 매출성장률 | {$recGrowth} |
-| 부채비율 | {$recDebt} |
 | 2년 연속흑자 | {$recP2y} |
 | 추천 점수 | {$recScore} |
 | 연결 방식 | {$recType} |
@@ -901,7 +894,7 @@ $userContent = <<<USR
 (업력·규모를 거래 파트너로서의 안정성 관점에서 해석. 2~3문장)
 
 ### 3-2. 재무 건전성
-(매출성장률·부채비율·2년 연속흑자를 거래 리스크 관점에서 해석. 항목별로 2~3문장)
+(매출성장률·2년 연속흑자를 거래 리스크 관점에서 해석. 항목별로 2~3문장)
 
 ---
 
@@ -945,7 +938,7 @@ $userContent = <<<USR
     "거래 흐름 시나리오 2"
   ],
   "stability_analysis": "업력·규모 기반 거래 안정성을 2~3문장으로 설명합니다.",
-  "financial_analysis": "매출성장률·부채비율·2년 연속흑자를 거래 리스크 관점에서 2~3문장으로 설명합니다.",
+  "financial_analysis": "매출성장률·2년 연속흑자를 거래 리스크 관점에서 2~3문장으로 설명합니다.",
   "first_touch_actions": [
     "첫 접촉 방법 1",
     "첫 접촉 방법 2"

@@ -398,9 +398,7 @@
                         sze: Number(found.sze || 0) || 0,
                         company_age: Number(found.company_age || 0) || 0,
                         sales_growth_pct: (found.sales_growth_pct != null && found.sales_growth_pct !== '' && Number.isFinite(Number(found.sales_growth_pct))) ? Number(found.sales_growth_pct) : null,
-                        debt_ratio_pct: (found.debt_ratio_pct != null && found.debt_ratio_pct !== '' && Number.isFinite(Number(found.debt_ratio_pct))) ? Number(found.debt_ratio_pct) : null,
                         consec_profit_2y: (found.consec_profit_2y != null && found.consec_profit_2y !== '') ? (Number(found.consec_profit_2y) ? 1 : 0) : null,
-                        capital_negative: (found.capital_negative != null && found.capital_negative !== '') ? (Number(found.capital_negative) ? 1 : 0) : null,
                         radar: found.radar,
                         trade_type: pageTradeType,
                         ai_match: Math.round(scorePct),
@@ -902,7 +900,7 @@
             // 신규 키
             supply_chain: '기존 거래망으로 접근 가능',
             network_overlap: '공통 거래처 연결 유사도',
-            financial_health: '신용등급 · 부채 안정성',
+            financial_health: '신용등급 · 재무 안정성',
             market_power: '업계 거래 규모 · 인지도',
             trade_diversity: '거래처 집중도 낮을수록 우수',
             scale_match: '매출 · 자산 규모 유사성',
@@ -920,7 +918,7 @@
             industry: '거래 네트워크상 얼마나 가까운지',
             network: '귀사와 비슷한 거래처를 보유',
             trust: '다양한 기업과 활발히 거래 중',
-            finance: '신용점수와 부채비율 기반 재무 안정성',
+            finance: '신용점수 기반 재무 안정성',
             region: '물류/방문이 편리한 거리',
             scale: '거래하기에 적절한 기업 규모'
         };
@@ -1314,7 +1312,7 @@
                 return {
                     supply_chain: '기존 거래망 기반 접근 가능',
                     network_overlap: '공통 거래처 연결 가능성',
-                    financial_health: '신용등급 · 부채 안정성',
+                    financial_health: '신용등급 · 재무 안정성',
                     market_power: '업계 거래 규모 · 인지도',
                     trade_diversity: '고르게 분산된 거래 구조',
                     scale_match: '매출 · 자산 규모 유사성',
@@ -1816,9 +1814,7 @@
                     radar: card.radar || {},
                     company_age: card.company_age || 0,
                     sales_growth_pct: card.sales_growth_pct != null ? card.sales_growth_pct : null,
-                    debt_ratio_pct: card.debt_ratio_pct != null ? card.debt_ratio_pct : null,
                     consec_profit_2y: card.consec_profit_2y != null ? card.consec_profit_2y : null,
-                    capital_negative: card.capital_negative || 0,
                     keywords: recKeywords,
                     keyword_source: String(card.tag_source || (recKeywords.length ? 'actual' : 'none'))
                 };

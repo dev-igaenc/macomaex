@@ -1449,23 +1449,11 @@ if (!function_exists('company_list_ai_normalize_item')) {
         } else {
             $sales_growth_pct = null;
         }
-        $debt_ratio_pct = company_list_ai_pick($item, array('debt_ratio_pct'), null);
-        if ($debt_ratio_pct !== null && $debt_ratio_pct !== '' && is_numeric($debt_ratio_pct)) {
-            $debt_ratio_pct = (float)$debt_ratio_pct;
-        } else {
-            $debt_ratio_pct = null;
-        }
         $consec_profit_2y = company_list_ai_pick($item, array('consec_profit_2y'), null);
         if ($consec_profit_2y !== null && $consec_profit_2y !== '') {
             $consec_profit_2y = (int)$consec_profit_2y ? 1 : 0;
         } else {
             $consec_profit_2y = null;
-        }
-        $capital_negative = company_list_ai_pick($item, array('capital_negative'), null);
-        if ($capital_negative !== null && $capital_negative !== '') {
-            $capital_negative = (int)$capital_negative ? 1 : 0;
-        } else {
-            $capital_negative = null;
         }
         $candidate_type = trim((string)company_list_ai_pick($item, array('candidate_type'), ''));
         $one_line = trim((string)company_list_ai_pick($item, array('one_line', 'reason'), ''));
@@ -1483,9 +1471,7 @@ if (!function_exists('company_list_ai_normalize_item')) {
             'display_score' => $display_score,
             'company_age' => $company_age,
             'sales_growth_pct' => $sales_growth_pct,
-            'debt_ratio_pct' => $debt_ratio_pct,
             'consec_profit_2y' => $consec_profit_2y,
-            'capital_negative' => $capital_negative,
             'candidate_type' => $candidate_type,
             'radar' => company_list_ai_normalize_radar(company_list_ai_pick($item, array('radar'), array())),
             'one_line' => $one_line,
