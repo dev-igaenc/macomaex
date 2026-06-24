@@ -977,8 +977,14 @@ $selected_keywords = array_values(array_filter(array_map('trim', preg_split('/\s
 $keyword_source_bzc_cds = company_list_ai_parse_partner_bzc_filters($_GET['keyword_source_bzc'] ?? '');
 $keyword_match_types = array_values(array_filter(array_map(function ($value) {
     $value = trim((string)$value);
-    return in_array($value, array('exact', 'prefix_5', 'prefix_4', 'all'), true) ? $value : '';
+    return in_array($value, array('exact', 'prefix_5', 'prefix_4', 'all', 'global_all'), true) ? $value : '';
 }, preg_split('/\s*,\s*/', (string)($_GET['keyword_match_type'] ?? ''), -1, PREG_SPLIT_NO_EMPTY))));
+$requested_keyword_scope = trim((string)($_GET['keyword_scope'] ?? ''));
+if (!in_array($requested_keyword_scope, array('related', 'all'), true)) $requested_keyword_scope = '';
+$requested_source_bzc_missing = (int)($_GET['source_bzc_missing'] ?? 0) ? 1 : 0;
+$requested_source_bzc_resolved = (int)($_GET['source_bzc_resolved'] ?? 0) ? 1 : 0;
+$requested_source_bzc_resolve_source = preg_replace('/[^a-z0-9_-]/i', '', (string)($_GET['source_bzc_resolve_source'] ?? ''));
+$requested_fallback_reason = preg_replace('/[^a-z0-9_-]/i', '', (string)($_GET['fallback_reason'] ?? ''));
 $recommendation_action = trim((string)($_GET['recommendation_action'] ?? ''));
 if (!in_array($recommendation_action, array('skip', 'keyword_select'), true)) $recommendation_action = '';
 // [추천 흐름 추적 ID]
@@ -1025,6 +1031,25 @@ if (($has_kedcd_query && strlen($kedcd_query) === 10 && !preg_match('/^0+$/', $k
 }
 
 if (!empty($resolved_base_payload['kedcd'])) {
+    // bzc_meta는 로그/화면 흐름 전용이다. 실제 EC2 payload에는 내부 추적값을 보내지 않는다.
+    $bzc_meta = isset($resolved_base_payload['_bzc_meta']) && is_array($resolved_base_payload['_bzc_meta'])
+        ? $resolved_base_payload['_bzc_meta']
+        : array();
+    if (!isset($bzc_meta['source_bzc_cd'])) {
+        $bzc_meta['source_bzc_cd'] = (string)($resolved_base_payload['bzc_cd'] ?? '');
+    }
+    if ($requested_keyword_scope !== '') $bzc_meta['keyword_scope'] = $requested_keyword_scope;
+    if ($requested_source_bzc_missing) $bzc_meta['source_bzc_missing'] = 1;
+    if ($requested_source_bzc_resolved) $bzc_meta['source_bzc_resolved'] = 1;
+    if ($requested_source_bzc_resolve_source !== '') $bzc_meta['source_bzc_resolve_source'] = $requested_source_bzc_resolve_source;
+    if ($requested_fallback_reason !== '') $bzc_meta['fallback_reason'] = $requested_fallback_reason;
+    // URL로 넘어온 scope가 있으면 우선 적용해 키워드 조회 단계와 최종 추천 로그를 같은 기준으로 묶는다.
+    $keyword_scope = in_array((string)($bzc_meta['keyword_scope'] ?? ''), array('related', 'all'), true)
+        ? (string)$bzc_meta['keyword_scope']
+        : (!empty($resolved_base_payload['bzc_cd']) ? 'related' : 'all');
+    $bzc_meta['keyword_scope'] = $keyword_scope;
+    if ($keyword_scope === 'all' && empty($bzc_meta['match_type'])) $bzc_meta['match_type'] = 'global_all';
+
     $source_kedcd_for_detail = str_pad(preg_replace('/\D/', '', (string)$resolved_base_payload['kedcd']), 10, '0', STR_PAD_LEFT);
     if (strlen($source_kedcd_for_detail) !== 10 || preg_match('/^0+$/', $source_kedcd_for_detail)) {
         $source_kedcd_for_detail = '';
@@ -1034,6 +1059,8 @@ if (!empty($resolved_base_payload['kedcd'])) {
     // 구매처 찾기는 trade_type=1 payload만, 판매처 찾기는 trade_type=2 payload만 실제 조회한다.
     // 키워드 추천이면 사용자가 고른 상대 업종코드와 선택 횟수 기반 가중치를 해당 방향 payload에 추가한다.
     $base_payload = $resolved_base_payload;
+    // 내부 fallback 메타는 request_received/external 로그에만 남기고 EC2 추천 요청에서는 제거한다.
+    unset($base_payload['_bzc_meta']);
     $buy_payload = $base_payload;
     $buy_payload['trade_type'] = 1;
     if ($use_buy_partner_filter) {
@@ -1055,6 +1082,9 @@ if (!empty($resolved_base_payload['kedcd'])) {
     $unique_keyword_match_types = array_values(array_unique($keyword_match_types));
     if ($recommendation_mode === 'full') {
         $recommendation_match_type = $recommendation_action === 'skip' ? 'skip' : 'full';
+    } else if ($keyword_scope === 'all' && empty($unique_keyword_match_types)) {
+        // 과거 링크처럼 match_type이 없더라도 전체 업종 fallback 추천임을 명확히 기록한다.
+        $recommendation_match_type = 'global_all';
     } else if (count($unique_keyword_match_types) === 1) {
         $recommendation_match_type = $unique_keyword_match_types[0];
     } else if (empty($unique_keyword_match_types)) {
@@ -1083,6 +1113,12 @@ if (!empty($resolved_base_payload['kedcd'])) {
         'kedcd' => $ml_log_kedcd,
         'keywords' => implode(',', $selected_keywords),
         'match_type' => $recommendation_match_type,
+        'original_source_bzc_cd' => (string)($bzc_meta['original_source_bzc_cd'] ?? ''),
+        'source_bzc_missing' => (int)($bzc_meta['source_bzc_missing'] ?? 0),
+        'source_bzc_resolved' => (int)($bzc_meta['source_bzc_resolved'] ?? 0),
+        'source_bzc_resolve_source' => (string)($bzc_meta['source_bzc_resolve_source'] ?? ''),
+        'keyword_scope' => $keyword_scope,
+        'fallback_reason' => (string)($bzc_meta['fallback_reason'] ?? ''),
     );
 
     // [추천 진입 로그]
@@ -1098,9 +1134,15 @@ if (!empty($resolved_base_payload['kedcd'])) {
         'trade_type' => $partner_filter_trade_type,
         'bizno' => $ml_log_bizno,
         'kedcd' => $ml_log_kedcd,
-        'selected_trade_type' => $partner_filter_trade_type,
-        'source_bzc_cd' => (string)($resolved_base_payload['bzc_cd'] ?? ''),
-        'partner_bzc_count' => count($partner_bzc_filters),
+	        'selected_trade_type' => $partner_filter_trade_type,
+	        'source_bzc_cd' => (string)($resolved_base_payload['bzc_cd'] ?? ''),
+	        'original_source_bzc_cd' => (string)($bzc_meta['original_source_bzc_cd'] ?? ''),
+	        'source_bzc_missing' => (int)($bzc_meta['source_bzc_missing'] ?? 0),
+	        'source_bzc_resolved' => (int)($bzc_meta['source_bzc_resolved'] ?? 0),
+	        'source_bzc_resolve_source' => (string)($bzc_meta['source_bzc_resolve_source'] ?? ''),
+	        'keyword_scope' => $keyword_scope,
+	        'fallback_reason' => (string)($bzc_meta['fallback_reason'] ?? ''),
+	        'partner_bzc_count' => count($partner_bzc_filters),
         'partner_bzc_cds' => $partner_bzc_cds_for_log,
         'filter_bzc_count' => count($partner_bzc_filters),
         'filter_bzc_cds' => $partner_bzc_cds_for_log,
@@ -1111,9 +1153,11 @@ if (!empty($resolved_base_payload['kedcd'])) {
         'request_data' => array(
             'resolved_base_payload' => $resolved_base_payload,
             'selected_keywords' => $selected_keywords,
-            'keyword_source_bzc_cds' => $keyword_source_bzc_cds,
-            'keyword_match_types' => $keyword_match_types,
-            'recommendation_action' => $recommendation_action,
+	            'keyword_source_bzc_cds' => $keyword_source_bzc_cds,
+	            'keyword_match_types' => $keyword_match_types,
+	            'keyword_scope' => $keyword_scope,
+	            'bzc_meta' => $bzc_meta,
+	            'recommendation_action' => $recommendation_action,
             'filter_bzc_cds' => $partner_bzc_filters,
             'filter_bzc_weights' => $partner_bzc_weights,
         ),
@@ -1132,9 +1176,15 @@ if (!empty($resolved_base_payload['kedcd'])) {
         'recommendation_mode' => $buy_cache_context['recommendation_mode'],
         'bizno' => $ml_log_bizno,
         'kedcd' => $ml_log_kedcd,
-        'trade_type' => 1,
-        'source_bzc_cd' => (string)($resolved_base_payload['bzc_cd'] ?? ''),
-        'matched_source_bzc_cds' => implode(',', $keyword_source_bzc_cds),
+	        'trade_type' => 1,
+	        'source_bzc_cd' => (string)($resolved_base_payload['bzc_cd'] ?? ''),
+	        'original_source_bzc_cd' => (string)($bzc_meta['original_source_bzc_cd'] ?? ''),
+	        'source_bzc_missing' => (int)($bzc_meta['source_bzc_missing'] ?? 0),
+	        'source_bzc_resolved' => (int)($bzc_meta['source_bzc_resolved'] ?? 0),
+	        'source_bzc_resolve_source' => (string)($bzc_meta['source_bzc_resolve_source'] ?? ''),
+	        'keyword_scope' => $keyword_scope,
+	        'fallback_reason' => (string)($bzc_meta['fallback_reason'] ?? ''),
+	        'matched_source_bzc_cds' => implode(',', $keyword_source_bzc_cds),
         'keywords' => implode(',', $selected_keywords),
         'filter_bzc_cds' => implode(',', $buy_cache_context['filter_bzc_cds']),
         'filter_bzc_weights' => implode(',', $buy_cache_context['filter_bzc_weights']),
@@ -1158,8 +1208,15 @@ if (!empty($resolved_base_payload['kedcd'])) {
             'match_type' => $recommendation_match_type,
             'bizno' => $ml_log_bizno,
             'kedcd' => $ml_log_kedcd,
-            'trade_type' => 1,
-            'keywords' => implode(',', $selected_keywords),
+	            'trade_type' => 1,
+	            'source_bzc_cd' => (string)($resolved_base_payload['bzc_cd'] ?? ''),
+	            'original_source_bzc_cd' => (string)($bzc_meta['original_source_bzc_cd'] ?? ''),
+	            'source_bzc_missing' => (int)($bzc_meta['source_bzc_missing'] ?? 0),
+	            'source_bzc_resolved' => (int)($bzc_meta['source_bzc_resolved'] ?? 0),
+	            'source_bzc_resolve_source' => (string)($bzc_meta['source_bzc_resolve_source'] ?? ''),
+	            'keyword_scope' => $keyword_scope,
+	            'fallback_reason' => (string)($bzc_meta['fallback_reason'] ?? ''),
+	            'keywords' => implode(',', $selected_keywords),
             'filter_bzc_cds' => implode(',', $buy_cache_context['filter_bzc_cds']),
             'filter_bzc_weights' => implode(',', $buy_cache_context['filter_bzc_weights']),
             'from_cache' => 1,
@@ -1185,9 +1242,15 @@ if (!empty($resolved_base_payload['kedcd'])) {
         'recommendation_mode' => $sell_cache_context['recommendation_mode'],
         'bizno' => $ml_log_bizno,
         'kedcd' => $ml_log_kedcd,
-        'trade_type' => 2,
-        'source_bzc_cd' => (string)($resolved_base_payload['bzc_cd'] ?? ''),
-        'matched_source_bzc_cds' => implode(',', $keyword_source_bzc_cds),
+	        'trade_type' => 2,
+	        'source_bzc_cd' => (string)($resolved_base_payload['bzc_cd'] ?? ''),
+	        'original_source_bzc_cd' => (string)($bzc_meta['original_source_bzc_cd'] ?? ''),
+	        'source_bzc_missing' => (int)($bzc_meta['source_bzc_missing'] ?? 0),
+	        'source_bzc_resolved' => (int)($bzc_meta['source_bzc_resolved'] ?? 0),
+	        'source_bzc_resolve_source' => (string)($bzc_meta['source_bzc_resolve_source'] ?? ''),
+	        'keyword_scope' => $keyword_scope,
+	        'fallback_reason' => (string)($bzc_meta['fallback_reason'] ?? ''),
+	        'matched_source_bzc_cds' => implode(',', $keyword_source_bzc_cds),
         'keywords' => implode(',', $selected_keywords),
         'filter_bzc_cds' => implode(',', $sell_cache_context['filter_bzc_cds']),
         'filter_bzc_weights' => implode(',', $sell_cache_context['filter_bzc_weights']),
@@ -1211,8 +1274,15 @@ if (!empty($resolved_base_payload['kedcd'])) {
             'match_type' => $recommendation_match_type,
             'bizno' => $ml_log_bizno,
             'kedcd' => $ml_log_kedcd,
-            'trade_type' => 2,
-            'keywords' => implode(',', $selected_keywords),
+	            'trade_type' => 2,
+	            'source_bzc_cd' => (string)($resolved_base_payload['bzc_cd'] ?? ''),
+	            'original_source_bzc_cd' => (string)($bzc_meta['original_source_bzc_cd'] ?? ''),
+	            'source_bzc_missing' => (int)($bzc_meta['source_bzc_missing'] ?? 0),
+	            'source_bzc_resolved' => (int)($bzc_meta['source_bzc_resolved'] ?? 0),
+	            'source_bzc_resolve_source' => (string)($bzc_meta['source_bzc_resolve_source'] ?? ''),
+	            'keyword_scope' => $keyword_scope,
+	            'fallback_reason' => (string)($bzc_meta['fallback_reason'] ?? ''),
+	            'keywords' => implode(',', $selected_keywords),
             'filter_bzc_cds' => implode(',', $sell_cache_context['filter_bzc_cds']),
             'filter_bzc_weights' => implode(',', $sell_cache_context['filter_bzc_weights']),
             'from_cache' => 1,
@@ -1320,9 +1390,15 @@ if (!empty($resolved_base_payload['kedcd'])) {
         'match_type' => $recommendation_match_type,
         'bizno' => $ml_log_bizno,
         'kedcd' => $ml_log_kedcd,
-        'trade_type' => 1,
-        'source_bzc_cd' => (string)($resolved_base_payload['bzc_cd'] ?? ''),
-        'keywords' => implode(',', $selected_keywords),
+	        'trade_type' => 1,
+	        'source_bzc_cd' => (string)($resolved_base_payload['bzc_cd'] ?? ''),
+	        'original_source_bzc_cd' => (string)($bzc_meta['original_source_bzc_cd'] ?? ''),
+	        'source_bzc_missing' => (int)($bzc_meta['source_bzc_missing'] ?? 0),
+	        'source_bzc_resolved' => (int)($bzc_meta['source_bzc_resolved'] ?? 0),
+	        'source_bzc_resolve_source' => (string)($bzc_meta['source_bzc_resolve_source'] ?? ''),
+	        'keyword_scope' => $keyword_scope,
+	        'fallback_reason' => (string)($bzc_meta['fallback_reason'] ?? ''),
+	        'keywords' => implode(',', $selected_keywords),
         'filter_bzc_cds' => implode(',', $buy_cache_context['filter_bzc_cds']),
         'filter_bzc_weights' => implode(',', $buy_cache_context['filter_bzc_weights']),
         'from_cache' => !empty($buy_call['from_cache']),
@@ -1338,9 +1414,15 @@ if (!empty($resolved_base_payload['kedcd'])) {
         'match_type' => $recommendation_match_type,
         'bizno' => $ml_log_bizno,
         'kedcd' => $ml_log_kedcd,
-        'trade_type' => 2,
-        'source_bzc_cd' => (string)($resolved_base_payload['bzc_cd'] ?? ''),
-        'keywords' => implode(',', $selected_keywords),
+	        'trade_type' => 2,
+	        'source_bzc_cd' => (string)($resolved_base_payload['bzc_cd'] ?? ''),
+	        'original_source_bzc_cd' => (string)($bzc_meta['original_source_bzc_cd'] ?? ''),
+	        'source_bzc_missing' => (int)($bzc_meta['source_bzc_missing'] ?? 0),
+	        'source_bzc_resolved' => (int)($bzc_meta['source_bzc_resolved'] ?? 0),
+	        'source_bzc_resolve_source' => (string)($bzc_meta['source_bzc_resolve_source'] ?? ''),
+	        'keyword_scope' => $keyword_scope,
+	        'fallback_reason' => (string)($bzc_meta['fallback_reason'] ?? ''),
+	        'keywords' => implode(',', $selected_keywords),
         'filter_bzc_cds' => implode(',', $sell_cache_context['filter_bzc_cds']),
         'filter_bzc_weights' => implode(',', $sell_cache_context['filter_bzc_weights']),
         'from_cache' => !empty($sell_call['from_cache']),

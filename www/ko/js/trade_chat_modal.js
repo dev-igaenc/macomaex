@@ -70,6 +70,12 @@
 		// 데스크톱에서는 room list 폭을 토글하고, 모바일에서는 기존 전환 흐름을 유지한다.
 		function syncSidebarToggleState() {
 			if (!sidebarToggleBtn) return;
+			if (isMobileViewport()) {
+				sidebarToggleBtn.setAttribute('aria-pressed', 'false');
+				sidebarToggleBtn.setAttribute('aria-label', '닫기');
+				sidebarToggleBtn.setAttribute('title', '닫기');
+				return;
+			}
 			var collapsed = modal.classList.contains('chat-demo-modal--sidebar-collapsed');
 			sidebarToggleBtn.setAttribute('aria-pressed', collapsed ? 'true' : 'false');
 			sidebarToggleBtn.setAttribute('aria-label', collapsed ? '목록 펼치기' : '목록 접기');
@@ -712,6 +718,16 @@
 			}).join('');
 		}
 
+		function showRoomListLanding() {
+			cleanupActiveChannel();
+			state.activeRoomId = 0;
+			modal.classList.remove('chat-demo-modal--mobile-chat');
+			renderRoomList();
+			setMainHeader(null, '연결 대기 중', 'waiting');
+			renderEmptyMessages('채팅방을 선택하면 대화 내용을 불러옵니다.');
+			setComposerEnabled(false, '채팅방을 먼저 선택해 주세요.');
+		}
+
 		async function ensureClient(roomPayload) {
 			var bootstrap = roomPayload || state.bootstrap || {};
 			var StreamChatCtor = window.StreamChat && (window.StreamChat.StreamChat || window.StreamChat);
@@ -870,7 +886,7 @@
 				return true;
 			}
 
-			await bindRoom(state.bootstrap.initialRoomId || initialRoomId || state.bootstrap.rooms[0].roomId);
+			showRoomListLanding();
 			return true;
 		}
 
@@ -912,6 +928,8 @@
 					renderEmptyMessages(error && error.message ? error.message : '채팅 정보를 불러오지 못했습니다.');
 					setComposerEnabled(false, '채팅 정보를 다시 확인해 주세요.');
 				}
+			} else if (state.bootstrap && roomListEl) {
+				showRoomListLanding();
 			}
 		}
 
@@ -953,6 +971,10 @@
 
 		if (sidebarToggleBtn) {
 			sidebarToggleBtn.addEventListener('click', function () {
+				if (isMobileViewport()) {
+					closeModal();
+					return;
+				}
 				toggleSidebarCollapsed();
 			});
 			syncSidebarToggleState();

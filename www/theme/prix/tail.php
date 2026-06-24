@@ -23,13 +23,13 @@ if (G5_IS_MOBILE) {
         <div class="partner-showcase_rows">
             <div class="partner-showcase_item partner-showcase_item--kodata">
                 <div class="partner-showcase_logo is-kodata">
-                    <img src="/img/KODATA.png" alt="KODATA 로고">
+                    <img src="/img/kodata-signature.svg" alt="KODATA 로고">
                 </div>
                 <p class="partner-showcase_text">KODATA 기업데이터 기반 AI 추천</p>
             </div>
             <div class="partner-showcase_item partner-showcase_item--innobiz">
                 <div class="partner-showcase_logo is-innobiz">
-                    <img src="/img/partner-innobiz-logo-200.png" alt="이노비즈 로고">
+                    <img src="/img/innobiz-logo.svg" alt="이노비즈 로고">
                 </div>
                 <p class="partner-showcase_text">이노비즈 협회 회원서비스 운영 기관</p>
             </div>
@@ -100,6 +100,7 @@ $(function() {
 
 
 <?php include_once(G5_THEME_PATH."/tail.sub.php"); ?>
+<?php include_once(G5_LIB_PATH . '/channel_talk.lib.php'); ?>
 
 
 <script type="text/javascript">
@@ -113,16 +114,4 @@ $(function() {
 		//easing: 'ease-out'
 	});
 </script>
-<?php if (isset($_SERVER['REMOTE_ADDR']) && $_SERVER['REMOTE_ADDR'] == '222.107.227.177') { ?>
-<script>
-
-
-  (function(){var w=window;if(w.ChannelIO){return w.console.error("ChannelIO script included twice.");}var ch=function(){ch.c(arguments);};ch.q=[];ch.c=function(args){ch.q.push(args);};w.ChannelIO=ch;function l(){if(w.ChannelIOInitialized){return;}w.ChannelIOInitialized=true;var s=document.createElement("script");s.type="text/javascript";s.async=true;s.src="https://cdn.channel.io/plugin/ch-plugin-web.js";var x=document.getElementsByTagName("script")[0];if(x.parentNode){x.parentNode.insertBefore(s,x);}}if(document.readyState==="complete"){l();}else{w.addEventListener("DOMContentLoaded",l);w.addEventListener("load",l);}})();
-
-  ChannelIO('boot', {
-    "pluginKey": "296accc8-9450-4f33-a7e5-8a61d905164d"
-  });
-
-
-</script>
-<?php } ?>
+<?= channel_talk_boot_script(); ?>

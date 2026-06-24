@@ -310,6 +310,7 @@ if (!function_exists('company_list_ai_should_write_event_log')) {
         return in_array($event_type, array(
             'request_received', 'external_request', 'external_response',
             'cache_response', 'cache_save', 'output',
+            'keyword_lookup', 'custom_keyword_search',
         ), true);
     }
 }
@@ -630,7 +631,65 @@ if (!function_exists('company_list_ai_build_base_payload_from_kodata_json')) {
             'error' => '',
             'base_payload' => $payload,
         );
-    }
+	}
+}
+
+if (!function_exists('company_list_ai_normalize_bzc_cd')) {
+	function company_list_ai_normalize_bzc_cd($value) {
+		return strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', (string)$value), 0, 10));
+	}
+}
+
+if (!function_exists('company_list_ai_fetch_company_bzc_by_bizno')) {
+	function company_list_ai_fetch_company_bzc_by_bizno($bizno) {
+		// KODATA 원문에 업종코드가 없을 때만 쓰는 보강 조회다.
+		$bizno = preg_replace('/\D/', '', (string)$bizno);
+		if (strlen($bizno) !== 10) return '';
+		$row = sql_fetch("select BZC_CD from company where BZNO='" . sql_real_escape_string($bizno) . "' and BZC_CD<>'' limit 1");
+		return company_list_ai_normalize_bzc_cd($row['BZC_CD'] ?? '');
+	}
+}
+
+if (!function_exists('company_list_ai_apply_bzc_resolution_meta')) {
+	function company_list_ai_apply_bzc_resolution_meta($base_payload, $bizno, $source = '') {
+		// 추천은 계속 성공 흐름으로 진행하되, 업종코드 보강/전체 업종 fallback 흔적은 로그에 남긴다.
+		$base_payload = is_array($base_payload) ? $base_payload : array();
+		$original_bzc = company_list_ai_normalize_bzc_cd($base_payload['bzc_cd'] ?? '');
+		$final_bzc = $original_bzc;
+		$missing = ($original_bzc === '');
+		$resolved = false;
+		$resolve_source = $original_bzc !== '' ? (string)$source : '';
+		$fallback_reason = '';
+
+		if ($missing) {
+			// company 테이블 보강 실패 시 bzc_cd를 EC2 payload에 넣지 않고 keyword_scope=all로 전환한다.
+			$company_bzc = company_list_ai_fetch_company_bzc_by_bizno($bizno);
+			if ($company_bzc !== '') {
+				$final_bzc = $company_bzc;
+				$base_payload['bzc_cd'] = $company_bzc;
+				$resolved = true;
+				$resolve_source = 'company';
+				$fallback_reason = 'company_bzc_found';
+			} else {
+				unset($base_payload['bzc_cd']);
+				$resolve_source = 'none';
+				$fallback_reason = 'missing_bzc_cd';
+			}
+		}
+
+		$base_payload['_bzc_meta'] = array(
+			'original_source_bzc_cd' => $original_bzc,
+			'source_bzc_cd' => $final_bzc,
+			'source_bzc_missing' => $missing ? 1 : 0,
+			'source_bzc_resolved' => $resolved ? 1 : 0,
+			'source_bzc_resolve_source' => $resolve_source,
+			'keyword_scope' => ($final_bzc === '') ? 'all' : 'related',
+			'match_type' => ($final_bzc === '') ? 'global_all' : '',
+			'fallback_reason' => $fallback_reason,
+		);
+
+		return $base_payload;
+	}
 }
 
 if (!function_exists('company_list_ai_resolve_base_payload_by_bizno')) {
@@ -711,21 +770,31 @@ if (!function_exists('company_list_ai_resolve_base_payload_by_bizno')) {
             );
         }
 
+        $base_payload = company_list_ai_apply_bzc_resolution_meta($parsed['base_payload'], $bizno, $common_source);
+        $bzc_meta = is_array($base_payload['_bzc_meta'] ?? null) ? $base_payload['_bzc_meta'] : array();
+
         company_list_ai_write_event_log('bizno_resolve', 'success', array(
             'trace_id' => $resolve_trace_id,
             'trade_type' => $resolve_trade_type,
             'action' => 'resolve_base_payload',
             'bizno' => $bizno,
-            'kedcd' => (string)($parsed['base_payload']['kedcd'] ?? ''),
+            'kedcd' => (string)($base_payload['kedcd'] ?? ''),
             'source' => $common_source,
             'from_cache' => ($common_source === 'kodata_live') ? 0 : 1,
+            'source_bzc_cd' => (string)($bzc_meta['source_bzc_cd'] ?? ''),
+            'original_source_bzc_cd' => (string)($bzc_meta['original_source_bzc_cd'] ?? ''),
+            'source_bzc_missing' => (int)($bzc_meta['source_bzc_missing'] ?? 0),
+            'source_bzc_resolved' => (int)($bzc_meta['source_bzc_resolved'] ?? 0),
+            'source_bzc_resolve_source' => (string)($bzc_meta['source_bzc_resolve_source'] ?? ''),
+            'keyword_scope' => (string)($bzc_meta['keyword_scope'] ?? 'related'),
+            'fallback_reason' => (string)($bzc_meta['fallback_reason'] ?? ''),
         ));
         return array(
             'ok' => true,
             'status' => 200,
             'error' => '',
             'source' => $common_source,
-            'base_payload' => $parsed['base_payload'],
+            'base_payload' => $base_payload,
         );
 
         // 1) 최근 1개월 캐시
@@ -1153,6 +1222,12 @@ if (!function_exists('company_list_ai_call_recommend')) {
             'bizno' => $bizno_for_log,
             'trade_type' => $trade_type_for_log,
             'source_bzc_cd' => strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', (string)($payload['bzc_cd'] ?? '')), 0, 10)),
+            'original_source_bzc_cd' => (string)($trace_context['original_source_bzc_cd'] ?? ''),
+            'source_bzc_missing' => (int)($trace_context['source_bzc_missing'] ?? 0),
+            'source_bzc_resolved' => (int)($trace_context['source_bzc_resolved'] ?? 0),
+            'source_bzc_resolve_source' => (string)($trace_context['source_bzc_resolve_source'] ?? ''),
+            'keyword_scope' => (string)($trace_context['keyword_scope'] ?? ''),
+            'fallback_reason' => (string)($trace_context['fallback_reason'] ?? ''),
             'filter_bzc_count' => count($filter_bzc_cds_for_log),
             'filter_bzc_cds' => implode(',', $filter_bzc_cds_for_log),
             'filter_bzc_weights' => implode(',', $filter_bzc_weights_for_log),
