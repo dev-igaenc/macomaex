@@ -385,14 +385,8 @@ function company_list_ai_ml_item_to_card($item)
         'sales_growth_pct' => (isset($item['sales_growth_pct']) && $item['sales_growth_pct'] !== '' && $item['sales_growth_pct'] !== null)
             ? (float)$item['sales_growth_pct']
             : null,
-        'debt_ratio_pct' => (isset($item['debt_ratio_pct']) && $item['debt_ratio_pct'] !== '' && $item['debt_ratio_pct'] !== null)
-            ? (float)$item['debt_ratio_pct']
-            : null,
         'consec_profit_2y' => (isset($item['consec_profit_2y']) && $item['consec_profit_2y'] !== '' && $item['consec_profit_2y'] !== null)
             ? ((int)$item['consec_profit_2y'] ? 1 : 0)
-            : null,
-        'capital_negative' => (isset($item['capital_negative']) && $item['capital_negative'] !== '' && $item['capital_negative'] !== null)
-            ? ((int)$item['capital_negative'] ? 1 : 0)
             : null,
         'one_line' => trim((string)($item['one_line'] ?? '')),
         'score' => $score,
@@ -769,9 +763,7 @@ function company_list_ai_render_card($card, $trade_type, $rank = 0, $src_kedcd =
     $sze_attr = (int)($card['sze'] ?? 0);
     $company_age_attr = (int)($card['company_age'] ?? 0);
     $sales_growth_attr = (isset($card['sales_growth_pct']) && $card['sales_growth_pct'] !== null && $card['sales_growth_pct'] !== '') ? (string)$card['sales_growth_pct'] : '';
-    $debt_ratio_attr = (isset($card['debt_ratio_pct']) && $card['debt_ratio_pct'] !== null && $card['debt_ratio_pct'] !== '') ? (string)$card['debt_ratio_pct'] : '';
     $consec_profit_attr = (isset($card['consec_profit_2y']) && $card['consec_profit_2y'] !== null && $card['consec_profit_2y'] !== '') ? ((int)$card['consec_profit_2y'] ? '1' : '0') : '';
-    $capital_negative_attr = (isset($card['capital_negative']) && $card['capital_negative'] !== null && $card['capital_negative'] !== '') ? ((int)$card['capital_negative'] ? '1' : '0') : '';
     $one_line_attr = htmlspecialchars((string)($card['one_line'] ?? ''), ENT_QUOTES, 'UTF-8');
     $analysis_tags_attr = htmlspecialchars(implode(',', (array)($card['analysis_tags'] ?? array())), ENT_QUOTES, 'UTF-8');
     $tag_source_attr = htmlspecialchars((string)($card['tag_source'] ?? 'none'), ENT_QUOTES, 'UTF-8');
@@ -830,7 +822,7 @@ function company_list_ai_render_card($card, $trade_type, $rank = 0, $src_kedcd =
     $radar_tags = company_list_ai_render_radar_tags($card['radar'] ?? []);
     $html = '<div class="swiper-slide">';
     if ($is_top3) $html .= company_list_ai_render_rank_medal($rank);
-    $html .= '<a href="' . $url . '" class="company-ai-link" data-kedcd="' . $kedcd . '" data-src-kedcd="' . $src_kedcd_attr . '" data-trade-type="' . $trade_q . '" data-selected-keywords="' . $selected_keywords_attr . '" data-partner-bzc-cds="' . $partner_bzc_attr . '" data-recommendation-mode="' . $recommendation_mode_attr . '" data-trace-id="' . $trace_id_attr . '" data-analysis-tags="' . $analysis_tags_attr . '" data-tag-source="' . $tag_source_attr . '" data-score="' . $score . '" data-candidate-type="' . $candidate_type . '" data-bzc-cd="' . $industry . '" data-bzc-nm="' . $industry_nm . '" data-sido="' . $region . '" data-sze="' . $sze_attr . '" data-company-age="' . $company_age_attr . '" data-sales-growth-pct="' . htmlspecialchars($sales_growth_attr, ENT_QUOTES, 'UTF-8') . '" data-debt-ratio-pct="' . htmlspecialchars($debt_ratio_attr, ENT_QUOTES, 'UTF-8') . '" data-consec-profit-2y="' . $consec_profit_attr . '" data-capital-negative="' . $capital_negative_attr . '" data-one-line="' . $one_line_attr . '" style="text-decoration:none;color:inherit;">';
+    $html .= '<a href="' . $url . '" class="company-ai-link" data-kedcd="' . $kedcd . '" data-src-kedcd="' . $src_kedcd_attr . '" data-trade-type="' . $trade_q . '" data-selected-keywords="' . $selected_keywords_attr . '" data-partner-bzc-cds="' . $partner_bzc_attr . '" data-recommendation-mode="' . $recommendation_mode_attr . '" data-trace-id="' . $trace_id_attr . '" data-analysis-tags="' . $analysis_tags_attr . '" data-tag-source="' . $tag_source_attr . '" data-score="' . $score . '" data-candidate-type="' . $candidate_type . '" data-bzc-cd="' . $industry . '" data-bzc-nm="' . $industry_nm . '" data-sido="' . $region . '" data-sze="' . $sze_attr . '" data-company-age="' . $company_age_attr . '" data-sales-growth-pct="' . htmlspecialchars($sales_growth_attr, ENT_QUOTES, 'UTF-8') . '" data-consec-profit-2y="' . $consec_profit_attr . '" data-one-line="' . $one_line_attr . '" style="text-decoration:none;color:inherit;">';
     $html .= '<div class="mCompanyCard company-ai-card" style="position:relative;">';
     $html .= '<div class="mCompanyCard_content">';
     $html .= '<div class="mCompanyCard_ai_match"><span class="mCompanyCard_ai_match_label">AI 추천점수</span><span><span class="mCompanyCard_ai_match_value">' . $score . '</span><span class="mCompanyCard_ai_match_unit">    점</span></span></div>';
