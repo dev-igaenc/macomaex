@@ -346,9 +346,9 @@ window.__AUTH_SESSION_GUARD_CONFIG__ = {
 <hr>
 
 <!-- 콘텐츠 시작 { -->
-<div id="wrapper">
+<div id="wrapper"<?php echo !empty($theme_wrapper_inline_style) ? ' style="'.htmlspecialchars($theme_wrapper_inline_style, ENT_QUOTES, 'UTF-8').'"' : ''; ?>>
 	<?php if (!defined("_INDEX_")) { ?>
-	<div id="container_wr">
+	<div id="container_wr"<?php echo !empty($theme_container_wr_inline_style) ? ' style="'.htmlspecialchars($theme_container_wr_inline_style, ENT_QUOTES, 'UTF-8').'"' : ''; ?>>
 
 
 			<?php if (empty($hide_theme_svisual)) { ?>
@@ -411,6 +411,7 @@ window.__AUTH_SESSION_GUARD_CONFIG__ = {
                         <!-- <p><?php echo $bo_text ?></p> -->
                     <!-- <?php } ?> -->
                 </div>
+                <?php if (empty($hide_theme_pagetop_nav)) { ?>
                 <div class="pageTop_nav">
                     <script type="text/javascript">
                         var dn1 = "<?=$depth_1?>";
@@ -422,10 +423,11 @@ window.__AUTH_SESSION_GUARD_CONFIG__ = {
                         leftMenuList(dn1, dn2, dn3, dn4);
                     </script>
                 </div>
+                <?php } ?>
             </div>
 			</div>
 			<?php } ?>
-			<div id="container">
+			<div id="container"<?php echo !empty($theme_container_inline_style) ? ' style="'.htmlspecialchars($theme_container_inline_style, ENT_QUOTES, 'UTF-8').'"' : ''; ?>>
 	<?php } ?>
 
 <!-- 사업자 확인 + 추천 키워드 선택 모달 -->
