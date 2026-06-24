@@ -225,7 +225,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 <?php } ?>
 
 
-<div id="wrap" class="<?php if (!defined("_INDEX_")) { ?> sub<?php } ?>">
+<div id="wrap" class="<?php if (!defined("_INDEX_")) { ?> sub<?php } ?>"<?php echo !empty($theme_wrap_inline_style) ? ' style="'.htmlspecialchars($theme_wrap_inline_style, ENT_QUOTES, 'UTF-8').'"' : ''; ?>>
 
 <?php
 if ($is_member) { // 회원이라면 로그인 중이라는 메세지를 출력해준다.

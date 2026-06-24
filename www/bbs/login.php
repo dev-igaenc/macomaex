@@ -11,6 +11,12 @@ $board['bo_5'] = "멤버쉽";
 $board['bo_subject'] = "로그인";
 $board['bo_4'] = $config['cf_title']."의 혜택을 확인하세요.";
 $g5['title'] = '로그인';
+$hide_theme_svisual = true;
+$hide_theme_pagetop = true;
+$theme_wrap_inline_style = 'min-height:0;height:auto;display:block;overflow:visible;';
+$theme_wrapper_inline_style = 'flex:0 0 auto;';
+$theme_container_wr_inline_style = 'height:auto;min-height:0;';
+$theme_container_inline_style = 'min-height:0;height:auto;padding-bottom:8rem;';
 
 if(!strpos($refer,"/backoffice/")) include_once(G5_THEME_PATH.'/head.php');
 

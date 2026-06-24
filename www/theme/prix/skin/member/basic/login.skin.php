@@ -10,9 +10,7 @@ if (file_exists(G5_THEME_MSHOP_PATH.'/shop.head.php')) {
 <form name="flogin" action="<?php echo $login_action_url ?>" onsubmit="return flogin_submit(this);" method="post" id="flogin">
 	<input type="hidden" name="url" value="<?php echo $login_url ?>">
 	<div class="skin-member login">
-		<dl class="h1">
-			<dt><img src="/img/logo.svg" alt="매커멕스" title=""></dt>
-		</dl>
+		<p class="h2">일반 로그인</p>
 		<div class="login-fild">
 			<label for="login-id"><input type="text" name="mb_id" id="login-id" value="" maxlength="32" placeholder="이메일" required autocomplete="off" /></label>
 			<label for="login-pw"><input type="password" name="mb_password" id="login-pw" value="" maxlength="32" placeholder="비밀번호" required autocomplete="off" /></label>
