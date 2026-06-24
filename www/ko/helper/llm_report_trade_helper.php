@@ -43,13 +43,6 @@ if (!function_exists('llm_report_trade_allowed_items')) {
 
 if (!function_exists('llm_report_trade_selection_context')) {
     function llm_report_trade_selection_context($sourceData, $rec, $isSell, $buyItems, $sellItems) {
-        $recItems = llm_report_trade_filter_analysis_items(
-            llm_report_trade_exact_items(is_array($rec) ? ($rec['keywords'] ?? array()) : array())
-        );
-        $sourceItems = llm_report_trade_filter_analysis_items(array_merge(
-            llm_report_trade_exact_items($sourceData['src_keywords'] ?? array()),
-            llm_report_trade_exact_items($sourceData['source_mpd'] ?? '')
-        ));
         $primaryItems = $isSell ? $sellItems : $buyItems;
         $industryCandidate = trim((string)($isSell
             ? ($sourceData['source_bzc_nm'] ?? $sourceData['source_bzc_cd'] ?? '')
@@ -69,8 +62,6 @@ if (!function_exists('llm_report_trade_selection_context')) {
             'item_evidence' => $itemEvidence,
             'item_evidence_level' => !empty($primaryItems) ? 'actual' : (!empty($inferredItems) ? 'industry_inferred' : 'insufficient'),
             'inferred_items' => $inferredItems,
-            'recommended_company_items' => $recItems,
-            'source_company_items' => $sourceItems,
         );
     }
 }
