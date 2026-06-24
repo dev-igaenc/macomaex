@@ -1,4 +1,18 @@
 
+#### Security Policy BEGIN #####
+<IfModule mod_rewrite.c>
+RewriteEngine On
+
+# Block common sensitive files and metadata directories from web access.
+RewriteCond %{THE_REQUEST} "(?:/|%2f)(?:\.env|\.git|\.svn|\.hg|\.aws)(?:[/?#\s]|%2f)" [NC,OR]
+RewriteCond %{REQUEST_URI} "(^|/)(\.env[^/]*|\.git|\.svn|\.hg|\.aws)(/|$)" [NC,OR]
+RewriteCond %{REQUEST_URI} "(^|/)(composer\.(json|lock)|package-lock\.json|package\.json|yarn\.lock|pnpm-lock\.yaml)(\?.*)?$" [NC,OR]
+RewriteCond %{REQUEST_URI} "(^|/)(\.htaccess|\.htpasswd|web\.config)(\?.*)?$" [NC,OR]
+RewriteCond %{REQUEST_URI} "(^|/)(backup|dump|database|db|sql|config|settings|credentials)[^/]*\.(sql|sqlite|db|bak|backup|old|orig|save|zip|tar|tgz|gz|7z|rar)(\?.*)?$" [NC]
+RewriteRule ^ - [F,L]
+</IfModule>
+#### Security Policy END #####
+
 #### 그누보드5 rewrite BEGIN #####
 <IfModule mod_rewrite.c>
 RewriteEngine On
