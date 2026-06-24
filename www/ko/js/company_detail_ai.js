@@ -1344,9 +1344,9 @@
                 };
             }
 
-            function pickStrengthBucketIndex(score5) {
-                if (score5 >= 4.5) return 2;
-                if (score5 >= 4.0) return 1;
+            function pickStrengthBucketIndex(score100) {
+                if (score100 >= 90) return 2;
+                if (score100 >= 80) return 1;
                 return 0;
             }
 
@@ -1367,7 +1367,7 @@
                 };
             }
 
-            // 레이더 12축에서 3.0점 이상인 상위 항목만 핵심요약 후보로 사용
+            // 레이더 12축에서 60점 이상인 상위 항목만 핵심요약 후보로 사용
             function buildRadarStrengthCards(card, limit) {
                 var radarNorm = normalizeRadarLikeList((card && card.radar) || {});
                 var titleMap = radarStrengthTitleMap();
@@ -1392,8 +1392,7 @@
                     if (!Number.isFinite(rawScore)) return null;
                     if (rawScore < 0) rawScore = 0;
                     if (rawScore > 100) rawScore = 100;
-                    var score5 = +(rawScore / 20).toFixed(1);
-                    var bucketIdx = pickStrengthBucketIndex(score5);
+                    var bucketIdx = pickStrengthBucketIndex(rawScore);
                     var values = valueMap[key] || ['확인', '양호', '우수'];
                     return {
                         id: 'radar_' + key,
@@ -1402,7 +1401,6 @@
                         value: values[bucketIdx] || values[0] || '',
                         desc: descMap[key] || (AXIS_DESC_MAP[key] || ''),
                         rawScore: rawScore,
-                        score5: score5,
                         sortIdx: idx
                     };
                 }).filter(Boolean);
@@ -1413,7 +1411,7 @@
                 });
 
                 var preferred = candidates.filter(function (item) {
-                    return item.score5 >= 3.0;
+                    return item.rawScore >= 60;
                 });
                 return preferred.slice(0, limit || 2);
             }
@@ -1522,8 +1520,7 @@
                 }
                 if (aiMatch < 0) aiMatch = 0;
                 if (aiMatch > 100) aiMatch = 100;
-                var score5 = +(aiMatch / 20).toFixed(1);
-                var bucketIdx = pickStrengthBucketIndex(score5);
+                var bucketIdx = pickStrengthBucketIndex(aiMatch);
                 var labels = ['적합', '양호', '우수'];
                 return {
                     id: 'fixed_recommendation_fit',
@@ -1648,13 +1645,12 @@
                 var html = '';
                 html += '<h1>' + esc(data.title || '거래 가능성 분석') + '</h1>';
                 html += '<blockquote>추천 유형: ' + esc(tradeLabel || '') + ' | 점수: ' + esc(data.score || '') + ' | 연결: ' + esc(data.connection_type || '') + '</blockquote>';
-                if (primaryItems.length) {
-                    html += '<h2>거래 품목 요약</h2>';
-                    html += '<h3>' + esc(primaryLabel) + '</h3>';
-                    html += '<p>' + esc(primaryItems.map(function (item, idx) { return String.fromCharCode(9312 + idx) + ' ' + item; }).join('  ')) + '</p>';
-                }
                 if (strengthSummaryHtml) {
                     html += strengthSummaryHtml;
+                }
+                if (primaryItems.length) {
+                    html += '<h2>' + esc(primaryLabel) + '</h2>';
+                    html += '<p>' + esc(primaryItems.map(function (item, idx) { return String.fromCharCode(9312 + idx) + ' ' + item; }).join('  ')) + '</p>';
                 }
                 html += '<h2>핵심 추천 사유</h2>';
                 html += '<ul>' + (reasons.length ? reasons : ['미확인']).map(function (item) { return '<li>' + esc(item) + '</li>'; }).join('') + '</ul>';
