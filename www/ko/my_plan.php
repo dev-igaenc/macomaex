@@ -94,6 +94,31 @@ if (!function_exists('my_plan_pay_method_text')) {
 	}
 }
 
+if (!function_exists('my_plan_mask_company_name')) {
+	function my_plan_mask_company_name($name)
+	{
+		$raw = trim((string)$name);
+		if ($raw === '') return '';
+
+		// 이미 마스킹된 값이면 그대로 사용
+		if (preg_match('/\*{2,}/u', $raw)) {
+			return $raw;
+		}
+
+		$m = array();
+		preg_match('/^(\(주\)|\(유\)|\(사\))?(.*)$/u', $raw, $m);
+		$prefix = isset($m[1]) ? (string)$m[1] : '';
+		$body = isset($m[2]) ? trim((string)$m[2]) : $raw;
+		if ($body === '') return $prefix . '****';
+
+		$visible = ($prefix !== '')
+			? mb_substr($body, 0, 1, 'UTF-8')
+			: mb_substr($body, 0, 2, 'UTF-8');
+
+		return $prefix . $visible . '****';
+	}
+}
+
 // 원장 조회 (구버전 fallback)
 $sql = "select
 			H.id,
@@ -483,7 +508,7 @@ for($i=0; $i<count($payment_rows); $i++){
 	                                }
                                 // memo는 고정값 유지하고, 화면에서만 AI 대상 기업명 suffix 처리
                                 if($use_type=="analyze" && $ai_company_name && strpos((string)$title, "—") === false){
-                                    $title .= " — ".$ai_company_name;
+                                    $title .= " — ".my_plan_mask_company_name($ai_company_name);
                                 }
                             ?>
                             <div class="pay-card" data-type="<?=$use_type?>">

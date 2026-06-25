@@ -11,6 +11,12 @@ $board['bo_5'] = "멤버쉽";
 $board['bo_subject'] = "로그인";
 $board['bo_4'] = $config['cf_title']."의 혜택을 확인하세요.";
 $g5['title'] = '로그인';
+$hide_theme_svisual = true;
+$hide_theme_pagetop = true;
+$theme_wrap_inline_style = '';
+$theme_wrapper_inline_style = 'display:flex;flex-direction:column;height:100%;';
+$theme_container_wr_inline_style = 'flex:1 1 auto;display:flex;flex-direction:column;height:100%;';
+$theme_container_inline_style = 'flex:1 1 auto;display:flex;align-items:center;justify-content:center;padding:3rem 2rem 3rem;';
 
 if(!strpos($refer,"/backoffice/")) include_once(G5_THEME_PATH.'/head.php');
 
@@ -43,6 +49,28 @@ run_event('member_login_tail', $login_url, $login_action_url, $member_skin_path,
 
 
 if(!strpos($refer,"/backoffice/"))  include_once(G5_THEME_PATH.'/tail.php');
+?>
+<script>
+(function() {
+    function syncLoginWrapHeight() {
+        var wrap = document.getElementById('wrap');
+        var partner = document.getElementById('partner-showcase');
+        var footer = document.getElementById('footer');
+
+        if (!wrap || !partner || !footer) return;
+
+        var viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
+        var reservedHeight = partner.offsetHeight + footer.offsetHeight;
+        var availableHeight = Math.max(0, viewportHeight - reservedHeight);
+
+        wrap.style.minHeight = availableHeight + 'px';
+    }
+
+    window.addEventListener('load', syncLoginWrapHeight);
+    window.addEventListener('resize', syncLoginWrapHeight);
+})();
+</script>
+<?php
 
 include_once('./_tail.sub.php');
 ?>
