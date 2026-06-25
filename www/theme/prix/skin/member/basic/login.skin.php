@@ -1,8 +1,10 @@
 <?php
 if (!defined('_GNUBOARD_')) exit; // 개별 페이지 접근 불가
 
-// add_stylesheet('css 구문', 출력순서); 숫자가 작을 수록 먼저 출력됨
-add_stylesheet('<link rel="stylesheet" href="'.$member_skin_url.'/newstyle.css">', 0);
+// add_stylesheet('css 구문', 출력순서); 숫자가 작을 수록 먼저 출력
+// 로그인 스타일 변경이 잦아 파일 수정 시점으로 캐시 분리
+$member_newstyle_ver = file_exists($member_skin_path.'/newstyle.css') ? filemtime($member_skin_path.'/newstyle.css') : G5_CSS_VER;
+add_stylesheet('<link rel="stylesheet" href="'.$member_skin_url.'/newstyle.css?ver='.$member_newstyle_ver.'">', 0);
 if (file_exists(G5_THEME_MSHOP_PATH.'/shop.head.php')) {
 	include_once(G5_THEME_MSHOP_PATH.'/shop.head.php');
 }
