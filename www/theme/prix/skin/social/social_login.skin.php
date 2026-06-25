@@ -15,16 +15,22 @@ if( G5_SOCIAL_USE_POPUP ) {
 }
 
 ?>
-		<div class="login-sns">
-			<p class="h2">SNS 간편로그인</p>
-			<?php if( social_service_check('naver') ) { //네이버 로그인을 사용한다면 ?>
-			<button type="button" class="sns-naver" href="<?php echo $self_url;?>?provider=naver&amp;url=<?php echo $urlencode;?>"><img src="/theme/prix/skin/member/basic/img/icon_login_naver.svg" width="21"><strong>네이버</strong> 계정으로 로그인</button>
-			<?php }     //end if ?>
+			<div class="login-sns">
+				<p class="h2">SNS 간편로그인</p>
+				<?php if( social_service_check('naver') ) { //네이버 로그인을 사용한다면 ?>
+				<button type="button" class="sns-naver" href="<?php echo $self_url;?>?provider=naver&amp;url=<?php echo $urlencode;?>"><img src="/theme/prix/skin/member/basic/img/NAVER_login_Light_KR_green_icon_H48.svg" width="48" height="48"><strong>네이버</strong> 계정으로 로그인</button>
+				<?php }     //end if ?>
 			<?php if( social_service_check('kakao') ) {     //카카오 로그인을 사용한다면 ?>
-			<button type="button" class="sns-kakao" href="<?php echo $self_url;?>?provider=kakao&amp;url=<?php echo $urlencode;?>"><img src="/theme/prix/skin/member/basic/img/icon_login_kakao.svg" width="27"><strong>카카오</strong> 계정으로 로그인</button>
-			<?php }     //end if ?>
-			<?php if( social_service_check('google') ) {     //구글 로그인을 사용한다면 ?>
-			<button type="button" class="sns-google" href="<?php echo $self_url;?>?provider=google&amp;url=<?php echo $urlencode;?>"><img src="/theme/prix/skin/member/basic/img/icon_login_google.svg" width="23" style="margin-left:-9px;"><strong>구글</strong> 계정으로 로그인</button>
+				<button type="button" class="sns-kakao" href="<?php echo $self_url;?>?provider=kakao&amp;url=<?php echo $urlencode;?>"><img src="/theme/prix/skin/member/basic/img/icon_login_kakao.svg" width="27"><strong>카카오</strong> 계정으로 로그인</button>
+				<?php }     //end if ?>
+				<?php if( social_service_check('google') ) {     //구글 로그인을 사용한다면 ?>
+				<button type="button" class="gsi-material-button" href="<?php echo $self_url;?>?provider=google&amp;url=<?php echo $urlencode;?>">
+				<div class="gsi-material-button-state"></div>
+				<div class="gsi-material-button-content-wrapper">
+					<div class="gsi-material-button-icon"></div>
+					<span style="display: none;">Sign in with Google</span>
+				</div>
+			</button>
 			<?php }     //end if ?>
 		</div>
 
