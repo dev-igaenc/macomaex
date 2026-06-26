@@ -153,7 +153,7 @@ body, button, input, select, textarea { font-family: "Pretendard Variable", "SUI
 /* 데스크탑: 좌우 2열 */
 @media (min-width: 1025px) {
     #mVisual {
-        padding: 0 !important;
+        padding: 60px 0 0 !important;
     }
     #mVisual .mVisual_main {
         flex-direction: row;

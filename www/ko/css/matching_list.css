@@ -162,6 +162,7 @@ html, body { margin: 0; overflow-x: hidden; font-family: var(--font-base); backg
 @media (max-width: 900px) {
     .list-body .inner { flex-direction: column; }
     .list-cat-tab-wrap { display: block !important; background: #fff; border-bottom: 1px solid #e8e8e8; }
+    .list-cat-dropdown { display: none !important; }
 }
 .list-cat-dropdown {
     position: relative;
@@ -391,10 +392,14 @@ html, body { margin: 0; overflow-x: hidden; font-family: var(--font-base); backg
 }
 
 @media (max-width: 900px) {
-    .list-cat-dropdown { display: block; }
-    .list-cat-tabs { display: none; }
+    .list-cat-dropdown { display: none !important; }
+    .list-cat-tabs {
+        display: flex;
+        padding: 0 16px;
+        background: #fff;
+    }
     .list-cat-sub {
-        padding: 0 16px 12px;
+        padding: 10px 16px 12px;
         background: #fff;
     }
 }
