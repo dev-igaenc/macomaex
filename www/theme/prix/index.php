@@ -20,6 +20,29 @@ include_once(G5_THEME_PATH . '/head.php');
 <link rel="stylesheet" href="<?php echo $prix_theme_asset_url('css/index.css', G5_CSS_VER); ?>">
 <?php
 
+$main_categories = include G5_PATH . '/ko/matching_categories.php';
+
+function render_main_category_item($category, $wrap_slide = false) {
+    $slug = isset($category['slug']) ? (string)$category['slug'] : '';
+    $label = isset($category['label']) ? (string)$category['label'] : '';
+    $icon = !empty($category['icon']) ? (string)$category['icon'] : 'cat-iso-all';
+    if ($slug === '' || $label === '') return '';
+
+    $href = '/companies?category=' . rawurlencode($slug);
+    $item = '<a href="' . htmlspecialchars($href, ENT_QUOTES, 'UTF-8') . '" class="mCategories_item" title="' . htmlspecialchars($label, ENT_QUOTES, 'UTF-8') . '">'
+        . '<div class="cat_inner">'
+        . '<div class="cat_icon"><svg viewBox="0 0 48 48" aria-hidden="true"><use href="#' . htmlspecialchars($icon, ENT_QUOTES, 'UTF-8') . '"></use></svg></div>'
+        . '<span class="cat_label">' . htmlspecialchars($label, ENT_QUOTES, 'UTF-8') . '</span>'
+        . '</div>'
+        . '</a>';
+
+    if ($wrap_slide) {
+        return '<div class="swiper-slide">' . $item . '</div>';
+    }
+
+    return $item;
+}
+
 // 점수를 0~5 범위로 보정
 function clamp_score_5($value) {
     $num = (float)$value;
@@ -424,62 +447,22 @@ $stable_list = get_processed_companies('stability_score_5', 3, $unlocked_bzno_ma
     <div class="inner">
         <div class="mCategories_row">
             <div class="mCategories_primary">
-        <!-- 데스크탑/태블릿: 그리드 (대분류 8개) -->
-        <div class="mCategories_grid">
-            <a href="/companies?category=metal" class="mCategories_item" title="금속·소재"><div class="cat_inner"><div class="cat_icon"><svg viewBox="0 0 48 48"><use href="#cat-iso-7"/></svg></div><span class="cat_label">금속·소재</span></div></a>
-            <a href="/companies?category=chemical" class="mCategories_item" title="화학·케미컬·원료"><div class="cat_inner"><div class="cat_icon"><svg viewBox="0 0 48 48"><use href="#cat-iso-5"/></svg></div><span class="cat_label">화학·케미컬·원료</span></div></a>
-            <a href="/companies?category=electronics" class="mCategories_item" title="전자·전기·반도체"><div class="cat_inner"><div class="cat_icon"><svg viewBox="0 0 48 48"><use href="#cat-iso-10"/></svg></div><span class="cat_label">전자·전기·반도체</span></div></a>
-            <a href="/companies?category=machinery" class="mCategories_item" title="기계·설비·산업장비"><div class="cat_inner"><div class="cat_icon"><svg viewBox="0 0 48 48"><use href="#cat-iso-6"/></svg></div><span class="cat_label">기계·설비·산업장비</span></div></a>
-            <a href="/companies?category=auto" class="mCategories_item" title="자동차·모빌리티"><div class="cat_inner"><div class="cat_icon"><svg viewBox="0 0 48 48"><use href="#cat-iso-11"/></svg></div><span class="cat_label">자동차·모빌리티</span></div></a>
-            <a href="/companies?category=food" class="mCategories_item" title="식자재·식품 B2B"><div class="cat_inner"><div class="cat_icon"><svg viewBox="0 0 48 48"><use href="#cat-iso-4"/></svg></div><span class="cat_label">식자재·식품 B2B</span></div></a>
-            <a href="/companies?category=medical" class="mCategories_item" title="의료·헬스케어"><div class="cat_inner"><div class="cat_icon"><svg viewBox="0 0 48 48"><use href="#cat-iso-17"/></svg></div><span class="cat_label">의료·헬스케어</span></div></a>
-            <a href="/companies?category=packaging" class="mCategories_item" title="포장재·소모성 자재"><div class="cat_inner"><div class="cat_icon"><svg viewBox="0 0 48 48"><use href="#cat-iso-12"/></svg></div><span class="cat_label">포장재·소모성 자재</span></div></a>
-        </div>
-        <!-- 모바일 전용: 대분류 8개 2줄 스와이프 캐러셀 -->
-        <div class="mCategories_carousel_wrap">
-            <div class="mCategories_carousel_card">
-            <div class="mCategories_swiper swiper">
-                <div class="swiper-wrapper">
-                    <div class="swiper-slide"><a href="/companies?category=metal" class="mCategories_item" title="금속·소재"><div class="cat_inner"><div class="cat_icon"><svg viewBox="0 0 48 48"><use href="#cat-iso-7"/></svg></div><span class="cat_label">금속·소재</span></div></a></div>
-                    <div class="swiper-slide"><a href="/companies?category=chemical" class="mCategories_item" title="화학·케미컬·원료"><div class="cat_inner"><div class="cat_icon"><svg viewBox="0 0 48 48"><use href="#cat-iso-5"/></svg></div><span class="cat_label">화학·케미컬·원료</span></div></a></div>
-                    <div class="swiper-slide"><a href="/companies?category=electronics" class="mCategories_item" title="전자·전기·반도체"><div class="cat_inner"><div class="cat_icon"><svg viewBox="0 0 48 48"><use href="#cat-iso-10"/></svg></div><span class="cat_label">전자·전기·반도체</span></div></a></div>
-                    <div class="swiper-slide"><a href="/companies?category=machinery" class="mCategories_item" title="기계·설비·산업장비"><div class="cat_inner"><div class="cat_icon"><svg viewBox="0 0 48 48"><use href="#cat-iso-6"/></svg></div><span class="cat_label">기계·설비·산업장비</span></div></a></div>
-                    <div class="swiper-slide"><a href="/companies?category=auto" class="mCategories_item" title="자동차·모빌리티"><div class="cat_inner"><div class="cat_icon"><svg viewBox="0 0 48 48"><use href="#cat-iso-11"/></svg></div><span class="cat_label">자동차·모빌리티</span></div></a></div>
-                    <div class="swiper-slide"><a href="/companies?category=food" class="mCategories_item" title="식자재·식품 B2B"><div class="cat_inner"><div class="cat_icon"><svg viewBox="0 0 48 48"><use href="#cat-iso-4"/></svg></div><span class="cat_label">식자재·식품 B2B</span></div></a></div>
-                    <div class="swiper-slide"><a href="/companies?category=medical" class="mCategories_item" title="의료·헬스케어"><div class="cat_inner"><div class="cat_icon"><svg viewBox="0 0 48 48"><use href="#cat-iso-17"/></svg></div><span class="cat_label">의료·헬스케어</span></div></a></div>
-                    <div class="swiper-slide"><a href="/companies?category=packaging" class="mCategories_item" title="포장재·소모성 자재"><div class="cat_inner"><div class="cat_icon"><svg viewBox="0 0 48 48"><use href="#cat-iso-12"/></svg></div><span class="cat_label">포장재·소모성 자재</span></div></a></div>
+                <div class="mCategories_grid">
+                    <?php foreach ($main_categories as $main_category): ?>
+                    <?php echo render_main_category_item($main_category); ?>
+                    <?php endforeach; ?>
                 </div>
-                <div class="swiper-pagination mCategories_carousel_pagination"></div>
-            </div>
-            </div>
-        </div>
-            </div>
-            <div class="mVisual_banner_wrap mVisual_banner_compact">
-                <div class="mVisual_banner_swiper swiper">
-                    <div class="swiper-wrapper">
-                        <div class="swiper-slide">
-                            <aside class="mVisual_banner mVisual_banner_card">
-                                <div class="mVisual_banner_inner">
-                                    <span class="mVisual_banner_status">정식 서비스 운영 중</span>
-                                    <p class="mVisual_banner_main">거래 빈도가 높은<br>핵심 산업 집중</p>
-                                    <p class="mVisual_banner_sub">제조·유통 기반 추천 모델 고도화</p>
-                                </div>
-                            </aside>
-                        </div>
-                        <div class="swiper-slide">
-                            <aside class="mVisual_banner mVisual_banner_card">
-                                <div class="mVisual_banner_inner">
-                                    <span class="mVisual_banner_status">OPEN EVENT · 5월 한정</span>
-                                    <p class="mVisual_banner_main">크레딧 충전 시<br>x2 두 배로 적립</p>
-                                    <p class="mVisual_banner_sub">정식 오픈 기념 한정 혜택</p>
-                                </div>
-                            </aside>
+                <div class="mCategories_carousel_wrap">
+                    <div class="mCategories_carousel_card">
+                        <div class="mCategories_swiper swiper">
+                            <div class="swiper-wrapper">
+                                <?php foreach ($main_categories as $main_category): ?>
+                                <?php echo render_main_category_item($main_category, true); ?>
+                                <?php endforeach; ?>
+                            </div>
+                            <div class="swiper-pagination mCategories_carousel_pagination"></div>
                         </div>
                     </div>
-                <div class="mVisual_banner_pagination" aria-hidden="true">
-                    <span class="mVisual_banner_page_current">1</span>/<span class="mVisual_banner_page_total">2</span>
-                    <button type="button" class="mVisual_banner_next" aria-label="다음 배너"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg></button>
-                </div>
                 </div>
             </div>
         </div>
