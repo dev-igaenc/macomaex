@@ -41,70 +41,7 @@ if (!$is_matching_list_api) {
 // ----------------------------------------------------------
 // 3. 카테고리 정의
 // ----------------------------------------------------------
-$list_categories = [
-    ['slug' => 'metal', 'label' => '금속·소재', 'large_category_cd' => 1, 'sub' => [
-        ['slug' => 'metal_steel',      'label' => '1차 철강·비철',   'code' => 'C241'],
-        ['slug' => 'metal_nonferrous', 'label' => '1차 비철금속',   'code' => 'C242'],
-        ['slug' => 'metal_casting',    'label' => '금속 주조',      'code' => 'C243'],
-        ['slug' => 'metal_structural', 'label' => '구조용 금속',    'code' => 'C251'],
-        ['slug' => 'metal_machining',  'label' => '금속 가공·부품',  'code' => 'C259'],
-    ]],
-    ['slug' => 'chemical', 'label' => '화학·케미컬·원료', 'large_category_cd' => 2, 'sub' => [
-        ['slug' => 'chem_basic',       'label' => '기초 화학원료',        'code' => 'C201'],
-        ['slug' => 'chem_plastic_raw', 'label' => '합성수지·플라스틱 원료', 'code' => 'C202'],
-        ['slug' => 'chem_agri',        'label' => '농업용 화학제품',      'code' => 'C203'],
-        ['slug' => 'chem_indus',       'label' => '산업용 화학제품',      'code' => 'C204'],
-        ['slug' => 'chem_fiber',       'label' => '화학섬유',           'code' => 'C205'],
-        ['slug' => 'chem_rubber',      'label' => '고무제품',           'code' => 'C221'],
-        ['slug' => 'chem_plastic',     'label' => '플라스틱 제품',       'code' => 'C222'],
-    ]],
-    ['slug' => 'electronics', 'label' => '전자·전기·반도체', 'large_category_cd' => 3, 'sub' => [
-        ['slug' => 'elec_semi',      'label' => '반도체',         'code' => 'C261'],
-        ['slug' => 'elec_parts',     'label' => '전자부품',       'code' => 'C262'],
-        ['slug' => 'elec_it',        'label' => '컴퓨터·IT기기',   'code' => 'C263'],
-        ['slug' => 'elec_comm',      'label' => '통신·방송장비',   'code' => 'C264'],
-        ['slug' => 'elec_av',        'label' => '영상·음향기기',   'code' => 'C265'],
-        ['slug' => 'elec_measure',   'label' => '정밀측정·제어기기', 'code' => 'C272'],
-        ['slug' => 'elec_imaging',   'label' => '광학·이미징기기',  'code' => 'C273'],
-    ]],
-    ['slug' => 'machinery', 'label' => '기계·설비·산업장비', 'large_category_cd' => 4, 'sub' => [
-        ['slug' => 'mach_control',   'label' => '산업용 전동·제어장치', 'code' => 'C281'],
-        ['slug' => 'mach_battery',   'label' => '배터리·축전지',      'code' => 'C282'],
-        ['slug' => 'mach_cable',     'label' => '전선·케이블',        'code' => 'C283'],
-        ['slug' => 'mach_light',     'label' => '조명·광원장치',      'code' => 'C284'],
-        ['slug' => 'mach_appliance', 'label' => '가전·생활기기',      'code' => 'C285'],
-        ['slug' => 'mach_electric',  'label' => '산업용 전기장비',     'code' => 'C289'],
-        ['slug' => 'mach_general',   'label' => '일반 산업기계',      'code' => 'C291'],
-        ['slug' => 'mach_special',   'label' => '특수 산업기계',      'code' => 'C292'],
-    ]],
-    ['slug' => 'auto', 'label' => '자동차·모빌리티', 'large_category_cd' => 5, 'sub' => [
-        ['slug' => 'auto_finish',    'label' => '완성차·엔진',      'code' => 'C301'],
-        ['slug' => 'auto_body',      'label' => '차체·특장차',      'code' => 'C302'],
-        ['slug' => 'auto_parts',     'label' => '자동차 부품',      'code' => 'C303'],
-        ['slug' => 'auto_reman',     'label' => '재생·재제조 부품',  'code' => 'C304'],
-    ]],
-    ['slug' => 'food', 'label' => '식자재·식품 B2B', 'large_category_cd' => 6, 'sub' => [
-        ['slug' => 'food_meat',      'label' => '육류 가공',      'code' => 'C101'],
-        ['slug' => 'food_sea',       'label' => '수산물 가공',    'code' => 'C102'],
-        ['slug' => 'food_agri',      'label' => '농산물 가공',    'code' => 'C103'],
-        ['slug' => 'food_oil',       'label' => '유지·식용유',    'code' => 'C104'],
-        ['slug' => 'food_dairy',     'label' => '낙농·빙과',      'code' => 'C105'],
-        ['slug' => 'food_grain',     'label' => '곡물·전분',      'code' => 'C106'],
-        ['slug' => 'food_processed', 'label' => '가공식품',       'code' => 'C107'],
-        ['slug' => 'food_feed',      'label' => '사료·동물식품',   'code' => 'C108'],
-    ]],
-    ['slug' => 'medical', 'label' => '의료·헬스케어', 'large_category_cd' => 7, 'sub' => [
-        ['slug' => 'med_material',   'label' => '의약 원료',     'code' => 'C211'],
-        ['slug' => 'med_pharma',     'label' => '의약품',       'code' => 'C212'],
-        ['slug' => 'med_consumable', 'label' => '의료 소모품',    'code' => 'C213'],
-        ['slug' => 'med_device',     'label' => '의료기기',      'code' => 'C271'],
-    ]],
-    ['slug' => 'packaging', 'label' => '포장재·소모성 자재', 'large_category_cd' => 8, 'sub' => [
-        ['slug' => 'pack_pulp',      'label' => '펄프·종이 원지',  'code' => 'C171'],
-        ['slug' => 'pack_box',       'label' => '골판지·포장재',   'code' => 'C172'],
-        ['slug' => 'pack_paper',     'label' => '종이 가공제품',   'code' => 'C179'],
-    ]],
-];
+$list_categories = include __DIR__ . '/matching_categories.php';
 
 // ----------------------------------------------------------
 // 4. 요청 파라미터 처리
@@ -145,9 +82,9 @@ if ($member['mb_id']) {
     }
 }
 
-$free_limit   = 9;
+$free_limit   = 12;
 // 기본 렌더/더보기 단위 크기
-$default_page_size = 9;
+$default_page_size = 12;
 $max_page_size = 100;
 // 더보기 권한: 비회원은 기존 제한 유지, 로그인 회원은 멤버십/결제 여부와 무관하게 허용
 $can_load_more = !empty($member['mb_id']);
@@ -374,41 +311,73 @@ function resolve_keyword_tag_total_count($keyword_count, $tags) {
     return count(is_array($tags) ? $tags : []);
 }
 
-// 현재 카테고리의 구매 코드 찾기
-function get_target_codes_by_category($list_categories, $current_cat) {
+// 현재 카테고리의 prefix/exclude 규칙 찾기
+function get_target_prefix_rules_by_category($list_categories, $current_cat) {
     if (empty($current_cat) || $current_cat === 'all') return [];
-    $target_codes = [];
+    $rules = [];
     foreach ($list_categories as $lg) {
         if ($lg['slug'] === $current_cat) {
             foreach ($lg['sub'] as $sub) {
-                if (!empty($sub['code'])) $target_codes[] = $sub['code'];
+                $prefixes = isset($sub['prefixes']) && is_array($sub['prefixes']) ? $sub['prefixes'] : [];
+                if (!empty($sub['code'])) $prefixes[] = $sub['code']; // backward compatibility
+                if ($prefixes) {
+                    $rules[] = [
+                        'prefixes' => $prefixes,
+                        'excludes' => isset($sub['excludes']) && is_array($sub['excludes']) ? $sub['excludes'] : [],
+                    ];
+                }
             }
             break;
         }
         foreach ($lg['sub'] as $sub) {
             if ($sub['slug'] === $current_cat) {
-                if (!empty($sub['code'])) $target_codes[] = $sub['code'];
+                $prefixes = isset($sub['prefixes']) && is_array($sub['prefixes']) ? $sub['prefixes'] : [];
+                if (!empty($sub['code'])) $prefixes[] = $sub['code']; // backward compatibility
+                if ($prefixes) {
+                    $rules[] = [
+                        'prefixes' => $prefixes,
+                        'excludes' => isset($sub['excludes']) && is_array($sub['excludes']) ? $sub['excludes'] : [],
+                    ];
+                }
                 break 2;
             }
         }
     }
-    return $target_codes;
+    return $rules;
 }
 
 // company 조회 WHERE 만들기
-function build_company_where_clause($target_codes, $restrict_cg_prefix = false) {
+function build_company_where_clause($target_rules, $restrict_cg_prefix = false) {
     $where_clause = "WHERE A.KEDCD != '' AND A.ENP_NM != ''";
     $where_clause .= " AND A.ENP_SCD = '01'";
     $where_clause .= " AND A.ENP_SZE IN ('02', '03', '06')";
     if ($restrict_cg_prefix) {
         $where_clause .= " AND (A.BZC_CD LIKE 'C%' OR A.BZC_CD LIKE 'G%')";
     }
-    if (!empty($target_codes)) {
-        $code_conds = [];
-        foreach ($target_codes as $tc) {
-            $code_conds[] = "A.BZC_CD LIKE '" . sql_real_escape_string($tc) . "%'";
+    if (!empty($target_rules)) {
+        $rule_conds = [];
+        foreach ($target_rules as $rule) {
+            $prefixes = isset($rule['prefixes']) && is_array($rule['prefixes']) ? $rule['prefixes'] : [];
+            $excludes = isset($rule['excludes']) && is_array($rule['excludes']) ? $rule['excludes'] : [];
+            $prefix_conds = [];
+            foreach ($prefixes as $tc) {
+                $tc = trim((string)$tc);
+                if ($tc === '') continue;
+                $prefix_conds[] = "A.BZC_CD LIKE '" . sql_real_escape_string($tc) . "%'";
+            }
+            if (!$prefix_conds) continue;
+
+            $cond = "(" . implode(" OR ", $prefix_conds) . ")";
+            foreach ($excludes as $ex) {
+                $ex = trim((string)$ex);
+                if ($ex === '') continue;
+                $cond .= " AND A.BZC_CD NOT LIKE '" . sql_real_escape_string($ex) . "%'";
+            }
+            $rule_conds[] = "(" . $cond . ")";
         }
-        $where_clause .= " AND (" . implode(" OR ", $code_conds) . ")";
+        if ($rule_conds) {
+            $where_clause .= " AND (" . implode(" OR ", $rule_conds) . ")";
+        }
     }
     return $where_clause;
 }
@@ -507,8 +476,8 @@ function resolve_where_clause_for_general_list($query_type, $current_cat, $list_
         return build_company_where_clause_in_codes($seller_codes, false);
     }
 
-    $buyer_codes = get_target_codes_by_category($list_categories, $current_cat);
-    return build_company_where_clause($buyer_codes, false);
+    $buyer_rules = get_target_prefix_rules_by_category($list_categories, $current_cat);
+    return build_company_where_clause($buyer_rules, false);
 }
 
 function matching_list_count_cache_get($cache_key, $ttl_sec = 45) {
@@ -591,7 +560,7 @@ function fetch_general_cards_by_where($where_clause, $query_type, $show_count_re
             S.growth_score_5, S.profit_score_5, S.stability_score_5, S.age_score_5, S.emp_score_5, S.final_total_score_5,
             S.badge_growth, S.badge_stability, S.badge_venture
         FROM   company A
-        LEFT JOIN kssc B ON A.BZC_CD = B.k_code
+        LEFT JOIN kssc_11 B ON A.BZC_CD = B.k_code
         LEFT JOIN company_score_final_dedup S ON A.KEDCD = S.KEDCD
         {$where_clause}
         ORDER BY {$order_clause}
@@ -735,7 +704,7 @@ $should_use_api_payload_cache = (
 $api_payload_cache_key = '';
 if ($should_use_api_payload_cache) {
     $api_payload_cache_key = implode('|', array(
-        'v1',
+        'v2',
         'matching_list_api',
         'member:' . (string)($member['mb_id'] ?? ''),
         'type:' . (string)$current_type,
@@ -862,7 +831,7 @@ if (!$has_comnum) {
                            MAX(S.badge_venture) AS badge_venture
                     FROM   company_client A
                     LEFT JOIN company B ON A.TXPL_KEDCD = B.KEDCD
-                    LEFT JOIN kssc C    ON B.BZC_CD = C.k_code
+                    LEFT JOIN kssc_11 C ON B.BZC_CD = C.k_code
                     LEFT JOIN company_score_final_dedup S ON A.TXPL_KEDCD = S.KEDCD
                     WHERE  A.KEDCD IN ('{$REC}')
                       AND  A.TXPL_KEDCD != ''
@@ -1074,7 +1043,7 @@ if ($has_comnum) {
                     // 수정된 로직: 현재 카테고리가 본인이거나 하위 카테고리인 경우 그룹을 엽니다.
                     $is_open          = ($open_group_slug === $lg['slug']);
                     $is_current_group = ($current_cat === $lg['slug']);
-                    $group_icon = isset($sidebar_icon_map[$lg['slug']]) ? $sidebar_icon_map[$lg['slug']] : 'cat-iso-all';
+                    $group_icon = !empty($lg['icon']) ? $lg['icon'] : (isset($sidebar_icon_map[$lg['slug']]) ? $sidebar_icon_map[$lg['slug']] : 'cat-iso-all');
                 ?>
                 <div class="list-sidebar_group <?php echo $is_open ? 'is-open' : ''; ?>"
                      data-group="<?php echo htmlspecialchars($lg['slug']); ?>">
@@ -1204,6 +1173,7 @@ foreach ($list_categories as $lg) {
     $list_categories_for_js[] = [
         'slug' => $lg['slug'],
         'label' => $lg['label'],
+        'icon' => isset($lg['icon']) ? $lg['icon'] : '',
         'sub' => $subs,
     ];
 }
