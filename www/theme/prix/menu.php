@@ -88,7 +88,7 @@ $link_9701 = "/bbs/new.php";						/* 새글 */
 
 		,["12","고객센터", "<?=$link_1201?>", "", "", ""]
 			,["1201","이용약관", "<?=$link_1201?>", "고객센터", "이용약관", ""]
-			,["1202","개인정보처리방침", "<?=$link_1202?>", "고객센터", "개인정보활용동의서 및 처리방침", ""]
+			,["1202","개인정보처리방침", "<?=$link_1202?>", "고객센터", "처리방침", ""]
 
 
 
@@ -405,9 +405,11 @@ $link_9701 = "/bbs/new.php";						/* 새글 */
 
             setTimeout(() => {
                 $("#pageTop h3").text(pageTopTitle)
-                $("#pageTop p").text(pageTopText)
+                if($.trim($("#pageTop p").text()) === ""){
+                    $("#pageTop p").text(pageTopText)
+                }
 
-				if(pageTopText == ""){
+				if($.trim($("#pageTop p").text()) == ""){
 					$("#pageTop p").remove();
 				}
             }, 20);

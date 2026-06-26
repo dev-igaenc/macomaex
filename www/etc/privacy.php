@@ -5,7 +5,7 @@ $board['bo_10']="12";
 $board['bo_9']="2";
 $board['bo_5'] = "ETC";
 $board['bo_subject'] = "개인정보처리방침";
-$board['bo_4'] = '';
+$board['bo_4'] = '처리방침';
 $privacy = sql_fetch("select * from g5_content where co_id='privacy'");
 
 include_once(G5_THEME_PATH.'/head.php');
