@@ -47,16 +47,13 @@ $list_categories = include __DIR__ . '/matching_categories.php';
 // 4. 요청 파라미터 처리
 // ----------------------------------------------------------
 $current_cat  = isset($_GET['category']) ? $_GET['category'] : (isset($_GET['cat']) ? $_GET['cat'] : 'all');
-$current_type = (isset($_GET['type']) && $_GET['type'] === 'seller') ? 'seller' : 'buyer';
 $current_sort = isset($_GET['sort']) ? $_GET['sort'] : 'rank';
 if (!in_array($current_sort, ['rank', 'grow', 'profit', 'stable'], true)) $current_sort = 'rank';
 $mq = '';
 if (isset($_GET['section'])) $mq .= 'section=' . urlencode($_GET['section']) . '&';
-$mq .= 'type=' . urlencode($current_type) . '&';
 $mq .= 'sort=' . urlencode($current_sort) . '&';
 $mq_cat = '';
 if (isset($_GET['section'])) $mq_cat .= 'section=' . urlencode($_GET['section']) . '&';
-$mq_cat .= 'type=' . urlencode($current_type) . '&';
 $mq_cat .= 'sort=rank&';
 
 // 사업자번호 처리
@@ -382,30 +379,6 @@ function build_company_where_clause($target_rules, $restrict_cg_prefix = false) 
     return $where_clause;
 }
 
-// 판매하기처럼 코드 후보가 많은 경우, 상세 코드 정확매칭(IN)으로 필터링
-function build_company_where_clause_in_codes($target_codes, $restrict_cg_prefix = false) {
-    $where_clause = "WHERE A.KEDCD != '' AND A.ENP_NM != ''";
-    $where_clause .= " AND A.ENP_SCD = '01'";
-    $where_clause .= " AND A.ENP_SZE IN ('02', '03', '06')";
-    if ($restrict_cg_prefix) {
-        $where_clause .= " AND (A.BZC_CD LIKE 'C%' OR A.BZC_CD LIKE 'G%')";
-    }
-    if (empty($target_codes)) return $where_clause;
-
-    $safe_codes = [];
-    foreach ($target_codes as $tc) {
-        $code = trim((string)$tc);
-        if ($code === '') continue;
-        $safe_codes[] = "'" . sql_real_escape_string($code) . "'";
-    }
-    $safe_codes = array_values(array_unique($safe_codes));
-    if (!$safe_codes) return $where_clause;
-
-    $where_clause .= " AND A.BZC_CD IN (" . implode(',', $safe_codes) . ")";
-
-    return $where_clause;
-}
-
 // 정렬 기준에 맞는 ORDER BY 만들기
 function build_company_order_clause($sort_key) {
     switch ($sort_key) {
@@ -433,51 +406,6 @@ function build_company_order_clause($sort_key) {
                 A.ENP_NM ASC
             ";
     }
-}
-
-// 현재 카테고리의 판매 코드 찾기
-function get_seller_codes_by_category($list_categories, $current_cat, $seller_category_code_map) {
-    // 전체면 모든 판매 코드 사용
-    if (empty($current_cat) || $current_cat === 'all') {
-        $all = [];
-        foreach ($seller_category_code_map as $codes) {
-            $all = array_merge($all, $codes);
-        }
-        return array_values(array_unique($all));
-    }
-
-    // 소분류 직접 선택
-    if (isset($seller_category_code_map[$current_cat])) {
-        return array_values(array_unique($seller_category_code_map[$current_cat]));
-    }
-
-    // 대분류면 하위 코드 합치기
-    foreach ($list_categories as $lg) {
-        if ($lg['slug'] === $current_cat) {
-            $merged = [];
-            foreach ($lg['sub'] as $sub) {
-                $sub_slug = $sub['slug'] ?? '';
-                if ($sub_slug && isset($seller_category_code_map[$sub_slug])) {
-                    $merged = array_merge($merged, $seller_category_code_map[$sub_slug]);
-                }
-            }
-            return array_values(array_unique($merged));
-        }
-    }
-
-    return [];
-}
-
-// buyer/seller에 맞는 WHERE 결정
-function resolve_where_clause_for_general_list($query_type, $current_cat, $list_categories, $seller_category_code_map) {
-    if ($query_type === 'seller') {
-        $seller_codes = get_seller_codes_by_category($list_categories, $current_cat, $seller_category_code_map);
-        if (empty($seller_codes)) return "WHERE 1=0";
-        return build_company_where_clause_in_codes($seller_codes, false);
-    }
-
-    $buyer_rules = get_target_prefix_rules_by_category($list_categories, $current_cat);
-    return build_company_where_clause($buyer_rules, false);
 }
 
 function matching_list_count_cache_get($cache_key, $ttl_sec = 45) {
@@ -690,7 +618,6 @@ function matching_list_render_cards_grid_html($cards) {
     return ob_get_clean();
 }
 
-$seller_category_code_map = include __DIR__ . "/matching_seller_category_codes.php";
 $unlocked_bzno_map = fetch_unlocked_bzno_map_for_member($member['mb_id'] ?? '');
 
 $cards = [];
@@ -707,7 +634,6 @@ if ($should_use_api_payload_cache) {
         'v2',
         'matching_list_api',
         'member:' . (string)($member['mb_id'] ?? ''),
-        'type:' . (string)$current_type,
         'cat:' . (string)$current_cat,
         'sort:' . (string)$current_sort,
         'page_size:' . (int)$page_size
@@ -721,9 +647,10 @@ if ($should_use_api_payload_cache) {
 }
 
 if (!$has_comnum) {
-    // 7-1. 사업자번호 미입력: 탭/카테고리 기준 기업 조회
-    $query_type = ($current_type === 'seller') ? 'seller' : 'buyer';
-    $where_clause = resolve_where_clause_for_general_list($query_type, $current_cat, $list_categories, $seller_category_code_map);
+    // 7-1. 사업자번호 미입력: 카테고리 기준 일반 기업 조회
+    $query_type = 'company';
+    $buyer_rules = get_target_prefix_rules_by_category($list_categories, $current_cat);
+    $where_clause = build_company_where_clause($buyer_rules, false);
     $general_result = fetch_general_cards_by_where($where_clause, $query_type, $show_count_req, $current_sort, $offset_req, $unlocked_bzno_map);
     $cards = $general_result['cards'];
     $cards_total_count = (int)$general_result['total_count'];
@@ -924,14 +851,10 @@ foreach ($cards as $card_item) {
 $buyer_total_count = $buyer_loaded_count;
 $seller_total_count = $seller_loaded_count;
 if (!$has_comnum) {
-    if ($current_type === 'seller') {
-        $buyer_total_count = 0;
-        $seller_total_count = $cards_total_count;
-    } else {
-        $buyer_total_count = $cards_total_count;
-        $seller_total_count = 0;
-    }
+    $buyer_total_count = $cards_total_count;
+    $seller_total_count = 0;
 }
+$list_total_count = !$has_comnum ? $cards_total_count : count($cards);
 
 if ($is_matching_list_api) {
     $grid_html = matching_list_render_cards_grid_html($cards);
@@ -942,7 +865,7 @@ if ($is_matching_list_api) {
             'buyer' => (int)$buyer_total_count,
             'seller' => (int)$seller_total_count,
         ],
-        'currentType' => ($current_type === 'seller') ? 'seller' : 'buyer',
+        'totalCount' => (int)$list_total_count,
         'currentSort' => $current_sort,
         'pageSize' => (int)$page_size,
     ];
@@ -1091,18 +1014,13 @@ if ($has_comnum) {
 
             <div class="list-top">
                 <div class="list-type-wrap">
-                    <div class="list-type-switch" role="group" aria-label="구매하기/판매하기">
-                        <span class="list-type-slider" aria-hidden="true"></span>
-                        <button type="button" class="list-type-btn on" data-type="buyer">구매하기</button>
-                        <button type="button" class="list-type-btn"    data-type="seller">판매하기</button>
-                    </div>
                     <p class="list-count">
                         <?php if (!empty($_GET['comnum'])): ?>
                         <span class="list-search-query">
                             사업자번호 <?php echo htmlspecialchars($_GET['comnum']); ?> 검색 ·&nbsp;
                         </span>
                         <?php endif; ?>
-                        <strong><?php echo (int)($current_type === 'seller' ? $seller_total_count : $buyer_total_count); ?></strong>개의 기업
+                        <strong><?php echo (int)$list_total_count; ?></strong>개의 기업
                     </p>
                 </div>
                 <div class="list-sort">
@@ -1187,7 +1105,7 @@ $matching_list_js_config = [
         'buyer' => (int)$buyer_total_count,
         'seller' => (int)$seller_total_count,
     ],
-    'currentType' => ($current_type === 'seller') ? 'seller' : 'buyer',
+    'totalCount' => (int)$list_total_count,
     'currentCat' => $current_cat,
     'currentSort' => $current_sort,
     'mq' => $mq,
