@@ -131,8 +131,6 @@ if ($w == "") {
     $member['mb_6']           = get_text($member['mb_6']);
     $member['mb_7']           = get_text($member['mb_7']);
     $member['mb_8']           = get_text($member['mb_8']);
-    $member['mb_9']           = get_text($member['mb_9']);
-    $member['mb_10']          = get_text($member['mb_10']);
 } else {
     alert('w 값이 제대로 넘어오지 않았습니다.');
 }

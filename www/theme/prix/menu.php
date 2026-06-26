@@ -36,13 +36,6 @@ $link_1001 = "/bbs/login.php"; // 로그인
 $link_1002 = "/signup"; // 회원가입
 
 /* Mypage */
-/*
-if($member[mb_11]=='dev'){
-	$link_0601 = "/ko/my_company_t.php"; // 내 회사 정보
-}else{
-	$link_0601 = "/ko/my_company.php"; // 내 회사 정보
-}
-*/
 $link_0601 = "/account/company"; // 내 회사 정보
 $link_0602 = "/account/trades"; // 매칭 히스토리
 $link_0603 = "/account/trades#interested"; // 관심기업

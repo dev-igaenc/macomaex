@@ -108,23 +108,6 @@ $mb_6           = isset($_POST['mb_6'])             ? trim($_POST['mb_6'])      
 $mb_8           = isset($_POST['mb_8'])             ? trim($_POST['mb_8'])           : "";
 $mb_5           = $mb_email;
 $mb_7           = "";
-$mb_9_list      = (isset($_POST['mb_9']) && is_array($_POST['mb_9'])) ? $_POST['mb_9'] : array();
-// $mb_10_list     = (isset($_POST['mb_10']) && is_array($_POST['mb_10'])) ? $_POST['mb_10'] : array();
-$mb_10_list     = array();
-
-$mb_9_list = array_map('trim', $mb_9_list);
-$mb_10_list = array_map('trim', $mb_10_list);
-
-$mb_9_list = array_values(array_filter($mb_9_list, static function ($value) {
-    return $value !== '';
-}));
-$mb_10_list = array_values(array_filter($mb_10_list, static function ($value) {
-    return $value !== '';
-}));
-
-$mb_9 = implode(":|:", $mb_9_list);
-// $mb_10 = implode(":|:", $mb_10_list);
-$mb_10 = "";
 $comnum = $mb_4;
 
 if (!isset($default) || !is_array($default)) {
@@ -336,9 +319,7 @@ if ($w == '') {
                      mb_5 = '{$mb_5}',
                      mb_6 = '{$mb_6}',
                      /* mb_7 = '{$mb_7}', */
-                     mb_8 = '{$mb_8}',
-                     mb_9 = '{$mb_9}'
-                     /* mb_10 = '{$mb_10}' */
+                     mb_8 = '{$mb_8}'
                      {$sql_certify} ";
 
     // 이메일 인증을 사용하지 않는다면 이메일 인증시간을 바로 넣는다
@@ -537,8 +518,6 @@ $sql .= "                    mb_4 = '{$mb_4}',";
 // $sql .= "                    mb_7 = '{$mb_7}',";
 	if($mb_8) $sql .= "                    mb_hp = '{$mb_8}',";
 	if($mb_8) $sql .= "                    mb_8 = '{$mb_8}',";
-if($mb_9) $sql .= "                    mb_9 = '{$mb_9}',";
-// if($mb_10) $sql .= "                    mb_10 = '{$mb_10}'";
 if(substr($sql,-1)==",") $sql=substr($sql,0,-1);
 //$sql .= "                    {$sql_password}";
 //$sql .= "                    {$sql_nick_date}";

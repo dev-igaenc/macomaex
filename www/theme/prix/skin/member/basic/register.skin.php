@@ -163,15 +163,6 @@ if (!defined('_GNUBOARD_')) exit; // 개별 페이지 접근 불가
                         </div>
                     </div>
 
-                    <div class="formBox">
-                        <div class="inputBox type2 type3 Product">
-                            <p class="title">주요 서비스/제품</p>
-                            <div class="products addz">
-                                <input name="mb_9[]" type="text" maxlength="32">
-                                <button type="button" class="add">+</button>
-                            </div>
-                        </div>
-                    </div>
                     -->
 
                     <div class="section_divider"></div>

@@ -36,8 +36,6 @@ $mb = array(
 'mb_6' => null,
 'mb_7' => null,
 'mb_8' => null,
-'mb_9' => null,
-'mb_10' => null,
 );
 
 $sound_only = '';
@@ -89,8 +87,6 @@ else if ($w == 'u')
     $mb['mb_6'] = get_text($mb['mb_6']);
     $mb['mb_7'] = get_text($mb['mb_7']);
     $mb['mb_8'] = get_text($mb['mb_8']);
-    $mb['mb_9'] = get_text($mb['mb_9']);
-    $mb['mb_10'] = get_text($mb['mb_10']);
 }
 else
     alert('제대로 된 값이 넘어오지 않았습니다.');
