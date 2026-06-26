@@ -187,7 +187,16 @@ if (!defined('_GNUBOARD_')) exit; // 개별 페이지 접근 불가
                         <div class="checkBox">
                             <input type="checkbox" name="privacy" id="privacy" class="req">
                             <span class="consent_text">
-                                <a href="<?= $link_1202 ?? '/etc/privacy.php' ?>" target="_blank" rel="noopener noreferrer">개인정보 수집 및 이용동의</a>에 동의합니다.
+                                <a href="/etc/privacy_consent.php" target="_blank" rel="noopener noreferrer">개인정보 수집 및 이용동의</a>에 동의합니다.
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="formBox terms_box">
+                        <div class="checkBox">
+                            <input type="checkbox" name="marketing" id="marketing">
+                            <span class="consent_text">
+                                <a href="<?= $link_1205 ?? '/etc/marketing_consent.php' ?>" target="_blank" rel="noopener noreferrer">마케팅 수신 동의</a>에 동의합니다. (선택)
                             </span>
                         </div>
                     </div>
@@ -515,8 +524,7 @@ $("#reg_mb_name").on("input blur change", function(){
 
 $("#agreeAll").click(function(){
     var chk = $(this).is(":checked");
-    if(chk) $("input.req").prop("checked", true);
-    else $("input.req").prop("checked", false);
+    $("input[name='terms'], input[name='privacy'], input[name='marketing']").prop("checked", chk);
 });
 
 // 사업자등록번호 자동조회 기능 이관 예정으로 임시 비활성화
@@ -702,7 +710,12 @@ $("#join_submit").on("click", function(){
     $("#reg_mb_id").val(email);
     if(!fregisterform_submit()) return false;
 
-    $("#agree_chk").val("#terms#privacy");
+    var agreeTokens = ["#terms", "#privacy"];
+    if($("#marketing").is(":checked")) {
+        agreeTokens.push("#marketing");
+    }
+
+    $("#agree_chk").val(agreeTokens.join(""));
     $("#mb_id").val(email);
     $("#mb_6").val(realName);
     $("#mb_8").val($.trim($("#reg_mb_hp").val()));
