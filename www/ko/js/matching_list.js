@@ -112,7 +112,8 @@
         var selectors = [
             '.list-sidebar a[href]',
             '.list-cat-tabs a[href]',
-            '.list-cat-sub a[href]'
+            '.list-cat-sub a[href]',
+            '.list-cat-dropdown a[href]'
         ];
 
         var links = document.querySelectorAll(selectors.join(','));
@@ -201,6 +202,48 @@
         if (activeTab) {
             setTimeout(function () {
                 activeTab.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
+            }, 100);
+        }
+    }
+
+    function initMobileCategoryDropdown() {
+        var wrap = document.getElementById('catDropdown');
+        var btn = document.getElementById('catDropdownBtn');
+        var panel = document.getElementById('catDropdownPanel');
+        if (!wrap || !btn || !panel) return;
+
+        function closePanel() {
+            wrap.classList.remove('is-open');
+            btn.setAttribute('aria-expanded', 'false');
+        }
+
+        function openPanel() {
+            wrap.classList.add('is-open');
+            btn.setAttribute('aria-expanded', 'true');
+        }
+
+        btn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            if (wrap.classList.contains('is-open')) closePanel();
+            else openPanel();
+        });
+
+        panel.addEventListener('click', function (e) {
+            if (e.target.closest('a[href]')) closePanel();
+        });
+
+        document.addEventListener('click', function (e) {
+            if (!wrap.contains(e.target)) closePanel();
+        });
+
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') closePanel();
+        });
+
+        var active = panel.querySelector('a.on');
+        if (active) {
+            setTimeout(function () {
+                active.scrollIntoView({ block: 'nearest', inline: 'nearest' });
             }, 100);
         }
     }
@@ -678,6 +721,7 @@
 
     // 페이지 초기화
     initMobileCategoryTabs();
+    initMobileCategoryDropdown();
     initSidebarAccordion();
     initTypeSwitchAndList();
     initMatchingPopupLogic();

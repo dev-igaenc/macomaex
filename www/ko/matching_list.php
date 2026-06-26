@@ -925,13 +925,73 @@ $ai_recommend_href = '/recommendations/demo';
 if ($has_comnum) {
     $ai_recommend_href = '/recommendations?comnum=' . urlencode($input_comnum);
 }
+
+$current_category_label = '전체 업종';
+$current_category_group_slug = '';
+$current_category_group_label = '';
+foreach ($list_categories as $lg) {
+    if ($current_cat === $lg['slug']) {
+        $current_category_label = $lg['label'];
+        $current_category_group_slug = $lg['slug'];
+        $current_category_group_label = $lg['label'];
+        break;
+    }
+
+    foreach ($lg['sub'] as $sub) {
+        if ($current_cat === $sub['slug']) {
+            $current_category_label = $sub['label'];
+            $current_category_group_slug = $lg['slug'];
+            $current_category_group_label = $lg['label'];
+            break 2;
+        }
+    }
+}
 ?>
 
 <div id="listWrap">
 <!-- =========================================================
-     모바일 전용: 업종별 카테고리 탭
+     모바일 전용: 업종별 카테고리 드롭다운/탭
      ========================================================= -->
 <div class="list-cat-tab-wrap">
+    <div class="list-cat-dropdown" id="catDropdown">
+        <button type="button"
+                class="list-cat-dropdown_btn"
+                id="catDropdownBtn"
+                aria-haspopup="true"
+                aria-expanded="false">
+            <span class="list-cat-dropdown_label">
+                <span class="list-cat-dropdown_overline"><?php echo htmlspecialchars($current_category_group_label ?: '업종별 탐색'); ?></span>
+                <strong><?php echo htmlspecialchars($current_category_label); ?></strong>
+            </span>
+            <svg class="list-cat-dropdown_chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="6 9 12 15 18 9"/>
+            </svg>
+        </button>
+        <div class="list-cat-dropdown_panel" id="catDropdownPanel">
+            <a href="/companies?<?php echo $mq_cat; ?>category=all"
+               class="list-cat-dropdown_all <?php echo ($current_cat === 'all' || $current_cat === '') ? 'on' : ''; ?>">
+                전체 업종
+            </a>
+            <div class="list-cat-dropdown_groups">
+                <?php foreach ($list_categories as $lg): ?>
+                <div class="list-cat-dropdown_group <?php echo ($current_category_group_slug === $lg['slug']) ? 'is-active' : ''; ?>">
+                    <a href="/companies?<?php echo $mq_cat; ?>category=<?php echo urlencode($lg['slug']); ?>"
+                       class="list-cat-dropdown_group_name <?php echo ($current_cat === $lg['slug']) ? 'on' : ''; ?>">
+                        <?php echo htmlspecialchars($lg['label']); ?>
+                    </a>
+                    <div class="list-cat-dropdown_subs">
+                        <?php foreach ($lg['sub'] as $sub): ?>
+                        <a href="/companies?<?php echo $mq_cat; ?>category=<?php echo urlencode($sub['slug']); ?>"
+                           class="<?php echo ($current_cat === $sub['slug']) ? 'on' : ''; ?>">
+                            <?php echo htmlspecialchars($sub['label']); ?>
+                        </a>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+                <?php endforeach; ?>
+            </div>
+        </div>
+    </div>
     <div class="list-cat-tabs" id="catTabs"></div>
     <div class="list-cat-sub" id="catSubSwiper"></div>
 </div>
@@ -962,6 +1022,10 @@ if ($has_comnum) {
             <div class="list-sidebar_or"><span>업종별 탐색</span></div>
 
             <nav class="list-sidebar_nav">
+                <a href="/companies?<?php echo $mq_cat; ?>category=all"
+                   class="list-sidebar_all <?php echo ($current_cat === 'all' || $current_cat === '') ? 'on' : ''; ?>">
+                    전체 업종
+                </a>
                 <?php foreach ($list_categories as $lg):
                     // 수정된 로직: 현재 카테고리가 본인이거나 하위 카테고리인 경우 그룹을 엽니다.
                     $is_open          = ($open_group_slug === $lg['slug']);
