@@ -106,6 +106,9 @@ $mb_company     = isset($_POST['mb_company'])       ? trim($_POST['mb_company'])
 $mb_6           = isset($_POST['mb_6'])             ? trim($_POST['mb_6'])           : "";
 // $mb_7           = isset($_POST['mb_7'])             ? trim($_POST['mb_7'])           : "";
 $mb_8           = isset($_POST['mb_8'])             ? trim($_POST['mb_8'])           : "";
+$mb_9           = ($w === '') ? (isset($_POST['terms']) ? '1' : '0') : trim((string) ($member['mb_9'] ?? ''));
+$mb_10          = ($w === '') ? (isset($_POST['privacy']) ? '1' : '0') : trim((string) ($member['mb_10'] ?? ''));
+$mb_11          = ($w === '') ? (isset($_POST['marketing']) ? '1' : '0') : trim((string) ($member['mb_11'] ?? ''));
 $mb_5           = $mb_email;
 $mb_7           = "";
 $comnum = $mb_4;
@@ -319,7 +322,10 @@ if ($w == '') {
                      mb_5 = '{$mb_5}',
                      mb_6 = '{$mb_6}',
                      /* mb_7 = '{$mb_7}', */
-                     mb_8 = '{$mb_8}'
+                     mb_8 = '{$mb_8}',
+                     mb_9 = '{$mb_9}',
+                     mb_10 = '{$mb_10}',
+                     mb_11 = '{$mb_11}'
                      {$sql_certify} ";
 
     // 이메일 인증을 사용하지 않는다면 이메일 인증시간을 바로 넣는다
