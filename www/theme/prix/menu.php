@@ -390,15 +390,19 @@ $link_9701 = "/bbs/new.php";						/* 새글 */
 			h2_title = menuFull[i][1];
 		}
 		//////////////////////////////////////////////////////////////
-		if(pcd.length > 2 || pcd.length == 4){
-			var tcd_02 = pcd.substr(0,4);
-			for(var i=0; i < menuFull.length; i++){
-				if(menuFull[i][0].length==4 && menuFull[i][0] == tcd_02){
-					break;
+			if(pcd.length > 2 || pcd.length == 4){
+				var tcd_02 = pcd.substr(0,4);
+				for(var i=0; i < menuFull.length; i++){
+					if(menuFull[i][0].length==4 && menuFull[i][0] == tcd_02){
+						break;
+					}
 				}
-			}
-			tit_1 = tit_1+" &gt; ";
-			tit_2 = menuFull[i][1];
+				if (tcd_02 !== "1002") {
+					tit_1 = tit_1+" &gt; ";
+				} else {
+					tit_1 = "";
+				}
+				tit_2 = menuFull[i][1];
 
 			pageTopTitle = menuFull[i][1];
 
