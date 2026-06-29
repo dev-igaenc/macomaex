@@ -106,9 +106,10 @@ $mb_company     = isset($_POST['mb_company'])       ? trim($_POST['mb_company'])
 $mb_6           = isset($_POST['mb_6'])             ? trim($_POST['mb_6'])           : "";
 // $mb_7           = isset($_POST['mb_7'])             ? trim($_POST['mb_7'])           : "";
 $mb_8           = isset($_POST['mb_8'])             ? trim($_POST['mb_8'])           : "";
-$mb_9           = ($w === '') ? (isset($_POST['terms']) ? '1' : '0') : trim((string) ($member['mb_9'] ?? ''));
-$mb_10          = ($w === '') ? (isset($_POST['privacy']) ? '1' : '0') : trim((string) ($member['mb_10'] ?? ''));
-$mb_11          = ($w === '') ? (isset($_POST['marketing']) ? '1' : '0') : trim((string) ($member['mb_11'] ?? ''));
+$use_member_consent = isset($_POST['use_member_consent']) && trim((string) $_POST['use_member_consent']) === '1';
+$mb_9           = $use_member_consent ? (isset($_POST['terms']) ? '1' : '0') : trim((string) ($member['mb_9'] ?? ''));
+$mb_10          = $use_member_consent ? (isset($_POST['privacy']) ? '1' : '0') : trim((string) ($member['mb_10'] ?? ''));
+$mb_11          = $use_member_consent ? (isset($_POST['marketing']) ? '1' : '0') : trim((string) ($member['mb_11'] ?? ''));
 $mb_5           = $mb_email;
 $mb_7           = "";
 $comnum = $mb_4;
@@ -272,6 +273,14 @@ if ($w != '' && $config['cf_cert_use'] && $cert_type && $md5_cert_no) {
         alert('본인인증된 정보와 입력된 회원정보가 일치하지않습니다. 다시시도 해주세요');
     }
 } else if ($w != '') {
+    if ($use_member_consent && $mb_9 !== '1') {
+        alert('이용약관에 동의해 주세요.', "", true, true);
+    }
+
+    if ($use_member_consent && $mb_10 !== '1') {
+        alert('개인정보 수집 및 이용동의에 동의해 주세요.', "", true, true);
+    }
+
     $phone_changed = (macomaex_signup_phone_otp_normalize($mb_8) !== macomaex_signup_phone_otp_normalize($member_mb_8));
     if ($phone_changed && !macomaex_signup_phone_otp_is_verified($mb_8)) {
         alert('변경한 휴대폰 번호의 인증을 완료해 주세요.', "", true, true);
@@ -528,13 +537,16 @@ $sql .= "                    mb_company = '{$mb_company}',";
 if($mb_1) $sql .= "                    mb_1 = '{$mb_1}',";
 if($mb_2) $sql .= "                    mb_2 = '{$mb_2}',";
 // $sql .= "                    mb_3 = '{$mb_3}',";
-$sql .= "                    mb_4 = '{$mb_4}',";
-// if($mb_5) $sql .= "                    mb_5 = '{$mb_5}',";
-	$sql .= "                    mb_6 = '{$mb_6}',";
-// $sql .= "                    mb_7 = '{$mb_7}',";
-	if($mb_8) $sql .= "                    mb_hp = '{$mb_8}',";
-	if($mb_8) $sql .= "                    mb_8 = '{$mb_8}',";
-if(substr($sql,-1)==",") $sql=substr($sql,0,-1);
+	$sql .= "                    mb_4 = '{$mb_4}',";
+	// if($mb_5) $sql .= "                    mb_5 = '{$mb_5}',";
+		$sql .= "                    mb_6 = '{$mb_6}',";
+	// $sql .= "                    mb_7 = '{$mb_7}',";
+		if($mb_8) $sql .= "                    mb_hp = '{$mb_8}',";
+		if($mb_8) $sql .= "                    mb_8 = '{$mb_8}',";
+	if ($use_member_consent) $sql .= "                    mb_9 = '{$mb_9}',";
+	if ($use_member_consent) $sql .= "                    mb_10 = '{$mb_10}',";
+	if ($use_member_consent) $sql .= "                    mb_11 = '{$mb_11}',";
+	if(substr($sql,-1)==",") $sql=substr($sql,0,-1);
 //$sql .= "                    {$sql_password}";
 //$sql .= "                    {$sql_nick_date}";
 //$sql .= "                    {$sql_open_date}";

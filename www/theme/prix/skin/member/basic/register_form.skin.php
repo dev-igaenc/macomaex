@@ -11,6 +11,9 @@ $member_company_code = trim((string) $member['mb_company']);
 $has_business_number = $member_business_number !== '';
 $has_verified_company = ($member_business_number !== '' && $member_company_name !== '' && $member_company_code !== '');
 $display_company_name = $has_business_number ? $member_company_name : '';
+$member_terms_agreed = trim((string) ($member['mb_9'] ?? '')) === '1';
+$member_privacy_agreed = trim((string) ($member['mb_10'] ?? '')) === '1';
+$member_marketing_agreed = trim((string) ($member['mb_11'] ?? '')) === '1';
 ?>
 
 <!-- 회원정보 입력/수정 시작 { -->
@@ -24,6 +27,44 @@ $display_company_name = $has_business_number ? $member_company_name : '';
 	height: 1px;
 	margin: 2.4rem 0;
 	background: #ddd;
+}
+#fregisterform .terms_box {
+	margin-bottom: 1.8rem;
+}
+#fregisterform .terms_box:last-of-type {
+	margin-bottom: 0;
+}
+#fregisterform .terms_box .checkBox {
+	display: flex;
+	align-items: center;
+	gap: 0.8rem;
+}
+#fregisterform .terms_box .checkBox input {
+	position: static;
+	top: auto;
+	left: auto;
+	width: 1.6rem;
+	height: 1.6rem;
+	flex: 0 0 1.6rem;
+	cursor: pointer;
+	opacity: 1;
+	appearance: auto !important;
+	-webkit-appearance: checkbox !important;
+	-moz-appearance: auto !important;
+	accent-color: #111;
+}
+#fregisterform .consent_text {
+	font-size: 1.5rem;
+	line-height: 1.4;
+	color: #666;
+}
+#fregisterform .consent_text a {
+	color: #666;
+	text-decoration: underline;
+	text-underline-offset: 0.2rem;
+}
+#fregisterform .consent_text a:hover {
+	color: #444;
 }
 #fregisterform .cert_input_group {
 	display: flex;
@@ -129,9 +170,10 @@ $display_company_name = $has_business_number ? $member_company_name : '';
 	<input type="hidden" name="agree2" value="<?php echo $agree2 ?>">
 	<input type="hidden" name="cert_type" value="<?php echo $member['mb_certify']; ?>">
 	<input type="hidden" name="cert_no" value="">
-	<input type="hidden" name="mb_3" value="<?php echo $member['mb_3'] ?>">
-	<input type="hidden" name="mb_7" value="<?php echo $member['mb_7'] ?>">
-	<input type="hidden" name="com_chk" id="com_chk" value="<?php echo $has_verified_company ? 'true' : 'false'; ?>">
+		<input type="hidden" name="mb_3" value="<?php echo $member['mb_3'] ?>">
+		<input type="hidden" name="mb_7" value="<?php echo $member['mb_7'] ?>">
+		<input type="hidden" name="use_member_consent" value="1">
+		<input type="hidden" name="com_chk" id="com_chk" value="<?php echo $has_verified_company ? 'true' : 'false'; ?>">
 	<input type="hidden" name="origin_mb_4" id="origin_mb_4" value="<?php echo get_text($member_business_number); ?>">
 	<input type="hidden" name="origin_mb_name" id="origin_mb_name" value="<?php echo get_text($member_company_name); ?>">
 	<input type="hidden" name="origin_mb_company" id="origin_mb_company" value="<?php echo get_text($member_company_code); ?>">
@@ -176,7 +218,7 @@ $display_company_name = $has_business_number ? $member_company_name : '';
 								<input type="text" id="member_phone_code" maxlength="6" inputmode="numeric" placeholder="인증번호 6자리">
 								<button type="button" id="member_phone_verify" class="cert_btn secondary">확인</button>
 							</div>
-							<p id="member_phone_status" class="phone_cert_status member_phone_status_row"></p>
+						<p id="member_phone_status" class="phone_cert_status member_phone_status_row"></p>
 	                    </div>
 	                    <div class="section_divider"></div>
 	                    <div class="inputBox type2">
@@ -190,9 +232,34 @@ $display_company_name = $has_business_number ? $member_company_name : '';
 	                        <input type="text" id="mb_name" class="readonly" readonly value="<?php echo get_text($display_company_name); ?>">
 							<input type="hidden" name="mb_company" id="mb_company" value="<?php echo get_text($member_company_code); ?>">
 	                    </div>
+	                    <div class="section_divider"></div>
+	                    <div class="formBox terms_box">
+	                    	<div class="checkBox">
+	                    		<input type="checkbox" name="terms" id="terms" <?php echo $member_terms_agreed ? 'checked' : ''; ?>>
+	                    		<span class="consent_text">
+	                    			<a href="<?= $link_1201 ?? '/etc/clause.php' ?>" target="_blank" rel="noopener noreferrer">이용약관</a>에 동의합니다. (필수)
+	                    		</span>
+	                    	</div>
+	                    </div>
+	                    <div class="formBox terms_box">
+	                    	<div class="checkBox">
+	                    		<input type="checkbox" name="privacy" id="privacy" <?php echo $member_privacy_agreed ? 'checked' : ''; ?>>
+	                    		<span class="consent_text">
+	                    			<a href="/etc/privacy_consent.php" target="_blank" rel="noopener noreferrer">개인정보 수집 및 이용동의</a>에 동의합니다. (필수)
+	                    		</span>
+	                    	</div>
+	                    </div>
+	                    <div class="formBox terms_box">
+	                    	<div class="checkBox">
+	                    		<input type="checkbox" name="marketing" id="marketing" <?php echo $member_marketing_agreed ? 'checked' : ''; ?>>
+	                    		<span class="consent_text">
+	                    			<a href="<?= $link_1205 ?? '/etc/marketing_consent.php' ?>" target="_blank" rel="noopener noreferrer">마케팅 수신 동의</a>에 동의합니다. (선택)
+	                    		</span>
+	                    	</div>
+	                    </div>
 	                </div>
-            </div>
-        </div>
+	            </div>
+	        </div>
 
         <div class="formBtns">
             <button class="agree">저장하기</button>
@@ -455,8 +522,8 @@ $("#member_phone_code").on("input", function() {
 	$(this).val($(this).val().replace(/[^0-9]/g, "").substring(0, 6));
 });
 
-	//비밀번호 변경
-	function chkPW(word){
+		//비밀번호 변경
+		function chkPW(word){
 
 	 var pw = word;
 	 var num = pw.search(/[0-9]/g);
@@ -547,14 +614,22 @@ function fregisterform_submit()
 			jAlert("이름을 확인해 주세요.","알림",function(){$("#mb_6").focus();});
 			return false;
 	}
-	if(!$("#mb_8").val().trim()) {
-		jAlert("휴대폰 번호를 확인해 주세요.","알림",function(){$("#mb_8").focus();});
-		return false;
-	}
-	if(isMemberPhoneChanged() && (!memberPhoneVerified || memberPhoneVerifiedValue !== $.trim($("#mb_8").val()))) {
-		jAlert("변경한 휴대폰 번호의 인증을 완료해 주세요.","알림",function(){$("#mb_8").focus();});
-		return false;
-	}
+		if(!$("#mb_8").val().trim()) {
+			jAlert("휴대폰 번호를 확인해 주세요.","알림",function(){$("#mb_8").focus();});
+			return false;
+		}
+		if(!$("#terms").is(":checked")) {
+			jAlert("이용약관에 동의해 주세요.","알림",function(){$("#terms").focus();});
+			return false;
+		}
+		if(!$("#privacy").is(":checked")) {
+			jAlert("개인정보 수집 및 이용동의에 동의해 주세요.","알림",function(){$("#privacy").focus();});
+			return false;
+		}
+		if(isMemberPhoneChanged() && (!memberPhoneVerified || memberPhoneVerifiedValue !== $.trim($("#mb_8").val()))) {
+			jAlert("변경한 휴대폰 번호의 인증을 완료해 주세요.","알림",function(){$("#mb_8").focus();});
+			return false;
+		}
 	if($("#coupon").val().length>0 && $("#coupon").val().length<6) {
 		jAlert("쿠폰번호를 확인해 주세요.","알림");
 		return false;
