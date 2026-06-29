@@ -36,6 +36,36 @@
         return div.innerHTML;
     }
 
+    function centerItemInScroller(scroller, item, behavior) {
+        if (!scroller || !item || !scroller.clientWidth) return;
+
+        var targetLeft = item.offsetLeft - ((scroller.clientWidth - item.offsetWidth) / 2);
+        var maxLeft = scroller.scrollWidth - scroller.clientWidth;
+        targetLeft = Math.max(0, Math.min(targetLeft, maxLeft));
+
+        if (typeof scroller.scrollTo === 'function') {
+            try {
+                scroller.scrollTo({
+                    left: targetLeft,
+                    behavior: behavior || 'auto'
+                });
+                return;
+            } catch (err) {}
+        }
+
+        scroller.scrollLeft = targetLeft;
+    }
+
+    function centerActiveCategoryItem(scroller, behavior) {
+        if (!scroller) return;
+
+        window.requestAnimationFrame(function () {
+            window.requestAnimationFrame(function () {
+                centerItemInScroller(scroller, scroller.querySelector('a.on'), behavior);
+            });
+        });
+    }
+
     function getLoginReturnUrl() {
         return '/bbs/login.php?url=' + encodeURIComponent(window.location.pathname + window.location.search);
     }
@@ -181,6 +211,7 @@
                 html += '<a href="' + buildCategoryHref(sub.slug) + '" class="' + (currentCat === sub.slug ? 'on' : '') + '">' + escapeHtml(sub.label) + '</a>';
             });
             subEl.innerHTML = html;
+            centerActiveCategoryItem(subEl, 'auto');
         }
 
         if (activeGroup) renderSub(activeGroup);
@@ -196,13 +227,12 @@
             });
             a.classList.add('on');
             renderSub(a.getAttribute('data-group'));
+            centerItemInScroller(tabsEl, a, 'smooth');
         });
 
         var activeTab = tabsEl.querySelector('a.on');
         if (activeTab) {
-            setTimeout(function () {
-                activeTab.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
-            }, 100);
+            centerActiveCategoryItem(tabsEl, 'auto');
         }
     }
 
