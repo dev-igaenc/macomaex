@@ -131,7 +131,7 @@ if (!empty($company['BZC_CD'])) {
 	$companyBzcCdSql = sql_escape_string($company['BZC_CD']);
 	$industry = sql_fetch("
 		SELECT k_code, k_code_name
-		FROM kssc
+		FROM kssc_11
 		WHERE k_code = '{$companyBzcCdSql}'
 	");
 }

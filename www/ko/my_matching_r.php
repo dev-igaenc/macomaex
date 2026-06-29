@@ -122,7 +122,7 @@ $favorite=getFavorite($member['mb_id']);
 
 <div class="matching-list">
 <?for ($i=0; $row=sql_fetch_array($result); $i++) {
-	$r_info=sql_fetch("select *, (SELECT k_code_name from kssc where k_code=A.BZC_CD) as BZC_NAME from company A LEFT JOIN  g5_member B ON A.KEDCD=B.mb_company where B.mb_id='{$row['request_id']}'");
+	$r_info=sql_fetch("select *, (SELECT k_code_name from kssc_11 where k_code=A.BZC_CD) as BZC_NAME from company A LEFT JOIN  g5_member B ON A.KEDCD=B.mb_company where B.mb_id='{$row['request_id']}'");
 	$f_chk=in_array($r_info['KEDCD'],$favorite);
 ?>
 	<div class="matching-item" kedcd="<?=$r_info['KEDCD']?>"><!-- 전체 -->

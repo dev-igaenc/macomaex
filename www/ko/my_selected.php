@@ -33,7 +33,7 @@ if($member['mb_id']){
 		SET gs.s_cnt = sd.cnt, gs.s_modi = NOW()
 	");
 
-	$query="SELECT *, (select k_code_name from kssc where k_code=B.BZC_CD) as BZC_NAME from g5_selected_data A left join company B ON A.KEDCD=B.KEDCD where A.mb_id='{$member['mb_id']}' and A.s_status='S' ";
+	$query="SELECT *, (select k_code_name from kssc_11 where k_code=B.BZC_CD) as BZC_NAME from g5_selected_data A left join company B ON A.KEDCD=B.KEDCD where A.mb_id='{$member['mb_id']}' and A.s_status='S' ";
 	//echo $query;
 	$result=sql_query($query);
 	$total_count=mysqli_num_rows($result);

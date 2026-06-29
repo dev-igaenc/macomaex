@@ -86,7 +86,7 @@ if ($page < 1) $page = 1; // 페이지가 없으면 첫 페이지 (1 페이지)
 
 $total_page  = ceil($total_count / $rows);  // 전체 페이지 계산
 
-$sql = " select *, (select k_code_name from kssc where k_code=B.BZC_CD) as BZC_NAME
+$sql = " select *, (select k_code_name from kssc_11 where k_code=B.BZC_CD) as BZC_NAME
             {$sql_common}
             {$sql_search}
             {$sql_order}

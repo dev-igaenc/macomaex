@@ -111,7 +111,7 @@ function trade_request_member_company_data($memberBzno, &$diagnostics = null) {
 
 	$industry = sql_fetch("
 		SELECT k_code_name
-		FROM kssc
+		FROM kssc_11
 		WHERE k_code = '" . sql_escape_string($company['BZC_CD']) . "'
 		LIMIT 1
 	", false);

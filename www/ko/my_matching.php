@@ -216,7 +216,7 @@ $receivedSql = "
 		C.ENP_NM AS company_name,
 		C.LOC_ADDRA,
 		C.LOC_ADDRB,
-		(SELECT k_code_name FROM kssc WHERE k_code = C.BZC_CD LIMIT 1) AS industry_name,
+		(SELECT k_code_name FROM kssc_11 WHERE k_code = C.BZC_CD LIMIT 1) AS industry_name,
 		M.mb_6 AS manager_name,
 		M.mb_5 AS manager_email
 	FROM trade_request TR
@@ -259,7 +259,7 @@ $sentSql = "
 		C.ENP_NM AS company_name,
 		C.LOC_ADDRA,
 		C.LOC_ADDRB,
-		(SELECT k_code_name FROM kssc WHERE k_code = C.BZC_CD LIMIT 1) AS industry_name,
+		(SELECT k_code_name FROM kssc_11 WHERE k_code = C.BZC_CD LIMIT 1) AS industry_name,
 		M.mb_6 AS manager_name,
 		M.mb_5 AS manager_email
 	FROM trade_request TR
@@ -317,7 +317,7 @@ $interestedSql = "
 		C.ENP_NM AS company_name,
 		C.LOC_ADDRA,
 		C.LOC_ADDRB,
-		(SELECT k_code_name FROM kssc WHERE k_code = C.BZC_CD LIMIT 1) AS industry_name
+		(SELECT k_code_name FROM kssc_11 WHERE k_code = C.BZC_CD LIMIT 1) AS industry_name
 	FROM g5_favorite F
 	LEFT JOIN company C ON C.KEDCD = F.KEDCD
 	WHERE F.mb_id = '{$memberIdSql}'
