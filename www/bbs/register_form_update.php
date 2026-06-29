@@ -121,6 +121,7 @@ $member_mb_4 = trim((string) $member['mb_4']);
 $member_mb_name = trim((string) $member['mb_name']);
 $member_mb_nick = trim((string) $member['mb_nick']);
 $member_mb_company = trim((string) $member['mb_company']);
+$member_mb_6 = trim((string) $member['mb_6']);
 
 $cert_mb_name   = clean_xss_tags($cert_mb_name);
 $mb_name        = ($w == '') ? $mb_id : clean_xss_tags($mb_name);
@@ -496,6 +497,9 @@ if ($w == '') {
         $mb_name = $member_mb_name;
         $mb_nick = $member_mb_nick;
     }
+
+    // 회원정보 수정 화면에서는 담당자 이름 변경을 허용하지 않습니다.
+    $mb_6 = $member_mb_6;
 
     $sql = " update {$g5['member_table']} set ";
 if($should_sync_company_identity && $mb_name) $sql .= "                    mb_name = '{$mb_name}',";

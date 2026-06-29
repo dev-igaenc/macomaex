@@ -67,9 +67,9 @@ $display_company_name = $has_business_number ? $member_company_name : '';
                             <button type="button" id="change_pwd">변경하기</button>
                         </div>
                     </div>
-	                    <div class="inputBox requied type2">
-	                        <p class="title">담당자 이름</p>
-	                        <input type="text" name="mb_6" id="mb_6" value="<?=$member['mb_6']?>" maxlength="32">
+	                    <div class="inputBox type2">
+	                        <p class="title">이름</p>
+	                        <input type="text" name="mb_6" id="mb_6" class="readonly" readonly value="<?=$member['mb_6']?>" maxlength="32">
 	                    </div>
 	                    <div class="inputBox requied type2">
 	                        <p class="title">휴대폰 번호</p>
