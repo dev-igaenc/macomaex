@@ -171,7 +171,7 @@ if (!defined('_GNUBOARD_')) exit; // 개별 페이지 접근 불가
 						<div class="formBox terms_all_box">
                         	<div class="checkBox all"><input type="checkbox" name="agreeAll" id="agreeAll"><label for="agreeAll">모두 동의합니다.</label></div>
                     	</div>
-						<p>회원 가입 및 회원 관리 등의 목적으로 서비스 이용약관, 개인정보를 수집 및 이용하고 있습니다.</p>
+						<p>회원가입 및 회원 관리를 위해 서비스 이용약관, 개인정보 수집 및 이용, 마케팅 수신 동의 내용을 확인해 주세요.</p>
 					</div>
 
                     <div class="formBox terms_box">
@@ -525,6 +525,15 @@ $("#reg_mb_name").on("input blur change", function(){
 $("#agreeAll").click(function(){
     var chk = $(this).is(":checked");
     $("input[name='terms'], input[name='privacy'], input[name='marketing']").prop("checked", chk);
+});
+
+$("input[name='terms'], input[name='privacy'], input[name='marketing']").on("change", function(){
+    var allChecked =
+        $("#terms").is(":checked") &&
+        $("#privacy").is(":checked") &&
+        $("#marketing").is(":checked");
+
+    $("#agreeAll").prop("checked", allChecked);
 });
 
 // 사업자등록번호 자동조회 기능 이관 예정으로 임시 비활성화
