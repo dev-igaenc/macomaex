@@ -10,7 +10,7 @@
 
     // PHP에서 내려준 페이지 설정값
     var cfg = window.MATCHING_LIST_CONFIG || {};
-    var pageSize = parseInt(cfg.pageSize, 10) || parseInt(cfg.freeLimit, 10) || 24;
+    var pageSize = parseInt(cfg.pageSize, 10) || parseInt(cfg.freeLimit, 10) || 9;
     var canLoadMore = !!cfg.canLoadMore;
     var isServerPaged = !!cfg.isServerPaged;
     var totalByType = cfg.totalByType || { buyer: 0, seller: 0 };

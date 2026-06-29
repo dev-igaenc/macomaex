@@ -79,15 +79,22 @@ if ($member['mb_id']) {
     }
 }
 
-$free_limit   = 12;
+$free_limit   = 9;
 // 기본 렌더/더보기 단위 크기
-$default_page_size = 12;
+$default_page_size = 9;
 $max_page_size = 100;
 // 더보기 권한: 비회원은 기존 제한 유지, 로그인 회원은 멤버십/결제 여부와 무관하게 허용
 $can_load_more = !empty($member['mb_id']);
 $page_size_req = isset($_GET['page_size']) ? (int)$_GET['page_size'] : $default_page_size;
 if ($page_size_req < $default_page_size) $page_size_req = $default_page_size;
+if ($page_size_req % $default_page_size !== 0) {
+    $page_size_req = (int)(floor($page_size_req / $default_page_size) * $default_page_size);
+    if ($page_size_req < $default_page_size) $page_size_req = $default_page_size;
+}
 if ($page_size_req > $max_page_size) $page_size_req = $max_page_size;
+if ($page_size_req % $default_page_size !== 0) {
+    $page_size_req = (int)(floor($page_size_req / $default_page_size) * $default_page_size);
+}
 $page_size = $page_size_req;
 $offset_req = isset($_GET['offset']) ? (int)$_GET['offset'] : 0;
 if ($offset_req < 0) $offset_req = 0;
@@ -898,10 +905,6 @@ foreach ($list_categories as $lg) {
     }
 }
 
-// 만약 아무것도 선택되지 않은 'all' 상태라면 첫 번째 그룹을 열어두거나 null 유지
-if (!$open_group_slug && $current_cat === 'all') {
-}
-
 $sort_labels = [
     'rank' => '랭킹순',
     'grow' => '성장성순',
@@ -910,7 +913,6 @@ $sort_labels = [
 $current_sort_label = isset($sort_labels[$current_sort]) ? $sort_labels[$current_sort] : $sort_labels['rank'];
 
 $sidebar_icon_map = [
-    'all' => 'cat-iso-all',
     'metal' => 'cat-iso-7',
     'chemical' => 'cat-iso-5',
     'electronics' => 'cat-iso-10',
@@ -1022,10 +1024,6 @@ foreach ($list_categories as $lg) {
             <div class="list-sidebar_or"><span>업종별 탐색</span></div>
 
             <nav class="list-sidebar_nav">
-                <a href="/companies?<?php echo $mq_cat; ?>category=all"
-                   class="list-sidebar_all <?php echo ($current_cat === 'all' || $current_cat === '') ? 'on' : ''; ?>">
-                    전체 업종
-                </a>
                 <?php foreach ($list_categories as $lg):
                     // 수정된 로직: 현재 카테고리가 본인이거나 하위 카테고리인 경우 그룹을 엽니다.
                     $is_open          = ($open_group_slug === $lg['slug']);
