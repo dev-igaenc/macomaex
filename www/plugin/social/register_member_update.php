@@ -66,6 +66,9 @@ $cert_mb_name   = isset($_POST['mb_name']) ? clean_xss_tags(trim(strip_tags($_PO
 $mb_hp          = isset($_POST['mb_hp']) ? trim($_POST['mb_hp']) : '';
 $mb_6           = isset($_POST['mb_6']) ? trim($_POST['mb_6']) : '';
 $mb_8           = isset($_POST['mb_8']) ? trim($_POST['mb_8']) : '';
+$mb_9           = isset($_POST['terms']) ? '1' : '0';
+$mb_10          = isset($_POST['privacy']) ? '1' : '0';
+$mb_11          = isset($_POST['marketing']) ? '1' : '0';
 $mb_email       = get_email_address($mb_email);
 $mb_5           = $mb_email;
 $mb_id          = $mb_email;
@@ -98,6 +101,8 @@ if( ! isset($mb_password) || ! $mb_password ){
 
 if ($msg = empty_mb_name($cert_mb_name))       macomaex_social_register_fail($msg);
 if ($msg = empty_mb_email($mb_email))   macomaex_social_register_fail($msg);
+if ($mb_9 !== '1') macomaex_social_register_fail('이용약관에 동의해 주세요.');
+if ($mb_10 !== '1') macomaex_social_register_fail('개인정보수집에 동의해 주세요.');
 if ($msg = reserve_mb_id($mb_id))       macomaex_social_register_fail($msg);
 if ($msg = empty_mb_nick($mb_nick))     macomaex_social_register_fail('회원 내부정보 생성에 실패했습니다. 다시 시도해 주세요.');
 if ($msg = valid_mb_nick($mb_nick))     macomaex_social_register_fail('회원 내부정보 생성에 실패했습니다. 다시 시도해 주세요.');
@@ -158,7 +163,10 @@ $sql = " insert into {$g5['member_table']}
                 mb_open_date = '".G5_TIME_YMD."',
                 mb_5 = '".sql_real_escape_string($mb_5)."',
                 mb_6 = '".sql_real_escape_string($mb_6)."',
-                mb_8 = '".sql_real_escape_string($mb_8)."' ";
+                mb_8 = '".sql_real_escape_string($mb_8)."',
+                mb_9 = '".sql_real_escape_string($mb_9)."',
+                mb_10 = '".sql_real_escape_string($mb_10)."',
+                mb_11 = '".sql_real_escape_string($mb_11)."' ";
 $result = sql_query($sql, false);
 
 if($result) {
