@@ -155,13 +155,7 @@ add_javascript(G5_POSTCODE_JS, 0);    //다음 주소 js
 			<input type="text" name="BZC_CD" class="frm_input" value="<?=$Companyinfo['BZC_CD']?>" />
         </td>
     </tr>
-	<tr>
-        <th scope="row"><label for="shorts_code">산업분류(9차)</label></th>
-        <td>
-			<input type="text" name="KSIC9_BZC_CD" class="frm_input" value="<?=$Companyinfo['KSIC9_BZC_CD']?>" />
-        </td>
-    </tr>
-	<tr>
+		<tr>
         <td colspan="2">
 			<button type="button" class="btn btn-sm btn-info pull-right" id="view_1_con">기업정보 적용</button>
         </td>
