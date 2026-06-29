@@ -65,7 +65,7 @@ function company_detail_ai_lookup_industry_name($bzc_cd)
 
     $row = sql_fetch("
         SELECT k_code_name
-        FROM kssc
+        FROM kssc_11
         WHERE k_code = '" . sql_escape_string($bzc_cd) . "'
         LIMIT 1
     ");
@@ -329,7 +329,7 @@ if (strlen($kedcd) === 10) {
         $bzc_cd_sql = sql_escape_string((string)$company['BZC_CD']);
         $industry_row = sql_fetch("
             SELECT k_code_name
-            FROM kssc
+            FROM kssc_11
             WHERE k_code = '{$bzc_cd_sql}'
             LIMIT 1
         ");

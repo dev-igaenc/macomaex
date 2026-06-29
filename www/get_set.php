@@ -720,7 +720,6 @@ switch ($type) {
 						$sql.="FAX_NO='{$fax_no}', ";
 						$sql.="LABORER_SUM='{$row_data[38]}', ";
 						$sql.="PD_NM='".addslashes($mpd)."', ";
-						$sql.="KSIC9_BZC_CD='{$row_data[40]}', ";
 						$sql.="REL_KEDCD='{$row_data[41]}', ";
 						$sql.="REL_ESTB_DT='{$row_data[42]}', ";
 						$sql.="LOC_RDNM_ZIP='{$row_data[43]}', ";
@@ -845,10 +844,8 @@ switch ($type) {
 				if($chk=="1000"){
 						unset($comp);
 						$comp=getComapyInfo($kedcd);
-						$kssc9=getKsscInfo9($comp['KSIC9_BZC_CD']);
 						$kssc=getKsscInfo($comp['BZC_CD']);
 						// 표준산업분류 기본값 처리
-						if(!is_array($kssc9)) $kssc9 = array('k_code_name' => '-');
 						if(!is_array($kssc)) $kssc = array('k_code_name' => '-');
 							$matcing=sql_fetch("SELECT * from g5_matching where del != 'D' and  request_id='{$member['mb_id']}' and KEDCD='{$kedcd}'");//매칭요청
 							if(!is_array($matcing)) $matcing = array();
@@ -940,11 +937,7 @@ switch ($type) {
 				</dl>
 
 				<dl>
-					<dt>표준산업분류(9차)</dt>
-					<dd>(<?=$comp['KSIC9_BZC_CD']?>) <?=$kssc9['k_code_name']?></dd>
-				</dl>
-				<dl>
-					<dt>표준산업분류</dt>
+					<dt>표준산업분류(11차)</dt>
 					<dd>(<?=$comp['BZC_CD']?>) <?=$kssc['k_code_name']?></dd>
 				</dl>
 

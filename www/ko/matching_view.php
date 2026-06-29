@@ -23,8 +23,7 @@ if($cd){
 	ALERT("정상적으로 이용하세요.","/");
 }
 
-if($com['BZC_CD']) $kssc=sql_fetch("SELECT * from kssc where k_code='{$com['BZC_CD']}'");
-if($com['KSIC9_BZC_CD']) $kssc_9=sql_fetch("SELECT * from kssc_9 where k_code='{$com['KSIC9_BZC_CD']}'");
+if($com['BZC_CD']) $kssc=sql_fetch("SELECT * from kssc_11 where k_code='{$com['BZC_CD']}'");
 
 //사업자번호
 function addh_bzno($bz){
@@ -101,7 +100,6 @@ if($view_chk=="false"){
 	$com['HPAGE_URL']=str_pad(mb_substr($com['HPAGE_URL'],0, 6), mb_strlen($com['HPAGE_URL']), "*");
 	//산업분류
 	$kssc['k_code_name']=str_pad(mb_substr($kssc['k_code_name'],0, 3), mb_strlen($kssc['k_code_name']), "*");
-	$kssc_9['k_code_name']=str_pad(mb_substr($kssc_9['k_code_name'],0, 3), mb_strlen($kssc_9['k_code_name']), "*");
 	//종업원수
 	$com['LABORER_SUM']=str_pad(mb_substr($com['LABORER_SUM'],0, 0), mb_strlen($com['LABORER_SUM']), "*");
 	//주소
@@ -229,13 +227,7 @@ if($view_chk=="false"){
 					</div>
                 </li>
                 <li>
-                    <div class="title">표준산업분류(9차)</div>
-                    <div class="text">
-					<?if($com['KSIC9_BZC_CD']){?>(<?=$com['KSIC9_BZC_CD']?>) <?=$kssc_9['k_code_name']?><?}?>
-					</div>
-                </li>
-                <li>
-                    <div class="title">표준산업분류</div>
+                    <div class="title">표준산업분류(11차)</div>
                     <div class="text"><?if($com['BZC_CD']){?>(<?=$com['BZC_CD']?>) <?=$kssc['k_code_name']?><?}?></div>
                 </li>
                 <li>

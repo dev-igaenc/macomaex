@@ -20,8 +20,9 @@ $sql = "SELECT
             A.ENP_NM_TRD,
             A.BZC_CD,
             A.ENP_TYP,
-            (SELECT k_code_name FROM kssc WHERE k_code = A.BZC_CD) as BZC_NM
+            COALESCE(k11.k_code_name, '') as BZC_NM
         FROM company A
+        LEFT JOIN kssc_11 k11 ON k11.k_code = A.BZC_CD
         WHERE A.BZNO = '{$comnum}'";
 $comp = sql_fetch($sql);
 
@@ -73,7 +74,11 @@ if (!empty($cominfo_json)) {
     $enp_typ = isset($node['enp_typ']) ? $node['enp_typ'] : '';
 
     if (!$bzc_name && $bzc_cd) {
-        $bzc_row = sql_fetch("SELECT k_code_name FROM kssc WHERE k_code = '{$bzc_cd}'");
+        $bzc_row = sql_fetch("
+            SELECT COALESCE(k11.k_code_name, '') AS k_code_name
+            FROM (SELECT '{$bzc_cd}' AS k_code) src
+            LEFT JOIN kssc_11 k11 ON k11.k_code = src.k_code
+        ");
         $bzc_name = isset($bzc_row['k_code_name']) ? $bzc_row['k_code_name'] : '';
     }
 

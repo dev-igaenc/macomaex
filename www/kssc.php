@@ -7,7 +7,7 @@ set_time_limit ( 0 );
 ini_set('memory_limit', '50M');
 
 if(1) {
-    $file = "kssc_9.xls";
+    $file = "kssc_11.xls";
 
     include_once(G5_LIB_PATH.'/PHPExcel/IOFactory.php');
 
@@ -121,7 +121,7 @@ if(1) {
 			$add_txt=$addcd[$cd_2];
 		}
 		
-        $sql = " INSERT INTO kssc_9
+        $sql = " INSERT INTO kssc_11
                      SET k_code = '{$add_txt}$ca_id',
                          k_code_name = '$ca_id2',
                          k_code_type = '$ca_id3'";

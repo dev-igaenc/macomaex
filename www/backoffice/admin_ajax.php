@@ -139,9 +139,8 @@ switch ($type) {
 		$sql.="ENP_TYP='".$ENP_TYP."', ";
 		$sql.="LOC_ZIP='".$LOC_ZIP."', ";
 		$sql.="LOC_ADDRA='".$LOC_ADDRA."', ";
-		$sql.="LOC_ADDRB='".$LOC_ADDRB."', ";
-		$sql.="BZC_CD='".$BZC_CD."', ";
-		$sql.="KSIC9_BZC_CD='".$KSIC9_BZC_CD."' ";
+			$sql.="LOC_ADDRB='".$LOC_ADDRB."', ";
+			$sql.="BZC_CD='".$BZC_CD."' ";
 		$sql.="where KEDCD='".$KEDCD."' ";
 		$result=sql_query($sql);
 		if($result) echo "1000";
@@ -659,7 +658,7 @@ switch ($type) {
         break;
 
     case "comp_search":
-		$sql = " select *,(select k_code_name from kssc where k_code=KSIC9_BZC_CD) as BZC_NAME, (select mb_8 from g5_member where mb_company=KEDCD) as M_TEL from company where ENP_NM like '%".$sr_txt."%' or  BZNO like '%".$sr_txt."%' ";
+			$sql = " select *,(select k_code_name from kssc_11 where k_code=BZC_CD) as BZC_NAME, (select mb_8 from g5_member where mb_company=KEDCD) as M_TEL from company where ENP_NM like '%".$sr_txt."%' or  BZNO like '%".$sr_txt."%' ";
 		$result = sql_query($sql);
 ?>
 			<table class="mb_data">

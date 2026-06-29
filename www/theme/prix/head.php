@@ -61,86 +61,74 @@ window.__AUTH_SESSION_GUARD_CONFIG__ = {
 <div id="hd">
 	<div id="hd_h1"><?php echo $g5['title'] ?></div>
 
-	<svg xmlns="http://www.w3.org/2000/svg" style="position:absolute;width:0;height:0;">
+		<svg xmlns="http://www.w3.org/2000/svg" style="position:absolute;width:0;height:0;">
 	  <defs>
-		<!-- 건설 - 망치 -->
-		<symbol id="cat-iso-1" viewBox="0 0 48 48"><path fill="#e53935" d="M20 8 L28 8 L28 16 L20 16 Z"></path><path fill="#c62828" d="M20 8 L20 16 L16 20 L16 12 Z"></path><path fill="#ef5350" d="M28 8 L28 16 L32 20 L32 12 Z"></path><path fill="#ff9800" d="M12 20 L20 20 L20 28 L12 28 Z"></path><path fill="#ff6f00" d="M12 20 L12 28 L8 32 L8 24 Z"></path><path fill="#ffb74d" d="M20 20 L20 28 L24 32 L24 24 Z"></path></symbol>
-		<!-- 의류 - 티셔츠 -->
-		<symbol id="cat-iso-2" viewBox="0 0 48 48"><path fill="#ec407a" d="M18 8 L22 8 L22 12 L18 12 Z"></path><path fill="#ad1457" d="M18 8 L18 12 L14 16 L14 10 Z"></path><path fill="#f48fb1" d="M22 8 L22 12 L26 16 L26 10 Z"></path><path fill="#ab47bc" d="M14 16 L34 16 L34 40 L14 40 Z"></path><path fill="#7b1fa2" d="M14 16 L14 40 L10 44 L10 20 Z"></path><path fill="#ba68c8" d="M34 16 L34 40 L38 44 L38 20 Z"></path></symbol>
-		<!-- 화장품 - 립스틱 -->
-		<symbol id="cat-iso-3" viewBox="0 0 48 48"><path fill="#e91e63" d="M20 8 L28 8 L28 12 L20 12 Z"></path><path fill="#c2185b" d="M20 8 L20 12 L18 14 L18 10 Z"></path><path fill="#f06292" d="M28 8 L28 12 L30 14 L30 10 Z"></path><path fill="#26a69a" d="M18 14 L30 14 L30 36 L18 36 Z"></path><path fill="#00897b" d="M18 14 L18 36 L16 38 L16 16 Z"></path><path fill="#4db6ac" d="M30 14 L30 36 L32 38 L32 16 Z"></path><path fill="#ff6f00" d="M22 36 L26 36 L26 40 L22 40 Z"></path></symbol>
-		<!-- 식자재·식품 B2B - 식품/원재료 -->
-		<symbol id="cat-iso-4" viewBox="0 0 48 48"><circle fill="#ffb74d" cx="24" cy="22" r="11"></circle><path fill="#ffa726" d="M24 11 Q21 14 24 17 Q27 14 24 11"></path><path fill="#ffe082" d="M18 22 Q20 18 24 20 Q28 18 30 22 Q28 26 24 24 Q20 26 18 22"></path><path fill="#8bc34a" d="M22 12 Q23 10 25 10 Q24 12 24 14 Q23 13 22 12"></path></symbol>
-		<!-- 화학·케미컬·원료 - 라운드 플라스크/버블 -->
-		<symbol id="cat-iso-5" viewBox="0 0 48 48">
-		  <!-- 배경 원 -->
-		  <circle fill="#e9f5ff" cx="24" cy="24" r="14"></circle>
-		  <!-- 목 부분 -->
-		  <rect x="20" y="10" width="8" height="8" rx="2" fill="#455a64"></rect>
-		  <rect x="21" y="11" width="6" height="6" rx="1.5" fill="#607d8b"></rect>
-		  <!-- 플라스크 몸통 -->
-		  <path d="M18 18 H30 L31.5 24 C32 26 31.6 28.2 30.5 30 L27 35 C26 36.5 25 37 24 37 C23 37 22 36.5 21 35 L17.5 30 C16.4 28.2 16 26 16.5 24 Z" fill="#37474f"></path>
-		  <!-- 액체 -->
-		  <path d="M18.5 25 H29.5 C30 27.2 29.6 29 28.7 30.3 L26 33.6 C25.3 34.5 24.6 35 24 35 C23.4 35 22.7 34.5 22 33.6 L19.3 30.3 C18.4 29 18 27.2 18.5 25 Z" fill="#26a69a"></path>
-		  <!-- 액체 하이라이트 -->
-		  <path d="M19.5 26.2 C21.2 25.3 22.8 25 24 25 C25.2 25 26.8 25.3 28.5 26.2 L28 27.4 C26.6 26.8 25.3 26.5 24 26.5 C22.7 26.5 21.4 26.8 20 27.4 Z" fill="#4db6ac"></path>
-		  <!-- 기포 -->
-		  <circle cx="21" cy="23" r="1.2" fill="#b2ebf2"></circle>
-		  <circle cx="26.5" cy="25.5" r="1" fill="#b2ebf2"></circle>
-		  <circle cx="23.4" cy="21.2" r="0.9" fill="#b2ebf2"></circle>
-		  <!-- 반사 하이라이트 -->
-		  <path d="M22 19.5 C23 18.8 23.9 18.5 25 18.5 C25.6 18.5 26.2 18.6 26.8 18.8" fill="none" stroke="#ffffff" stroke-width="1.2" stroke-linecap="round" opacity="0.7"></path>
-		</symbol>
-		<!-- 기계·설비·산업장비 - 산업 기어/설비암 -->
-		<symbol id="cat-iso-6" viewBox="0 0 48 48"><circle fill="#edf2f7" cx="24" cy="24" r="14"></circle><rect fill="#78909c" x="10" y="30" width="28" height="4" rx="1.2"></rect><path fill="#607d8b" d="M12 26 L36 26 L34 30 L14 30 Z"></path><circle fill="#546e7a" cx="20" cy="22" r="6.5"></circle><circle fill="#cfd8dc" cx="20" cy="22" r="2.4"></circle><rect fill="#90a4ae" x="19.4" y="12.5" width="1.2" height="3.8" rx="0.6"></rect><rect fill="#90a4ae" x="19.4" y="27.7" width="1.2" height="3.8" rx="0.6"></rect><rect fill="#90a4ae" x="10.5" y="21.4" width="3.8" height="1.2" rx="0.6"></rect><rect fill="#90a4ae" x="25.7" y="21.4" width="3.8" height="1.2" rx="0.6"></rect><path fill="#90a4ae" d="M13.7 16.6 L14.6 15.7 L17.3 18.4 L16.4 19.3 Z"></path><path fill="#90a4ae" d="M23.6 26.5 L24.5 25.6 L27.2 28.3 L26.3 29.2 Z"></path><path fill="#90a4ae" d="M23.6 17.5 L26.3 14.8 L27.2 15.7 L24.5 18.4 Z"></path><path fill="#90a4ae" d="M13.7 27.4 L16.4 24.7 L17.3 25.6 L14.6 28.3 Z"></path><circle fill="#455a64" cx="31.5" cy="27.5" r="4.2"></circle><circle fill="#b0bec5" cx="31.5" cy="27.5" r="1.5"></circle><path fill="#5f6f7a" d="M30 19 L35.5 13.5 L37.2 15.2 L31.7 20.7 Z"></path></symbol>
-		<!-- 금속·소재 - 메탈 블록/플레이트 -->
-		<symbol id="cat-iso-7" viewBox="0 0 48 48">
-		  <!-- 차가운 메탈 배경 -->
-		  <circle cx="24" cy="24" r="14" fill="#ECEFF1"></circle>
-		  <!-- 메탈 플레이트(원근감) -->
-		  <path d="M14 20 L32 16 L36 22 L18 26 Z" fill="#B0BEC5"></path>
-		  <path d="M14 20 L14 28 L18 34 L18 26 Z" fill="#90A4AE"></path>
-		  <path d="M18 26 L36 22 L36 30 L18 34 Z" fill="#78909C"></path>
-		  <!-- 상단 빛 반사 -->
-		  <path d="M15.5 20.8 L31.5 17.4 L34.2 21.4 L18.2 24.8 Z" fill="#CFD8DC"></path>
-		  <!-- 리벳(볼트) -->
-		  <circle cx="19.5" cy="23.5" r="0.9" fill="#ECEFF1"></circle>
-		  <circle cx="25.5" cy="22.3" r="0.9" fill="#ECEFF1"></circle>
-		  <circle cx="30.8" cy="21.3" r="0.9" fill="#ECEFF1"></circle>
-		  <circle cx="21.2" cy="28.4" r="0.9" fill="#ECEFF1"></circle>
-		  <circle cx="27.5" cy="26.9" r="0.9" fill="#ECEFF1"></circle>
-		  <!-- 메탈 브러시 느낌의 라인 -->
-		  <path d="M19 30 H33" stroke="#B0BEC5" stroke-width="0.8" stroke-linecap="round" opacity="0.8"></path>
-		  <path d="M19.5 31.6 H31.5" stroke="#B0BEC5" stroke-width="0.7" stroke-linecap="round" opacity="0.7"></path>
-		</symbol>
-		<!-- 농축수산 - 농작물/물고기 -->
-		<symbol id="cat-iso-8" viewBox="0 0 48 48"><path fill="#66bb6a" d="M24 12 Q20 16 24 20 Q28 16 24 12"></path><path fill="#4caf50" d="M20 20 Q24 24 28 20 Q24 28 20 20"></path><path fill="#81c784" d="M22 18 L26 18 L26 22 L22 22 Z"></path><path fill="#43a047" d="M18 24 L30 24 L30 32 L18 32 Z"></path><path fill="#388e3c" d="M18 24 L18 32 L16 34 L16 26 Z"></path><path fill="#66bb6a" d="M30 24 L30 32 L32 34 L32 26 Z"></path></symbol>
-		<!-- 에너지·환경 - 태양 -->
-		<symbol id="cat-iso-9" viewBox="0 0 48 48"><circle fill="#ffc107" cx="24" cy="24" r="8"></circle><path fill="#ff9800" d="M24 8 L26 8 L26 12 L24 12 Z"></path><path fill="#ff9800" d="M24 36 L26 36 L26 40 L24 40 Z"></path><path fill="#ff9800" d="M8 24 L12 24 L12 26 L8 26 Z"></path><path fill="#ff9800" d="M36 24 L40 24 L40 26 L36 26 Z"></path><path fill="#ff9800" d="M14 14 L16 16 L13 19 L11 17 Z"></path><path fill="#ff9800" d="M34 14 L36 16 L35 19 L33 17 Z"></path><path fill="#ff9800" d="M14 34 L16 32 L19 35 L17 37 Z"></path><path fill="#ff9800" d="M34 34 L32 32 L29 35 L31 37 Z"></path></symbol>
-		<!-- 전자·전기·반도체 - 칩/전기 -->
-		<symbol id="cat-iso-10" viewBox="0 0 48 48"><circle fill="#eaf2ff" cx="24" cy="24" r="14"></circle><rect fill="#1e88e5" x="16" y="16" width="16" height="16" rx="2"></rect><rect fill="#90caf9" x="20" y="20" width="8" height="8" rx="1.2"></rect><path fill="#42a5f5" d="M14 19 H16 V21 H14 Z M14 23 H16 V25 H14 Z M14 27 H16 V29 H14 Z M32 19 H34 V21 H32 Z M32 23 H34 V25 H32 Z M32 27 H34 V29 H32 Z M19 14 H21 V16 H19 Z M23 14 H25 V16 H23 Z M27 14 H29 V16 H27 Z M19 32 H21 V34 H19 Z M23 32 H25 V34 H23 Z M27 32 H29 V34 H27 Z"></path><path fill="#ffd54f" d="M24 18 L27.5 23 H24.8 L27 29 L21 24.5 H23.8 L22 18 Z"></path></symbol>
-		<!-- 자동차·모빌리티 - 자동차 -->
-		<symbol id="cat-iso-11" viewBox="0 0 48 48"><rect fill="#e1f5fe" x="8" y="20" width="32" height="12" rx="4"></rect><path fill="#29b6f6" d="M14 18 L34 18 L38 22 L10 22 Z"></path><circle fill="#37474f" cx="16" cy="30" r="3.5"></circle><circle fill="#37474f" cx="32" cy="30" r="3.5"></circle><rect fill="#ffffff" x="16" y="19" width="8" height="4" rx="1"></rect><rect fill="#ffffff" x="24" y="19" width="8" height="4" rx="1"></rect></symbol>
-		<!-- 포장재·소모성 자재 - 상자/패키징 -->
-		<symbol id="cat-iso-12" viewBox="0 0 48 48"><path fill="#ede7f6" d="M10 16 L38 16 L38 34 L10 34 Z"></path><path fill="#d1c4e9" d="M10 16 L24 10 L38 16 L24 22 Z"></path><path fill="#b39ddb" d="M24 22 L38 16 L38 34 L24 40 Z"></path><path fill="#9575cd" d="M24 22 L10 16 L10 34 L24 40 Z"></path><path fill="#7e57c2" d="M20 18 L24 20 L28 18 L24 16 Z"></path></symbol>
-		<!-- 반도체 - 칩 -->
-		<symbol id="cat-iso-13" viewBox="0 0 48 48"><path fill="#29b6f6" d="M16 16 L32 16 L32 32 L16 32 Z"></path><path fill="#0288d1" d="M16 16 L16 32 L14 34 L14 18 Z"></path><path fill="#4fc3f7" d="M32 16 L32 32 L34 34 L34 18 Z"></path><path fill="#01579b" d="M18 18 L30 18 L30 30 L18 30 Z"></path><path fill="#0277bd" d="M20 20 L28 20 L28 28 L20 28 Z"></path></symbol>
-		<!-- IT·소프트웨어 - 컴퓨터 -->
-		<symbol id="cat-iso-14" viewBox="0 0 48 48"><path fill="#42a5f5" d="M10 12 L38 12 L38 28 L10 28 Z"></path><path fill="#1976d2" d="M10 12 L10 28 L8 30 L8 14 Z"></path><path fill="#64b5f6" d="M38 12 L38 28 L40 30 L40 14 Z"></path><path fill="#1565c0" d="M12 14 L36 14 L36 26 L12 26 Z"></path><path fill="#1e88e5" d="M14 16 L34 16 L34 24 L14 24 Z"></path><path fill="#90caf9" d="M18 28 L30 28 L30 30 L18 30 Z"></path></symbol>
-		<!-- 통신 - 신호/안테나 -->
-		<symbol id="cat-iso-15" viewBox="0 0 48 48"><path fill="#5c6bc0" d="M24 8 L26 8 L26 40 L24 40 Z"></path><path fill="#3f51b5" d="M18 16 L20 16 L20 40 L18 40 Z"></path><path fill="#7986cb" d="M30 16 L32 16 L32 40 L30 40 Z"></path><path fill="#3949ab" d="M12 24 L14 24 L14 40 L12 40 Z"></path><path fill="#5c6bc0" d="M36 24 L38 24 L38 40 L36 40 Z"></path></symbol>
-		<!-- 토목 - 다리 -->
-		<symbol id="cat-iso-16" viewBox="0 0 48 48"><path fill="#78909c" d="M8 28 L40 28 L40 32 L8 32 Z"></path><path fill="#546e7a" d="M8 28 L8 32 L6 34 L6 30 Z"></path><path fill="#90a4ae" d="M40 28 L40 32 L42 34 L42 30 Z"></path><path fill="#607d8b" d="M12 20 L16 20 L16 28 L12 28 Z"></path><path fill="#455a64" d="M32 20 L36 20 L36 28 L32 28 Z"></path><path fill="#78909c" d="M20 16 L28 16 L28 28 L20 28 Z"></path></symbol>
-		<!-- 의료·헬스케어 - 십자가/케어 -->
-		<symbol id="cat-iso-17" viewBox="0 0 48 48"><circle fill="#ffebee" cx="24" cy="24" r="14"></circle><circle fill="#e53935" cx="24" cy="24" r="9"></circle><path fill="#ffffff" d="M23 18 L25 18 L25 22 L29 22 L29 24 L25 24 L25 28 L23 28 L23 24 L19 24 L19 22 L23 22 Z"></path></symbol>
-		<!-- 인력 - 사람 -->
-		<symbol id="cat-iso-18" viewBox="0 0 48 48"><circle fill="#66bb6a" cx="24" cy="16" r="6"></circle><path fill="#4caf50" d="M16 28 Q16 24 20 24 L28 24 Q32 24 32 28 L32 36 L16 36 Z"></path><path fill="#43a047" d="M18 30 L30 30 L30 36 L18 36 Z"></path></symbol>
-		<!-- 연구·기술 - 현미경/전구 -->
-		<symbol id="cat-iso-19" viewBox="0 0 48 48"><circle fill="#ab47bc" cx="24" cy="20" r="8" opacity="0.3"></circle><path fill="#9c27b0" d="M20 12 L28 12 L28 16 L20 16 Z"></path><path fill="#ba68c8" d="M22 16 L26 16 L26 24 L22 24 Z"></path><path fill="#7b1fa2" d="M18 24 L30 24 L30 28 L18 28 Z"></path><path fill="#ce93d8" d="M24 28 L24 32 L22 34 L26 34 Z"></path></symbol>
-		<!-- 공통 아이콘 - 요술봉 -->
-		<symbol id="icon-magic-wand" viewBox="0 0 24 24"><path fill="currentColor" d="M16.8 2.2l1.1 2.3 2.3 1.1-2.3 1.1-1.1 2.3-1.1-2.3-2.3-1.1 2.3-1.1 1.1-2.3zm3.2 2.8.6 1.1 1.1.6-1.1.6-.6 1.1-.6-1.1-1.1-.6 1.1-.6.6-1.1zM7.4 17.4 16.1 8.7l2.6 2.6-8.7 8.7-2.6-2.6zm-1 2.4 1.3 1.3-3.1 1 .8-2.9z"></path></symbol>
-		<!-- 전체보기 - 그리드 (4칸) -->
-		<symbol id="cat-iso-all" viewBox="0 0 48 48"><path fill="#2196f3" d="M8 8 L26 8 L26 26 L8 26 Z"></path><path fill="#ffc107" d="M28 8 L46 8 L46 26 L28 26 Z"></path><path fill="#4caf50" d="M8 28 L26 28 L26 46 L8 46 Z"></path><path fill="#e53935" d="M28 28 L46 28 L46 46 L28 46 Z"></path></symbol>
+	    <!-- 섬유·의류·패션 - 티셔츠 -->
+	    <symbol id="cat-iso-1" viewBox="0 0 48 48"><path fill="#5c6bc0" d="M9 17 L18 11 L21 14 Q24 16.5 27 14 L30 11 L39 17 L33 22 L31 20 L31 39 L17 39 L17 20 L15 22 Z"/><path fill="#3f51b5" d="M9 17 L18 11 L17 14 L15 22 Z"/><path fill="#7986cb" d="M39 17 L30 11 L31 14 L33 22 Z"/><path fill="#3949ab" d="M21 14 Q24 16.5 27 14 L25.5 12 Q24 13.2 22.5 12 Z"/></symbol>
+	    <!-- 화장품·위생 - 펌프 보틀 -->
+	    <symbol id="cat-iso-2" viewBox="-0.6 -0.6 49.2 49.2"><rect fill="#ad1457" x="22" y="8" width="6" height="3" rx="1"/><path fill="#c2185b" d="M22 9 L17 9 L17 11 L22 11 Z"/><rect fill="#ec407a" x="23" y="11" width="4" height="5"/><rect fill="#f06292" x="16" y="16" width="16" height="24" rx="3"/><rect fill="#ec407a" x="16" y="26" width="16" height="7"/><rect fill="#f8bbd0" x="18.5" y="19" width="2.5" height="5" rx="1.2" opacity="0.7"/></symbol>
+	    <!-- 플라스틱·고무 - 페트병 -->
+	    <symbol id="cat-iso-3" viewBox="-0.6 -0.6 49.2 49.2"><rect fill="#00695c" x="21" y="8" width="6" height="4.5" rx="1"/><path fill="#26a69a" d="M22 12.5 L26 12.5 L26 16 Q31 18 31 23 L31 26 Q28.5 27.5 31 29 L31 37 Q31 40 24 40 Q17 40 17 37 L17 29 Q19.5 27.5 17 26 L17 23 Q17 18 22 16 Z"/><path fill="#80cbc4" d="M20.5 18 L22 18 L22 38 L20.5 38 Z" opacity="0.55"/></symbol>
+	    <!-- 식품·음료 - 포크·스푼 -->
+	    <symbol id="cat-iso-4" viewBox="0.9 0.65 46.2 46.2"><ellipse fill="#ffb74d" cx="19" cy="14" rx="4" ry="5.5"/><rect fill="#fb8c00" x="17.5" y="18" width="3" height="21" rx="1.5"/><rect fill="#ffb74d" x="26.3" y="9" width="1.6" height="10" rx="0.8"/><rect fill="#ffb74d" x="28.7" y="9" width="1.6" height="10" rx="0.8"/><rect fill="#ffb74d" x="31.1" y="9" width="1.6" height="10" rx="0.8"/><rect fill="#fb8c00" x="26" y="16.5" width="6.7" height="4.5" rx="2"/><rect fill="#fb8c00" x="27.8" y="20" width="3" height="19" rx="1.5"/></symbol>
+	    <!-- 화학·케미컬·원료 -->
+	    <symbol id="cat-iso-5" viewBox="5.5 5.5 37 37">
+	      <circle fill="#e9f5ff" cx="24" cy="24" r="14"/>
+	      <rect x="20" y="10" width="8" height="8" rx="2" fill="#455a64"/>
+	      <rect x="21" y="11" width="6" height="6" rx="1.5" fill="#607d8b"/>
+	      <path d="M18 18 H30 L31.5 24 C32 26 31.6 28.2 30.5 30 L27 35 C26 36.5 25 37 24 37 C23 37 22 36.5 21 35 L17.5 30 C16.4 28.2 16 26 16.5 24 Z" fill="#37474f"/>
+	      <path d="M18.5 25 H29.5 C30 27.2 29.6 29 28.7 30.3 L26 33.6 C25.3 34.5 24.6 35 24 35 C23.4 35 22.7 34.5 22 33.6 L19.3 30.3 C18.4 29 18 27.2 18.5 25 Z" fill="#26a69a"/>
+	      <path d="M19.5 26.2 C21.2 25.3 22.8 25 24 25 C25.2 25 26.8 25.3 28.5 26.2 L28 27.4 C26.6 26.8 25.3 26.5 24 26.5 C22.7 26.5 21.4 26.8 20 27.4 Z" fill="#4db6ac"/>
+	      <circle cx="21" cy="23" r="1.2" fill="#b2ebf2"/>
+	      <circle cx="26.5" cy="25.5" r="1" fill="#b2ebf2"/>
+	      <circle cx="23.4" cy="21.2" r="0.9" fill="#b2ebf2"/>
+	      <path d="M22 19.5 C23 18.8 23.9 18.5 25 18.5 C25.6 18.5 26.2 18.6 26.8 18.8" fill="none" stroke="#ffffff" stroke-width="1.2" stroke-linecap="round" opacity="0.7"/>
+	    </symbol>
+	    <!-- 기계·설비·산업장비 -->
+	    <symbol id="cat-iso-6" viewBox="5.5 5.5 37 37"><circle fill="#edf2f7" cx="24" cy="24" r="14"/><rect fill="#78909c" x="10" y="30" width="28" height="4" rx="1.2"/><path fill="#607d8b" d="M12 26 L36 26 L34 30 L14 30 Z"/><circle fill="#546e7a" cx="20" cy="22" r="6.5"/><circle fill="#cfd8dc" cx="20" cy="22" r="2.4"/><rect fill="#90a4ae" x="19.4" y="12.5" width="1.2" height="3.8" rx="0.6"/><rect fill="#90a4ae" x="19.4" y="27.7" width="1.2" height="3.8" rx="0.6"/><rect fill="#90a4ae" x="10.5" y="21.4" width="3.8" height="1.2" rx="0.6"/><rect fill="#90a4ae" x="25.7" y="21.4" width="3.8" height="1.2" rx="0.6"/><path fill="#90a4ae" d="M13.7 16.6 L14.6 15.7 L17.3 18.4 L16.4 19.3 Z"/><path fill="#90a4ae" d="M23.6 26.5 L24.5 25.6 L27.2 28.3 L26.3 29.2 Z"/><path fill="#90a4ae" d="M23.6 17.5 L26.3 14.8 L27.2 15.7 L24.5 18.4 Z"/><path fill="#90a4ae" d="M13.7 27.4 L16.4 24.7 L17.3 25.6 L14.6 28.3 Z"/><circle fill="#455a64" cx="31.5" cy="27.5" r="4.2"/><circle fill="#b0bec5" cx="31.5" cy="27.5" r="1.5"/><path fill="#5f6f7a" d="M30 19 L35.5 13.5 L37.2 15.2 L31.7 20.7 Z"/></symbol>
+	    <!-- 금속·소재 -->
+	    <symbol id="cat-iso-7" viewBox="5.5 5.5 37 37">
+	      <circle cx="24" cy="24" r="14" fill="#ECEFF1"/>
+	      <path d="M14 20 L32 16 L36 22 L18 26 Z" fill="#B0BEC5"/>
+	      <path d="M14 20 L14 28 L18 34 L18 26 Z" fill="#90A4AE"/>
+	      <path d="M18 26 L36 22 L36 30 L18 34 Z" fill="#78909C"/>
+	      <path d="M15.5 20.8 L31.5 17.4 L34.2 21.4 L18.2 24.8 Z" fill="#CFD8DC"/>
+	      <circle cx="19.5" cy="23.5" r="0.9" fill="#ECEFF1"/>
+	      <circle cx="25.5" cy="22.3" r="0.9" fill="#ECEFF1"/>
+	      <circle cx="30.8" cy="21.3" r="0.9" fill="#ECEFF1"/>
+	      <circle cx="21.2" cy="28.4" r="0.9" fill="#ECEFF1"/>
+	      <circle cx="27.5" cy="26.9" r="0.9" fill="#ECEFF1"/>
+	      <path d="M19 30 H33" stroke="#B0BEC5" stroke-width="0.8" stroke-linecap="round" opacity="0.8"/>
+	      <path d="M19.5 31.6 H31.5" stroke="#B0BEC5" stroke-width="0.7" stroke-linecap="round" opacity="0.7"/>
+	    </symbol>
+	    <!-- 비금속·요업 - 벽돌 -->
+	    <symbol id="cat-iso-8" viewBox="2.5 3.5 43 43"><rect fill="#c1694a" x="13" y="15" width="10" height="6" rx="1"/><rect fill="#a85638" x="24" y="15" width="11" height="6" rx="1"/><rect fill="#a85638" x="9" y="22" width="9" height="6" rx="1"/><rect fill="#c1694a" x="19" y="22" width="11" height="6" rx="1"/><rect fill="#8d6e63" x="31" y="22" width="8" height="6" rx="1"/><rect fill="#a85638" x="13" y="29" width="10" height="6" rx="1"/><rect fill="#c1694a" x="24" y="29" width="11" height="6" rx="1"/></symbol>
+	    <!-- 소매·전자상거래 - 쇼핑백 -->
+	    <symbol id="cat-iso-9" viewBox="0 0 48 48"><path fill="#ff8f00" d="M18 16 Q18 9 24 9 Q30 9 30 16 L27 16 Q27 11.5 24 11.5 Q21 11.5 21 16 Z"/><path fill="#ffb300" d="M13.5 15 L34.5 15 L33 38 Q32.8 40 30.8 40 L17.2 40 Q15.2 40 15 38 Z"/><path fill="#ffa000" d="M13.5 15 L34.5 15 L34.2 20 L13.8 20 Z"/></symbol>
+	    <!-- 전자·전기·반도체 -->
+	    <symbol id="cat-iso-10" viewBox="5.5 5.5 37 37"><circle fill="#eaf2ff" cx="24" cy="24" r="14"/><rect fill="#1e88e5" x="16" y="16" width="16" height="16" rx="2"/><rect fill="#90caf9" x="20" y="20" width="8" height="8" rx="1.2"/><path fill="#42a5f5" d="M14 19 H16 V21 H14 Z M14 23 H16 V25 H14 Z M14 27 H16 V29 H14 Z M32 19 H34 V21 H32 Z M32 23 H34 V25 H32 Z M32 27 H34 V29 H32 Z M19 14 H21 V16 H19 Z M23 14 H25 V16 H23 Z M27 14 H29 V16 H27 Z M19 32 H21 V34 H19 Z M23 32 H25 V34 H23 Z M27 32 H29 V34 H27 Z"/><path fill="#ffd54f" d="M24 18 L27.5 23 H24.8 L27 29 L21 24.5 H23.8 L22 18 Z"/></symbol>
+	    <!-- 자동차·모빌리티 -->
+	    <symbol id="cat-iso-11" viewBox="5.2 6.9 37.6 37.6"><rect fill="#e1f5fe" x="8" y="20" width="32" height="12" rx="4"/><path fill="#29b6f6" d="M14 18 L34 18 L38 22 L10 22 Z"/><circle fill="#37474f" cx="16" cy="30" r="3.5"/><circle fill="#37474f" cx="32" cy="30" r="3.5"/><rect fill="#ffffff" x="16" y="19" width="8" height="4" rx="1"/><rect fill="#ffffff" x="24" y="19" width="8" height="4" rx="1"/></symbol>
+	    <!-- 포장재·소모성 자재 -->
+	    <symbol id="cat-iso-12" viewBox="0.9 1.9 46.2 46.2"><path fill="#ede7f6" d="M10 16 L38 16 L38 34 L10 34 Z"/><path fill="#d1c4e9" d="M10 16 L24 10 L38 16 L24 22 Z"/><path fill="#b39ddb" d="M24 22 L38 16 L38 34 L24 40 Z"/><path fill="#9575cd" d="M24 22 L10 16 L10 34 L24 40 Z"/><path fill="#7e57c2" d="M20 18 L24 20 L28 18 L24 16 Z"/></symbol>
+	    <!-- 전기장비·2차전지 - 배터리 -->
+	    <symbol id="cat-iso-13" viewBox="0.9 0.9 46.2 46.2"><rect fill="#2e7d32" x="20.5" y="9" width="7" height="3.5" rx="1.2"/><rect fill="#66bb6a" x="16" y="12" width="16" height="27" rx="3"/><rect fill="#a5d6a7" x="18.5" y="14.5" width="11" height="22" rx="1.5"/><path fill="#f9a825" d="M25.5 16 L19.5 27.5 L23.2 27.5 L22 36 L28.5 23.5 L24.6 23.5 Z"/></symbol>
+	    <!-- 가구·리빙·잡화 - 소파 -->
+	    <symbol id="cat-iso-14" viewBox="1.8 2.8 44.4 44.4"><path fill="#1e88e5" d="M11 18 Q11 15 14 15 L34 15 Q37 15 37 18 L37 24 L11 24 Z"/><rect fill="#1565c0" x="8" y="21" width="6" height="12" rx="2.5"/><rect fill="#1565c0" x="34" y="21" width="6" height="12" rx="2.5"/><rect fill="#42a5f5" x="13" y="23" width="22" height="8" rx="2"/><rect fill="#0d47a1" x="12" y="32" width="3" height="3" rx="0.5"/><rect fill="#0d47a1" x="33" y="32" width="3" height="3" rx="0.5"/></symbol>
+	    <!-- 통신 -->
+	    <symbol id="cat-iso-15" viewBox="0 0 48 48"><path fill="#5c6bc0" d="M24 8 L26 8 L26 40 L24 40 Z"/><path fill="#3f51b5" d="M18 16 L20 16 L20 40 L18 40 Z"/><path fill="#7986cb" d="M30 16 L32 16 L32 40 L30 40 Z"/><path fill="#3949ab" d="M12 24 L14 24 L14 40 L12 40 Z"/><path fill="#5c6bc0" d="M36 24 L38 24 L38 40 L36 40 Z"/></symbol>
+	    <!-- 토목 -->
+	    <symbol id="cat-iso-16" viewBox="-0.3 0.7 48.6 48.6"><path fill="#78909c" d="M8 28 L40 28 L40 32 L8 32 Z"/><path fill="#546e7a" d="M8 28 L8 32 L6 34 L6 30 Z"/><path fill="#90a4ae" d="M40 28 L40 32 L42 34 L42 30 Z"/><path fill="#607d8b" d="M12 20 L16 20 L16 28 L12 28 Z"/><path fill="#455a64" d="M32 20 L36 20 L36 28 L32 28 Z"/><path fill="#78909c" d="M20 16 L28 16 L28 28 L20 28 Z"/></symbol>
+	    <!-- 의료·헬스케어 -->
+	    <symbol id="cat-iso-17" viewBox="5.5 5.5 37 37"><circle fill="#ffebee" cx="24" cy="24" r="14"/><circle fill="#e53935" cx="24" cy="24" r="9"/><path fill="#ffffff" d="M23 18 L25 18 L25 22 L29 22 L29 24 L25 24 L25 28 L23 28 L23 24 L19 24 L19 22 L23 22 Z"/></symbol>
+	    <!-- 인력 -->
+	    <symbol id="cat-iso-18" viewBox="4 3 40 40"><circle fill="#66bb6a" cx="24" cy="16" r="6"/><path fill="#4caf50" d="M16 28 Q16 24 20 24 L28 24 Q32 24 32 28 L32 36 L16 36 Z"/><path fill="#43a047" d="M18 30 L30 30 L30 36 L18 36 Z"/></symbol>
+	    <!-- 정밀·측정·광학 - 돋보기 -->
+	    <symbol id="cat-iso-19" viewBox="4 4 42 42"><circle fill="#ce93d8" cx="21" cy="21" r="10"/><circle fill="#f3e5f5" cx="21" cy="21" r="6.5" opacity="0.55"/><circle fill="none" stroke="#9c27b0" stroke-width="3" cx="21" cy="21" r="10"/><path d="M28.5 28.5 L37 37" fill="none" stroke="#7b1fa2" stroke-width="4.5" stroke-linecap="round"/></symbol>
+	    <!-- 공통 아이콘 - 요술봉 -->
+	    <symbol id="icon-magic-wand" viewBox="0 0 24 24"><path fill="currentColor" d="M16.8 2.2l1.1 2.3 2.3 1.1-2.3 1.1-1.1 2.3-1.1-2.3-2.3-1.1 2.3-1.1 1.1-2.3zm3.2 2.8.6 1.1 1.1.6-1.1.6-.6 1.1-.6-1.1-1.1-.6 1.1-.6.6-1.1zM7.4 17.4 16.1 8.7l2.6 2.6-8.7 8.7-2.6-2.6zm-1 2.4 1.3 1.3-3.1 1 .8-2.9z"/></symbol>
+	    <!-- 전체보기 -->
+	    <symbol id="cat-iso-all" viewBox="0 0 48 48"><path fill="#2196f3" d="M8 8 L26 8 L26 26 L8 26 Z"/><path fill="#ffc107" d="M28 8 L46 8 L46 26 L28 26 Z"/><path fill="#4caf50" d="M8 28 L26 28 L26 46 L8 46 Z"/><path fill="#e53935" d="M28 28 L46 28 L46 46 L28 46 Z"/></symbol>
 	  </defs>
 	</svg>
 

@@ -476,14 +476,7 @@ function getComapyInfo($no){
 //산업분류 정보가져오기
 function getKsscInfo($no){
 	if(!$no) return false;
-	$sql="select * from kssc where k_code = '{$no}' ";
-	$result=sql_fetch($sql);
-	 return $result;
-}
-//산업분류 정보가져오기(9차)
-function getKsscInfo9($no){
-	if(!$no) return false;
-	$sql="select * from kssc_9 where k_code = '{$no}' ";
+	$sql="select * from kssc_11 where k_code = '{$no}' ";
 	$result=sql_fetch($sql);
 	 return $result;
 }
@@ -861,7 +854,6 @@ function updateKODATA($comnum){ // 한국평가데이터 정보 업데이트 API
 								$sql.="FAX_NO='{$fax_no}', ";
 								$sql.="LABORER_SUM='{$row_data[38]}', ";
 								$sql.="PD_NM='".addslashes($mpd)."', ";
-								$sql.="KSIC9_BZC_CD='{$row_data[40]}', ";
 								$sql.="REL_KEDCD='{$row_data[41]}', ";
 								$sql.="REL_ESTB_DT='{$row_data[42]}', ";
 								$sql.="LOC_RDNM_ZIP='{$row_data[43]}', ";

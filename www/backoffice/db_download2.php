@@ -92,7 +92,6 @@ echo "<th>전화번호</th>";
 echo "<th>팩스번호</th>";
 echo "<th>상시근로자수(합계)</th>";
 echo "<th>제품명</th>";
-echo "<th>업종코드 (표준산업분류 9차)</th>";
 echo "<th>관련기업KED코드</th>";
 echo "<th>관련기업설립일</th>";
 echo "<th>도로명소재지우편번호</th>";
@@ -149,7 +148,6 @@ for ($i=0; $row=sql_fetch_array($result); $i++) {
 	echo "<td style=mso-number-format:'\@'>" . $row['FAX_NO'] . "</td>";
 	echo "<td style=mso-number-format:'\@'>" . $row['LABORER_SUM'] . "</td>";
 	echo "<td style=mso-number-format:'\@'>" . $row['PD_NM'] . "</td>";
-	echo "<td style=mso-number-format:'\@'>" . $row['KSIC9_BZC_CD'] . "</td>";
 	echo "<td style=mso-number-format:'\@'>" . $row['REL_KEDCD'] . "</td>";
 	echo "<td style=mso-number-format:'\@'>" . $row['REL_ESTB_DT'] . "</td>";
 	echo "<td style=mso-number-format:'\@'>" . $row['LOC_RDNM_ZIP'] . "</td>";

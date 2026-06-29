@@ -546,31 +546,6 @@ if (!function_exists('company_list_ai_collect_partner_names')) {
     }
 }
 
-if (!function_exists('company_list_ai_pick_company_api_log')) {
-    function company_list_ai_pick_company_api_log($bizno, $today_only, $max_age_months = 0)
-    {
-        $bizno = preg_replace('/\D/', '', (string)$bizno);
-        if (strlen($bizno) !== 10) return null;
-        $max_age_months = (int)$max_age_months;
-        if ($max_age_months < 0) $max_age_months = 0;
-
-        $bizno_sql = sql_real_escape_string($bizno);
-        $sql = "select c_bizno, c_kedcd, c_content, c_datetime
-                from company_api_log
-                where c_bizno='{$bizno_sql}'";
-        if ($today_only) {
-            $sql .= " and DATE(c_datetime)='" . date('Y-m-d') . "'";
-        } else if ($max_age_months > 0) {
-            $sql .= " and c_datetime >= date_sub(now(), interval {$max_age_months} month)";
-        }
-        $sql .= " order by c_datetime desc limit 1";
-
-        $row = sql_fetch($sql);
-        if (!is_array($row) || empty($row['c_content'])) return null;
-        return $row;
-    }
-}
-
 if (!function_exists('company_list_ai_build_base_payload_from_kodata_json')) {
     function company_list_ai_build_base_payload_from_kodata_json($json_text, $fallback_kedcd = '')
     {
@@ -695,7 +670,8 @@ if (!function_exists('company_list_ai_apply_bzc_resolution_meta')) {
 if (!function_exists('company_list_ai_resolve_base_payload_by_bizno')) {
     function company_list_ai_resolve_base_payload_by_bizno($bizno, $allow_kodata = true, $trace_context = array())
     {
-        // bizno -> ML 공통 payload 변환: cache-first, miss 시 Kodata
+        // 기업정보 조회 우선순위는 macomaex_kodata_resolve_company()가 담당한다.
+        // 이 함수는 조회 결과를 ML payload와 추천 흐름 메타데이터로 변환한다.
         $trace_context = is_array($trace_context) ? $trace_context : array();
         $resolve_trace_id = company_list_ai_normalize_trace_id($trace_context['trace_id'] ?? '');
         $resolve_trade_type = in_array((int)($trace_context['trade_type'] ?? 0), array(1, 2), true)
@@ -795,121 +771,6 @@ if (!function_exists('company_list_ai_resolve_base_payload_by_bizno')) {
             'error' => '',
             'source' => $common_source,
             'base_payload' => $base_payload,
-        );
-
-        // 1) 최근 1개월 캐시
-        $recent_row = company_list_ai_pick_company_api_log($bizno, false, 1);
-        if (is_array($recent_row) && !empty($recent_row['c_content'])) {
-            $parsed = company_list_ai_build_base_payload_from_kodata_json($recent_row['c_content'], $recent_row['c_kedcd']);
-            if (!empty($parsed['ok'])) {
-                company_list_ai_write_event_log('bizno_resolve', 'success', array(
-                    'trace_id' => $resolve_trace_id,
-                    'trade_type' => $resolve_trade_type,
-                    'action' => 'resolve_base_payload',
-                    'bizno' => $bizno,
-                    'kedcd' => (string)($parsed['base_payload']['kedcd'] ?? ''),
-                    'source' => 'company_api_log_1m',
-                    'cache_scope' => '1month',
-                    'cache_datetime' => (string)$recent_row['c_datetime'],
-                    'from_cache' => 1,
-                ));
-                return array(
-                    'ok' => true,
-                    'status' => 200,
-                    'error' => '',
-                    'source' => 'company_api_log_1m',
-                    'cached_datetime' => (string)$recent_row['c_datetime'],
-                    'base_payload' => $parsed['base_payload'],
-                );
-            }
-        }
-
-        // 2) 한 달 이내 캐시가 없으면 KODATA를 직접 호출한다.
-        if (!$allow_kodata || !function_exists('getKODATA')) {
-            company_list_ai_write_event_log('bizno_resolve', 'fail', array(
-                'trace_id' => $resolve_trace_id,
-                'trade_type' => $resolve_trade_type,
-                'action' => 'resolve_base_payload',
-                'bizno' => $bizno,
-                'reason' => 'kodata_not_available',
-                'source' => 'none',
-                'error_code' => 'kodata_not_available',
-            ), 'Kodata 캐시 없음(로컬 IP 제한 가능). company_api_log 캐시를 먼저 확보하세요.');
-            return array(
-                'ok' => false,
-                'status' => 502,
-                'error' => 'Kodata 캐시 없음(로컬 IP 제한 가능). company_api_log 캐시를 먼저 확보하세요.',
-                'base_payload' => array(),
-            );
-        }
-
-        $kodata_raw = (string)getKODATA($bizno);
-        $parts = explode('|', $kodata_raw, 2);
-        $code = isset($parts[0]) ? trim((string)$parts[0]) : '';
-        $body = isset($parts[1]) ? (string)$parts[1] : '';
-
-        if ($code !== '1000' || $body === '') {
-            company_list_ai_write_event_log('bizno_resolve', 'fail', array(
-                'trace_id' => $resolve_trace_id,
-                'trade_type' => $resolve_trade_type,
-                'action' => 'resolve_base_payload',
-                'bizno' => $bizno,
-                'reason' => 'kodata_call_failed',
-                'source' => 'kodata_live',
-                'error_code' => 'kodata_call_failed',
-            ), ($body !== '') ? $body : 'Kodata 조회 실패');
-            return array(
-                'ok' => false,
-                'status' => 502,
-                'error' => ($body !== '') ? $body : 'Kodata 조회 실패',
-                'base_payload' => array(),
-            );
-        }
-
-        $parsed = company_list_ai_build_base_payload_from_kodata_json($body, '');
-        if (empty($parsed['ok'])) {
-            company_list_ai_write_event_log('bizno_resolve', 'fail', array(
-                'trace_id' => $resolve_trace_id,
-                'trade_type' => $resolve_trade_type,
-                'action' => 'resolve_base_payload',
-                'bizno' => $bizno,
-                'reason' => 'kodata_parse_failed',
-                'source' => 'kodata_live',
-                'error_code' => 'kodata_parse_failed',
-            ), isset($parsed['error']) ? $parsed['error'] : 'Kodata 파싱 실패');
-            return array(
-                'ok' => false,
-                'status' => 502,
-                'error' => isset($parsed['error']) ? $parsed['error'] : 'Kodata 파싱 실패',
-                'base_payload' => array(),
-            );
-        }
-
-        // Kodata 성공 응답은 company_api_log 에 즉시 기록해 재호출 절감
-        $bizno_sql = sql_real_escape_string($bizno);
-        $kedcd_sql = sql_real_escape_string((string)$parsed['base_payload']['kedcd']);
-        $json_sql = sql_real_escape_string($body);
-        $ip_sql = sql_real_escape_string((string)(isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : ''));
-        sql_query("insert company_api_log set c_bizno='{$bizno_sql}', c_kedcd='{$kedcd_sql}', c_content='{$json_sql}', c_datetime=now(), c_ip='{$ip_sql}'");
-        company_list_ai_write_event_log('bizno_resolve', 'success', array(
-            'trace_id' => $resolve_trace_id,
-            'trade_type' => $resolve_trade_type,
-            'action' => 'resolve_base_payload',
-            'bizno' => $bizno,
-            'kedcd' => (string)($parsed['base_payload']['kedcd'] ?? ''),
-            'source' => 'kodata_live',
-            'cache_scope' => 'live',
-            'cache_datetime' => date('Y-m-d H:i:s'),
-            'from_cache' => 0,
-        ));
-
-        return array(
-            'ok' => true,
-            'status' => 200,
-            'error' => '',
-            'source' => 'kodata_live',
-            'cached_datetime' => date('Y-m-d H:i:s'),
-            'base_payload' => $parsed['base_payload'],
         );
     }
 }

@@ -19,7 +19,7 @@ if($member['mb_id']){
 	if($w==d && $idx){
 		sql_query("delete from g5_favorite where ms_id='{$idx}' and mb_id='{$member['mb_id']}'");
 	}
-	$query="SELECT *, (select k_code_name from kssc where k_code=B.BZC_CD) as BZC_NAME  from g5_favorite A left join company B ON A.KEDCD=B.KEDCD where A.mb_id='{$member['mb_id']}' ";
+	$query="SELECT *, (select k_code_name from kssc_11 where k_code=B.BZC_CD) as BZC_NAME  from g5_favorite A left join company B ON A.KEDCD=B.KEDCD where A.mb_id='{$member['mb_id']}' ";
 	//echo $query;
 	$result=sql_query($query);
 }

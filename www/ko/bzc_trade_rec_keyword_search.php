@@ -45,12 +45,10 @@ function bzc_trade_rec_search_contains($haystack, $needle)
 function bzc_trade_rec_search_fetch_rows($source_where, $query_sql, $trade_type)
 {
     // 추천 키워드와 업종명을 함께 검색해 사용자가 입력한 품목과 연결되는 후보를 찾는다.
-    $industry_select = "COALESCE(k.k_code_name, k9.k_code_name, '') AS industry_name";
-    $industry_joins = "LEFT JOIN kssc k ON k.k_code = r.c_partner_bzc
-        LEFT JOIN kssc_9 k9 ON k9.k_code = r.c_partner_bzc";
+    $industry_select = "COALESCE(k11.k_code_name, '') AS industry_name";
+    $industry_joins = "LEFT JOIN kssc_11 k11 ON k11.k_code = r.c_partner_bzc";
     $query_where = "(r.c_partner_kw LIKE '%{$query_sql}%'
-            OR k.k_code_name LIKE '%{$query_sql}%'
-            OR k9.k_code_name LIKE '%{$query_sql}%')";
+            OR k11.k_code_name LIKE '%{$query_sql}%')";
     $sql = "
         SELECT
             r.c_source_bzc,
@@ -161,7 +159,7 @@ if ($action === 'select') {
             'action' => 'select_custom_keyword',
             'trace_id' => $trace_id,
             'stage' => 'keyword_select',
-            'source' => 'bzc_trade_rec+kssc+kssc_9',
+            'source' => 'bzc_trade_rec+kssc_11',
             'recommendation_mode' => 'keyword',
             'trade_type' => $trade_type,
             'source_bzc_cd' => $source_bzc,
@@ -223,7 +221,7 @@ if ($query_failed) {
         'action' => 'search_custom_keyword',
         'trace_id' => $trace_id,
         'stage' => 'keyword_search',
-        'source' => 'bzc_trade_rec+kssc+kssc_9',
+        'source' => 'bzc_trade_rec+kssc_11',
         'recommendation_mode' => 'keyword',
         'trade_type' => $trade_type,
         'source_bzc_cd' => $source_bzc,
@@ -252,7 +250,7 @@ if ($search_scope === 'all' && $source_bzc === '') {
         'action' => 'search_custom_keyword',
         'trace_id' => $trace_id,
         'stage' => 'keyword_search',
-        'source' => 'bzc_trade_rec+kssc+kssc_9',
+        'source' => 'bzc_trade_rec+kssc_11',
         'recommendation_mode' => 'keyword',
         'trade_type' => $trade_type,
         'source_bzc_cd' => $source_bzc,

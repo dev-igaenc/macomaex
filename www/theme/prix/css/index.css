@@ -153,17 +153,19 @@ body, button, input, select, textarea { font-family: "Pretendard Variable", "SUI
 /* 데스크탑: 좌우 2열 */
 @media (min-width: 1025px) {
     #mVisual {
-        padding: 80px 0 40px !important;
+        padding: 60px 0 0 !important;
     }
-    .mVisual_main {
+    #mVisual .mVisual_main {
         flex-direction: row;
         align-items: center;
+        justify-content: space-between;
         gap: 56px;
         text-align: left;
+        padding: 0 32px;
     }
     .mVisual_left {
         flex: 1;
-        max-width: 480px;
+        max-width: 580px;
         align-items: flex-start;
         margin: 0;
         text-align: left;
@@ -173,14 +175,15 @@ body, button, input, select, textarea { font-family: "Pretendard Variable", "SUI
     }
     .mVisual_topbanner {
         align-self: flex-start;
-        margin-left: 10px;
+        margin-left: 6px;
     }
     .mVisual_searchWrap {
         align-self: stretch;
     }
     .mVisual_right {
-        flex: 0 0 360px;
-        width: 360px;
+        flex: 0 0 380px;
+        width: 380px;
+        gap: 6px;
     }
     .mVisual_right .mVisual_preview {
         display: block;
@@ -193,13 +196,13 @@ body, button, input, select, textarea { font-family: "Pretendard Variable", "SUI
     }
     .mVisual_preview_cards {
         transform: scale(0.88);
-        transform-origin: top center;
-        margin-bottom: -36px;
+        transform-origin: top right;
+        margin-bottom: -28px;
     }
     .mVisual_quick {
         transform: scale(0.88);
-        transform-origin: top center;
-        margin-top: 28px;
+        transform-origin: top right;
+        margin-top: 14px;
     }
 }
 br.quick-br { display: none; }
@@ -336,11 +339,11 @@ br.quick-br { display: none; }
 }
 .mVisual_searchWrap input {
     width: 100%;
-    height: 52px;
-    padding: 0 158px 0 20px;
+    height: 62px;
+    padding: 0 176px 0 22px;
     border: none;
     border-radius: 0;
-    font-size: 15px;
+    font-size: 16px;
     color: #222;
     background: transparent;
     outline: none;
@@ -359,8 +362,8 @@ br.quick-br { display: none; }
     right: 6px;
     top: 50%;
     transform: translateY(-50%);
-    height: 42px;
-    padding: 0 20px;
+    height: 50px;
+    padding: 0 24px;
     border: none;
     border-radius: 12px;
     background: linear-gradient(135deg, #f6a5d2, #dea7ff, #c8a1ff, #dea7ff, #f6a5d2);
@@ -372,7 +375,7 @@ br.quick-br { display: none; }
     justify-content: center;
     gap: 6px;
     box-shadow: 0 4px 16px rgba(198, 139, 250, 0.42);
-    font-size: 15px;
+    font-size: 16px;
     font-weight: 600;
     color: #fff;
     white-space: nowrap;
@@ -442,6 +445,9 @@ br.quick-br { display: none; }
     margin-top: 12px;
     box-sizing: border-box;
 }
+@media (min-width: 1025px) {
+    .mVisual_preview { margin-top: 0; }
+}
 .mVisual_preview_guide {
     font-size: 13px;
     color: #888;
@@ -459,9 +465,141 @@ br.quick-br { display: none; }
     background: #fff;
     border: 1px solid #e5e7eb;
     border-radius: 12px;
-    padding: 12px;
+    padding: 12px 12px 32px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.04);
     overflow: hidden;
+    aspect-ratio: 4 / 3;
+    box-sizing: border-box;
+}
+/* 핵심 카피 슬라이드 */
+.mSlideIntro {
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    gap: 12px;
+    padding: 30px 28px;
+    background: linear-gradient(150deg, #242b35 0%, #0b0d12 100%);
+    border: none;
+    position: relative;
+    overflow: hidden;
+}
+.mSlideIntro_eyebrow {
+    font-size: 24px;
+    font-weight: 500;
+    color: #9ca3af;
+    letter-spacing: 0.01em;
+}
+.mSlideIntro_title {
+    margin: 0;
+    font-size: 32px;
+    font-weight: 800;
+    line-height: 1.3;
+    color: #fff;
+    letter-spacing: -0.02em;
+    word-break: keep-all;
+}
+.mSlideIntro_title b { color: #a3e635; font-weight: 800; }
+.mSlideIntro_line {
+    width: 70%;
+    height: 2px;
+    margin-top: -4px;
+    border-radius: 2px;
+    background: linear-gradient(90deg, #a3e635 0%, rgba(163,230,53,0) 100%);
+    box-shadow: 0 0 10px rgba(163,230,53,0.5);
+}
+.mSlideScore {
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    gap: 14px;
+    background: linear-gradient(155deg, #2563eb 0%, #1d4ed8 100%);
+    border: none;
+}
+.mSlideScore_label {
+    font-size: 24px;
+    font-weight: 600;
+    color: rgba(255,255,255,0.85);
+    letter-spacing: 0.01em;
+}
+.mSlideScore_value {
+    font-size: 76px;
+    font-weight: 800;
+    line-height: 1;
+    color: #fff;
+    letter-spacing: -0.04em;
+}
+.mSlideScore_value span {
+    font-size: 26px;
+    font-weight: 800;
+    margin-left: 3px;
+    color: #bfdbfe;
+}
+.mSlideScore_bar {
+    width: 78%;
+    height: 9px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.28);
+    overflow: hidden;
+}
+.mSlideScore_bar i {
+    display: block;
+    height: 100%;
+    border-radius: 999px;
+    background: #fff;
+}
+.mSlideScore_cap {
+    margin: 0;
+    font-size: 16px;
+    color: rgba(255,255,255,0.92);
+    font-weight: 500;
+}
+.mSlideReasons {
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    gap: 18px;
+    padding: 20px 22px 32px;
+    background: linear-gradient(155deg, #7c3aed 0%, #5b21b6 100%);
+    border: none;
+}
+.mSlideReasons_label {
+    font-size: 24px;
+    font-weight: 600;
+    color: rgba(255,255,255,0.95);
+}
+.mSlideReasons_list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+}
+.mSlideReasons_list li {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    font-size: 14.5px;
+    font-weight: 500;
+    color: #fff;
+    line-height: 1.35;
+}
+.mSlideReasons_list li b { color: #fff; font-weight: 700; }
+.mSlideReasons_list li i {
+    flex-shrink: 0;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #fff;
+    color: #6d28d9;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 900;
+    font-style: normal;
 }
 /* ── 통일된 슬라이드 헤더 ── */
 .mSlide_header {
@@ -588,7 +726,7 @@ br.quick-br { display: none; }
 .mVisual_preview_slide {
     opacity: 0;
     visibility: hidden;
-    transition: opacity 0.5s ease, visibility 0.5s ease;
+    transition: none;
     position: absolute;
     top: 0;
     left: 0;
@@ -631,24 +769,30 @@ br.quick-br { display: none; }
 .mVisual_preview_slide .mVisual_report_reason_row { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 0; }
 .mVisual_preview_slide .mVisual_report_more { flex-shrink: 0; }
 .mVisual_preview_indicator {
+    position: absolute;
+    left: 50%;
+    bottom: 12px;
+    transform: translateX(-50%);
     display: flex;
-    justify-content: center;
-    gap: 6px;
-    margin-top: 12px;
+    gap: 7px;
+    z-index: 6;
 }
 .mVisual_preview_dot {
-    width: 8px;
-    height: 8px;
+    width: 9px;
+    height: 9px;
     border-radius: 50%;
-    background: #d1d5db;
+    background: rgba(255,255,255,0.6);
     border: none;
     padding: 0;
     cursor: pointer;
-    transition: background 0.3s, transform 0.3s;
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.12);
+    opacity: 0.8;
+    transition: background 0.35s ease, transform 0.35s ease, box-shadow 0.35s ease;
 }
 .mVisual_preview_dot.active {
-    background: #7c3aed;
-    transform: scale(1.2);
+    background: #fff;
+    transform: scale(1.25);
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.14), 0 0 0 3px rgba(255,255,255,0.3);
 }
 .mVisual_preview .detail-radar_row { display: flex; flex-direction: row; align-items: center; gap: 8px; }
 .mVisual_preview .detail-radar_chart { overflow: visible; flex-shrink: 0; }
@@ -1134,23 +1278,24 @@ br.quick-br { display: none; }
 }
 /* 서비스 카테고리 그리드 + 오른쪽 배너 */
 #mCategories {
-    background: #F3F5FA;
-    padding: 40px 0;
+    background: #FAFBFD;
+    padding: 0 0 20px;
     overflow-x: hidden;
 }
 #mCategories .inner {
-    max-width: 1100px;
+    max-width: 1200px;
     margin: 0 auto;
-    padding: 0 40px;
+    padding: 0 32px;
     box-sizing: border-box;
     width: 100%;
 }
 @media (max-width: 768px) {
     #mCategories .inner { padding: 0 16px; max-width: 100%; }
+    #mCategories { padding-top: 20px; }
 }
 .mCategories_row {
     display: grid;
-    grid-template-columns: 1fr 280px;
+    grid-template-columns: 1fr;
     gap: 12px;
     align-items: stretch;
 }
@@ -1165,19 +1310,17 @@ br.quick-br { display: none; }
 #mCategories .mCategories_title { display: none; }
 .mCategories_grid {
     display: grid;
-    grid-template-columns: repeat(8, 1fr);
-    gap: 10px;
+    grid-template-columns: repeat(9, 1fr);
+    gap: 6px;
     max-width: 100%;
     box-sizing: border-box;
     background: #fff;
     border-radius: 16px;
-    padding: 20px 16px;
+    padding: 20px 12px;
     box-shadow: 0 1px 3px rgba(0,0,0,0.06);
 }
-.mCategories_grid .mCategories_item:nth-child(n+11) { display: none; }
-.mCategories_grid.expanded .mCategories_item:nth-child(n+11) {
-    display: block;
-    animation: categoryExpandIn 0.4s ease-out forwards;
+.mCategories_grid .mCategories_item:nth-child(n+11) {
+    display: flex;
 }
 @keyframes categoryExpandIn {
     0% { opacity: 0; transform: translateY(-10px); }
@@ -1185,51 +1328,25 @@ br.quick-br { display: none; }
 }
 /* 중간 너비: 아이콘·라벨 축소, 배너 줄이기 */
 @media (max-width: 1200px) and (min-width: 1025px) {
-    .mCategories_row { grid-template-columns: 1fr 240px; }
-    .mCategories_grid { gap: 6px; }
-    .mCategories_item { padding: 12px 4px; }
-    .mCategories_item .cat_icon { width: 56px; height: 56px; }
-    .mCategories_item .cat_label { font-size: 11px; }
+    .mCategories_grid { gap: 4px; padding: 18px 10px; }
+    .mCategories_item { padding: 10px 2px; }
+    .mCategories_item .cat_icon { width: 48px; height: 48px; }
+    .mCategories_item .cat_label { font-size: 10.5px; }
 }
 @media (max-width: 1024px) {
-    .mCategories_grid { grid-template-columns: repeat(4, 1fr); gap: 10px; row-gap: 24px; position: relative; }
+    .mCategories_grid { grid-template-columns: repeat(4, 1fr); gap: 10px; row-gap: 20px; position: relative; }
     .mCategories_grid.expanded { grid-template-columns: repeat(4, 1fr); }
-    .mCategories_grid .mCategories_item:nth-child(n+5) { margin-top: -10px; }
-    .mCategories_grid::after {
-        content: '';
-        position: absolute;
-        left: 5%;
-        right: 5%;
-        top: calc(50% - 2px);
-        height: 1px;
-        background: #e5e5e5;
-        pointer-events: none;
-    }
 }
 @media (max-width: 640px) {
-    .mCategories_grid { grid-template-columns: repeat(4, 1fr); gap: 8px; row-gap: 24px; position: relative; padding: 16px 8px; }
+    .mCategories_grid { grid-template-columns: repeat(4, 1fr); gap: 8px; row-gap: 18px; position: relative; padding: 16px 8px; }
     .mCategories_grid.expanded { grid-template-columns: repeat(4, 1fr); }
-    .mCategories_grid .mCategories_item:nth-child(n+5) { margin-top: -10px; }
-    .mCategories_grid::after {
-        content: '';
-        position: absolute;
-        left: 8%;
-        right: 8%;
-        top: calc(50% - 2px);
-        height: 1px;
-        background: #e5e5e5;
-        pointer-events: none;
-    }
 }
-/* 모바일: 그리드 숨김, 2줄 캐러셀만 표시 (대분류 8개) - 카드형 + 하단 인디케이터 */
+/* 모바일: 그리드 숨김, 2줄 스와이프 캐러셀만 표시 */
 .mCategories_carousel_wrap { display: none; }
 @media (max-width: 640px) {
-    .mCategories_grid { display: grid !important; grid-template-columns: repeat(4, 1fr) !important; gap: 8px !important; row-gap: 24px !important; }
-    .mCategories_grid .mCategories_item { padding: 12px 4px; }
-    .mCategories_grid .mCategories_item .cat_icon { width: 48px; height: 48px; }
-    .mCategories_grid .mCategories_item .cat_label { font-size: 11px; }
-    #mCategories { background: #F3F5FA; }
-    .mCategories_carousel_wrap { display: none; }
+    .mCategories_grid { display: none !important; }
+    #mCategories { background: #FAFBFD; }
+    .mCategories_carousel_wrap { display: block; }
     .mCategories_carousel_card {
         position: relative;
         background: #fff;
@@ -1238,24 +1355,24 @@ br.quick-br { display: none; }
         box-shadow: 0 1px 3px rgba(0,0,0,0.06);
         overflow: visible;
     }
-    /* 스와이프 가능함 암시: 오른쪽 가장자리 페이드 + 다음 항목 살짝 보이기 */
+    /* 스와이프 가능함 암시: 오른쪽 끝 다음 항목 일부 노출 + 아주 옅은 페이드 */
     .mCategories_carousel_card::after {
         content: '';
         position: absolute;
         top: 20px;
         right: 16px;
         bottom: 36px;
-        width: 28px;
-        background: linear-gradient(to left, rgba(255,255,255,0.92), transparent);
+        width: 14px;
+        background: linear-gradient(to left, rgba(255,255,255,0.55), transparent);
         pointer-events: none;
         z-index: 1;
     }
     .mCategories_swiper { overflow: hidden; padding-bottom: 4px; }
-    .mCategories_swiper .swiper-wrapper { display: flex; flex-wrap: nowrap; }
+    .mCategories_swiper .swiper-wrapper { display: flex; flex-wrap: wrap; }
     .mCategories_swiper .swiper-slide { height: auto; box-sizing: border-box; display: flex; align-items: stretch; }
     .mCategories_swiper .swiper-slide .mCategories_item { width: 100%; margin: 0; flex: 1; min-height: 0; padding: 12px 6px; }
     .mCategories_swiper .swiper-slide .mCategories_item .cat_icon { width: 56px; height: 56px; }
-    .mCategories_swiper .swiper-slide .mCategories_item .cat_label { font-size: 11px; font-weight: 600; color: #222; }
+    .mCategories_swiper .swiper-slide .mCategories_item .cat_label { font-size: 11px; font-weight: 500; color: #222; }
     /* 하단 캐러셀 인디케이터 (진한 바 + 연한 바) */
     .mCategories_carousel_pagination { position: relative; margin-top: 16px; height: 4px; }
     .mCategories_carousel_pagination.swiper-pagination-progressbar { background: #e0e0e0; border-radius: 2px; overflow: hidden; }
@@ -1295,214 +1412,6 @@ a.mCategories_item { text-decoration: none; color: inherit; display: flex; flex-
 /* 호버 시 SVG 내부 개별 요소에 시차 애니메이션 */
 .mCategories_item .cat_icon svg > * { transform-origin: center center; transition: transform 0.3s ease, opacity 0.3s ease; }
 
-/* ── 8개 대분류: SVG 내부 요소별 파형/지연 변형 ── */
-/* 원형 요소: 원 안에서 파형처럼 리드미컬하게 변형 */
-.mCategories_item:is(
-    [title="금속·소재"],
-    [title="화학·케미컬·원료"],
-    [title="전자·전기·반도체"],
-    [title="기계·설비·산업장비"],
-    [title="자동차·모빌리티"],
-    [title="식자재·식품 B2B"],
-    [title="의료·헬스케어"],
-    [title="포장재·소모성 자재"]
-):hover .cat_icon svg circle,
-.mCategories_item:is(
-    [title="금속·소재"],
-    [title="화학·케미컬·원료"],
-    [title="전자·전기·반도체"],
-    [title="기계·설비·산업장비"],
-    [title="자동차·모빌리티"],
-    [title="식자재·식품 B2B"],
-    [title="의료·헬스케어"],
-    [title="포장재·소모성 자재"]
-):active .cat_icon svg circle {
-    animation: iconCircleWave 0.9s ease-in-out both;
-}
-.mCategories_item:is(
-    [title="금속·소재"],
-    [title="화학·케미컬·원료"],
-    [title="전자·전기·반도체"],
-    [title="기계·설비·산업장비"],
-    [title="자동차·모빌리티"],
-    [title="식자재·식품 B2B"],
-    [title="의료·헬스케어"],
-    [title="포장재·소모성 자재"]
-):hover .cat_icon svg circle:nth-of-type(2),
-.mCategories_item:is(
-    [title="금속·소재"],
-    [title="화학·케미컬·원료"],
-    [title="전자·전기·반도체"],
-    [title="기계·설비·산업장비"],
-    [title="자동차·모빌리티"],
-    [title="식자재·식품 B2B"],
-    [title="의료·헬스케어"],
-    [title="포장재·소모성 자재"]
-):active .cat_icon svg circle:nth-of-type(2) {
-    animation-delay: 0.08s;
-}
-
-/* path 요소: 각 path가 약간씩 딜레이를 두고 다른 변형 */
-.mCategories_item:is(
-    [title="금속·소재"],
-    [title="화학·케미컬·원료"],
-    [title="전자·전기·반도체"],
-    [title="기계·설비·산업장비"],
-    [title="자동차·모빌리티"],
-    [title="식자재·식품 B2B"],
-    [title="의료·헬스케어"],
-    [title="포장재·소모성 자재"]
-):hover .cat_icon svg path,
-.mCategories_item:is(
-    [title="금속·소재"],
-    [title="화학·케미컬·원료"],
-    [title="전자·전기·반도체"],
-    [title="기계·설비·산업장비"],
-    [title="자동차·모빌리티"],
-    [title="식자재·식품 B2B"],
-    [title="의료·헬스케어"],
-    [title="포장재·소모성 자재"]
-):active .cat_icon svg path {
-    animation: iconPathMorphA 0.85s cubic-bezier(0.2, 0.65, 0.2, 1) both;
-}
-.mCategories_item:is(
-    [title="금속·소재"],
-    [title="화학·케미컬·원료"],
-    [title="전자·전기·반도체"],
-    [title="기계·설비·산업장비"],
-    [title="자동차·모빌리티"],
-    [title="식자재·식품 B2B"],
-    [title="의료·헬스케어"],
-    [title="포장재·소모성 자재"]
-):hover .cat_icon svg path:nth-of-type(2n),
-.mCategories_item:is(
-    [title="금속·소재"],
-    [title="화학·케미컬·원료"],
-    [title="전자·전기·반도체"],
-    [title="기계·설비·산업장비"],
-    [title="자동차·모빌리티"],
-    [title="식자재·식품 B2B"],
-    [title="의료·헬스케어"],
-    [title="포장재·소모성 자재"]
-):active .cat_icon svg path:nth-of-type(2n) {
-    animation-name: iconPathMorphB;
-    animation-delay: 0.06s;
-}
-.mCategories_item:is(
-    [title="금속·소재"],
-    [title="화학·케미컬·원료"],
-    [title="전자·전기·반도체"],
-    [title="기계·설비·산업장비"],
-    [title="자동차·모빌리티"],
-    [title="식자재·식품 B2B"],
-    [title="의료·헬스케어"],
-    [title="포장재·소모성 자재"]
-):hover .cat_icon svg path:nth-of-type(3n),
-.mCategories_item:is(
-    [title="금속·소재"],
-    [title="화학·케미컬·원료"],
-    [title="전자·전기·반도체"],
-    [title="기계·설비·산업장비"],
-    [title="자동차·모빌리티"],
-    [title="식자재·식품 B2B"],
-    [title="의료·헬스케어"],
-    [title="포장재·소모성 자재"]
-):active .cat_icon svg path:nth-of-type(3n) {
-    animation-name: iconPathMorphC;
-    animation-delay: 0.12s;
-}
-.mCategories_item:is(
-    [title="금속·소재"],
-    [title="화학·케미컬·원료"],
-    [title="전자·전기·반도체"],
-    [title="기계·설비·산업장비"],
-    [title="자동차·모빌리티"],
-    [title="식자재·식품 B2B"],
-    [title="의료·헬스케어"],
-    [title="포장재·소모성 자재"]
-):hover .cat_icon svg path:nth-of-type(4n),
-.mCategories_item:is(
-    [title="금속·소재"],
-    [title="화학·케미컬·원료"],
-    [title="전자·전기·반도체"],
-    [title="기계·설비·산업장비"],
-    [title="자동차·모빌리티"],
-    [title="식자재·식품 B2B"],
-    [title="의료·헬스케어"],
-    [title="포장재·소모성 자재"]
-):active .cat_icon svg path:nth-of-type(4n) {
-    animation-delay: 0.18s;
-}
-
-/* rect 요소: 면 단위로 살짝 출렁이게 */
-.mCategories_item:is(
-    [title="금속·소재"],
-    [title="화학·케미컬·원료"],
-    [title="전자·전기·반도체"],
-    [title="기계·설비·산업장비"],
-    [title="자동차·모빌리티"],
-    [title="식자재·식품 B2B"],
-    [title="의료·헬스케어"],
-    [title="포장재·소모성 자재"]
-):hover .cat_icon svg rect,
-.mCategories_item:is(
-    [title="금속·소재"],
-    [title="화학·케미컬·원료"],
-    [title="전자·전기·반도체"],
-    [title="기계·설비·산업장비"],
-    [title="자동차·모빌리티"],
-    [title="식자재·식품 B2B"],
-    [title="의료·헬스케어"],
-    [title="포장재·소모성 자재"]
-):active .cat_icon svg rect {
-    animation: iconRectWaveA 0.85s ease-in-out both;
-}
-.mCategories_item:is(
-    [title="금속·소재"],
-    [title="화학·케미컬·원료"],
-    [title="전자·전기·반도체"],
-    [title="기계·설비·산업장비"],
-    [title="자동차·모빌리티"],
-    [title="식자재·식품 B2B"],
-    [title="의료·헬스케어"],
-    [title="포장재·소모성 자재"]
-):hover .cat_icon svg rect:nth-of-type(2n),
-.mCategories_item:is(
-    [title="금속·소재"],
-    [title="화학·케미컬·원료"],
-    [title="전자·전기·반도체"],
-    [title="기계·설비·산업장비"],
-    [title="자동차·모빌리티"],
-    [title="식자재·식품 B2B"],
-    [title="의료·헬스케어"],
-    [title="포장재·소모성 자재"]
-):active .cat_icon svg rect:nth-of-type(2n) {
-    animation-name: iconRectWaveB;
-    animation-delay: 0.07s;
-}
-.mCategories_item:is(
-    [title="금속·소재"],
-    [title="화학·케미컬·원료"],
-    [title="전자·전기·반도체"],
-    [title="기계·설비·산업장비"],
-    [title="자동차·모빌리티"],
-    [title="식자재·식품 B2B"],
-    [title="의료·헬스케어"],
-    [title="포장재·소모성 자재"]
-):hover .cat_icon svg rect:nth-of-type(3n),
-.mCategories_item:is(
-    [title="금속·소재"],
-    [title="화학·케미컬·원료"],
-    [title="전자·전기·반도체"],
-    [title="기계·설비·산업장비"],
-    [title="자동차·모빌리티"],
-    [title="식자재·식품 B2B"],
-    [title="의료·헬스케어"],
-    [title="포장재·소모성 자재"]
-):active .cat_icon svg rect:nth-of-type(3n) {
-    animation-delay: 0.14s;
-}
-
 @keyframes iconCircleWave {
     0%, 100% { transform: scale(1, 1) translateY(0); opacity: 1; }
     25% { transform: scale(1.08, 0.93) translateY(-1px); opacity: 0.92; }
@@ -1532,130 +1441,75 @@ a.mCategories_item { text-decoration: none; color: inherit; display: flex; flex-
     0%, 100% { transform: translateX(0) scale(1); opacity: 1; }
     50% { transform: translateX(2px) scale(1.02); opacity: 0.9; }
 }
-/* 전기전자 - 전기 스파크 효과 */
-.mCategories_item[title="전기전자"]:hover .cat_icon svg,
-.mCategories_item[title="전기전자"]:active .cat_icon svg {
-    animation: iconElectronics 0.6s ease-in-out;
+.mCategories_item:hover .cat_icon svg,
+.mCategories_item:active .cat_icon svg {
+    animation: categoryIconPop 0.6s cubic-bezier(0.2, 0.65, 0.2, 1) both;
 }
-/* 반도체 - 미세한 진동 */
-.mCategories_item[title="반도체"]:hover .cat_icon svg,
-.mCategories_item[title="반도체"]:active .cat_icon svg {
-    animation: iconSemiconductor 0.6s ease-in-out;
+.mCategories_item:hover .cat_icon svg use,
+.mCategories_item:active .cat_icon svg use {
+    animation: categoryIconUsePulse 0.6s ease-in-out both;
+    transform-origin: center center;
 }
-/* IT·소프트웨어 - 디지털 효과 */
-.mCategories_item[title="IT·소프트웨어"]:hover .cat_icon svg,
-.mCategories_item[title="IT·소프트웨어"]:active .cat_icon svg {
-    animation: iconIT 0.6s ease-in-out;
+.mCategories_item:hover .cat_icon svg circle,
+.mCategories_item:active .cat_icon svg circle,
+.mCategories_item:hover .cat_icon svg ellipse,
+.mCategories_item:active .cat_icon svg ellipse {
+    animation: iconCircleWave 0.9s ease-in-out both;
 }
-/* 통신 - 신호 전송 효과 */
-.mCategories_item[title="통신"]:hover .cat_icon svg,
-.mCategories_item[title="통신"]:active .cat_icon svg {
-    animation: iconTelecom 0.6s ease-in-out;
+.mCategories_item:hover .cat_icon svg path,
+.mCategories_item:active .cat_icon svg path,
+.mCategories_item:hover .cat_icon svg polygon,
+.mCategories_item:active .cat_icon svg polygon,
+.mCategories_item:hover .cat_icon svg polyline,
+.mCategories_item:active .cat_icon svg polyline,
+.mCategories_item:hover .cat_icon svg line,
+.mCategories_item:active .cat_icon svg line {
+    animation: iconPathMorphA 0.85s cubic-bezier(0.2, 0.65, 0.2, 1) both;
 }
-/* 건설 - 견고한 확대 */
-.mCategories_item[title="건설"]:hover .cat_icon svg,
-.mCategories_item[title="건설"]:active .cat_icon svg {
-    animation: iconConstruction 0.6s ease-in-out;
+.mCategories_item:hover .cat_icon svg path:nth-of-type(2n),
+.mCategories_item:active .cat_icon svg path:nth-of-type(2n),
+.mCategories_item:hover .cat_icon svg polygon:nth-of-type(2n),
+.mCategories_item:active .cat_icon svg polygon:nth-of-type(2n) {
+    animation-name: iconPathMorphB;
+    animation-delay: 0.06s;
 }
-/* 토목 - 안정적인 상승 */
-.mCategories_item[title="토목"]:hover .cat_icon svg,
-.mCategories_item[title="토목"]:active .cat_icon svg {
-    animation: iconCivil 0.6s ease-in-out;
+.mCategories_item:hover .cat_icon svg path:nth-of-type(3n),
+.mCategories_item:active .cat_icon svg path:nth-of-type(3n),
+.mCategories_item:hover .cat_icon svg polygon:nth-of-type(3n),
+.mCategories_item:active .cat_icon svg polygon:nth-of-type(3n) {
+    animation-name: iconPathMorphC;
+    animation-delay: 0.12s;
 }
-/* 에너지·환경 - 에너지 파동 */
-.mCategories_item[title="에너지·환경"]:hover .cat_icon svg,
-.mCategories_item[title="에너지·환경"]:active .cat_icon svg {
-    animation: iconEnergy 0.6s ease-in-out;
+.mCategories_item:hover .cat_icon svg rect,
+.mCategories_item:active .cat_icon svg rect {
+    animation: iconRectWaveA 0.85s ease-in-out both;
 }
-/* 유통 - 흐르는 효과 */
-.mCategories_item[title="유통"]:hover .cat_icon svg,
-.mCategories_item[title="유통"]:active .cat_icon svg {
-    animation: iconDistribution 0.6s ease-in-out;
+.mCategories_item:hover .cat_label,
+.mCategories_item:active .cat_label {
+    color: #3B5BDB;
 }
-/* 인력 - 사람 움직임 */
-.mCategories_item[title="인력"]:hover .cat_icon svg,
-.mCategories_item[title="인력"]:active .cat_icon svg {
-    animation: iconLabor 0.6s ease-in-out;
+@keyframes categoryIconPop {
+    0% { transform: translateY(0) scale(1); filter: none; }
+    42% { transform: translateY(-4px) scale(1.08); filter: drop-shadow(0 8px 10px rgba(59,91,219,0.18)); }
+    72% { transform: translateY(1px) scale(0.98); filter: drop-shadow(0 3px 6px rgba(59,91,219,0.12)); }
+    100% { transform: translateY(0) scale(1); filter: none; }
 }
-/* 연구·기술 - 혁신적인 회전 */
-.mCategories_item[title="연구·기술"]:hover .cat_icon svg,
-.mCategories_item[title="연구·기술"]:active .cat_icon svg {
-    animation: iconResearch 0.6s ease-in-out;
-}
-/* (기존 전체-SVG 대상 keyframes 제거 – 개별 요소 keyframes으로 대체) */
-@keyframes iconElectronics {
-    0% { transform: scale(1); opacity: 1; }
-    25% { transform: scale(1.1); opacity: 0.8; }
-    50% { transform: scale(1.15); opacity: 1; }
-    75% { transform: scale(1.1); opacity: 0.8; }
-    100% { transform: scale(1); opacity: 1; }
-}
-@keyframes iconSemiconductor {
-    0% { transform: translateY(0) scale(1); }
-    50% { transform: translateY(-3px) scale(1.08); }
-    100% { transform: translateY(0) scale(1); }
-}
-@keyframes iconIT {
-    0% { transform: rotateZ(0deg) scale(1); }
-    50% { transform: rotateZ(180deg) scale(1.12); }
-    100% { transform: rotateZ(360deg) scale(1); }
-}
-@keyframes iconTelecom {
-    0% { transform: translateY(0) scale(1); }
-    25% { transform: translateY(-5px) scale(1.1); }
-    50% { transform: translateY(-8px) scale(1.15); }
-    75% { transform: translateY(-5px) scale(1.1); }
-    100% { transform: translateY(0) scale(1); }
-}
-@keyframes iconConstruction {
-    0% { transform: scale(1) rotateX(0deg); }
-    50% { transform: scale(1.2) rotateX(10deg); }
-    100% { transform: scale(1) rotateX(0deg); }
-}
-@keyframes iconCivil {
-    0% { transform: translateY(0) scale(1); }
-    50% { transform: translateY(-10px) scale(1.12); }
-    100% { transform: translateY(0) scale(1); }
-}
-@keyframes iconEnergy {
-    0% { transform: scale(1) rotateZ(0deg); }
-    25% { transform: scale(1.1) rotateZ(90deg); }
-    50% { transform: scale(1.15) rotateZ(180deg); }
-    75% { transform: scale(1.1) rotateZ(270deg); }
-    100% { transform: scale(1) rotateZ(360deg); }
-}
-@keyframes iconDistribution {
-    0% { transform: translateX(0) scale(1); }
-    50% { transform: translateX(8px) scale(1.1); }
-    100% { transform: translateX(0) scale(1); }
-}
-@keyframes iconLabor {
-    0% { transform: translateY(0) rotateY(0deg) scale(1); }
-    50% { transform: translateY(-6px) rotateY(15deg) scale(1.1); }
-    100% { transform: translateY(0) rotateY(0deg) scale(1); }
-}
-@keyframes iconResearch {
-    0% { transform: rotateY(0deg) rotateX(0deg) scale(1); }
-    50% { transform: rotateY(180deg) rotateX(15deg) scale(1.15); }
-    100% { transform: rotateY(360deg) rotateX(0deg) scale(1); }
-}
-/* (개별 요소 애니메이션은 위 카테고리별 규칙으로 대체됨) */
-@keyframes pathHover6 {
-    0% { transform: translateZ(0px) rotateX(0deg) rotateY(0deg) scale(1); opacity: 1; }
-    50% { transform: translateZ(5px) rotateX(-5deg) rotateY(10deg) scale(1.05); opacity: 0.95; }
-    100% { transform: translateZ(0px) rotateX(0deg) rotateY(0deg) scale(1); opacity: 1; }
+@keyframes categoryIconUsePulse {
+    0%, 100% { opacity: 1; }
+    45% { opacity: 0.88; }
 }
 .mCategories_item .cat_label {
     display: block;
-    font-size: 12px;
-    font-weight: 600;
+    font-size: 11.5px;
+    font-weight: 500;
     color: #222;
     line-height: 1.3;
     word-break: keep-all;
-    overflow: hidden;
+    overflow-wrap: anywhere;
+    overflow: visible;
     white-space: normal;
-    text-overflow: ellipsis;
     max-width: 100%;
+    min-height: 2.6em;
 }
 .mCategories_item .cat_badge { display: none; }
 .mCategories_item .cat_badge.best { display: none; }
@@ -1669,6 +1523,7 @@ a.mCategories_item { text-decoration: none; color: inherit; display: flex; flex-
 }
 .mHookSection:nth-child(even) { background: #F3F5FA; }
 .mHookSection:nth-child(odd) { background: #FAFBFD; }
+#hkGrowth { background: #F3F5FA; }
 .mHookSection .section-inner {
     max-width: 1200px;
     margin: 0 auto;

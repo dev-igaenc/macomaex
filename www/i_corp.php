@@ -61,10 +61,9 @@ foreach($arr as $row){
 	
 	//sql_query($sql);
 	//echo $sql;
-	$bzc_cd=$row->ENPintr0000->bzc_cd;
-	$bzc_cd=substr($bzc_cd,1);
-	//echo "select * from kssc where k_code='$bzc_cd'";
-	$info = sql_fetch("select * from kssc where k_code='$bzc_cd'");
+		$bzc_cd=$row->ENPintr0000->bzc_cd;
+		//echo "select * from kssc_11 where k_code='$bzc_cd'";
+		$info = sql_fetch("select * from kssc_11 where k_code='$bzc_cd'");
 
 	echo $info['k_code_name'];
 	}

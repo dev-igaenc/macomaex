@@ -73,7 +73,7 @@
     setInterval(function() { show(current + 1); }, 2000);
 })();
 
-// 모바일 전용: 카테고리 2줄 스와이프 캐러셀 (대분류 8개)
+// 모바일 전용: 카테고리 2줄 스와이프 캐러셀 (대분류 18개)
 (function() {
     var wrap = document.querySelector('.mCategories_carousel_wrap');
     var el = document.querySelector('.mCategories_swiper');

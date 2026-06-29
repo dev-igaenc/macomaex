@@ -41,7 +41,7 @@ if (G5_IS_MOBILE) {
     <div class="inConts">
         <div class="textArea">
             <ul class="links">
-                <li><a href="<?=$link_0101?>">매커멕스란</a></li>
+                <?php /* <li><a href="<?=$link_0101?>">매커멕스란</a></li> */ ?>
                 <li><a href="<?=$link_1201?>">이용약관</a></li>
 				<li><a href="<?=$link_1202?>">개인정보 처리방침</a></li>
 				<li><a href="<?=$link_1204?>">환불규정</a></li>
