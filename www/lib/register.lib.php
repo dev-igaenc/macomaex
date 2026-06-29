@@ -271,7 +271,7 @@ function macomaex_aligo_send_sms($receiver, $message)
     if (!$config['ready']) {
         return array(
             'ok' => false,
-            'message' => '알리고 설정값이 누락되었습니다.',
+            'message' => '문자 발송을 준비 중입니다. 잠시 후 다시 시도해 주세요.',
             'debug' => array('reason' => 'missing_config'),
         );
     }
@@ -379,7 +379,7 @@ function macomaex_aligo_remain()
     if (!$config['ready']) {
         return array(
             'ok' => false,
-            'message' => '알리고 설정값이 누락되었습니다.',
+            'message' => '문자 발송 상태를 확인할 수 없습니다.',
             'debug' => array('reason' => 'missing_config'),
         );
     }

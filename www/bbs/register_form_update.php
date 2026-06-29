@@ -122,6 +122,7 @@ $member_mb_name = trim((string) $member['mb_name']);
 $member_mb_nick = trim((string) $member['mb_nick']);
 $member_mb_company = trim((string) $member['mb_company']);
 $member_mb_6 = trim((string) $member['mb_6']);
+$member_mb_8 = trim((string) $member['mb_8']);
 
 $cert_mb_name   = clean_xss_tags($cert_mb_name);
 $mb_name        = ($w == '') ? $mb_id : clean_xss_tags($mb_name);
@@ -271,6 +272,11 @@ if ($w != '' && $config['cf_cert_use'] && $cert_type && $md5_cert_no) {
         alert('본인인증된 정보와 입력된 회원정보가 일치하지않습니다. 다시시도 해주세요');
     }
 } else if ($w != '') {
+    $phone_changed = (macomaex_signup_phone_otp_normalize($mb_8) !== macomaex_signup_phone_otp_normalize($member_mb_8));
+    if ($phone_changed && !macomaex_signup_phone_otp_is_verified($mb_8)) {
+        alert('변경한 휴대폰 번호의 인증을 완료해 주세요.', "", true, true);
+    }
+
     if (get_session("ss_reg_mb_name") != $mb_name || get_session("ss_reg_mb_hp") != $mb_hp) {
         $sql_certify .= " , mb_hp = '{$mb_hp}' ";
         $sql_certify .= " , mb_certify = '' ";
@@ -537,6 +543,9 @@ if(substr($sql,-1)==",") $sql=substr($sql,0,-1);
 $sql .= "              where mb_id = '$mb_id' ";
 
     sql_query($sql);
+    if ($phone_changed) {
+        macomaex_signup_phone_otp_clear();
+    }
 
     if($cert_type == 'ipin' && get_session('ss_cert_hash') == md5($mb_name.$cert_type.get_session('ss_cert_birth').$md5_cert_no)) { // 아이핀일때 hash 값 체크 hp미포함)
         insert_member_cert_history($mb_id, $mb_name, $mb_hp, get_session('ss_cert_birth'), get_session('ss_cert_type') ); // 본인인증 후 정보 수정 시 내역 기록
