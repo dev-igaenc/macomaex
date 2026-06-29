@@ -106,25 +106,12 @@ $mb_company     = isset($_POST['mb_company'])       ? trim($_POST['mb_company'])
 $mb_6           = isset($_POST['mb_6'])             ? trim($_POST['mb_6'])           : "";
 // $mb_7           = isset($_POST['mb_7'])             ? trim($_POST['mb_7'])           : "";
 $mb_8           = isset($_POST['mb_8'])             ? trim($_POST['mb_8'])           : "";
+$use_member_consent = isset($_POST['use_member_consent']) && trim((string) $_POST['use_member_consent']) === '1';
+$mb_9           = $use_member_consent ? (isset($_POST['terms']) ? '1' : '0') : trim((string) ($member['mb_9'] ?? ''));
+$mb_10          = $use_member_consent ? (isset($_POST['privacy']) ? '1' : '0') : trim((string) ($member['mb_10'] ?? ''));
+$mb_11          = $use_member_consent ? (isset($_POST['marketing']) ? '1' : '0') : trim((string) ($member['mb_11'] ?? ''));
 $mb_5           = $mb_email;
 $mb_7           = "";
-$mb_9_list      = (isset($_POST['mb_9']) && is_array($_POST['mb_9'])) ? $_POST['mb_9'] : array();
-// $mb_10_list     = (isset($_POST['mb_10']) && is_array($_POST['mb_10'])) ? $_POST['mb_10'] : array();
-$mb_10_list     = array();
-
-$mb_9_list = array_map('trim', $mb_9_list);
-$mb_10_list = array_map('trim', $mb_10_list);
-
-$mb_9_list = array_values(array_filter($mb_9_list, static function ($value) {
-    return $value !== '';
-}));
-$mb_10_list = array_values(array_filter($mb_10_list, static function ($value) {
-    return $value !== '';
-}));
-
-$mb_9 = implode(":|:", $mb_9_list);
-// $mb_10 = implode(":|:", $mb_10_list);
-$mb_10 = "";
 $comnum = $mb_4;
 
 if (!isset($default) || !is_array($default)) {
@@ -135,6 +122,8 @@ $member_mb_4 = trim((string) $member['mb_4']);
 $member_mb_name = trim((string) $member['mb_name']);
 $member_mb_nick = trim((string) $member['mb_nick']);
 $member_mb_company = trim((string) $member['mb_company']);
+$member_mb_6 = trim((string) $member['mb_6']);
+$member_mb_8 = trim((string) $member['mb_8']);
 
 $cert_mb_name   = clean_xss_tags($cert_mb_name);
 $mb_name        = ($w == '') ? $mb_id : clean_xss_tags($mb_name);
@@ -284,6 +273,19 @@ if ($w != '' && $config['cf_cert_use'] && $cert_type && $md5_cert_no) {
         alert('본인인증된 정보와 입력된 회원정보가 일치하지않습니다. 다시시도 해주세요');
     }
 } else if ($w != '') {
+    if ($use_member_consent && $mb_9 !== '1') {
+        alert('이용약관에 동의해 주세요.', "", true, true);
+    }
+
+    if ($use_member_consent && $mb_10 !== '1') {
+        alert('개인정보 수집 및 이용동의에 동의해 주세요.', "", true, true);
+    }
+
+    $phone_changed = (macomaex_signup_phone_otp_normalize($mb_8) !== macomaex_signup_phone_otp_normalize($member_mb_8));
+    if ($phone_changed && !macomaex_signup_phone_otp_is_verified($mb_8)) {
+        alert('변경한 휴대폰 번호의 인증을 완료해 주세요.', "", true, true);
+    }
+
     if (get_session("ss_reg_mb_name") != $mb_name || get_session("ss_reg_mb_hp") != $mb_hp) {
         $sql_certify .= " , mb_hp = '{$mb_hp}' ";
         $sql_certify .= " , mb_certify = '' ";
@@ -337,8 +339,9 @@ if ($w == '') {
                      mb_6 = '{$mb_6}',
                      /* mb_7 = '{$mb_7}', */
                      mb_8 = '{$mb_8}',
-                     mb_9 = '{$mb_9}'
-                     /* mb_10 = '{$mb_10}' */
+                     mb_9 = '{$mb_9}',
+                     mb_10 = '{$mb_10}',
+                     mb_11 = '{$mb_11}'
                      {$sql_certify} ";
 
     // 이메일 인증을 사용하지 않는다면 이메일 인증시간을 바로 넣는다
@@ -510,6 +513,9 @@ if ($w == '') {
         $mb_nick = $member_mb_nick;
     }
 
+    // 회원정보 수정 화면에서는 담당자 이름 변경을 허용하지 않습니다.
+    $mb_6 = $member_mb_6;
+
     $sql = " update {$g5['member_table']} set ";
 if($should_sync_company_identity && $mb_name) $sql .= "                    mb_name = '{$mb_name}',";
 if($should_sync_company_identity && $mb_nick) $sql .= "					mb_nick = '{$mb_nick}',";
@@ -531,15 +537,16 @@ $sql .= "                    mb_company = '{$mb_company}',";
 if($mb_1) $sql .= "                    mb_1 = '{$mb_1}',";
 if($mb_2) $sql .= "                    mb_2 = '{$mb_2}',";
 // $sql .= "                    mb_3 = '{$mb_3}',";
-$sql .= "                    mb_4 = '{$mb_4}',";
-// if($mb_5) $sql .= "                    mb_5 = '{$mb_5}',";
-	$sql .= "                    mb_6 = '{$mb_6}',";
-// $sql .= "                    mb_7 = '{$mb_7}',";
-	if($mb_8) $sql .= "                    mb_hp = '{$mb_8}',";
-	if($mb_8) $sql .= "                    mb_8 = '{$mb_8}',";
-if($mb_9) $sql .= "                    mb_9 = '{$mb_9}',";
-// if($mb_10) $sql .= "                    mb_10 = '{$mb_10}'";
-if(substr($sql,-1)==",") $sql=substr($sql,0,-1);
+	$sql .= "                    mb_4 = '{$mb_4}',";
+	// if($mb_5) $sql .= "                    mb_5 = '{$mb_5}',";
+		$sql .= "                    mb_6 = '{$mb_6}',";
+	// $sql .= "                    mb_7 = '{$mb_7}',";
+		if($mb_8) $sql .= "                    mb_hp = '{$mb_8}',";
+		if($mb_8) $sql .= "                    mb_8 = '{$mb_8}',";
+	if ($use_member_consent) $sql .= "                    mb_9 = '{$mb_9}',";
+	if ($use_member_consent) $sql .= "                    mb_10 = '{$mb_10}',";
+	if ($use_member_consent) $sql .= "                    mb_11 = '{$mb_11}',";
+	if(substr($sql,-1)==",") $sql=substr($sql,0,-1);
 //$sql .= "                    {$sql_password}";
 //$sql .= "                    {$sql_nick_date}";
 //$sql .= "                    {$sql_open_date}";
@@ -548,6 +555,9 @@ if(substr($sql,-1)==",") $sql=substr($sql,0,-1);
 $sql .= "              where mb_id = '$mb_id' ";
 
     sql_query($sql);
+    if ($phone_changed) {
+        macomaex_signup_phone_otp_clear();
+    }
 
     if($cert_type == 'ipin' && get_session('ss_cert_hash') == md5($mb_name.$cert_type.get_session('ss_cert_birth').$md5_cert_no)) { // 아이핀일때 hash 값 체크 hp미포함)
         insert_member_cert_history($mb_id, $mb_name, $mb_hp, get_session('ss_cert_birth'), get_session('ss_cert_type') ); // 본인인증 후 정보 수정 시 내역 기록

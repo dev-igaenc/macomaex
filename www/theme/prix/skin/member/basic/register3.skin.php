@@ -79,15 +79,6 @@ if (!defined('_GNUBOARD_')) exit; // 개별 페이지 접근 불가
                         </ul>
                     </div>
                     <div class="inputBox requied type2">
-                        <p class="title">회원사 가입유무</p>
-						<span class="checkIn">
-							<input type="checkbox" id="mb_10_1" name="mb_10[]"  class="selec_chk" value="벤처기업" ><label for="mb_10_1">벤처기업</label>
-							<input type="checkbox" id="mb_10_2" name="mb_10[]"  class="selec_chk" value="메인비즈" ><label for="mb_10_2">메인비즈</label><br>
-							<input type="checkbox" id="mb_10_3" name="mb_10[]"  class="selec_chk" value="이노비즈" ><label for="mb_10_3">이노비즈</label>
-							<input type="checkbox" id="mb_10_4" name="mb_10[]"  class="selec_chk" value="해당사항없음" ><label for="mb_10_4">해당사항없음</label>
-						</span>
-                    </div>
-                    <div class="inputBox requied type2">
                         <p class="title">담당자 이름</p>
                         <input type="text" name="mb_6" id="mb_6" maxlength="32">
                     </div>
@@ -105,14 +96,6 @@ if (!defined('_GNUBOARD_')) exit; // 개별 페이지 접근 불가
 						<p class="txt-right formBox_errorM ">이메일 주소를 입력해주세요</p>
                     </div>
                     -->
-                    <div class="inputBox type2 type3 Product">
-                        <p class="title">주요 서비스/제품</p>
-                        <div class="products addz">
-                            <input name="mb_9[]" type="text" maxlength="32">
-                            <button type="button" class="add">+</button>
-                        </div>
-                        <!-- 구조 개선을 원하시면 말씀해주세요 -->
-                    </div>
 					<div class="inputBox type2">
                         <p class="title">가입이벤트쿠폰</p>
                         <input type="text" name="coupon" id="coupon" placeholder="ex) ED9A01" maxlength="6">
@@ -293,17 +276,6 @@ function fregisterform_submit()
 		return false;
 	}
 	// 담당자 정보 입력/검증 비활성화 (mb_5/mb_6/mb_7/mb_8)
-/*
-	mb_9_chk="false";
-	$("input[name='mb_9[]']").each(function(){
-		if($(this).val().length>0) mb_9_chk="true";
-	})
-	if(mb_9_chk=="false") {
-		mb_9_t=$(".Product .title").text();
-		jAlert(mb_9_t+"을 하나이상 입력해 주세요.","알림",function(){$("input[name='mb_9[]']:eq(0)").focus();});
-		return false;
-	}
-*/
 	if($("#coupon").val().length>0 && $("#coupon").val().length<6) {
 		jAlert("쿠폰번호를 확인해 주세요.","알림");
 		return false;

@@ -25,63 +25,76 @@ if ($social_email) {
 <style>
     #sVisual,
     #pageTop{display:none}
-    .social-join-wrap{max-width:720px;margin:72px auto 96px;padding:0 20px}
-    .social-join-card{background:#fff}
-    .social-join-provider{display:flex;align-items:center;width:max-content;max-width:100%;height:28px;margin:0 auto;padding:0 10px;border-radius:4px;background:#f4f6f8;color:#667085;font-size:13px;font-weight:700;box-sizing:border-box}
-    .social-join-title{margin:18px 0 8px;color:#111827;font-size:28px;line-height:1.35;font-weight:800;letter-spacing:0}
-    .social-join-desc{margin:0 0 28px;color:#667085;font-size:15px;line-height:1.65}
-    .social-join-form{display:flex;flex-direction:column;gap:18px}
-    .social-join-field label{display:block;margin-bottom:8px;color:#344054;font-size:14px;font-weight:700}
-    .social-join-field label.social-required::after{content:'*';padding-left:3px;color:#ff0000}
-    .social-join-input{width:100%;height:52px;border:1px solid #d0d5dd;border-radius:6px;padding:0 15px;color:#101828;font-size:16px;background:#fff;box-sizing:border-box}
-    .social-join-input:read-only{background:#f9fafb;color:#667085}
-    .social-join-cert{display:flex;gap:8px;align-items:center}
-    .social-join-cert .social-join-input{flex:1;min-width:0}
-    .social-join-cert-code{display:none;margin-top:8px}
-    .social-join-cert-btn{height:52px;padding:0 18px;border:0;border-radius:6px;background:#111827;color:#fff;font-size:15px;font-weight:800;white-space:nowrap;cursor:pointer}
-    .social-join-cert-btn.secondary{background:#2563eb}
-    .social-join-cert-btn:disabled{background:#9ca3af;cursor:not-allowed}
-    .social-join-help{margin:8px 0 0;color:#8a94a6;font-size:13px;line-height:1.5}
-    .social-join-error{margin:8px 0 0;color:#d92d20;font-size:13px;line-height:1.5}
-    .social-join-status{margin:8px 0 0;color:#667085;font-size:13px;line-height:1.5}
-    #signup_phone_status.social-join-status.success{color:#2563eb}
-    #signup_phone_status.social-join-status.warning{color:#b45309}
-    #signup_phone_status.social-join-status.error{color:#d92d20}
-    .social-join-actions{display:flex;gap:10px;margin-top:12px}
-    .social-join-submit,.social-join-cancel{display:flex;align-items:center;justify-content:center;flex:1;width:100%;height:60px;border:0;border-radius:5px;color:#fff;font-size:17px;line-height:20px;font-weight:550;text-decoration:none;box-sizing:border-box}
-    .social-join-submit{background:var(--point);cursor:pointer}
-    .social-join-cancel{background:#999}
+    #join_single .join_agree_head{border-bottom:none;margin-bottom:0;padding-bottom:0}
+    #join_single .section_divider{width:100%;height:1px;background:#ddd;margin:0 0 3rem}
+    #join_single .required_mark{position:relative;display:inline-block}
+    #join_single .required_mark::after{content:'*';color:#ff0000;padding-left:0.25rem}
+    #join_single .formBox.terms_box{margin-bottom:2.2rem}
+    #join_single .formBox.terms_box .checkBox{margin-top:0.8rem;display:flex;align-items:center;gap:0.8rem}
+    #join_single .formBox.terms_all_box{margin-top:0.6rem;margin-bottom:2.6rem}
+    #join_single .formBox.terms_all_box .checkBox label{font-size:1.8rem;font-weight:700;line-height:1.2;padding-left:2.4rem}
+    #join_single .formBox.terms_all_box .checkBox label::before{width:1.8rem;height:1.8rem}
+    #join_single .formBox.terms_all_box .checkBox label::after{left:0.25rem;width:1.3rem}
+    #join_single .formBox.terms_box .checkBox input{
+        position:static;
+        top:auto;
+        left:auto;
+        width:1.6rem;
+        height:1.6rem;
+        z-index:auto;
+        flex:0 0 1.6rem;
+        cursor:pointer;
+        opacity:1;
+        appearance:auto !important;
+        -webkit-appearance:checkbox !important;
+        -moz-appearance:auto !important;
+        accent-color:#111;
+    }
+    #join_single .formBox.terms_box .consent_text{font-size:1.5rem;line-height:1.4;color:#666}
+    #join_single .formBox.terms_box .consent_text a{color:#666;text-decoration:underline;text-underline-offset:0.2rem}
+    #join_single .formBox.terms_box .consent_text a:hover{color:#444}
+    #join_single .cert_input_group{display:flex;gap:0.8rem;align-items:stretch}
+    #join_single .cert_input_group .inputBox{flex:1;min-width:0}
+    #join_single .cert_btn{min-height:4.8rem;padding:0 1.8rem;margin-bottom:10px;border:0;border-radius:0.4rem;background:#111;color:#fff;font-size:1.5rem;font-weight:700;white-space:nowrap;cursor:pointer}
+    #join_single .cert_btn.secondary{background:#2563eb}
+    #join_single .cert_btn:disabled{background:#9ca3af;cursor:not-allowed}
+    #join_single .phone_cert_code{display:none;margin-top:0.8rem}
+    #join_single .phone_cert_status{margin-top:0.8rem;color:#666;font-size:1.4rem;line-height:1.5}
+    #join_single .phone_cert_status.success{color:#2563eb}
+    #join_single .phone_cert_status.warning{color:#b45309}
+    #join_single .phone_cert_status.error{color:#d92d20}
+    #join_single .social_provider_badge{display:inline-flex;align-items:center;justify-content:center;min-height:2.8rem;padding:0 1rem;margin:0 auto 1.6rem;border-radius:999px;background:#f4f6f8;color:#667085;font-size:1.3rem;font-weight:700}
+    #join_single .social_join_desc{margin-bottom:2.4rem;color:#8a94a6;font-size:1.4rem;line-height:1.6;text-align:center}
+    #join_single .social_join_error{margin-top:1.2rem;color:#d92d20;font-size:1.4rem;line-height:1.6;text-align:center}
     .member_connect{margin-top:22px;text-align:center}
     .member_connect .strong{margin:0 0 8px;color:#667085;font-size:14px}
     .member_connect .btn-txt{border:0;background:transparent;color:#2563eb;font-weight:800;cursor:pointer}
     @media (max-width:640px){
-        .social-join-wrap{margin:36px auto 64px;padding:0 16px}
-        .social-join-title{font-size:24px}
-        .social-join-cert{display:block}
-        .social-join-cert-code{display:none}
-        .social-join-cert-btn{width:100%;margin-top:8px}
+        #join_single .cert_input_group{display:block}
+        #join_single .phone_cert_code{display:none}
+        #join_single .cert_btn{width:100%;margin-top:0.8rem}
     }
 </style>
 
-<div class="social-join-wrap">
-    <div class="social-join-card member_sign_layout">
-        <span class="social-join-provider"><?php echo get_text($social_provider_label); ?> 계정 확인 완료</span>
-        <h4 class="social-join-title member_sign_title">회원가입을 마무리해 주세요</h4>
-        <p class="social-join-desc">이메일, 이름, 휴대폰 번호를 확인하면 가입이 완료됩니다.</p>
+<div id="join_single">
+    <div class="member_sign_layout">
+        <span class="social_provider_badge"><?php echo get_text($social_provider_label); ?> 계정 확인 완료</span>
+        <h4 class="member_sign_title">회원가입</h4>
+        <p class="social_join_desc">소셜 계정 정보를 확인하고 약관에 동의해 주세요.</p>
 
         <?php if (!$social_email) { ?>
-            <p class="social-join-error">소셜 계정에서 이메일을 확인할 수 없습니다. 다시 로그인해 주세요.</p>
-            <div class="social-join-actions">
-                <a href="<?php echo G5_BBS_URL; ?>/login.php" class="social-join-cancel" style="width:100%">로그인으로 이동</a>
+            <p class="social_join_error">소셜 계정에서 이메일을 확인할 수 없습니다. 다시 로그인해 주세요.</p>
+            <div class="formBtns">
+                <a href="<?php echo G5_BBS_URL; ?>/login.php" class="agree" style="width:100%">로그인으로 이동</a>
             </div>
         <?php } else if (!empty($mem_chk['mb_id']) && empty($mem_chk['mb_leave_date']) && empty($mem_chk['mb_intercept_date'])) { ?>
-            <p class="social-join-error">이미 가입된 이메일입니다. 기존 계정에 소셜 계정을 연결해 주세요.</p>
+            <p class="social_join_error">이미 가입된 이메일입니다. 기존 계정에 소셜 계정을 연결해 주세요.</p>
             <div class="member_connect">
                 <p class="strong">기존 회원이신가요?</p>
                 <button type="button" class="connect-opener btn-txt" data-remodal-target="modal">기존 계정에 연결하기</button>
             </div>
         <?php } else { ?>
-            <form name="fregisterform" id="fregisterform" class="social-join-form" action="<?php echo $register_action_url; ?>" onsubmit="return fregisterform_submit(this);" method="post" autocomplete="off">
+            <form name="fregisterform" id="fregisterform" action="<?php echo $register_action_url; ?>" onsubmit="return fregisterform_submit(this);" method="post" autocomplete="off">
                 <input type="hidden" name="w" value="<?php echo $w; ?>">
                 <input type="hidden" name="url" value="<?php echo $urlencode; ?>">
                 <input type="hidden" name="provider" value="<?php echo $provider_name; ?>">
@@ -91,37 +104,86 @@ if ($social_email) {
                 <input type="hidden" name="mb_5" value="<?php echo get_text($social_email); ?>">
                 <input type="hidden" name="mb_6" value="<?php echo $social_name; ?>">
                 <input type="hidden" name="mb_8" value="<?php echo $social_phone; ?>">
+                <input type="hidden" name="agree_chk" id="agree_chk" value="">
                 <input type="hidden" name="old_mb_hp" value="<?php echo $social_phone; ?>">
 
-                <div class="social-join-field">
-                    <label for="social_email_view" class="social-required">이메일</label>
-                    <input type="text" id="social_email_view" class="social-join-input" value="<?php echo get_text($social_email); ?>" readonly>
-                </div>
+                <div class="join_agree_body">
+                    <div class="formArea">
+                        <div class="formBox email">
+                            <p class="formBox_title required_mark">이메일</p>
+                            <div class="inputBox">
+                                <input type="text" id="social_email_view" class="normal readonly" value="<?php echo get_text($social_email); ?>" readonly>
+                            </div>
+                            <p class="formBox_errorM"></p>
+                        </div>
 
-                <div class="social-join-field">
-                    <label for="reg_mb_name" class="social-required">이름</label>
-                    <input type="text" id="reg_mb_name" name="mb_name" class="social-join-input" value="<?php echo $social_name; ?>" maxlength="40" placeholder="이름을 입력해 주세요" required>
-                    <p class="social-join-help">소셜 계정에서 이름이 내려오면 자동으로 채워집니다.</p>
-                </div>
+                        <div class="formBox real_name">
+                            <p class="formBox_title required_mark">이름</p>
+                            <div class="inputBox">
+                                <input type="text" id="reg_mb_name" name="mb_name" class="normal" value="<?php echo $social_name; ?>" maxlength="40" placeholder="이름을 입력해 주세요" required>
+                            </div>
+                            <p class="formBox_errorM"></p>
+                        </div>
 
-                <div class="social-join-field">
-                    <label for="reg_mb_hp" class="social-required">휴대폰 번호</label>
-                    <!-- 일반 회원가입과 동일한 알리고 OTP 인증 흐름을 사용합니다. -->
-                    <div class="social-join-cert">
-                        <input type="text" id="reg_mb_hp" name="mb_hp" class="social-join-input" value="<?php echo $social_phone; ?>" maxlength="13" placeholder="010-0000-0000" required>
-                        <button type="button" id="signup_phone_send" class="social-join-cert-btn">인증</button>
+                        <div class="formBox mobile">
+                            <p class="formBox_title required_mark">휴대폰 번호</p>
+                            <div class="cert_input_group">
+                                <div class="inputBox">
+                                    <input type="text" id="reg_mb_hp" name="mb_hp" class="normal" value="<?php echo $social_phone; ?>" maxlength="13" placeholder="010-0000-0000" required>
+                                </div>
+                                <button type="button" id="signup_phone_send" class="cert_btn">인증</button>
+                            </div>
+                            <div id="signup_phone_code_wrap" class="cert_input_group phone_cert_code">
+                                <div class="inputBox">
+                                    <input type="text" id="signup_phone_code" class="normal" maxlength="6" inputmode="numeric" placeholder="인증번호 6자리">
+                                </div>
+                                <button type="button" id="signup_phone_verify" class="cert_btn secondary">확인</button>
+                            </div>
+                            <p id="signup_phone_status" class="phone_cert_status"></p>
+                            <p class="formBox_errorM"></p>
+                        </div>
+
+                        <div class="section_divider"></div>
+
+                        <div class="join_agree_head">
+                            <div class="formBox terms_all_box">
+                                <div class="checkBox all"><input type="checkbox" name="agreeAll" id="agreeAll"><label for="agreeAll">모두 동의합니다.</label></div>
+                            </div>
+                            <p>회원가입 및 회원 관리를 위해 서비스 이용약관, 개인정보 수집 및 이용, 마케팅 수신 동의 내용을 확인해 주세요.</p>
+                        </div>
+
+                        <div class="formBox terms_box">
+                            <div class="checkBox">
+                                <input type="checkbox" name="terms" id="terms" class="req">
+                                <span class="consent_text">
+                                    <a href="/etc/clause.php" target="_blank" rel="noopener noreferrer">이용약관</a>에 동의합니다.
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="formBox terms_box">
+                            <div class="checkBox">
+                                <input type="checkbox" name="privacy" id="privacy" class="req">
+                                <span class="consent_text">
+                                    <a href="/etc/privacy_consent.php" target="_blank" rel="noopener noreferrer">개인정보 수집 및 이용동의</a>에 동의합니다.
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="formBox terms_box">
+                            <div class="checkBox">
+                                <input type="checkbox" name="marketing" id="marketing">
+                                <span class="consent_text">
+                                    <a href="/etc/marketing_consent.php" target="_blank" rel="noopener noreferrer">마케팅 수신 동의</a>에 동의합니다. (선택)
+                                </span>
+                            </div>
+                        </div>
                     </div>
-                    <div id="signup_phone_code_wrap" class="social-join-cert social-join-cert-code">
-                        <input type="text" id="signup_phone_code" class="social-join-input" maxlength="6" inputmode="numeric" placeholder="인증번호 6자리">
-                        <button type="button" id="signup_phone_verify" class="social-join-cert-btn secondary">확인</button>
-                    </div>
-                    <p class="social-join-help"><?php echo $social_phone_digits ? '소셜 계정에서 받은 번호를 확인해 주세요.' : '번호가 없다면 직접 입력해 주세요.'; ?></p>
-                    <p id="signup_phone_status" class="social-join-status"></p>
                 </div>
 
-                <div class="social-join-actions">
-                    <button type="submit" id="btn_submit" class="social-join-submit">가입하기</button>
-                    <a href="<?php echo G5_BBS_URL; ?>/login.php" class="social-join-cancel">취소하기</a>
+                <div class="formBtns">
+                    <button type="submit" id="btn_submit" class="agree">가입하기</button>
+                    <a href="<?php echo G5_BBS_URL; ?>/login.php" class="disagree">취소하기</a>
                 </div>
             </form>
         <?php } ?>
@@ -202,6 +264,20 @@ $(function() {
 
     $("#reg_mb_name").on("keyup blur", function() {
         $("input[name=mb_6]").val($.trim($(this).val()));
+    });
+
+    $("#agreeAll").on("click", function() {
+        var checked = $(this).is(":checked");
+        $("input[name='terms'], input[name='privacy'], input[name='marketing']").prop("checked", checked);
+    });
+
+    $("input[name='terms'], input[name='privacy'], input[name='marketing']").on("change", function() {
+        var allChecked =
+            $("#terms").is(":checked") &&
+            $("#privacy").is(":checked") &&
+            $("#marketing").is(":checked");
+
+        $("#agreeAll").prop("checked", allChecked);
     });
 
     // 입력한 휴대폰 번호로 알리고 인증번호 발송을 요청합니다.
@@ -304,8 +380,25 @@ function fregisterform_submit(f) {
         return false;
     }
 
+    if (!$("#terms").is(":checked")) {
+        alert("이용약관에 동의해 주세요.");
+        $("#terms").focus();
+        return false;
+    }
+
+    if (!$("#privacy").is(":checked")) {
+        alert("개인정보수집에 동의해 주세요.");
+        $("#privacy").focus();
+        return false;
+    }
+
     $("input[name=mb_6]").val($.trim(f.mb_name.value));
     $("input[name=mb_8]").val($.trim(f.mb_hp.value));
+    var agreeTokens = ["#terms", "#privacy"];
+    if ($("#marketing").is(":checked")) {
+        agreeTokens.push("#marketing");
+    }
+    $("#agree_chk").val(agreeTokens.join(""));
 
     $("#btn_submit").prop("disabled", true);
     return true;

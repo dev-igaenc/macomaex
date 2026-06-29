@@ -245,20 +245,6 @@ if($view_chk=="false"){
         </div>
     </div>
 
-	<?
-		if($view_chk=="true" && $major_service['mb_9']){
-			$major=explode(":|:",$major_service['mb_9']);
-	?>
-    <div class="searchCompanyList">
-        <h4 class="barTitle">주요제품 & 서비스 </h4>
-        <ul class="viewCompany_lists">
-			<?foreach($major as $value){?>
-            <li><?=$value?></li>
-			<?}?>
-        </ul>
-    </div>
-	<?}?>
-
     <div class="common_info">
         <dl class="common_info_lists">
             <dt>직접 연락 방법</dt>

@@ -63,7 +63,7 @@ $check_keys = array(
 'mb_level'
 );
 
-for($i=1;$i<=10;$i++){
+for($i=1;$i<=8;$i++){
     $check_keys[] = 'mb_'.$i; 
 }
 
@@ -86,16 +86,6 @@ $posts['mb_5'] = trim((string) $posts['mb_5']);
 if ($posts['mb_5'] === '') {
     $posts['mb_5'] = $mb_email;
 }
-$mb_9_values = (isset($_POST['mb_9']) && is_array($_POST['mb_9'])) ? array_filter($_POST['mb_9']) : null;
-if ($mb_9_values !== null && $mb_9_values) {
-    $posts['mb_9'] = implode(":|:", $mb_9_values);
-}
-
-$mb_10_values = (isset($_POST['mb_10']) && is_array($_POST['mb_10'])) ? array_filter($_POST['mb_10']) : null;
-if ($mb_10_values !== null && $mb_10_values) {
-    $posts['mb_10'] = implode(":|:", $mb_10_values);
-}
-
 $posts['mb_company'] = $mb_company;
 
 if ($w == 'u') {
@@ -108,13 +98,6 @@ if ($w == 'u') {
             }
         }
 
-        if (!isset($_POST['mb_9'])) {
-            $posts['mb_9'] = $existing_mb['mb_9'];
-        }
-
-        if (!isset($_POST['mb_10'])) {
-            $posts['mb_10'] = $existing_mb['mb_10'];
-        }
     }
 }
 
@@ -151,9 +134,7 @@ $sql_common = "  mb_name = '{$posts['mb_name']}',
                  mb_5 = '{$posts['mb_5']}',
                  mb_6 = '{$posts['mb_6']}',
                  mb_7 = '{$posts['mb_7']}',
-                 mb_8 = '{$posts['mb_8']}',
-                 mb_9 = '{$posts['mb_9']}',
-                 mb_10 = '{$posts['mb_10']}' ";
+                 mb_8 = '{$posts['mb_8']}' ";
 
 if ($w == '')
 {

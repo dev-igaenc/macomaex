@@ -36,13 +36,6 @@ $link_1001 = "/bbs/login.php"; // 로그인
 $link_1002 = "/signup"; // 회원가입
 
 /* Mypage */
-/*
-if($member[mb_11]=='dev'){
-	$link_0601 = "/ko/my_company_t.php"; // 내 회사 정보
-}else{
-	$link_0601 = "/ko/my_company.php"; // 내 회사 정보
-}
-*/
 $link_0601 = "/account/company"; // 내 회사 정보
 $link_0602 = "/account/trades"; // 매칭 히스토리
 $link_0603 = "/account/trades#interested"; // 관심기업
@@ -56,6 +49,7 @@ $link_1201 = "/etc/clause.php";						/* 이용약관 */
 $link_1202 = "/etc/privacy.php";						/* 개인정보처리방침 */
 $link_1203 = "/etc/email.php";						/* 이메일무단수집거부 */
 $link_1204 = "/etc/refund.php";						/* 환불규정 */
+$link_1205 = "/etc/marketing_consent.php";			/* 마케팅 수신 동의 */
 
 /* ADMINISTRATOR */
 $link_9901 = "/bbs/board.php?bo_table=mainVisual";						/* 비쥬얼관리 */
@@ -95,7 +89,8 @@ $link_9701 = "/bbs/new.php";						/* 새글 */
 
 		,["12","고객센터", "<?=$link_1201?>", "", "", ""]
 			,["1201","이용약관", "<?=$link_1201?>", "고객센터", "이용약관", ""]
-			,["1202","개인정보처리방침", "<?=$link_1202?>", "고객센터", "개인정보활용동의서 및 처리방침", ""]
+			,["1202","개인정보처리방침", "<?=$link_1202?>", "고객센터", "처리방침", ""]
+			,["1205","마케팅 수신 동의", "<?=$link_1205?>", "고객센터", "마케팅 수신 동의서", ""]
 
 
 
@@ -395,15 +390,19 @@ $link_9701 = "/bbs/new.php";						/* 새글 */
 			h2_title = menuFull[i][1];
 		}
 		//////////////////////////////////////////////////////////////
-		if(pcd.length > 2 || pcd.length == 4){
-			var tcd_02 = pcd.substr(0,4);
-			for(var i=0; i < menuFull.length; i++){
-				if(menuFull[i][0].length==4 && menuFull[i][0] == tcd_02){
-					break;
+			if(pcd.length > 2 || pcd.length == 4){
+				var tcd_02 = pcd.substr(0,4);
+				for(var i=0; i < menuFull.length; i++){
+					if(menuFull[i][0].length==4 && menuFull[i][0] == tcd_02){
+						break;
+					}
 				}
-			}
-			tit_1 = tit_1+" &gt; ";
-			tit_2 = menuFull[i][1];
+				if (tcd_02 !== "1002") {
+					tit_1 = tit_1+" &gt; ";
+				} else {
+					tit_1 = "";
+				}
+				tit_2 = menuFull[i][1];
 
 			pageTopTitle = menuFull[i][1];
 
@@ -412,9 +411,11 @@ $link_9701 = "/bbs/new.php";						/* 새글 */
 
             setTimeout(() => {
                 $("#pageTop h3").text(pageTopTitle)
-                $("#pageTop p").text(pageTopText)
+                if($.trim($("#pageTop p").text()) === ""){
+                    $("#pageTop p").text(pageTopText)
+                }
 
-				if(pageTopText == ""){
+				if($.trim($("#pageTop p").text()) == ""){
 					$("#pageTop p").remove();
 				}
             }, 20);

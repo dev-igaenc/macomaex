@@ -394,10 +394,11 @@ window.__AUTH_SESSION_GUARD_CONFIG__ = {
 	            <div class="inConts">
                 <div class="pageTop_text">
                     <h3><?php echo $bo_subject ?></h3>
-                    <p></p>
-                    <!-- <?php if($bo_text != ""){?> -->
-                        <!-- <p><?php echo $bo_text ?></p> -->
-                    <!-- <?php } ?> -->
+                    <?php if($bo_text != ""){?>
+                        <p><?php echo $bo_text ?></p>
+                    <?php } else { ?>
+                        <p></p>
+                    <?php } ?>
                 </div>
                 <?php if (empty($hide_theme_pagetop_nav)) { ?>
                 <div class="pageTop_nav">
