@@ -37,6 +37,25 @@ class Hybrid_Providers_Kakao extends Hybrid_Provider_Model_OAuth2
     }
 
     /**
+    * begin login step
+    */
+    function loginBegin()
+    {
+        $parameters = array("scope" => $this->scope);
+
+        if (isset($this->config['scope']) && !empty($this->config['scope'])) {
+            $parameters["scope"] = $this->config['scope'];
+        }
+
+        // 최근 재인증 이력이 만료된 경우 카카오 로그인 절차를 다시 요구합니다.
+        if (isset($this->config['prompt']) && !empty($this->config['prompt'])) {
+            $parameters["prompt"] = $this->config['prompt'];
+        }
+
+        Hybrid_Auth::redirect($this->api->authorizeUrl($parameters));
+    }
+
+    /**
     * finish login step
     */
     function loginFinish()

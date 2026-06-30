@@ -85,7 +85,8 @@ function bzc_trade_rec_search_append_items(&$items, &$seen, $rows, $query, $matc
             if (bzc_trade_rec_search_contains($keyword, $query)) $labels[] = $keyword;
         }
         $industry_name = trim((string)($row['industry_name'] ?? ''));
-        if ($industry_name !== '' && bzc_trade_rec_search_contains($industry_name, $query)) $labels[] = $industry_name;
+        // c_partner_kw가 정제된 대표 키워드이므로, 매칭이 있으면 같은 업종의 표준 업종명은 숨긴다.
+        if (empty($labels) && $industry_name !== '' && bzc_trade_rec_search_contains($industry_name, $query)) $labels[] = $industry_name;
 
         foreach ($labels as $label) {
             $item_key = $partner_bzc . '|' . $label;
