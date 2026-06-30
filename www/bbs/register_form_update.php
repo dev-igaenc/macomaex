@@ -228,6 +228,14 @@ if ($w == '') {
 // 사용자 코드 실행
 @include_once($member_skin_path.'/register_form_update.head.skin.php');
 
+if ($use_member_consent && $mb_9 !== '1') {
+    alert('이용약관에 동의해 주세요.', "", true, true);
+}
+
+if ($use_member_consent && $mb_10 !== '1') {
+    alert('개인정보 수집 및 이용동의에 동의해 주세요.', "", true, true);
+}
+
 $sql_certify = '';
 $md5_cert_no = get_session('ss_cert_no');
 $cert_type = get_session('ss_cert_type');
@@ -273,14 +281,6 @@ if ($w != '' && $config['cf_cert_use'] && $cert_type && $md5_cert_no) {
         alert('본인인증된 정보와 입력된 회원정보가 일치하지않습니다. 다시시도 해주세요');
     }
 } else if ($w != '') {
-    if ($use_member_consent && $mb_9 !== '1') {
-        alert('이용약관에 동의해 주세요.', "", true, true);
-    }
-
-    if ($use_member_consent && $mb_10 !== '1') {
-        alert('개인정보 수집 및 이용동의에 동의해 주세요.', "", true, true);
-    }
-
     $phone_changed = (macomaex_signup_phone_otp_normalize($mb_8) !== macomaex_signup_phone_otp_normalize($member_mb_8));
     if ($phone_changed && !macomaex_signup_phone_otp_is_verified($mb_8)) {
         alert('변경한 휴대폰 번호의 인증을 완료해 주세요.', "", true, true);
