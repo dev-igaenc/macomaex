@@ -54,13 +54,15 @@ if (!function_exists('macomaex_contact_has_spam_pattern')) {
     {
         $subject = trim((string) $subject);
         $content = trim((string) $content);
+        $raw_text = implode(' ', array_merge(array($subject, $content), (array) $extra_values));
         $plain_text = macomaex_contact_collect_plaintext(array_merge(array($subject, $content), (array) $extra_values));
         if ($plain_text === '') {
             return false;
         }
 
+        // 링크 태그/URL 원문은 strip_tags 이전 단계에서 확인해야 HTML 링크 우회를 막을 수 있다.
         $link_pattern = '/(?:https?:\/\/|www\.|<\s*a\b|href\s*=|url\s*\(|\[url|\[link|u\.to\/|s\.ubyt\.es\/)/iu';
-        if (preg_match($link_pattern, $plain_text)) {
+        if (preg_match($link_pattern, $raw_text)) {
             return true;
         }
 
@@ -362,7 +364,7 @@ if ($is_contact_board) {
     );
 
     if (macomaex_contact_has_spam_pattern($wr_subject, $wr_content, $contact_extra_values)) {
-        alert('광고성 또는 링크가 포함된 문의는 등록할 수 없습니다.');
+        alert('광고성 또는 비정상 패턴이 포함된 문의는 등록할 수 없습니다.');
     }
 }
 
