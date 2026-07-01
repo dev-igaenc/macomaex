@@ -181,6 +181,20 @@ function exist_mb_hp($reg_mb_hp, $reg_mb_id)
         return "";
 }
 
+function macomaex_validate_unique_mb_hp($reg_mb_hp, $reg_mb_id = '')
+{
+    // 휴대폰 형식과 중복 여부를 같은 기준으로 확인
+    if ($msg = valid_mb_hp($reg_mb_hp)) {
+        return $msg;
+    }
+
+    if ($msg = exist_mb_hp($reg_mb_hp, $reg_mb_id)) {
+        return $msg;
+    }
+
+    return "";
+}
+
 // .env의 알리고 계정/키/발신번호를 읽어 공통 설정으로 반환합니다.
 function macomaex_aligo_config()
 {

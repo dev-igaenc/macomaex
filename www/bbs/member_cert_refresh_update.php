@@ -1,6 +1,7 @@
 <?php
 define('G5_CERT_IN_PROG', true);
 include_once('./_common.php');
+include_once(G5_LIB_PATH.'/register.lib.php');
 global $g5;
 
 if (!($w == '' || $w == 'u')) {
@@ -22,6 +23,9 @@ if(!$mb_id)
 //  본인확인
 //---------------------------------------------------------------
 $mb_hp = hyphen_hp_number($mb_hp);
+if ($msg = macomaex_validate_unique_mb_hp($mb_hp, $mb_id)) {
+    alert($msg);
+}
 if($config['cf_cert_use'] && get_session('ss_cert_type') && get_session('ss_cert_dupinfo')) {
     // 중복체크
     $sql = " select mb_id from {$g5['member_table']} where mb_id <> '{$member['mb_id']}' and mb_dupinfo = '".get_session('ss_cert_dupinfo')."' ";

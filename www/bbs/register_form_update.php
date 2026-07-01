@@ -189,8 +189,8 @@ if ($w == '') {
     if ($msg = valid_mb_email($mb_email))   alert($msg, "", true, true);
     if ($msg = prohibit_mb_email($mb_email))alert($msg, "", true, true);
 
-    if ($msg = valid_mb_hp($mb_hp))     alert($msg, "", true, true);
-    if ($msg = exist_mb_hp($mb_hp, $mb_id)) alert($msg, "", true, true);
+    // 신규 가입 저장 전에 휴대폰 중복 막음
+    if ($msg = macomaex_validate_unique_mb_hp($mb_hp, $mb_id)) alert($msg, "", true, true);
     // 클라이언트 검증 우회를 막기 위해 신규 가입 insert 전에 OTP 인증 세션을 확인합니다.
     if (!macomaex_signup_phone_otp_is_verified($mb_hp)) alert('휴대폰 인증을 완료해 주세요.', "", true, true);
 
@@ -282,6 +282,10 @@ if ($w != '' && $config['cf_cert_use'] && $cert_type && $md5_cert_no) {
     }
 } else if ($w != '') {
     $phone_changed = (macomaex_signup_phone_otp_normalize($mb_8) !== macomaex_signup_phone_otp_normalize($member_mb_8));
+    // 번호를 바꾼 경우에만 중복 여부를 다시 확인
+    if ($phone_changed && ($msg = macomaex_validate_unique_mb_hp($mb_8, $mb_id))) {
+        alert($msg, "", true, true);
+    }
     if ($phone_changed && !macomaex_signup_phone_otp_is_verified($mb_8)) {
         alert('변경한 휴대폰 번호의 인증을 완료해 주세요.', "", true, true);
     }
