@@ -279,7 +279,15 @@ if ($is_search_bbs) {
 
 
 $write_href = '';
-if ($member['mb_level'] >= $board['bo_write_level']) {
+// 회원 전용 작성 게시판은 비회원에게 글쓰기 버튼을 노출하지 않는다.
+if (
+    $member['mb_level'] >= $board['bo_write_level']
+    && (
+        !function_exists('macomaex_is_member_only_write_board')
+        || !macomaex_is_member_only_write_board($bo_table)
+        || !$is_guest
+    )
+) {
     $write_href = short_url_clean(G5_BBS_URL.'/write.php?bo_table='.$bo_table);
 }
 
