@@ -101,7 +101,7 @@ if (!defined('_GNUBOARD_')) exit; // 개별 페이지 접근 불가
 					<td>
 						<?php if ($option) { ?>
 						<ul class="board_option">
-							<?php// echo $option ?>
+							<!-- 옵션 출력 비활성화 -->
 						</ul>
 						<?php } ?>
 						<div class="wr_content <?php echo $is_dhtml_editor ? $config['cf_editor'] : ''; ?>">
@@ -123,13 +123,13 @@ if (!defined('_GNUBOARD_')) exit; // 개별 페이지 접근 불가
 							<input type="file" name="bf_file[]" id="bf_file_<?php echo $i+1 ?>" title="파일첨부 <?php echo $i+1 ?> : 용량 <?php echo $upload_max_filesize ?> 이하만 업로드 가능" >
 						</div>
 						<?php if ($is_file_content) { ?>
-						<input type="text" name="bf_content[]" value="<?php echo ($w == 'u') ? $file[$i]['bf_content'] : ''; ?>" title="파일 설명을 입력해주세요." class="full_input frm_input" size="50" placeholder="파일 설명을 입력해주세요.">
+						<input type="text" name="bf_content[]" value="<?php echo ($w == 'u') ? ($file[$i]['bf_content'] ?? '') : ''; ?>" title="파일 설명을 입력해주세요." class="full_input frm_input" size="50" placeholder="파일 설명을 입력해주세요.">
 						<?php } ?>
 
-						<?php if($w == 'u' && $file[$i]['file']) { ?>
+						<?php if($w == 'u' && !empty($file[$i]['file'])) { ?>
 						<p class="checkIn file_del">
 							<input type="checkbox" id="bf_file_del<?php echo $i ?>" name="bf_file_del[<?php echo $i;  ?>]" value="1">
-							<label for="bf_file_del<?php echo $i ?>"><?php echo $file[$i]['source'].'('.$file[$i]['size'].')';  ?> 파일삭제</label>
+							<label for="bf_file_del<?php echo $i ?>"><?php echo ($file[$i]['source'] ?? '').'('.($file[$i]['size'] ?? '').')';  ?> 파일삭제</label>
 						</p>
 						<?php } ?>
 					</td>
@@ -145,16 +145,16 @@ if (!defined('_GNUBOARD_')) exit; // 개별 페이지 접근 불가
 		</table>
 	</div>
 
-	<div class="board_btn write">
-		<ul class="board_user">
-			<?php if($rt) { ?>
-				<li><a href="./index.php?bo_table=<?=$bo_table?>" class="click big">취소하기</a></li>
-			<?}else{?>
-				<li><a href="<?php echo get_pretty_url($bo_table); ?>" class="click big">취소하기</a></li>
-			<?}?>
-			<li><button type="submit" id="btn_submit" accesskey="s" class="click write big">등록하기</button></li>
-		</ul>
-	</div>
+		<div class="board_btn write">
+			<ul class="board_user">
+				<?php if($rt) { ?>
+					<li><a href="./index.php?bo_table=<?=$bo_table?>" class="click big">취소하기</a></li>
+				<?php } else { ?>
+					<li><a href="<?php echo get_pretty_url($bo_table); ?>" class="click big">취소하기</a></li>
+				<?php } ?>
+				<li><button type="submit" id="btn_submit" accesskey="s" class="click write big">등록하기</button></li>
+			</ul>
+		</div>
 	</form>
 
     <script>

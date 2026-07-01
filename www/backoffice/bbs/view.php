@@ -70,7 +70,7 @@ if (isset($next['wr_id']) && $next['wr_id']) {
 
 // 쓰기 링크
 $write_href = '';
-if ($member['mb_level'] >= $board['bo_write_level'])
+if ($bo_table !== 'Contact' && $member['mb_level'] >= $board['bo_write_level'])
     $write_href = './write.php?bo_table='.$bo_table;
 
 // 답변 링크

@@ -166,6 +166,36 @@ if (file_exists($notice_style_path)) {
 include_once(G5_THEME_PATH . '/head.php');
 ?>
 
+<style>
+#bo_list .bo_tit {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+#bo_list .bo_tit a {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+#bo_list .cnt_cmt {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 20px;
+    padding: 0 7px;
+    line-height: 1;
+    margin-left: 0;
+    position: static;
+    flex: 0 0 auto;
+}
+
+#bo_v .board_write {
+    margin-bottom: 24px;
+}
+</style>
+
 <?php if (isset($detail['wr_id'])) { ?>
 <div id="bo_v">
     <div class="board_view">
@@ -195,16 +225,8 @@ include_once(G5_THEME_PATH . '/head.php');
                         <table>
                             <tbody>
                             <tr>
-                                <th scope="row">문의유형</th>
-                                <td><?php echo $detail['ca_name'] ? get_text($detail['ca_name']) : '-'; ?></td>
-                            </tr>
-                            <tr>
                                 <th scope="row">회사명</th>
                                 <td><?php echo $detail['wr_1'] ? get_text($detail['wr_1']) : '-'; ?></td>
-                            </tr>
-                            <tr>
-                                <th scope="row">직책</th>
-                                <td><?php echo $detail['wr_2'] ? get_text($detail['wr_2']) : '-'; ?></td>
                             </tr>
                             <tr>
                                 <th scope="row">연락처</th>
@@ -278,9 +300,11 @@ include_once(G5_THEME_PATH . '/head.php');
 
     <div class="board_btn">
         <div class="total">Total <strong><?php echo number_format($total_count); ?></strong>, &nbsp; Page <strong><?php echo $page; ?></strong></div>
+        <?php if (!isset($detail['wr_id'])) { ?>
         <ul class="board_user">
             <li><a href="<?php echo $write_url; ?>" class="click write">문의작성</a></li>
         </ul>
+        <?php } ?>
     </div>
 
     <div class="board_list">
