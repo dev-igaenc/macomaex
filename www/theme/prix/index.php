@@ -376,10 +376,8 @@ $stable_list = get_processed_companies('stability_score_5', 3, $unlocked_bzno_ma
                         <div class="mVisual_preview_card mSlideReasons">
                             <span class="mSlideReasons_label">AI가 분석한 추천 이유</span>
                             <ul class="mSlideReasons_list">
-                                <li><i>✓</i><span>공동 거래처 네트워크 <b>72% 중복</b></span></li>
                                 <li><i>✓</i><span>공급망 근접도 <b>상위 10%</b></span></li>
                                 <li><i>✓</i><span>최근 3년 연평균 매출 <b>18% 성장</b></span></li>
-                                <li><i>✓</i><span>재무 안정성 <b>A등급</b> 우량 기업</span></li>
                                 <li><i>✓</i><span>동일 권역 위치로 <b>물류 효율 ↑</b></span></li>
                                 <li><i>✓</i><span>거래 규모·단가 <b>적합도 우수</b></span></li>
                             </ul>
