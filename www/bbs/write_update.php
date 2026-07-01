@@ -3,6 +3,140 @@ include_once('./_common.php');
 include_once(G5_LIB_PATH.'/naver_syndi.lib.php');
 include_once(G5_CAPTCHA_PATH.'/captcha.lib.php');
 
+// Contact 계열 보드는 스킨명/bo_table이 제각각이라 둘 다 보고 판별한다.
+if (!function_exists('macomaex_is_contact_board_request')) {
+    function macomaex_is_contact_board_request($bo_table, $board_skin_path = '')
+    {
+        $bo_table = strtolower(trim((string) $bo_table));
+        $board_skin_path = strtolower(trim((string) $board_skin_path));
+
+        if ($bo_table !== '' && strpos($bo_table, 'contact') !== false) {
+            return true;
+        }
+
+        return ($board_skin_path !== '' && strpos($board_skin_path, 'contact') !== false);
+    }
+}
+
+// 제목/내용/부가 필드를 한 덩어리의 평문으로 정규화해 스팸 패턴 검사에 재사용한다.
+if (!function_exists('macomaex_contact_collect_plaintext')) {
+    function macomaex_contact_collect_plaintext($values)
+    {
+        $parts = array();
+
+        foreach ((array) $values as $value) {
+            if (is_array($value)) {
+                $parts[] = macomaex_contact_collect_plaintext($value);
+                continue;
+            }
+
+            $value = trim((string) $value);
+            if ($value === '') {
+                continue;
+            }
+
+            $value = html_entity_decode(strip_tags($value), ENT_QUOTES, 'UTF-8');
+            $value = preg_replace('/\s+/u', ' ', $value);
+            $value = trim((string) $value);
+
+            if ($value !== '') {
+                $parts[] = $value;
+            }
+        }
+
+        return implode(' ', $parts);
+    }
+}
+
+// 실제 유입된 광고성 문의 패턴을 서버에서 한 번 더 걸러 직접 POST 우회를 막는다.
+if (!function_exists('macomaex_contact_has_spam_pattern')) {
+    function macomaex_contact_has_spam_pattern($subject, $content, $extra_values = array())
+    {
+        $subject = trim((string) $subject);
+        $content = trim((string) $content);
+        $plain_text = macomaex_contact_collect_plaintext(array_merge(array($subject, $content), (array) $extra_values));
+        if ($plain_text === '') {
+            return false;
+        }
+
+        $link_pattern = '/(?:https?:\/\/|www\.|<\s*a\b|href\s*=|url\s*\(|\[url|\[link|u\.to\/|s\.ubyt\.es\/)/iu';
+        if (preg_match($link_pattern, $plain_text)) {
+            return true;
+        }
+
+        $hard_block_keywords = array(
+            'levitra', 'cialis', 'viagra',
+            'btc', 'bitcoin', 'crypto',
+            'signal trading', 'withdraw now', 'income opportunity',
+            'balance is live', 'goodrx',
+            'pharmacy', 'generic', 'discount'
+        );
+
+        foreach ($hard_block_keywords as $keyword) {
+            if (stripos($plain_text, $keyword) !== false) {
+                return true;
+            }
+        }
+
+        $conditional_keywords = array(
+            'urgent', 'trading', 'signal', 'withdraw',
+            'loan', 'casino', 'forex', 'adult',
+            'online', 'cheap', 'offer', 'opportunity'
+        );
+
+        $has_conditional_keyword = false;
+        foreach ($conditional_keywords as $keyword) {
+            if (stripos($plain_text, $keyword) !== false) {
+                $has_conditional_keyword = true;
+                break;
+            }
+        }
+
+        $is_numeric_title = ($subject !== '' && preg_match('/^\d{4,}$/', preg_replace('/\s+/', '', $subject)));
+        if ($is_numeric_title) {
+            return true;
+        }
+
+        $compact_subject = strtolower(preg_replace('/[^a-z]/i', '', $subject));
+        if ($compact_subject !== '' && strlen($compact_subject) >= 16 && !preg_match('/[aeiou]/i', $compact_subject)) {
+            return true;
+        }
+
+        if (preg_match('/[A-Za-z]{20,}/', $subject)) {
+            return true;
+        }
+
+        if (preg_match('/[A-Za-z]{35,}/', preg_replace('/\s+/', '', $plain_text))) {
+            return true;
+        }
+
+        if (preg_match_all('/[a-z]{4,}/iu', $plain_text, $matches)) {
+            $words = array_map('strtolower', $matches[0]);
+            $word_counts = array_count_values($words);
+            foreach ($word_counts as $count) {
+                if ($count >= 3) {
+                    return true;
+                }
+            }
+        }
+
+        $length = function_exists('mb_strlen') ? mb_strlen($plain_text, 'UTF-8') : strlen($plain_text);
+        if ($length > 0) {
+            preg_match_all('/[A-Za-z]/', $plain_text, $english_chars);
+            $english_ratio = count($english_chars[0]) / $length;
+            if ($length >= 80 && $english_ratio >= 0.65) {
+                return true;
+            }
+
+            if ($has_conditional_keyword && $english_ratio >= 0.45) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+}
+
 // 토큰체크
 check_write_token($bo_table);
 
@@ -202,11 +336,35 @@ if ($w == '' || $w == 'u') {
     alert('w 값이 제대로 넘어오지 않았습니다.');
 }
 
+// 클라이언트 검사를 우회해도 저장 직전 서버에서 캡챠를 다시 확인한다.
 $is_use_captcha = ((($board['bo_use_captcha'] && $w !== 'u') || $is_guest) && !$is_admin) ? 1 : 0;
+$is_contact_board = macomaex_is_contact_board_request($bo_table, isset($board_skin_path) ? $board_skin_path : '');
 
-//if ($is_use_captcha && !chk_captcha()) {
-//    alert('자동등록방지 숫자가 틀렸습니다.');
-//}
+if ($is_use_captcha && !chk_captcha()) {
+    alert('자동등록방지 숫자가 틀렸습니다.');
+}
+
+// 문의 보드에는 honeypot + 광고성 패턴 차단을 추가로 적용한다.
+if ($is_contact_board) {
+    // Honeypot field for contact forms. Real users should never fill this value.
+    $homepage_confirm = isset($_POST['homepage_confirm']) ? trim((string) $_POST['homepage_confirm']) : '';
+    if ($homepage_confirm !== '') {
+        alert('정상적인 요청이 아닙니다.');
+    }
+
+    $contact_extra_values = array(
+        isset($_POST['wr_name']) ? $_POST['wr_name'] : '',
+        isset($_POST['wr_email']) ? $_POST['wr_email'] : '',
+        isset($_POST['wr_1']) ? $_POST['wr_1'] : '',
+        isset($_POST['wr_2']) ? $_POST['wr_2'] : '',
+        isset($_POST['wr_10']) ? $_POST['wr_10'] : '',
+        isset($_POST['w_10']) ? $_POST['w_10'] : '',
+    );
+
+    if (macomaex_contact_has_spam_pattern($wr_subject, $wr_content, $contact_extra_values)) {
+        alert('광고성 또는 링크가 포함된 문의는 등록할 수 없습니다.');
+    }
+}
 
 if ($w == '' || $w == 'r') {
     if (isset($_SESSION['ss_datetime'])) {
