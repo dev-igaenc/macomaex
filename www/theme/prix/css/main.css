@@ -1118,6 +1118,7 @@ body.modal_verify_open {
     background: #eef2ff;
     border-radius: 999px;
     padding: 2px 10px;
+    margin-top: 3px;
 }
 
 .modal_pd_trade_toggle {
