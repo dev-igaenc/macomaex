@@ -56,6 +56,11 @@ class Hybrid_Providers_Naver extends Hybrid_Provider_Model_OAuth2
             $parameters["scope"] = $this->config['scope'];
         }
 
+        // 최근 재인증 이력이 만료된 경우 네이버 로그인 절차를 다시 요구합니다.
+        if (isset($this->config['auth_type']) && !empty($this->config['auth_type'])) {
+            $parameters["auth_type"] = $this->config['auth_type'];
+        }
+
         Hybrid_Auth::redirect($this->api->authorizeUrl($parameters));
     }
 

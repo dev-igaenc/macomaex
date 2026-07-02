@@ -436,7 +436,10 @@ window.__AUTH_SESSION_GUARD_CONFIG__ = {
         </div>
 
         <div id="modal_verify_pd_wrap">
-            <p class="modal_verify_pd_title">찾고 싶은 거래품목을 선택해주세요</p>
+            <div class="modal_verify_pd_title_row">
+                <p class="modal_verify_pd_title">찾고 싶은 거래품목을 선택해주세요</p>
+                <span class="modal_verify_pd_title_hint">OEM 협업포함</span>
+            </div>
             <div class="modal_pd_trade_toggle">
                 <button type="button" class="modal_pd_trade_btn active" id="modal_pd_trade_buy">
                     <svg class="modal_pd_trade_icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -668,6 +671,16 @@ function openCreditShortageGuide(opts) {
 		closeAiGuideModal();
 	}
 
+	function getPartnerTradeDescHtml(tradeType) {
+		var isBuy = Number(tradeType) !== 2;
+		var baseText = isBuy ? "귀사가 구매하려는 품목을 선택하세요" : "귀사가 판매하려는 품목을 선택하세요";
+		return baseText + ' <span class="modal_pd_multi_hint">복수 선택 가능</span>';
+	}
+
+	function setPartnerTradeDesc(tradeType) {
+		$("#modal_pd_trade_desc").html(getPartnerTradeDescHtml(tradeType));
+	}
+
 	function openCompanyVerifyModalFromData(data, $form) {
 		if (!data || data.result !== "success") return false;
 		closeCompanyLookupPendingGuide();
@@ -701,7 +714,7 @@ function openCreditShortageGuide(opts) {
 			if (typeEl) typeEl.textContent = data.enp_type || "";
 		$("#modal_pd_trade_buy").toggleClass("active", initialTradeType === 1);
 		$("#modal_pd_trade_sell").toggleClass("active", initialTradeType === 2);
-		$("#modal_pd_trade_desc").html((initialTradeType === 1 ? "귀사가 구매하려는 품목을 선택하세요" : "귀사가 판매하려는 품목을 선택하세요") + ' <span class="modal_pd_multi_hint">복수 선택 가능</span>');
+		setPartnerTradeDesc(initialTradeType);
 
 		if (overlay) {
 			overlay.classList.add("is_open");
@@ -739,6 +752,7 @@ function closeAiGuideModal() {
 
 	function closeVerifyModal() {
 		var overlay = document.getElementById("modal_verify_overlay");
+		window.__partnerRecommendPreviewState = null;
 		if (overlay && overlay.classList.contains("is_open")) {
 			overlay.classList.remove("is_open");
 			overlay.setAttribute("aria-hidden", "true");
@@ -987,6 +1001,13 @@ function closeAiGuideModal() {
 	}
 
 	function loadPartnerKeywordChips(tradeType) {
+		if (window.__partnerRecommendPreviewState) {
+			var previewState = window.__partnerRecommendPreviewState;
+			window.currentSearchTradeType = (tradeType === 2) ? 2 : 1;
+			renderPartnerKeywordChips(previewState.items || [], false);
+			return;
+		}
+
 		// [추천 키워드 조회]
 		// KODATA에서 확인한 기준 업종코드와 사용자가 선택한 구매/판매 방향으로 키워드 후보를 요청한다.
 		var grid = document.getElementById("modal_pd_grid");
@@ -1232,9 +1253,44 @@ function requestMainCompCheck(comnum, $form, opts) {
 		var isBuy = this.id === "modal_pd_trade_buy";
 		$("#modal_pd_trade_buy").toggleClass("active", isBuy);
 		$("#modal_pd_trade_sell").toggleClass("active", !isBuy);
-		$("#modal_pd_trade_desc").html((isBuy ? "귀사가 구매하려는 품목을 선택하세요" : "귀사가 판매하려는 품목을 선택하세요") + ' <span class="modal_pd_multi_hint">복수 선택 가능</span>');
+		setPartnerTradeDesc(isBuy ? 1 : 2);
 		loadPartnerKeywordChips(isBuy ? 1 : 2);
 	});
+
+	window.previewPartnerRecommendModal = function(opts) {
+		opts = opts || {};
+		window.__partnerRecommendPreviewState = {
+			items: (Array.isArray(opts.items) && opts.items.length ? opts.items : [
+				"응용소프트웨어개발공급",
+				"시스템소프트웨어개발공급",
+				"포털및인터넷정보매개서비스",
+				"데이터베이스온라인정보제공"
+			]).map(function(item) {
+				if (typeof item === "string") return { label: item };
+				return item;
+			})
+		};
+		var mockData = {
+			result: "success",
+			name: opts.name || "(주)가이엔씨",
+			bzc_name: opts.bzcName || "데이터베이스 및 온라인정보 제공업",
+			enp_type: opts.enpType || "법인기업",
+			trade_type: Number(opts.tradeType) === 2 ? 2 : 1,
+			bzc_cd: opts.bzcCd || "",
+			original_bzc_cd: opts.originalBzcCd || "",
+			keyword_scope: opts.keywordScope || "all",
+			source_bzc_missing: 1,
+			source_bzc_resolved: 0,
+			source_bzc_resolve_source: "",
+			fallback_reason: "local_preview",
+			bizno: opts.bizno || "1234567890",
+			bizno_token: opts.biznoToken || "local-preview-token",
+			kedcd: opts.kedcd || "",
+			cominfo: opts.cominfo || ""
+		};
+
+		openCompanyVerifyModalFromData(mockData, window.currentSearchForm || null);
+	};
 
 	$(document).on("input", "#modal_pd_custom_input", function() {
 		// 입력 중 API 호출을 줄이기 위해 350ms 대기하고, 선택된 구매/판매 방향으로만 후보를 조회한다.

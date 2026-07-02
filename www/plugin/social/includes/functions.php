@@ -281,12 +281,97 @@ function social_build_provider_config($provider){
         $setting['providers'][$provider] = social_extends_get_keys($provider);
     }
 
+    if( social_should_force_provider_reauth($provider) ){
+        foreach( social_get_provider_reauth_params($provider) as $key => $value ){
+            $setting['providers'][$provider][$key] = $value;
+        }
+        social_mark_provider_reauth_pending($provider);
+    }
+
     if(defined('G5_SOCIAL_IS_DEBUG') && G5_SOCIAL_IS_DEBUG){
         $setting['debug_mode'] = true;
         $setting['debug_file'] = G5_DATA_PATH.'/tmp/social_'.md5($_SERVER['SERVER_SOFTWARE'].$_SERVER['SERVER_ADDR']).'_'.date('ymd').'.log';
     }
 
     return $setting;
+}
+
+function social_get_provider_reauth_ttl(){
+    return 21600; // 6 hours
+}
+
+function social_is_reauth_managed_provider($provider){
+    return in_array(strtolower((string)$provider), array('naver', 'kakao', 'google'), true);
+}
+
+function social_get_provider_reauth_params($provider){
+    switch( strtolower((string)$provider) ){
+        case 'naver':
+            return array('auth_type' => 'reauthenticate');
+        case 'kakao':
+            return array('prompt' => 'login');
+        case 'google':
+            return array('prompt' => 'login');
+    }
+
+    return array();
+}
+
+function social_get_provider_reauth_cookie_name($provider){
+    return 'social_reauth_verified_'.strtolower((string)$provider);
+}
+
+function social_should_force_provider_reauth($provider){
+    $provider = strtolower((string)$provider);
+
+    if( ! social_is_reauth_managed_provider($provider) ){
+        return false;
+    }
+
+    $verified_at = 0;
+    if( isset($_SESSION['social_reauth_verified']) && is_array($_SESSION['social_reauth_verified']) && isset($_SESSION['social_reauth_verified'][$provider]) ){
+        $verified_at = (int)$_SESSION['social_reauth_verified'][$provider];
+    }
+
+    if( $verified_at <= 0 ){
+        $verified_at = (int)get_cookie(social_get_provider_reauth_cookie_name($provider));
+    }
+
+    return $verified_at <= 0 || (time() - $verified_at) >= social_get_provider_reauth_ttl();
+}
+
+function social_mark_provider_reauth_pending($provider){
+    $provider = strtolower((string)$provider);
+
+    if( ! social_is_reauth_managed_provider($provider) ){
+        return;
+    }
+
+    if( ! isset($_SESSION['social_reauth_pending']) || ! is_array($_SESSION['social_reauth_pending']) ){
+        $_SESSION['social_reauth_pending'] = array();
+    }
+
+    $_SESSION['social_reauth_pending'][$provider] = 1;
+}
+
+function social_remember_provider_reauth_success($provider){
+    $provider = strtolower((string)$provider);
+
+    if( ! social_is_reauth_managed_provider($provider) ){
+        return;
+    }
+
+    if( ! isset($_SESSION['social_reauth_pending']) || ! is_array($_SESSION['social_reauth_pending']) || empty($_SESSION['social_reauth_pending'][$provider]) ){
+        return;
+    }
+
+    if( ! isset($_SESSION['social_reauth_verified']) || ! is_array($_SESSION['social_reauth_verified']) ){
+        $_SESSION['social_reauth_verified'] = array();
+    }
+
+    $_SESSION['social_reauth_verified'][$provider] = time();
+    set_cookie(social_get_provider_reauth_cookie_name($provider), (string)time(), social_get_provider_reauth_ttl());
+    unset($_SESSION['social_reauth_pending'][$provider]);
 }
 
 function social_extends_get_keys($provider){
@@ -840,6 +925,7 @@ function social_login_success_after($mb, $link='', $mode='', $tmp_create_info=ar
 
         //소셜로그인의 provider 이름( naver, kakao, facebook 기타 등등 ) 서비스 이름을 세션에 입력합니다.
         set_session('ss_social_provider', $provider);
+        social_remember_provider_reauth_success($provider);
 
         //소셜로그인 최초 받아온 세션에 저장된 값을 삭제합니다.
         if( isset($_SESSION['sl_userprofile']) && isset($_SESSION['sl_userprofile'][$provider]) ){

@@ -63,7 +63,7 @@ if ($social_email) {
     #join_single .phone_cert_status.success{color:#2563eb}
     #join_single .phone_cert_status.warning{color:#b45309}
     #join_single .phone_cert_status.error{color:#d92d20}
-    #join_single .social_provider_badge{display:inline-flex;align-items:center;justify-content:center;min-height:2.8rem;padding:0 1rem;margin:0 auto 1.6rem;border-radius:999px;background:#f4f6f8;color:#667085;font-size:1.3rem;font-weight:700}
+    #join_single .social_provider_badge{display:flex;align-items:center;justify-content:center;width:max-content;min-height:2.8rem;padding:0 1rem;margin:0 auto 1.6rem;border-radius:999px;background:#f4f6f8;color:#667085;font-size:1.3rem;font-weight:700}
     #join_single .social_join_desc{margin-bottom:2.4rem;color:#8a94a6;font-size:1.4rem;line-height:1.6;text-align:center}
     #join_single .social_join_error{margin-top:1.2rem;color:#d92d20;font-size:1.4rem;line-height:1.6;text-align:center}
     .member_connect{margin-top:22px;text-align:center}
@@ -112,7 +112,7 @@ if ($social_email) {
                         <div class="formBox email">
                             <p class="formBox_title required_mark">이메일</p>
                             <div class="inputBox">
-                                <input type="text" id="social_email_view" class="normal readonly" value="<?php echo get_text($social_email); ?>" readonly>
+                                <input type="text" id="social_email_view" class="normal" value="<?php echo get_text($social_email); ?>" readonly>
                             </div>
                             <p class="formBox_errorM"></p>
                         </div>
