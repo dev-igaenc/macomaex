@@ -366,7 +366,7 @@ $addr2 = $wr_addr[3];
 		<div class="clauseArea">
 			<div class="tit">개인정보 수집 및 이용 동의</div>
 			<div class="scroll">
-				<? include_once(G5_THEME_PATH . '/privacy.php'); ?>
+				<? include_once(G5_THEME_PATH . '/privacy_consent.php'); ?>
 			</div>
 			<p class="checkIn">
 				<input type="checkbox" id="contactCheck" name="contactCheck"/>
