@@ -11,7 +11,9 @@ include_once(G5_LIB_PATH.'/thumbnail.lib.php');
 
 	<!-- 게시물 읽기 시작 { -->
 	<div class="board_btn end">
-
+		<ul class="board_user">
+			<?php if ($member['mb_level'] >= $board['bo_comment_level']) { ?><li><a href="#bo_vc_w" class="click"><i class="fa fa-commenting-o" aria-hidden="true"></i> 답변등록</a></li><?php } ?>
+		</ul>
 	</div>
 	<div class="board_write">
 		<table>
@@ -29,10 +31,6 @@ include_once(G5_LIB_PATH.'/thumbnail.lib.php');
 			<tr>
 				<th scope="row"><span class="">기업명</span></th>
 				<td><?php echo $view['wr_1']?></td>
-			</tr>
-			<tr>
-				<th scope="row"><span class="">직책</span></th>
-				<td><?php echo $view['wr_2']?></td>
 			</tr>
 			<tr>
 				<th scope="row"><span class="">이름</span></th>
@@ -75,14 +73,14 @@ include_once(G5_LIB_PATH.'/thumbnail.lib.php');
 	</div>
 
 	<?php
-	// 코멘트 입출력
-	//include_once(G5_BBS_PATH.'/view_comment.php');
+	if (defined('G5_ADMIN_BBS_PATH')) {
+		include_once(G5_ADMIN_BBS_PATH.'/view_comment.php');
+	}
 	?>
 
 	<div class="board_btn end">
 		<ul class="board_user">
 			<?php if ($is_admin == 'super' || $is_auth) {  ?>
-			<?php if ($update_href) { ?><li><a href="<?php echo $update_href ?>" class="click"><i class="fa fa-pencil-square-o" aria-hidden="true"></i> 수정</a></li><?php } ?>
 			<?php if ($delete_href) { ?><li><a href="<?php echo $delete_href ?>" class="click" onclick="del(this.href); return false;"><i class="fa fa-trash-o" aria-hidden="true"></i> 삭제</a></li><?php } ?>
 			<?php } ?>
 

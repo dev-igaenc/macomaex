@@ -72,6 +72,7 @@ if (!defined('_GNUBOARD_')) exit; // 개별 페이지 접근 불가
             <input type="hidden" name="com_chk" id="com_chk" class="com_chk" value="true">
             <input type="hidden" name="mb_company" id="mb_company" value="">
             <input type="hidden" name="register_flow" value="single_join_v1">
+            <input type="hidden" name="use_member_consent" value="1">
             <input type="hidden" name="provider" value="<?php echo $provider ?? ''; ?>">
             <input type="hidden" name="id" value="<?php echo $mb_id ?? ''; ?>">
             <input type="hidden" name="mb_6" id="mb_6" value="">

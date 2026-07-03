@@ -120,7 +120,6 @@ td {vertical-align:middle !important;}
                             <td class="column-center" ><?php echo date("Y.m.d", strtotime($list[$i]['wr_datetime'])) ?></td>
                             <td class="column-center last">
 								<button type="button" class="btn btn-danger" id="list_del">삭제</button>
-								<a href="write.php?w=u&bo_table=<?=$bo_table?>&wr_id=<?=$list[$i]['wr_id'] ?>&page=<?=$page?>" class="btn btn-secondary">수정</a>
                             </td>
                           </tr>
 				<?php } ?>

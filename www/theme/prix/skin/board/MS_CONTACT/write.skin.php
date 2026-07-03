@@ -124,18 +124,14 @@ $addr2 = $wr_addr[3];
 							</div>
 						</td>
 					</tr> -->
-					<tr>
-						<th scope="row"><span class="">기업명</span></th>
-						<td><input type="text" name="wr_1" value="<?php echo $wr_1 ?>" id="wr_1"  class=" small" placeholder="기업명"></td>
-					</tr>
-					<tr>
-						<th scope="row"><span class="">직책</span></th>
-						<td><input type="text" name="wr_2" value="<?php echo $wr_2 ?>" id="wr_2"  class=" small" placeholder="직책"></td>
-					</tr>
-					<tr>
-						<th scope="row"><span class="">성함</span></th>
-						<td><input type="text" name="wr_name" value="<?php echo $name ?>" id="wr_name" required class="required small" placeholder="이름"></td>
-					</tr>
+						<tr>
+							<th scope="row"><span class="">기업명</span></th>
+							<td><input type="text" name="wr_1" value="<?php echo $wr_1 ?>" id="wr_1"  class=" small" placeholder="기업명"></td>
+						</tr>
+						<tr>
+							<th scope="row"><span class="">성함</span></th>
+							<td><input type="text" name="wr_name" value="<?php echo $name ?>" id="wr_name" required class="required small" placeholder="이름"></td>
+						</tr>
 					<!-- <tr>
 						<th scope="row"><span class="">일자</span></th>
 						<td><input type="text" name="wr_7" value="<?php echo $wr_7 ?>" id="wr_7" required class="required datetimepicker small" placeholder=""></td>
@@ -386,7 +382,7 @@ $addr2 = $wr_addr[3];
 		<div class="clauseArea">
 			<div class="tit">개인정보 수집 및 이용 동의</div>
 			<div class="scroll">
-				<? include_once(G5_THEME_PATH . '/privacy.php'); ?>
+				<? include_once(G5_THEME_PATH . '/privacy_consent.php'); ?>
 			</div>
 			<p class="checkIn">
 				<input type="checkbox" id="contactCheck" name="contactCheck"/>
@@ -396,7 +392,6 @@ $addr2 = $wr_addr[3];
 
 		<div class="board_btn write">
 			<ul class="board_user">
-				<?php if ($is_member) { ?><li><a href="<?php echo get_pretty_url($bo_table); ?>" class="click big">목록</a></li><? } ?>
 				<li><button type="submit" id="btn_submit" accesskey="s" class="click write big">신청하기</button></li>
 			</ul>
 		</div>

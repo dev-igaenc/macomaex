@@ -19,6 +19,17 @@ if (!($w == '' || $w == 'u' || $w == 'r')) {
     alert('w 값이 제대로 넘어오지 않았습니다.');
 }
 
+$current_write_url = G5_BBS_URL.'/write.php?bo_table='.$bo_table;
+if ($w) {
+    $current_write_url .= '&w='.$w;
+}
+if ($wr_id) {
+    $current_write_url .= '&wr_id='.(int) $wr_id;
+}
+if (function_exists('macomaex_require_member_for_board_write')) {
+    macomaex_require_member_for_board_write($bo_table, $is_guest, $current_write_url);
+}
+
 if ($w == 'u' || $w == 'r') {
     if ($write['wr_id']) {
         // 가변 변수로 $wr_1 .. $wr_10 까지 만든다.

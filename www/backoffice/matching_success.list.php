@@ -50,6 +50,55 @@ function normalize_company_phone($raw_phone)
 	return $digits;
 }
 
+function normalize_matching_email_values($values)
+{
+	if (!is_array($values)) {
+		$values = array($values);
+	}
+
+	$emails = array();
+	for ($i = 0; $i < count($values); $i++) {
+		$email = trim((string)$values[$i]);
+		if ($email === '') continue;
+		$emails[$email] = true;
+	}
+
+	return array_keys($emails);
+}
+
+function format_matching_email_lines($memberEmail, $companyEmail)
+{
+	$memberEmails = normalize_matching_email_values($memberEmail);
+	$companyEmail = trim((string)$companyEmail);
+	$lines = array();
+
+	if ($companyEmail !== '' && !in_array($companyEmail, $memberEmails, true)) {
+		$lines[] = '<div><strong>대표</strong> ' . htmlspecialchars($companyEmail, ENT_QUOTES, 'UTF-8') . '</div>';
+	}
+
+	if (count($memberEmails) > 0) {
+		if (count($memberEmails) === 1) {
+			$lines[] = '<div><strong>회원</strong> ' . htmlspecialchars($memberEmails[0], ENT_QUOTES, 'UTF-8') . '</div>';
+		} else {
+			$memberLines = array();
+			for ($i = 0; $i < count($memberEmails); $i++) {
+			$memberLines[] = '<div class="matching-email-detail-item">' . htmlspecialchars($memberEmails[$i], ENT_QUOTES, 'UTF-8') . '</div>';
+			}
+
+			$lines[] = '<details class="matching-email-details">'
+				. '<summary><strong>회원</strong></summary>'
+				. '<div class="matching-email-detail-list">' . implode('', $memberLines) . '</div>'
+				. '</details>';
+		}
+	}
+
+	if (empty($lines)) {
+		return '-';
+	}
+
+	return implode('', $lines);
+}
+
 $sql_common = " from trade_request TR ";
 $sql_search = " where 1=1 ";
 
@@ -128,9 +177,11 @@ $sql = "select
 		TR.chat_room_id,
 		'' as req_member_email,
 		'' as req_member_phone,
+		'' as req_company_email,
 		null as tgt_mb_no,
 		'' as tgt_member_email,
 		'' as tgt_member_phone,
+		'' as tgt_company_email,
 		'' as req_company_phone,
 		'' as tgt_company_phone
 		$sql_common $sql_search order by TR.tr_no desc limit $from_record, {$config['cf_page_rows']} ";
@@ -182,7 +233,7 @@ if (count($request_bznos) > 0) {
 		$request_bzno_sql[] = "'" . sql_escape_string($request_bzno) . "'";
 	}
 
-	$request_company_result = sql_query(" select BZNO, TEL_NO
+	$request_company_result = sql_query(" select BZNO, TEL_NO, EMAIL
 		from company
 		where BZNO in (" . implode(',', $request_bzno_sql) . ") ");
 	for ($ri = 0; $row = sql_fetch_array($request_company_result); $ri++) {
@@ -198,7 +249,7 @@ if (count($target_kedcds) > 0) {
 		$target_kedcd_sql[] = "'" . sql_escape_string($target_kedcd) . "'";
 	}
 
-	$target_company_result = sql_query(" select KEDCD, TEL_NO
+	$target_company_result = sql_query(" select KEDCD, TEL_NO, EMAIL
 		from company
 		where KEDCD in (" . implode(',', $target_kedcd_sql) . ") ");
 	for ($ri = 0; $row = sql_fetch_array($target_company_result); $ri++) {
@@ -206,22 +257,34 @@ if (count($target_kedcds) > 0) {
 	}
 
 	$target_member_sql = " select
-			MM.mb_company,
-			MM.mb_no,
-			MM.mb_email,
-			MM.mb_hp,
-			MM.mb_8
-		from g5_member MM
-		inner join (
-			select mb_company, max(mb_no) as max_mb_no
-			from g5_member
-			where ifnull(mb_company, '') != ''
-			  and mb_company in (" . implode(',', $target_kedcd_sql) . ")
-			group by mb_company
-		) MX on MM.mb_company = MX.mb_company and MM.mb_no = MX.max_mb_no ";
+			mb_company,
+			mb_no,
+			mb_email,
+			mb_hp,
+			mb_8
+		from g5_member
+		where ifnull(mb_company, '') != ''
+		  and mb_company in (" . implode(',', $target_kedcd_sql) . ")
+		  and (mb_leave_date = '' or mb_leave_date is null)
+		order by mb_company asc, mb_no desc ";
 	$target_member_result = sql_query($target_member_sql);
 	for ($ri = 0; $row = sql_fetch_array($target_member_result); $ri++) {
-		$target_member_map[$row['mb_company']] = $row;
+		$target_company = trim((string)$row['mb_company']);
+		if ($target_company === '') continue;
+
+		if (!isset($target_member_map[$target_company])) {
+			$target_member_map[$target_company] = array(
+				'mb_no' => $row['mb_no'],
+				'mb_hp' => $row['mb_hp'],
+				'mb_8' => $row['mb_8'],
+				'emails' => array(),
+			);
+		}
+
+		$member_email = trim((string)$row['mb_email']);
+		if ($member_email !== '') {
+			$target_member_map[$target_company]['emails'][$member_email] = true;
+		}
 	}
 }
 
@@ -235,16 +298,18 @@ for ($ri = 0; $ri < count($rows_list); $ri++) {
 	$request_bzno = trim((string)$rows_list[$ri]['request_bzno']);
 	if ($request_bzno !== '' && isset($request_company_map[$request_bzno])) {
 		$rows_list[$ri]['req_company_phone'] = $request_company_map[$request_bzno]['TEL_NO'];
+		$rows_list[$ri]['req_company_email'] = $request_company_map[$request_bzno]['EMAIL'];
 	}
 
 	$target_kedcd = trim((string)$rows_list[$ri]['target_kedcd']);
 	if ($target_kedcd !== '' && isset($target_company_map[$target_kedcd])) {
 		$rows_list[$ri]['tgt_company_phone'] = $target_company_map[$target_kedcd]['TEL_NO'];
+		$rows_list[$ri]['tgt_company_email'] = $target_company_map[$target_kedcd]['EMAIL'];
 	}
 
 	if ($target_kedcd !== '' && isset($target_member_map[$target_kedcd])) {
 		$rows_list[$ri]['tgt_mb_no'] = $target_member_map[$target_kedcd]['mb_no'];
-		$rows_list[$ri]['tgt_member_email'] = $target_member_map[$target_kedcd]['mb_email'];
+		$rows_list[$ri]['tgt_member_email'] = array_keys($target_member_map[$target_kedcd]['emails']);
 		$rows_list[$ri]['tgt_member_phone'] = trim((string)$target_member_map[$target_kedcd]['mb_hp']) ? $target_member_map[$target_kedcd]['mb_hp'] : $target_member_map[$target_kedcd]['mb_8'];
 	}
 }
@@ -325,6 +390,35 @@ $rnumber=($total_count-($page-1)*$rows)+1;
 	.matching-success-table th,
 	.matching-success-table td {
 		white-space: nowrap;
+	}
+	.matching-success-table .matching-email-cell {
+		white-space: normal;
+		min-width: 220px;
+		line-height: 1.6;
+		word-break: break-all;
+	}
+	.matching-success-table .matching-email-cell strong {
+		display: inline-block;
+		min-width: 30px;
+		font-weight: 700;
+		color: #4b5563;
+	}
+	.matching-success-table .matching-email-details {
+		margin: 0;
+	}
+	.matching-success-table .matching-email-details summary {
+		cursor: pointer;
+		color: #2563eb;
+		list-style-position: inside;
+	}
+	.matching-success-table .matching-email-details summary strong {
+		color: #4b5563;
+	}
+	.matching-success-table .matching-email-detail-list {
+		margin-top: 6px;
+	}
+	.matching-success-table .matching-email-detail-item + .matching-email-detail-item {
+		margin-top: 4px;
 	}
 	.matching-success-table tbody td:nth-child(5),
 	.matching-success-table tbody td:nth-child(6),
@@ -566,11 +660,11 @@ $rnumber=($total_count-($page-1)*$rows)+1;
 	        <td class="td_center"><span class="matching-company-label matching-company-label--request">보낸</span><?=trim((string)$v['request_company_name']) ? $v['request_company_name'] : '-'?></td>
 			<td class="td_center"><?=trim((string)$v['request_bzno']) ? licenseNum($v['request_bzno']) : '-'?></td>
 			<td class="td_center"><?=normalize_company_phone(trim((string)$v['req_member_phone']) ? $v['req_member_phone'] : $v['req_company_phone'])?></td>
-			<td class="td_center"><?=trim((string)$v['req_member_email']) ? $v['req_member_email'] : '-'?></td>
+			<td class="td_left matching-email-cell"><?=format_matching_email_lines($v['req_member_email'], $v['req_company_email'])?></td>
 			<td class="td_center"><span class="matching-company-label matching-company-label--target">받은</span><?=trim((string)$v['target_company_name']) ? $v['target_company_name'] : '-'?></td>
 			<td class="td_center"><?=trim((string)$v['target_bzno']) ? licenseNum($v['target_bzno']) : '-'?></td>
 			<td class="td_center"><?=normalize_company_phone(trim((string)$v['tgt_member_phone']) ? $v['tgt_member_phone'] : $v['tgt_company_phone'])?></td>
-			<td class="td_center"><?=trim((string)$v['tgt_member_email']) ? $v['tgt_member_email'] : '-'?></td>
+			<td class="td_left matching-email-cell"><?=format_matching_email_lines($v['tgt_member_email'], $v['tgt_company_email'])?></td>
 			<td class="td_center"><?=nl2br(htmlspecialchars((string)$v['message_content'], ENT_QUOTES, 'UTF-8'))?></td>
 			<td class="td_center">
 			<?if($status!="거래진행중" && $status != "거래거절"){?>

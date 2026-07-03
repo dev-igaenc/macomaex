@@ -69,6 +69,13 @@ $e = static function ($value) {
 
   <tr><td style="padding:14px 14px 18px;background:#f9fafb;">
 
+    <div style="background:#ffffff;border-radius:12px;padding:18px;border:1px solid #e5e7eb;margin-bottom:10px;">
+      <div style="font-size:13px;line-height:1.8;color:#374151;word-break:keep-all;">
+        안녕하세요. 거래처 발굴 플랫폼 MACOMAEX입니다.<br>
+        발신기업이 귀사와의 거래를 희망하여 거래 요청을 보내셨습니다. 아래 거래 요청 내용을 확인해 주시면 감사하겠습니다.
+      </div>
+    </div>
+
     <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:10px;">
       <tr>
         <td style="width:47%;vertical-align:top;">
@@ -240,6 +247,36 @@ $e = static function ($value) {
             </div>
             <div style="text-align:center;margin-top:20px;">
                 <div style="font-size:10px;color:#d1d5db;letter-spacing:0.04em;">© 2026 IGAENC Co., Ltd.</div>
+            </div>
+            <div style="margin-top:20px;padding-top:20px;border-top:1px solid #f3f4f6;">
+                <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
+                    <tr>
+                        <td width="50%" valign="middle" style="padding-right:10px;">
+                            <table cellpadding="0" cellspacing="0" role="presentation">
+                                <tr>
+                                    <td valign="middle" style="padding-right:12px;">
+                                        <img src="<?php echo $mailBaseUrl; ?>/img/kodata-signature.svg" alt="KODATA 로고" style="display:block;width:110px;max-width:110px;height:auto;border:0;outline:none;text-decoration:none;">
+                                    </td>
+                                    <td valign="middle" style="font-size:11px;line-height:1.4;color:#4b5563;white-space:nowrap;">
+                                        KODATA 기업데이터 기반 AI 추천
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                        <td width="50%" valign="middle" style="padding-left:10px;">
+                            <table cellpadding="0" cellspacing="0" role="presentation">
+                                <tr>
+                                    <td valign="middle" style="padding-right:12px;">
+                                        <img src="<?php echo $mailBaseUrl; ?>/img/innobiz-logo.svg" alt="이노비즈 로고" style="display:block;width:92px;max-width:92px;height:auto;border:0;outline:none;text-decoration:none;">
+                                    </td>
+                                    <td valign="middle" style="font-size:11px;line-height:1.4;color:#4b5563;white-space:nowrap;">
+                                        이노비즈 협회 회원서비스 운영 기관
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                </table>
             </div>
         </td>
     </tr>
