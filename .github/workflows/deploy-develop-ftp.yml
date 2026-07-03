@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   deploy:
-    name: Deploy incremental www to dev server
+    name: Deploy changed www files to dev server
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -24,16 +24,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 2
-
-      - name: Restore tracked file mtimes
-        run: |
-          git ls-files -z www | while IFS= read -r -d '' file; do
-            ts=$(git log -1 --format=%cI -- "$file")
-            if [ -n "$ts" ] && [ -f "$file" ]; then
-              touch -d "$ts" "$file"
-            fi
-          done
+          fetch-depth: 0
 
       - name: Validate SFTP settings
         env:
@@ -57,6 +48,14 @@ jobs:
             www/composer.json
             www/composer.lock
 
+      - name: Detect changed deploy files
+        id: deploy-files
+        uses: tj-actions/changed-files@v47
+        with:
+          separator: "\n"
+          files: |
+            www/**
+
       - name: Setup PHP
         if: steps.composer-files.outputs.any_changed == 'true'
         uses: shivammathur/setup-php@v2
@@ -70,28 +69,62 @@ jobs:
         working-directory: www
         run: composer install --no-dev --prefer-dist --no-interaction --no-progress
 
-      - name: Prepare deploy bundle
+      - name: Build changed file lists
         run: |
-          rm -rf deploy_www
-          mkdir -p deploy_www
-          rsync -a \
-            --exclude='data/' \
-            --exclude='logs/' \
-            --exclude='plugin/*/key/' \
-            --exclude='plugin/*/cert/' \
-            --exclude='plugin/*/log/' \
-            --exclude='plugin/okname/' \
-            --exclude='plugin/kcpcert/' \
-            --exclude='plugin/inicert/' \
-            www/ deploy_www/
+          printf '%s\n' "${{ steps.deploy-files.outputs.all_changed_files }}" > .deploy_all.txt
+          printf '%s\n' "${{ steps.deploy-files.outputs.deleted_files }}" > .deploy_deleted_raw.txt
+
+          awk '
+            NF &&
+            $0 ~ /^www\// &&
+            $0 !~ /^www\/data\// &&
+            $0 !~ /^www\/logs\// &&
+            $0 !~ /^www\/vendor\// &&
+            $0 !~ /^www\/plugin\/[^/]+\/key\// &&
+            $0 !~ /^www\/plugin\/[^/]+\/cert\// &&
+            $0 !~ /^www\/plugin\/[^/]+\/log\// &&
+            $0 !~ /^www\/plugin\/okname(\/|$)/ &&
+            $0 !~ /^www\/plugin\/kcpcert(\/|$)/ &&
+            $0 !~ /^www\/plugin\/inicert(\/|$)/
+          ' .deploy_all.txt | sort -u > .deploy_changed.txt
+
+          awk '
+            NF &&
+            $0 ~ /^www\// &&
+            $0 !~ /^www\/data\// &&
+            $0 !~ /^www\/logs\// &&
+            $0 !~ /^www\/vendor\// &&
+            $0 !~ /^www\/plugin\/[^/]+\/key\// &&
+            $0 !~ /^www\/plugin\/[^/]+\/cert\// &&
+            $0 !~ /^www\/plugin\/[^/]+\/log\// &&
+            $0 !~ /^www\/plugin\/okname(\/|$)/ &&
+            $0 !~ /^www\/plugin\/kcpcert(\/|$)/ &&
+            $0 !~ /^www\/plugin\/inicert(\/|$)/
+          ' .deploy_deleted_raw.txt | sort -u > .deploy_deleted.txt
+
+          if [ "${{ steps.composer-files.outputs.any_changed }}" = "true" ] && [ -d www/vendor ]; then
+            find www/vendor -type f | sort -u > .deploy_vendor.txt
+            cat .deploy_vendor.txt >> .deploy_changed.txt
+            sort -u .deploy_changed.txt -o .deploy_changed.txt
+          else
+            : > .deploy_vendor.txt
+          fi
+
+          echo "Changed deploy files: $(wc -l < .deploy_changed.txt)"
+          echo "Deleted deploy files: $(wc -l < .deploy_deleted.txt)"
+          echo "Composer vendor files: $(wc -l < .deploy_vendor.txt)"
 
       - name: Show deploy target
-        run: echo "Deploying ./deploy_www contents to ${{ secrets.CAFE24_REMOTE_PATH }}"
+        run: |
+          echo "Deploying changed files to ${{ secrets.CAFE24_REMOTE_PATH }}"
+          sed -n '1,40p' .deploy_changed.txt
+          sed -n '1,40p' .deploy_deleted.txt
 
       - name: Install lftp
         run: sudo apt-get update && sudo apt-get install -y lftp
 
-      - name: Upload changed files via SFTP mirror
+      - name: Upload composer vendor via SFTP mirror
+        if: steps.composer-files.outputs.any_changed == 'true'
         env:
           CAFE24_SFTP_HOST: ${{ secrets.CAFE24_SFTP_HOST }}
           CAFE24_SFTP_PORT: ${{ secrets.CAFE24_SFTP_PORT }}
@@ -99,13 +132,62 @@ jobs:
           CAFE24_SFTP_PASSWORD: ${{ secrets.CAFE24_SFTP_PASSWORD }}
           CAFE24_REMOTE_PATH: ${{ secrets.CAFE24_REMOTE_PATH }}
         run: |
+          if [ ! -d www/vendor ]; then
+            echo "www/vendor not found after composer install"
+            exit 1
+          fi
+
           lftp -u "$CAFE24_SFTP_USER","$CAFE24_SFTP_PASSWORD" "sftp://$CAFE24_SFTP_HOST:$CAFE24_SFTP_PORT" <<EOF
           set sftp:auto-confirm yes
           set cmd:fail-exit yes
           cd "$CAFE24_REMOTE_PATH"
-          mirror -R --only-newer --verbose \
-            --overwrite \
-            ./deploy_www .
-          ls ./_head.php
+          mirror -R --delete --verbose ./www/vendor vendor
           bye
           EOF
+
+      - name: Upload changed tracked files via SFTP
+        env:
+          CAFE24_SFTP_HOST: ${{ secrets.CAFE24_SFTP_HOST }}
+          CAFE24_SFTP_PORT: ${{ secrets.CAFE24_SFTP_PORT }}
+          CAFE24_SFTP_USER: ${{ secrets.CAFE24_SFTP_USER }}
+          CAFE24_SFTP_PASSWORD: ${{ secrets.CAFE24_SFTP_PASSWORD }}
+          CAFE24_REMOTE_PATH: ${{ secrets.CAFE24_REMOTE_PATH }}
+        run: |
+          if [ ! -s .deploy_changed.txt ] && [ ! -s .deploy_deleted.txt ]; then
+            echo "No deployable file changes detected."
+            exit 0
+          fi
+
+          : > .lftp-commands.txt
+
+          while IFS= read -r file; do
+            [ -n "$file" ] || continue
+            rel="${file#www/}"
+            dir=$(dirname "$rel")
+
+            if [ "$dir" = "." ]; then
+              printf 'put "%s"\n' "$file" >> .lftp-commands.txt
+            else
+              printf 'mkdir -p "%s"\n' "$dir" >> .lftp-commands.txt
+              printf 'put -O "%s" "%s"\n' "$dir" "$file" >> .lftp-commands.txt
+            fi
+          done < .deploy_changed.txt
+
+          while IFS= read -r file; do
+            [ -n "$file" ] || continue
+            rel="${file#www/}"
+            printf 'rm -f "%s"\n' "$rel" >> .lftp-commands.txt
+          done < .deploy_deleted.txt
+
+          sed -n '1,120p' .lftp-commands.txt
+
+          {
+            echo "open -u \"$CAFE24_SFTP_USER\",\"$CAFE24_SFTP_PASSWORD\" sftp://$CAFE24_SFTP_HOST:$CAFE24_SFTP_PORT"
+            echo "set sftp:auto-confirm yes"
+            echo "set cmd:fail-exit yes"
+            echo "cd \"$CAFE24_REMOTE_PATH\""
+            cat .lftp-commands.txt
+            echo "bye"
+          } > .lftp-session.txt
+
+          lftp -f .lftp-session.txt
