@@ -11,7 +11,9 @@ include_once('./_common.php');
 
 check_demo();
 
-auth_check($auth[$sub_menu], 'd');
+if($sub_menu!="300250"){
+    auth_check($auth[$sub_menu], 'd');
+}
 
 $comment_id = (int) $comment_id;
 

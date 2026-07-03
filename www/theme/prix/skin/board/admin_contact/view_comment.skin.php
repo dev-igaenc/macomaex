@@ -102,7 +102,6 @@ var char_max = parseInt(<?php echo $comment_max ?>); // 최대
 				<p><time datetime="<?php echo date('Y.m.d\TH:i:s+09:00', strtotime($list[$i]['datetime'])) ?>"><?php echo date("Y.m.d H:i:s", strtotime($list[$i]['datetime'])) ?></time></p>
 
 				<div class="comment_option">
-					<?php if ($list[$i]['is_edit']) { ?><a href="<?php echo $c_edit_href; ?>" onclick="comment_box('<?php echo $comment_id ?>', 'cu'); return false;"><span><?=$lang_comment_modify?></span></a><?php } ?>
 					<?php if ($list[$i]['is_del']) { ?><a href="<?php echo $list[$i]['del_link']; ?>" onclick="return comment_delete();"><span><?=$lang_comment_del?></span></a><?php } ?>
 				</div>
 			</dd>

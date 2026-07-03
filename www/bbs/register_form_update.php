@@ -123,7 +123,8 @@ $member_mb_name = trim((string) $member['mb_name']);
 $member_mb_nick = trim((string) $member['mb_nick']);
 $member_mb_company = trim((string) $member['mb_company']);
 $member_mb_6 = trim((string) $member['mb_6']);
-$member_mb_8 = trim((string) $member['mb_8']);
+$member_mb_hp = hyphen_hp_number(trim((string) $member['mb_hp']));
+$member_mb_8 = hyphen_hp_number(trim((string) $member['mb_8']));
 
 $cert_mb_name   = clean_xss_tags($cert_mb_name);
 $mb_name        = ($w == '') ? $mb_id : clean_xss_tags($mb_name);
@@ -144,6 +145,12 @@ if ($mb_8_digits !== '') {
     }
 } else {
     $mb_8 = '';
+}
+// 수정 화면별 휴대폰 입력값을 하나로 통일한다.
+$member_phone = $member_mb_hp !== '' ? $member_mb_hp : $member_mb_8;
+$posted_member_phone = $mb_8 !== '' ? hyphen_hp_number($mb_8) : $mb_hp;
+if ($w != '' && $posted_member_phone === '') {
+    $posted_member_phone = $member_phone;
 }
 $mb_zip1        = preg_replace('/[^0-9]/', '', $mb_zip1);
 $mb_zip2        = preg_replace('/[^0-9]/', '', $mb_zip2);
@@ -189,8 +196,8 @@ if ($w == '') {
     if ($msg = valid_mb_email($mb_email))   alert($msg, "", true, true);
     if ($msg = prohibit_mb_email($mb_email))alert($msg, "", true, true);
 
-    if ($msg = valid_mb_hp($mb_hp))     alert($msg, "", true, true);
-    if ($msg = exist_mb_hp($mb_hp, $mb_id)) alert($msg, "", true, true);
+    // 신규 가입 저장 전에 휴대폰 중복 막음
+    if ($msg = macomaex_validate_unique_mb_hp($mb_hp, $mb_id)) alert($msg, "", true, true);
     // 클라이언트 검증 우회를 막기 위해 신규 가입 insert 전에 OTP 인증 세션을 확인합니다.
     if (!macomaex_signup_phone_otp_is_verified($mb_hp)) alert('휴대폰 인증을 완료해 주세요.', "", true, true);
 
@@ -227,6 +234,14 @@ if ($w == '') {
 
 // 사용자 코드 실행
 @include_once($member_skin_path.'/register_form_update.head.skin.php');
+
+if ($use_member_consent && $mb_9 !== '1') {
+    alert('이용약관에 동의해 주세요.', "", true, true);
+}
+
+if ($use_member_consent && $mb_10 !== '1') {
+    alert('개인정보 수집 및 이용동의에 동의해 주세요.', "", true, true);
+}
 
 $sql_certify = '';
 $md5_cert_no = get_session('ss_cert_no');
@@ -273,16 +288,12 @@ if ($w != '' && $config['cf_cert_use'] && $cert_type && $md5_cert_no) {
         alert('본인인증된 정보와 입력된 회원정보가 일치하지않습니다. 다시시도 해주세요');
     }
 } else if ($w != '') {
-    if ($use_member_consent && $mb_9 !== '1') {
-        alert('이용약관에 동의해 주세요.', "", true, true);
+    $phone_changed = (macomaex_signup_phone_otp_normalize($posted_member_phone) !== macomaex_signup_phone_otp_normalize($member_phone));
+    // 번호를 바꾼 경우에만 중복 여부를 다시 확인
+    if ($phone_changed && ($msg = macomaex_validate_unique_mb_hp($posted_member_phone, $mb_id))) {
+        alert($msg, "", true, true);
     }
-
-    if ($use_member_consent && $mb_10 !== '1') {
-        alert('개인정보 수집 및 이용동의에 동의해 주세요.', "", true, true);
-    }
-
-    $phone_changed = (macomaex_signup_phone_otp_normalize($mb_8) !== macomaex_signup_phone_otp_normalize($member_mb_8));
-    if ($phone_changed && !macomaex_signup_phone_otp_is_verified($mb_8)) {
+    if ($phone_changed && !macomaex_signup_phone_otp_is_verified($posted_member_phone)) {
         alert('변경한 휴대폰 번호의 인증을 완료해 주세요.', "", true, true);
     }
 
@@ -541,8 +552,8 @@ if($mb_2) $sql .= "                    mb_2 = '{$mb_2}',";
 	// if($mb_5) $sql .= "                    mb_5 = '{$mb_5}',";
 		$sql .= "                    mb_6 = '{$mb_6}',";
 	// $sql .= "                    mb_7 = '{$mb_7}',";
-		if($mb_8) $sql .= "                    mb_hp = '{$mb_8}',";
-		if($mb_8) $sql .= "                    mb_8 = '{$mb_8}',";
+		if($posted_member_phone) $sql .= "                    mb_hp = '{$posted_member_phone}',";
+		if($posted_member_phone) $sql .= "                    mb_8 = '{$posted_member_phone}',";
 	if ($use_member_consent) $sql .= "                    mb_9 = '{$mb_9}',";
 	if ($use_member_consent) $sql .= "                    mb_10 = '{$mb_10}',";
 	if ($use_member_consent) $sql .= "                    mb_11 = '{$mb_11}',";

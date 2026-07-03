@@ -235,7 +235,7 @@ if ($is_search_bbs) {
 
 
 $write_href = '';
-if ($member['mb_level'] >= $board['bo_write_level']) {
+if ($bo_table !== 'Contact' && $member['mb_level'] >= $board['bo_write_level']) {
     $write_href = './write.php?bo_table='.$bo_table;
 }
 

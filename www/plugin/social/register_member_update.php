@@ -112,7 +112,7 @@ if ($msg = reserve_mb_nick($mb_nick))   macomaex_social_register_fail('회원 �
 //if ($msg = valid_mb_name($mb_name))     alert($msg, "", true, true);
 if ($msg = valid_mb_email($mb_email))   macomaex_social_register_fail($msg);
 if ($msg = prohibit_mb_email($mb_email))macomaex_social_register_fail($msg);
-if ($msg = valid_mb_hp($mb_hp))         macomaex_social_register_fail($msg);
+if ($msg = macomaex_validate_unique_mb_hp($mb_hp, $mb_id)) macomaex_social_register_fail($msg);
 // 소셜 가입도 일반 가입과 동일하게 최종 insert 전에 OTP 인증을 강제합니다.
 if (!macomaex_signup_phone_otp_is_verified($mb_hp)) macomaex_social_register_fail('휴대폰 인증을 완료해 주세요.');
 

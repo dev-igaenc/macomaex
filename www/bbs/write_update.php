@@ -3,6 +3,15 @@ include_once('./_common.php');
 include_once(G5_LIB_PATH.'/naver_syndi.lib.php');
 include_once(G5_CAPTCHA_PATH.'/captcha.lib.php');
 
+// 직접 POST하는 우회도 동일하게 회원 전용 제한 적용
+if (function_exists('macomaex_require_member_for_board_write')) {
+    macomaex_require_member_for_board_write(
+        $bo_table,
+        $is_guest,
+        G5_BBS_URL.'/write.php?bo_table='.$bo_table
+    );
+}
+
 // Contact 계열 보드는 스킨명/bo_table이 제각각이라 둘 다 보고 판별한다.
 if (!function_exists('macomaex_is_contact_board_request')) {
     function macomaex_is_contact_board_request($bo_table, $board_skin_path = '')

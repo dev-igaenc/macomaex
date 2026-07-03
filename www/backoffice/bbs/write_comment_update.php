@@ -10,7 +10,9 @@ define('G5_CAPTCHA', true);
 include_once('./_common.php');
 include_once(G5_CAPTCHA_PATH.'/captcha.lib.php');
 
-auth_check($auth[$sub_menu], 'w');
+if($sub_menu!="300250"){
+    auth_check($auth[$sub_menu], 'w');
+}
 
 // 토큰체크
 $comment_token = trim(get_session('ss_comment_token'));
