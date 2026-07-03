@@ -66,6 +66,27 @@ function logVerifyRequestError(detail) {
     }).catch(function () {});
 }
 
+function recordTradeRequestClickHit() {
+    var target = MATCH_REQUEST_CONTEXT.target || {};
+    if (!target.kedcd) return;
+
+    var payload = new URLSearchParams();
+    payload.set('action', 'trade_request_click_hit');
+    payload.set('target_kedcd', target.kedcd);
+    payload.set('target_company_name', target.company || '');
+    payload.set('target_bzno', target.bzno || '');
+
+    fetch(REQUEST_ENDPOINT, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: payload.toString(),
+        keepalive: true
+    }).catch(function () {});
+}
+
 function isMemberFlagTrue(value) {
     return value === true || value === 1 || value === '1' || value === 'true';
 }
@@ -258,6 +279,8 @@ function openLoginRequiredModal(descriptionHtml) {
 var openMatchBtn = document.getElementById('openTypeModal2');
 if (openMatchBtn) {
     openMatchBtn.addEventListener('click', function () {
+        recordTradeRequestClickHit();
+
         // 비로그인 진입은 각 페이지가 내려준 로그인 유도 URL로만 처리한다.
         if (!isUserLoggedInNow()) {
             MATCH_REQUEST_CONTEXT.isLoggedIn = false;
