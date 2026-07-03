@@ -12,6 +12,9 @@ if (isset($_GET['trade_request_login']) && $_GET['trade_request_login'] === '1')
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
+    if ($_POST['action'] === 'trade_request_click_hit') {
+        company_detail_handle_trade_request_click_hit($member, $_POST, 'recommend');
+    }
     if ($_POST['action'] === 'trade_request_verify_bzno') {
         company_detail_handle_trade_request_verify_bzno($member, $_POST);
     }

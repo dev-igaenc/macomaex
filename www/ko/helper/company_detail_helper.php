@@ -635,6 +635,86 @@ function company_detail_should_overwrite_member_company_name($currentValue, $mem
 	return false;
 }
 
+function company_detail_trade_request_click_client_ip() {
+	return trim((string)($_SERVER['REMOTE_ADDR'] ?? ''));
+}
+
+function company_detail_trade_request_click_guest_id() {
+	$sessionId = trim((string)session_id());
+	if ($sessionId !== '') {
+		return 'guest:' . $sessionId;
+	}
+
+	$fallbackSeed = company_detail_trade_request_click_client_ip() . '|' . trim((string)($_SERVER['HTTP_USER_AGENT'] ?? ''));
+	return 'guest:' . substr(hash('sha256', $fallbackSeed), 0, 32);
+}
+
+function company_detail_handle_trade_request_click_hit($member, $request, $sourceType) {
+	$sourceType = trim((string)$sourceType);
+	if (!in_array($sourceType, array('category', 'recommend'), true)) {
+		company_detail_trade_request_json_response(false, '유입 구분이 올바르지 않습니다.', array(
+			'error_code' => 'invalid_source_type',
+		));
+	}
+
+	$targetKedcd = preg_replace('/\D/', '', (string)($request['target_kedcd'] ?? ($request['kedcd'] ?? '')));
+	if (strlen($targetKedcd) !== 10 || preg_match('/^0+$/', $targetKedcd)) {
+		company_detail_trade_request_json_response(false, '대상 기업 정보가 올바르지 않습니다.', array(
+			'error_code' => 'invalid_target_kedcd',
+		));
+	}
+
+	$targetCompany = sql_fetch("
+		SELECT KEDCD, ENP_NM, BZNO
+		FROM company
+		WHERE KEDCD = '" . sql_escape_string($targetKedcd) . "'
+		LIMIT 1
+	");
+	$targetCompanyName = trim((string)($targetCompany['ENP_NM'] ?? ''));
+	$targetBzno = preg_replace('/\D/', '', (string)($targetCompany['BZNO'] ?? ''));
+
+	if (empty($targetCompany['KEDCD'])) {
+		$targetCompanyName = trim((string)($request['target_company_name'] ?? ''));
+		$targetBzno = preg_replace('/\D/', '', (string)($request['target_bzno'] ?? ''));
+	}
+	if ($targetCompanyName === '' && $targetBzno === '') {
+		company_detail_trade_request_json_response(false, '대상 기업 정보를 찾지 못했습니다.', array(
+			'error_code' => 'target_company_not_found',
+		));
+	}
+
+	$memberId = trim((string)($member['mb_id'] ?? ''));
+	$mbType = $memberId !== '' ? 'member' : 'guest';
+	$mbId = $memberId !== '' ? $memberId : company_detail_trade_request_click_guest_id();
+	$ipAddress = company_detail_trade_request_click_client_ip();
+
+	$sql = "insert into trade_request_click_hit set
+		target_kedcd='" . sql_escape_string($targetKedcd) . "',
+		target_company_name='" . sql_escape_string($targetCompanyName) . "',
+		target_bzno='" . sql_escape_string($targetBzno) . "',
+		mb_type='" . sql_escape_string($mbType) . "',
+		mb_id='" . sql_escape_string($mbId) . "',
+		source_type='" . sql_escape_string($sourceType) . "',
+		ip_address='" . sql_escape_string($ipAddress) . "',
+		clicked_at=now(),
+		clicked_date=curdate()";
+
+	$result = sql_query($sql, false);
+	if (!$result) {
+		company_detail_trade_request_log('click_hit_insert_failed', array(
+			'target_kedcd' => $targetKedcd,
+			'mb_type' => $mbType,
+			'mb_id' => $mbId,
+			'source_type' => $sourceType,
+		));
+		company_detail_trade_request_json_response(false, '클릭 기록 저장에 실패했습니다.', array(
+			'error_code' => 'click_hit_insert_failed',
+		));
+	}
+
+	company_detail_trade_request_json_response(true, '클릭 기록이 저장되었습니다.');
+}
+
 function company_detail_handle_trade_request_verify_bzno($member, $request) {
 	if (empty($member['mb_id'])) {
 		company_detail_trade_request_json_response(false, '로그인 후 이용해 주세요.');
