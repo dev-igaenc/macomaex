@@ -102,10 +102,10 @@ jobs:
           lftp -u "$CAFE24_SFTP_USER","$CAFE24_SFTP_PASSWORD" "sftp://$CAFE24_SFTP_HOST:$CAFE24_SFTP_PORT" <<EOF
           set sftp:auto-confirm yes
           set cmd:fail-exit yes
-          mkdir -p "$CAFE24_REMOTE_PATH"
+          cd "$CAFE24_REMOTE_PATH"
           mirror -R --only-newer --verbose \
             --overwrite \
-            ./deploy_www "$CAFE24_REMOTE_PATH"
-          ls "$CAFE24_REMOTE_PATH/_head.php"
+            ./deploy_www .
+          ls ./_head.php
           bye
           EOF
