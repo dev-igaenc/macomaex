@@ -1,4 +1,5 @@
 <?php
+// Deploy smoke test marker 2026-07-03
 if (!defined('_GNUBOARD_')) exit; // 개별 페이지 접근 불가
 
 if (preg_match("/_en|\/en\//i", $_SERVER['REQUEST_URI'])){
