@@ -123,7 +123,8 @@ $member_mb_name = trim((string) $member['mb_name']);
 $member_mb_nick = trim((string) $member['mb_nick']);
 $member_mb_company = trim((string) $member['mb_company']);
 $member_mb_6 = trim((string) $member['mb_6']);
-$member_mb_8 = trim((string) $member['mb_8']);
+$member_mb_hp = hyphen_hp_number(trim((string) $member['mb_hp']));
+$member_mb_8 = hyphen_hp_number(trim((string) $member['mb_8']));
 
 $cert_mb_name   = clean_xss_tags($cert_mb_name);
 $mb_name        = ($w == '') ? $mb_id : clean_xss_tags($mb_name);
@@ -144,6 +145,12 @@ if ($mb_8_digits !== '') {
     }
 } else {
     $mb_8 = '';
+}
+// 수정 화면별 휴대폰 입력값을 하나로 통일한다.
+$member_phone = $member_mb_hp !== '' ? $member_mb_hp : $member_mb_8;
+$posted_member_phone = $mb_8 !== '' ? hyphen_hp_number($mb_8) : $mb_hp;
+if ($w != '' && $posted_member_phone === '') {
+    $posted_member_phone = $member_phone;
 }
 $mb_zip1        = preg_replace('/[^0-9]/', '', $mb_zip1);
 $mb_zip2        = preg_replace('/[^0-9]/', '', $mb_zip2);
@@ -281,12 +288,12 @@ if ($w != '' && $config['cf_cert_use'] && $cert_type && $md5_cert_no) {
         alert('본인인증된 정보와 입력된 회원정보가 일치하지않습니다. 다시시도 해주세요');
     }
 } else if ($w != '') {
-    $phone_changed = (macomaex_signup_phone_otp_normalize($mb_8) !== macomaex_signup_phone_otp_normalize($member_mb_8));
+    $phone_changed = (macomaex_signup_phone_otp_normalize($posted_member_phone) !== macomaex_signup_phone_otp_normalize($member_phone));
     // 번호를 바꾼 경우에만 중복 여부를 다시 확인
-    if ($phone_changed && ($msg = macomaex_validate_unique_mb_hp($mb_8, $mb_id))) {
+    if ($phone_changed && ($msg = macomaex_validate_unique_mb_hp($posted_member_phone, $mb_id))) {
         alert($msg, "", true, true);
     }
-    if ($phone_changed && !macomaex_signup_phone_otp_is_verified($mb_8)) {
+    if ($phone_changed && !macomaex_signup_phone_otp_is_verified($posted_member_phone)) {
         alert('변경한 휴대폰 번호의 인증을 완료해 주세요.', "", true, true);
     }
 
@@ -545,8 +552,8 @@ if($mb_2) $sql .= "                    mb_2 = '{$mb_2}',";
 	// if($mb_5) $sql .= "                    mb_5 = '{$mb_5}',";
 		$sql .= "                    mb_6 = '{$mb_6}',";
 	// $sql .= "                    mb_7 = '{$mb_7}',";
-		if($mb_8) $sql .= "                    mb_hp = '{$mb_8}',";
-		if($mb_8) $sql .= "                    mb_8 = '{$mb_8}',";
+		if($posted_member_phone) $sql .= "                    mb_hp = '{$posted_member_phone}',";
+		if($posted_member_phone) $sql .= "                    mb_8 = '{$posted_member_phone}',";
 	if ($use_member_consent) $sql .= "                    mb_9 = '{$mb_9}',";
 	if ($use_member_consent) $sql .= "                    mb_10 = '{$mb_10}',";
 	if ($use_member_consent) $sql .= "                    mb_11 = '{$mb_11}',";
