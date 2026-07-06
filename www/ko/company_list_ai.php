@@ -5,6 +5,164 @@ include_once(G5_PATH . '/ko/helper/company_list_ai_helper.php');
 $board['bo_10'] = '3';
 $board['bo_9'] = '1';
 
+if (!function_exists('company_list_ai_guard_now')) {
+    // 목록 진입 세션 유효시간 계산용 현재 시간
+    function company_list_ai_guard_now()
+    {
+        return defined('G5_SERVER_TIME') ? (int)G5_SERVER_TIME : time();
+    }
+}
+
+if (!function_exists('company_list_ai_entry_map_session_key')) {
+    // 추천 목록 승인 목록을 저장하는 세션 키
+    function company_list_ai_entry_map_session_key()
+    {
+        return 'ss_company_list_ai_entry_map';
+    }
+}
+
+if (!function_exists('company_list_ai_load_entry_map')) {
+    // 만료된 승인 목록은 제외하고 세션 승인 목록을 복원
+    function company_list_ai_load_entry_map()
+    {
+        $raw = (string)get_session(company_list_ai_entry_map_session_key());
+        $decoded = json_decode($raw, true);
+        if (!is_array($decoded)) return array();
+
+        $now = company_list_ai_guard_now();
+        $clean = array();
+        foreach ($decoded as $bizno => $entry) {
+            $bizno = preg_replace('/\D/', '', (string)$bizno);
+            $token = trim((string)($entry['token'] ?? ''));
+            $expires = (int)($entry['expires'] ?? 0);
+            $updated_at = (int)($entry['updated_at'] ?? 0);
+
+            if (strlen($bizno) !== 10 || $token === '' || $expires < $now) continue;
+
+            $clean[$bizno] = array(
+                'token' => $token,
+                'expires' => $expires,
+                'updated_at' => $updated_at,
+            );
+        }
+
+        return $clean;
+    }
+}
+
+if (!function_exists('company_list_ai_save_entry_map')) {
+    // 최근 정상 진입 목록만 세션에 짧게 유지
+    function company_list_ai_save_entry_map($entry_map)
+    {
+        if (!is_array($entry_map) || empty($entry_map)) {
+            set_session(company_list_ai_entry_map_session_key(), '');
+            return;
+        }
+
+        uasort($entry_map, function ($a, $b) {
+            return (int)($b['updated_at'] ?? 0) <=> (int)($a['updated_at'] ?? 0);
+        });
+
+        $trimmed = array_slice($entry_map, 0, 20, true);
+        set_session(
+            company_list_ai_entry_map_session_key(),
+            json_encode($trimmed, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
+        );
+    }
+}
+
+if (!function_exists('company_list_ai_normalize_guard_bizno')) {
+    // URL의 bizno/comnum 값을 세션 검증용 10자리 숫자로 통일
+    function company_list_ai_normalize_guard_bizno($value)
+    {
+        $raw = trim((string)$value);
+        if ($raw === '') return '';
+        if (preg_match('/^[0-9]{10}$/', $raw)) return $raw;
+
+        $decoded = simple_crypt($raw, 'd');
+        if (!is_string($decoded) || $decoded === '') return '';
+
+        $decoded_digits = preg_replace('/\D/', '', $decoded);
+        return strlen($decoded_digits) === 10 ? $decoded_digits : '';
+    }
+}
+
+if (!function_exists('company_list_ai_has_valid_entry_session')) {
+    // URL 토큰과 세션 승인값이 모두 맞아야 목록 진입을 허용
+    function company_list_ai_has_valid_entry_session($bizno_token_raw, $bizno)
+    {
+        $bizno = preg_replace('/\D/', '', (string)$bizno);
+        $bizno_token_raw = trim((string)$bizno_token_raw);
+        if (strlen($bizno) !== 10 || $bizno_token_raw === '') return false;
+
+        $entry_map = company_list_ai_load_entry_map();
+        if (!empty($entry_map[$bizno]['token'])) {
+            $session_token = trim((string)$entry_map[$bizno]['token']);
+            return function_exists('hash_equals')
+                ? hash_equals($session_token, $bizno_token_raw)
+                : ($session_token === $bizno_token_raw);
+        }
+
+        // 기존 마지막 1건 세션도 잠시 하위호환으로 허용
+        $session_bizno = preg_replace('/\D/', '', (string)get_session('ss_company_list_ai_bizno'));
+        $session_token = trim((string)get_session('ss_company_list_ai_bizno_token'));
+        $session_expires = (int)get_session('ss_company_list_ai_expires');
+
+        if ($session_bizno !== $bizno) return false;
+        if ($session_token === '' || $session_expires < company_list_ai_guard_now()) return false;
+
+        return function_exists('hash_equals')
+            ? hash_equals($session_token, $bizno_token_raw)
+            : ($session_token === $bizno_token_raw);
+    }
+}
+
+if (!function_exists('company_list_ai_touch_entry_session')) {
+    // 현재 보고 있는 추천 목록의 세션 만료를 연장
+    function company_list_ai_touch_entry_session($bizno, $bizno_token_raw)
+    {
+        $bizno = preg_replace('/\D/', '', (string)$bizno);
+        $bizno_token_raw = trim((string)$bizno_token_raw);
+        if (strlen($bizno) !== 10 || $bizno_token_raw === '') return;
+
+        $now = company_list_ai_guard_now();
+        $entry_map = company_list_ai_load_entry_map();
+        if (!empty($entry_map[$bizno]['token'])) {
+            $entry_token = trim((string)$entry_map[$bizno]['token']);
+            $is_match = function_exists('hash_equals')
+                ? hash_equals($entry_token, $bizno_token_raw)
+                : ($entry_token === $bizno_token_raw);
+
+            if ($is_match) {
+                $entry_map[$bizno]['expires'] = $now + 1800;
+                $entry_map[$bizno]['updated_at'] = $now;
+                company_list_ai_save_entry_map($entry_map);
+            }
+        }
+
+        $legacy_bizno = preg_replace('/\D/', '', (string)get_session('ss_company_list_ai_bizno'));
+        $legacy_token = trim((string)get_session('ss_company_list_ai_bizno_token'));
+        $legacy_match = ($legacy_bizno === $bizno) && (
+            function_exists('hash_equals')
+                ? hash_equals($legacy_token, $bizno_token_raw)
+                : ($legacy_token === $bizno_token_raw)
+        );
+        if ($legacy_match) {
+            set_session('ss_company_list_ai_expires', (string)($now + 1800));
+        }
+    }
+}
+
+// 추천 목록은 검색 버튼을 통해 발급된 세션이 있는 경우에만 연다
+$company_list_ai_entry_token = trim((string)($_GET['bizno'] ?? ($_GET['comnum'] ?? '')));
+$company_list_ai_entry_bizno = company_list_ai_normalize_guard_bizno($company_list_ai_entry_token);
+// 메인 검색 흐름을 거치지 않은 직접 URL 진입은 목록에서 차단
+if (!company_list_ai_has_valid_entry_session($company_list_ai_entry_token, $company_list_ai_entry_bizno)) {
+    alert('비정상적인 접근입니다. 메인페이지로 이동합니다.', G5_URL);
+}
+// 정상 사용자 흐름에서는 현재 보고 있는 목록의 승인 세션만 조금씩 연장
+company_list_ai_touch_entry_session($company_list_ai_entry_bizno, $company_list_ai_entry_token);
+
 $company_list_ai_css_ver = @filemtime(G5_PATH . '/ko/css/company_list_ai.css');
 if (!$company_list_ai_css_ver) $company_list_ai_css_ver = G5_CSS_VER;
 $company_card_css_ver = @filemtime(G5_PATH . '/ko/css/company-card.css');

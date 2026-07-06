@@ -237,9 +237,9 @@ if (!preg_match('/^\d{10}$/', $kedcd)) {
     }
 }
 
-// 잘못된 식별자로 직접 진입한 경우 목록으로 되돌린다.
+// 잘못된 식별자로 직접 진입한 경우 추천 시작 화면으로 되돌림
 if (strlen($kedcd) !== 10 || preg_match('/^0+$/', $kedcd)) {
-    alert('잘못된 접근입니다. AI 추천 목록에서 다시 선택해 주세요.', '/recommendations');
+    alert('잘못된 접근입니다. AI 추천을 다시 시작해 주세요.', '/recommendations/demo?entry=matching_ai_demo');
 }
 // 상세 진입 trade_type(1=구매처, 2=판매처)에 따라 상단 라벨을 분기한다.
 $detail_trade_type = isset($_GET['trade_type']) ? (int)$_GET['trade_type'] : 1;
@@ -259,7 +259,7 @@ $company = array();
 // 상세 기본 정보 조회
 $company = sql_fetch("\n    SELECT KEDCD, ENP_NM, BZNO, keywords_json, keyword_count, BZC_CD, ENP_TYP, LABORER_SUM, ESTB_DT, LOC_ADDRA, LOC_ADDRB, HPAGE_URL\n    FROM company\n    WHERE KEDCD = '" . sql_escape_string($kedcd) . "'\n    LIMIT 1\n");
 if (empty($company['KEDCD'])) {
-    alert('기업 정보를 찾을 수 없습니다.', '/recommendations');
+    alert('기업 정보를 찾을 수 없습니다. AI 추천을 다시 시작해 주세요.', '/recommendations/demo?entry=matching_ai_demo');
 }
 
 $is_favorite_company = false;

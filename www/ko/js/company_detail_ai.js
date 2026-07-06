@@ -1988,6 +1988,46 @@
             if (ov) { ov.classList.add('is_open'); ov.setAttribute('aria-hidden', 'false'); }
         }
 
+        // 목록 진입 전 서버에서 승인 세션과 bizno 토큰을 먼저 발급받는다.
+        function goToAiRecommendationList(comnum) {
+            var digits = String(comnum || '').replace(/[^0-9]/g, '');
+            if (digits.length !== 10) {
+                if (window.openAiGuideModal) openAiGuideModal({ title: '추천 페이지 이동 실패', text: '사업자번호 확인이 필요합니다.', text2: '사업자번호를 다시 확인한 뒤 AI 추천받기를 눌러주세요.' });
+                return;
+            }
+
+            fetch('/get_company_name.php', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+                body: new URLSearchParams({ comnum: digits }).toString()
+            })
+                .then(function (r) { return r.text(); })
+                .then(function (txt) {
+                    var data = null;
+                    try {
+                        data = JSON.parse(txt || '{}');
+                    } catch (e) {
+                        data = null;
+                    }
+
+                    if (!data || data.result !== 'success' || !data.bizno_token) {
+                        if (window.openAiGuideModal) openAiGuideModal({ title: '추천 페이지 이동 실패', text: '추천 목록 진입 정보를 준비하지 못했습니다.', text2: '잠시 후 다시 시도해 주세요.' });
+                        return;
+                    }
+
+                    // 추천 목록은 승인된 bizno 토큰으로만 진입시킨다.
+                    var url = '/recommendations?bizno=' + encodeURIComponent(String(data.bizno_token))
+                        + '&type=buyer&trade_type=1&recommendation_action=skip';
+
+                    if (typeof showAiLoading === 'function') { showAiLoading(url); }
+                    else { location.href = url; }
+                })
+                .catch(function () {
+                    if (window.openAiGuideModal) openAiGuideModal({ title: '추천 페이지 이동 실패', text: '추천 목록 이동 중 일시적인 오류가 발생했습니다.', text2: '잠시 후 다시 시도해 주세요.' });
+                });
+        }
+
         function doSearch() {
             var inp = document.getElementById('comnum');
             if (inp) inp.blur();
@@ -2074,11 +2114,9 @@
         if (vGo) {
             vGo.addEventListener('click', function () {
                 if (window.closeVerifyModal) window.closeVerifyModal();
-                var url = '/recommendations?type=buyer';
-                var _kedcd = _pendingKedcd || _pendingComnum;
-                if (_kedcd) url += '&comnum=' + encodeURIComponent(_kedcd);
-                if (typeof showAiLoading === 'function') { showAiLoading(url); }
-                else { location.href = url; }
+
+                // 상세 검색 플로우도 직접 URL 대신 서버 승인 경로를 거친다.
+                goToAiRecommendationList(_pendingComnum);
             });
         }
     })();
