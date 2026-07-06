@@ -923,7 +923,7 @@ $sidebar_icon_map = [
     'packaging' => 'cat-iso-12',
 ];
 
-$ai_recommend_href = '/recommendations/demo';
+$ai_recommend_href = '/recommendations/demo?entry=matching_ai_demo';
 if ($has_comnum) {
     $ai_recommend_href = '/recommendations?comnum=' . urlencode($input_comnum);
 }
@@ -1007,7 +1007,10 @@ foreach ($list_categories as $lg) {
         <aside class="list-sidebar">
 
             <div class="list-sidebar_ai_section">
-                <a href="<?php echo htmlspecialchars($ai_recommend_href, ENT_QUOTES, 'UTF-8'); ?>" class="list-sidebar_ai <?php echo $has_comnum ? 'on' : ''; ?>">
+                <?php // 사업자번호가 있으면 추천 진입도 서버 승인 플로우를 타도록 href를 고정 ?>
+                <a href="<?php echo htmlspecialchars($has_comnum ? '/recommendations/demo?entry=matching_ai_demo' : $ai_recommend_href, ENT_QUOTES, 'UTF-8'); ?>"
+                   class="list-sidebar_ai <?php echo $has_comnum ? 'on' : ''; ?>"
+                   <?php if ($has_comnum) { ?>data-ai-comnum="<?php echo htmlspecialchars((string)$input_comnum, ENT_QUOTES, 'UTF-8'); ?>"<?php } ?>>
                     <span class="list-sidebar_ai_icon"><span class="ai-magic-wand"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16.8 2.2l1.1 2.3 2.3 1.1-2.3 1.1-1.1 2.3-1.1-2.3-2.3-1.1 2.3-1.1 1.1-2.3zm3.2 2.8.6 1.1 1.1.6-1.1.6-.6 1.1-.6-1.1-1.1-.6 1.1-.6.6-1.1zM7.4 17.4 16.1 8.7l2.6 2.6-8.7 8.7-2.6-2.6zm-1 2.4 1.3 1.3-3.1 1 .8-2.9z"/></svg></span></span>
                     <div class="list-sidebar_ai_body">
                         <span class="list-sidebar_ai_label">AI 추천받기</span>
@@ -1176,6 +1179,34 @@ $matching_list_js_config = [
 ?>
 <script>
 window.MATCHING_LIST_CONFIG = <?php echo json_encode($matching_list_js_config, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
+
+// 목록 화면의 AI 추천 버튼도 직접 링크 대신 승인 세션 발급 경로를 거침
+$(document).on('click', '.list-sidebar_ai[data-ai-comnum]', function(e) {
+    var comnum = String($(this).attr('data-ai-comnum') || '').replace(/[^0-9]/g, '');
+    if (comnum.length !== 10) return;
+
+    e.preventDefault();
+
+    // 목록에서 추천으로 갈 때도 먼저 서버를 거쳐 진입 세션을 발급
+    $.post('<?php echo G5_URL; ?>/get_company_name.php', { comnum: comnum }, function(res) {
+        var data = null;
+        try {
+            data = JSON.parse(res);
+        } catch (err) {
+            data = null;
+        }
+
+        if (!data || data.result !== 'success' || !data.bizno_token) {
+            alert('추천 페이지로 이동할 수 없습니다. 다시 시도해 주세요.');
+            return;
+        }
+
+        window.location.href = '/recommendations?bizno=' + encodeURIComponent(String(data.bizno_token)) +
+            '&type=buyer&trade_type=1&recommendation_action=skip';
+    }).fail(function() {
+        alert('추천 페이지로 이동할 수 없습니다. 다시 시도해 주세요.');
+    });
+});
 </script>
 <script src="<?php echo G5_URL; ?>/ko/js/matching_list.js?ver=<?php echo (int)$matching_list_js_ver; ?>"></script>
 
