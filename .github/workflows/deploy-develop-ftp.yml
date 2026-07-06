@@ -40,24 +40,31 @@ jobs:
           test -n "$CAFE24_SFTP_PASSWORD" || { echo "Missing secret: CAFE24_SFTP_PASSWORD"; exit 1; }
           test -n "$CAFE24_REMOTE_PATH" || { echo "Missing secret: CAFE24_REMOTE_PATH"; exit 1; }
 
-      - name: Detect Composer manifest changes
-        id: composer-files
-        uses: tj-actions/changed-files@v47
-        with:
-          files: |
-            www/composer.json
-            www/composer.lock
+      - name: Detect deploy diff
+        id: diff-files
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "push" ] && [ -n "${{ github.event.before }}" ] && [ "${{ github.event.before }}" != "0000000000000000000000000000000000000000" ]; then
+            BASE_SHA="${{ github.event.before }}"
+          elif git rev-parse HEAD^ >/dev/null 2>&1; then
+            BASE_SHA="$(git rev-parse HEAD^)"
+          else
+            BASE_SHA="$(git rev-list --max-parents=0 HEAD)"
+          fi
 
-      - name: Detect changed deploy files
-        id: deploy-files
-        uses: tj-actions/changed-files@v47
-        with:
-          separator: "\n"
-          files: |
-            www/**
+          echo "Comparing changes from $BASE_SHA to $GITHUB_SHA"
+
+          git diff --name-only --diff-filter=ACMR "$BASE_SHA" "$GITHUB_SHA" -- www > .deploy_all.txt
+          git diff --name-only --diff-filter=D "$BASE_SHA" "$GITHUB_SHA" -- www > .deploy_deleted_raw.txt
+
+          if grep -Eq '^www/(composer\.json|composer\.lock)$' .deploy_all.txt .deploy_deleted_raw.txt 2>/dev/null; then
+            echo "any_composer_changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "any_composer_changed=false" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Setup PHP
-        if: steps.composer-files.outputs.any_changed == 'true'
+        if: steps.diff-files.outputs.any_composer_changed == 'true'
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.1'
@@ -65,15 +72,12 @@ jobs:
           coverage: none
 
       - name: Install PHP dependencies
-        if: steps.composer-files.outputs.any_changed == 'true'
+        if: steps.diff-files.outputs.any_composer_changed == 'true'
         working-directory: www
         run: composer install --no-dev --prefer-dist --no-interaction --no-progress
 
       - name: Build changed file lists
         run: |
-          printf '%s\n' "${{ steps.deploy-files.outputs.all_changed_files }}" > .deploy_all.txt
-          printf '%s\n' "${{ steps.deploy-files.outputs.deleted_files }}" > .deploy_deleted_raw.txt
-
           awk '
             NF &&
             $0 ~ /^www\// &&
@@ -102,7 +106,7 @@ jobs:
             $0 !~ /^www\/plugin\/inicert(\/|$)/
           ' .deploy_deleted_raw.txt | sort -u > .deploy_deleted.txt
 
-          if [ "${{ steps.composer-files.outputs.any_changed }}" = "true" ] && [ -d www/vendor ]; then
+          if [ "${{ steps.diff-files.outputs.any_composer_changed }}" = "true" ] && [ -d www/vendor ]; then
             find www/vendor -type f | sort -u > .deploy_vendor.txt
             cat .deploy_vendor.txt >> .deploy_changed.txt
             sort -u .deploy_changed.txt -o .deploy_changed.txt
@@ -124,7 +128,7 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y lftp
 
       - name: Upload composer vendor via SFTP mirror
-        if: steps.composer-files.outputs.any_changed == 'true'
+        if: steps.diff-files.outputs.any_composer_changed == 'true'
         env:
           CAFE24_SFTP_HOST: ${{ secrets.CAFE24_SFTP_HOST }}
           CAFE24_SFTP_PORT: ${{ secrets.CAFE24_SFTP_PORT }}
