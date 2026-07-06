@@ -5,7 +5,7 @@ include_once(__DIR__ . '/helper/company_detail_helper.php');
 include_once(__DIR__ . '/helper/llm_report_trade_helper.php');
 include_once(__DIR__ . '/helper/company_list_ai_helper.php');
 
-// 배포 확인 2026-07-06: 상세 추천 진입 가드 연동
+// 재배포 확인 2026-07-06-2: 상세 추천 진입 가드 연동
 $should_open_trade_request_modal = false;
 if (isset($_GET['trade_request_login']) && $_GET['trade_request_login'] === '1') {
     login_chk();

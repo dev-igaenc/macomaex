@@ -107,7 +107,7 @@
         if (srcKedcdParam.length === 10) {
             try { sessionStorage.setItem('_aiSrcKedcd', srcKedcdParam); } catch (e) { }
         }
-        // 배포 확인 2026-07-06: 상세 추천 컨텍스트 유지
+        // 재배포 확인 2026-07-06-2: 상세 추천 컨텍스트 유지
         // src_kedcd가 같은 스냅샷만 사용
         var expectedSrcKedcd = srcKedcdParam;
         if (expectedSrcKedcd.length !== 10) {
