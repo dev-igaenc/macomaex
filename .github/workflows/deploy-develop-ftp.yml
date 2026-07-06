@@ -159,6 +159,22 @@ jobs:
           sed -n '1,40p' .deploy_changed.txt
           sed -n '1,40p' .deploy_deleted.txt
 
+      - name: Build deploy bundle
+        shell: bash
+        run: |
+          rm -rf .deploy_bundle
+          mkdir -p .deploy_bundle
+
+          while IFS= read -r file; do
+            [ -n "$file" ] || continue
+            rel="${file#www/}"
+            mkdir -p ".deploy_bundle/$(dirname "$rel")"
+            cp "$file" ".deploy_bundle/$rel"
+          done < .deploy_changed.txt
+
+          echo "Deploy bundle files:"
+          find .deploy_bundle -type f | sed -n '1,80p'
+
       - name: Install lftp
         run: sudo apt-get update && sudo apt-get install -y lftp
 
@@ -196,37 +212,15 @@ jobs:
             echo "No deployable file changes detected."
             exit 0
           fi
-
-          : > .lftp-commands.txt
-
-          while IFS= read -r file; do
-            [ -n "$file" ] || continue
-            rel="${file#www/}"
-            dir=$(dirname "$rel")
-
-            if [ "$dir" = "." ]; then
-              printf 'put "%s"\n' "$file" >> .lftp-commands.txt
-            else
-              printf 'mkdir -p "%s"\n' "$dir" >> .lftp-commands.txt
-              printf 'put -O "%s" "%s"\n' "$dir" "$file" >> .lftp-commands.txt
-            fi
-          done < .deploy_changed.txt
-
-          while IFS= read -r file; do
-            [ -n "$file" ] || continue
-            rel="${file#www/}"
-            printf 'rm -f "%s"\n' "$rel" >> .lftp-commands.txt
-          done < .deploy_deleted.txt
-
-          sed -n '1,120p' .lftp-commands.txt
-
-          {
-            echo "open -u \"$CAFE24_SFTP_USER\",\"$CAFE24_SFTP_PASSWORD\" sftp://$CAFE24_SFTP_HOST:$CAFE24_SFTP_PORT"
-            echo "set sftp:auto-confirm yes"
-            echo "set cmd:fail-exit yes"
-            echo "cd \"$CAFE24_REMOTE_PATH\""
-            cat .lftp-commands.txt
-            echo "bye"
-          } > .lftp-session.txt
-
-          lftp -f .lftp-session.txt
+          lftp -u "$CAFE24_SFTP_USER","$CAFE24_SFTP_PASSWORD" "sftp://$CAFE24_SFTP_HOST:$CAFE24_SFTP_PORT" <<EOF
+          set sftp:auto-confirm yes
+          set cmd:fail-exit yes
+          cd "$CAFE24_REMOTE_PATH"
+          mirror -R --verbose ./.deploy_bundle/ .
+          $(while IFS= read -r file; do
+              [ -n "$file" ] || continue
+              rel="${file#www/}"
+              printf 'rm -f "%s"\n' "$rel"
+            done < .deploy_deleted.txt)
+          bye
+          EOF
