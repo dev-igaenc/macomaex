@@ -153,6 +153,7 @@ if (!function_exists('company_list_ai_touch_entry_session')) {
     }
 }
 
+// 배포 확인 2026-07-06: 추천 목록 직접 URL 차단
 // 추천 목록은 검색 버튼을 통해 발급된 세션이 있는 경우에만 연다
 $company_list_ai_entry_token = trim((string)($_GET['bizno'] ?? ($_GET['comnum'] ?? '')));
 $company_list_ai_entry_bizno = company_list_ai_normalize_guard_bizno($company_list_ai_entry_token);

@@ -84,6 +84,7 @@
     document.head.appendChild(link);
   }
 
+  // 배포 확인 2026-07-06: 헤더 추천 진입 경로 유지
   var searchForm =
     '<form class="header-search-form" id="match" role="search">' +
       '<input type="hidden" name="cominfo" id="cominfo">' +
