@@ -1180,7 +1180,7 @@ $matching_list_js_config = [
 <script>
 window.MATCHING_LIST_CONFIG = <?php echo json_encode($matching_list_js_config, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
 
-// 배포 확인 2026-07-06: 목록 추천 버튼 세션 경유 유지
+// 재배포 확인 2026-07-06-2: 목록 추천 버튼 세션 경유 유지
 // 목록 화면의 AI 추천 버튼도 직접 링크 대신 승인 세션 발급 경로를 거침
 $(document).on('click', '.list-sidebar_ai[data-ai-comnum]', function(e) {
     var comnum = String($(this).attr('data-ai-comnum') || '').replace(/[^0-9]/g, '');

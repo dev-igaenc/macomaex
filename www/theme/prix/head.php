@@ -20,7 +20,7 @@ $auth_session_guard_js_ver = file_exists(G5_PATH . '/ko/js/auth-session-guard.js
     : time();
 $auth_session_status_url = '/bbs/ajax.login_status.php';
 
-// 배포 확인 2026-07-06: 헤더 AI 추천 링크 유지
+// 재배포 확인 2026-07-06-2: 헤더 AI 추천 링크 유지
 $header_display_name = '';
 $header_credit = 0;
 
