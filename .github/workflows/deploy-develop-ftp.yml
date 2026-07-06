@@ -118,6 +118,41 @@ jobs:
           echo "Deleted deploy files: $(wc -l < .deploy_deleted.txt)"
           echo "Composer vendor files: $(wc -l < .deploy_vendor.txt)"
 
+      - name: Validate deploy file lists
+        shell: bash
+        run: |
+          validate_list() {
+            local list_file="$1"
+            local must_exist="$2"
+
+            [ -f "$list_file" ] || return 0
+
+            while IFS= read -r file; do
+              [ -n "$file" ] || continue
+
+              case "$file" in
+                www/*) ;;
+                *)
+                  echo "Invalid deploy path outside www/: $file"
+                  exit 1
+                  ;;
+              esac
+
+              if printf '%s\n' "$file" | grep -Eq '\*\*\*|^www/.+www/'; then
+                echo "Suspicious deploy path detected: $file"
+                exit 1
+              fi
+
+              if [ "$must_exist" = "true" ] && [ ! -e "$file" ]; then
+                echo "Changed deploy path does not exist in workspace: $file"
+                exit 1
+              fi
+            done < "$list_file"
+          }
+
+          validate_list .deploy_changed.txt true
+          validate_list .deploy_deleted.txt false
+
       - name: Show deploy target
         run: |
           echo "Deploying changed files to ${{ secrets.CAFE24_REMOTE_PATH }}"

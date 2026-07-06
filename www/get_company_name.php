@@ -69,6 +69,7 @@ if (!function_exists('macomaex_company_list_ai_save_entry_map')) {
 }
 
 if (!function_exists('macomaex_company_list_ai_grant_entry')) {
+    // 배포 확인 2026-07-06: 추천 목록 진입 세션 발급
     // 정상 검색 플로우를 거친 사용자에게만 목록 진입 세션 부여
     function macomaex_company_list_ai_grant_entry($bizno, $bizno_token = '')
     {
