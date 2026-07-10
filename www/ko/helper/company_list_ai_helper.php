@@ -189,6 +189,8 @@ if (!function_exists('company_list_ai_ensure_guest_daily_limit_table')) {
         static $ready = null;
         if ($ready !== null) return $ready;
 
+        // [비회원 일일 제한 상태 테이블]
+        // 추천목록 기준 회사별 1일 1행만 저장해 같은 회사 재조회는 차감하지 않는다.
         // 비회원 추천목록 일일 제한의 공식 상태 저장소. 토큰 원문은 저장하지 않고 해시만 보관한다.
         $sql = "CREATE TABLE IF NOT EXISTS guest_recommend_daily_limit (
             id bigint unsigned NOT NULL AUTO_INCREMENT COMMENT 'PK',
@@ -211,6 +213,9 @@ if (!function_exists('company_list_ai_ensure_guest_daily_limit_table')) {
     }
 }
 
+// [비회원 추천목록 일일 제한 헬퍼]
+// 역할 분리: 쿠키/세션은 익명 토큰 유지, guest_recommend_daily_limit는 공식 카운트,
+// company_recommend_log + IP는 토큰 재발급 우회 보완용으로만 사용한다.
 if (!function_exists('company_list_ai_guest_limit_cookie_name')) {
     function company_list_ai_guest_limit_cookie_name()
     {
@@ -228,6 +233,7 @@ if (!function_exists('company_list_ai_guest_limit_session_name')) {
 if (!function_exists('company_list_ai_guest_limit_secret')) {
     function company_list_ai_guest_limit_secret()
     {
+        // 쿠키 토큰 서명용 비밀값. 운영에서는 GUEST_RECOMMEND_TOKEN_SECRET 설정을 우선 사용한다.
         $secret = company_list_ai_env('GUEST_RECOMMEND_TOKEN_SECRET', '');
         if ($secret !== '') return (string)$secret;
         if (defined('G5_MYSQL_PASSWORD') && G5_MYSQL_PASSWORD !== '') return (string)G5_MYSQL_PASSWORD;
@@ -291,6 +297,7 @@ if (!function_exists('company_list_ai_guest_limit_store_token')) {
         $packed = company_list_ai_guest_limit_pack_token($token);
         if ($packed === '') return false;
 
+        // 세션은 현재 접속 보조, 쿠키는 세션 만료 이후 토큰 복원용이다.
         if (function_exists('set_session')) {
             set_session(company_list_ai_guest_limit_session_name(), $packed);
         }
@@ -333,6 +340,7 @@ if (!function_exists('company_list_ai_guest_limit_get_or_issue_token')) {
 if (!function_exists('company_list_ai_guest_limit_hash_token')) {
     function company_list_ai_guest_limit_hash_token($token)
     {
+        // DB에는 토큰 원문 대신 해시만 저장한다.
         $token = preg_replace('/[^a-f0-9]/i', '', (string)$token);
         if (strlen($token) !== 64) return '';
         return hash('sha256', strtolower($token));
@@ -342,6 +350,7 @@ if (!function_exists('company_list_ai_guest_limit_hash_token')) {
 if (!function_exists('company_list_ai_guest_limit_make_company_key')) {
     function company_list_ai_guest_limit_make_company_key($kedcd, $bizno)
     {
+        // 기준 회사는 KED 기업코드를 우선 사용하고, 없을 때만 사업자번호로 대체한다.
         $kedcd = preg_replace('/\D/', '', (string)$kedcd);
         if (strlen($kedcd) === 10 && !preg_match('/^0+$/', $kedcd)) {
             return 'K:' . $kedcd;
@@ -464,6 +473,7 @@ if (!function_exists('company_list_ai_guest_limit_fetch_ip_log_company_keys')) {
         $ip_sql = sql_real_escape_string($ip);
         $start_sql = sql_real_escape_string($start);
         $end_sql = sql_real_escape_string($end);
+        // 토큰이 새로 발급된 경우에도 같은 IP의 당일 추천목록 진입 흔적으로 얕은 우회를 보완한다.
         $sql = "select c_kedcd, c_bizno
                   from company_recommend_log
                  where c_ip='{$ip_sql}'
@@ -489,6 +499,7 @@ if (!function_exists('company_list_ai_check_guest_daily_limit')) {
     {
         global $member;
 
+        // 실제 차단 응답은 호출부(API/페이지)가 담당하고, 이 함수는 판정 결과만 반환한다.
         $options = is_array($options) ? $options : array();
         $limit = isset($options['limit']) ? (int)$options['limit'] : 5;
         if ($limit < 1) $limit = 5;
@@ -560,6 +571,7 @@ if (!function_exists('company_list_ai_check_guest_daily_limit')) {
         }
 
         if ($issued || count($token_map) === 0) {
+            // 새 토큰/빈 토큰 이력일 때만 IP 로그 보조 판정을 적용해 공유망 오탐 가능성을 낮춘다.
             $ip_keys = company_list_ai_guest_limit_fetch_ip_log_company_keys($ymd);
             if ($ip_keys === false) {
                 $ip_keys = array();
