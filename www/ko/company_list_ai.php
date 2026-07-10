@@ -182,6 +182,7 @@ add_stylesheet('<link rel="stylesheet" href="' . G5_URL . '/ko/css/favorite.css?
 add_stylesheet('<link rel="stylesheet" href="' . G5_URL . '/ko/css/section-header.css?ver=' . G5_CSS_VER . '">', 210);
 add_stylesheet('<link rel="stylesheet" href="' . G5_URL . '/ko/css/verify-modal.css?ver=' . G5_CSS_VER . '">', 215);
 add_stylesheet('<link rel="stylesheet" href="' . G5_URL . '/ko/css/ai-loading.css?ver=' . G5_CSS_VER . '">', 216);
+add_stylesheet('<link rel="stylesheet" href="' . G5_URL . '/ko/css/match-request-modal.css?ver=' . G5_CSS_VER . '">', 217);
 add_stylesheet('<link rel="stylesheet" href="' . G5_URL . '/ko/css/company_list_ai.css?ver=' . (int)$company_list_ai_css_ver . '">', 220);
 
 $g5['body_script'] = ' class="page-company-list-ai"';
@@ -1155,6 +1156,9 @@ $use_sell_partner_filter = $has_partner_bzc_filters && $partner_filter_trade_typ
 $resolved_base_payload = array();
 $input_error_notice = '';
 $resolve_error_notice = '';
+$guest_limit_blocked = false;
+$guest_limit_notice = '';
+$guest_limit_payload = array('limited' => false);
 
 if (!$has_valid_source_input && ($has_kedcd_query_invalid || $has_bizno_query_invalid)) {
     $input_error_notice = '입력값이 올바르지 않습니다. kedcd/bizno는 10자리 숫자여야 합니다.';
@@ -1280,6 +1284,50 @@ if (!empty($resolved_base_payload['kedcd'])) {
         'fallback_reason' => (string)($bzc_meta['fallback_reason'] ?? ''),
     );
 
+    // [비회원 추천목록 일일 제한]
+    // 화면 경로도 API와 동일하게 캐시/EC2 조회 전에 차단한다.
+    $guest_daily_limit = 5;
+    $guest_limit_result = company_list_ai_check_guest_daily_limit($ml_log_kedcd, $ml_log_bizno, array(
+        'limit' => $guest_daily_limit,
+        'source' => 'company_list_ai',
+        'trace_id' => $trace_id,
+    ));
+    if (!empty($guest_limit_result['limited'])) {
+        $guest_limit_blocked = true;
+        $guest_limit_notice = (string)($guest_limit_result['message'] ?? '오늘 비회원 추천 조회 한도를 초과했습니다. 로그인 후 이용해주세요.');
+        $guest_limit_payload = array(
+            'limited' => true,
+            'message' => $guest_limit_notice,
+            'limit' => (int)($guest_limit_result['limit'] ?? $guest_daily_limit),
+            'remaining' => 0,
+            'login_required' => true,
+            'login_url' => (defined('G5_BBS_URL') ? G5_BBS_URL : '/bbs') . '/login.php?url=' . urlencode((string)($_SERVER['REQUEST_URI'] ?? '/')),
+        );
+        company_list_ai_write_event_log('rate_limited', 'fail', array(
+            'trace_id' => $trace_id,
+            'source' => 'company_list_ai',
+            'recommendation_mode' => $recommendation_mode,
+            'match_type' => $recommendation_match_type,
+            'bizno' => $ml_log_bizno,
+            'kedcd' => $ml_log_kedcd,
+            'trade_type' => $partner_filter_trade_type,
+            'error_code' => 'guest_daily_limit_exceeded',
+            'limit_source' => (string)($guest_limit_result['limit_source'] ?? ''),
+            'company_key' => (string)($guest_limit_result['company_key'] ?? ''),
+            'ymd' => (string)($guest_limit_result['ymd'] ?? ''),
+            'limit' => (int)($guest_limit_result['limit'] ?? $guest_daily_limit),
+            'used_count' => (int)($guest_limit_result['used_count'] ?? 0),
+            'remaining' => 0,
+            'request_data' => array(
+                'resolved_base_payload' => $resolved_base_payload,
+                'selected_keywords' => $selected_keywords,
+                'filter_bzc_cds' => $partner_bzc_filters,
+                'filter_bzc_weights' => $partner_bzc_weights,
+            ),
+        ), '비회원 추천목록 일일 조회 한도 초과');
+    }
+
+    if (!$guest_limit_blocked) {
     // [추천 진입 로그]
     // 기준 기업, 선택 방향, 키워드, 상대 업종코드와 가중치를 최초 스냅샷으로 기록한다.
     company_list_ai_write_event_log('request_received', 'success', array(
@@ -1589,6 +1637,7 @@ if (!empty($resolved_base_payload['kedcd'])) {
         'error_code' => !empty($sell_call['ok']) ? '' : 'recommend_failed',
         'output_data' => company_list_ai_summarize_cards_for_log($seller_cards),
     ), !empty($sell_call['ok']) ? '판매처 추천 카드 출력 완료' : '판매처 추천 실패로 카드 출력 불가');
+    }
 }
 
 if ($source_kedcd_for_detail === '' && $has_kedcd_query && strlen($kedcd_query) === 10 && !preg_match('/^0+$/', $kedcd_query)) {
@@ -1627,6 +1676,11 @@ if ($input_error_notice !== '') {
     $buy_rest_notice = $input_error_notice;
     $sell_top3_notice = $input_error_notice;
     $sell_rest_notice = $input_error_notice;
+} else if ($guest_limit_blocked) {
+    $buy_top3_notice = $guest_limit_notice;
+    $buy_rest_notice = $guest_limit_notice;
+    $sell_top3_notice = $guest_limit_notice;
+    $sell_rest_notice = $guest_limit_notice;
 } else {
     if (empty($buy_top3)) $buy_top3_notice = !empty($resolve_error_notice) ? $resolve_error_notice : (!empty($buy_call['error']) ? '구매 추천 데이터를 불러오지 못했습니다.' : '구매 추천 결과가 없습니다.');
     if (empty($buy_rest_pool)) $buy_rest_notice = !empty($resolve_error_notice) ? $resolve_error_notice : '추가 구매 추천 결과가 없습니다.';
@@ -1822,6 +1876,7 @@ window.__COMPANY_LIST_AI_STATS__ = {
     buyer_total: <?php echo (int)$buy_total_stat; ?>,
     seller_total: <?php echo (int)$sell_total_stat; ?>
 };
+window.__COMPANY_LIST_AI_GUEST_LIMIT__ = <?php echo json_encode($guest_limit_payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
 </script>
 <script src="<?php echo G5_URL; ?>/ko/js/company_list_ai.js?ver=<?php echo (int)$company_list_ai_js_ver; ?>"></script>
 
