@@ -183,6 +183,34 @@ if (!function_exists('company_list_ai_ensure_recommend_log_table')) {
     }
 }
 
+if (!function_exists('company_list_ai_ensure_guest_daily_limit_table')) {
+    function company_list_ai_ensure_guest_daily_limit_table()
+    {
+        static $ready = null;
+        if ($ready !== null) return $ready;
+
+        // 비회원 추천목록 일일 제한의 공식 상태 저장소. 토큰 원문은 저장하지 않고 해시만 보관한다.
+        $sql = "CREATE TABLE IF NOT EXISTS guest_recommend_daily_limit (
+            id bigint unsigned NOT NULL AUTO_INCREMENT COMMENT 'PK',
+            token_hash char(64) NOT NULL COMMENT '게스트 토큰 해시값',
+            ymd char(8) NOT NULL COMMENT '제한 기준일 YYYYMMDD',
+            company_key varchar(24) NOT NULL COMMENT '조회 기준 회사 식별자: K:{kedcd} 또는 B:{bizno}',
+            ip varchar(45) NOT NULL DEFAULT '' COMMENT '요청 IP',
+            user_agent_hash char(64) NOT NULL DEFAULT '' COMMENT 'User-Agent 해시값',
+            created_at datetime NOT NULL COMMENT '해당 회사가 최초 기록된 시각',
+            PRIMARY KEY (id),
+            UNIQUE KEY uniq_token_day_company (token_hash, ymd, company_key),
+            KEY idx_token_day (token_hash, ymd),
+            KEY idx_ip_day_company (ip, ymd, company_key),
+            KEY idx_created_at (created_at)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
+          COMMENT='비회원 추천목록 일일 회사 조회 제한 상태'";
+
+        $ready = (bool)sql_query($sql, false);
+        return $ready;
+    }
+}
+
 if (!function_exists('company_list_ai_normalize_event_type')) {
     function company_list_ai_normalize_event_type($event_type, $payload = array())
     {
