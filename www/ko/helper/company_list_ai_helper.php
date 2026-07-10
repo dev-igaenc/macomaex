@@ -211,6 +211,421 @@ if (!function_exists('company_list_ai_ensure_guest_daily_limit_table')) {
     }
 }
 
+if (!function_exists('company_list_ai_guest_limit_cookie_name')) {
+    function company_list_ai_guest_limit_cookie_name()
+    {
+        return 'ck_guest_recommend_token';
+    }
+}
+
+if (!function_exists('company_list_ai_guest_limit_session_name')) {
+    function company_list_ai_guest_limit_session_name()
+    {
+        return 'ss_guest_recommend_token';
+    }
+}
+
+if (!function_exists('company_list_ai_guest_limit_secret')) {
+    function company_list_ai_guest_limit_secret()
+    {
+        $secret = company_list_ai_env('GUEST_RECOMMEND_TOKEN_SECRET', '');
+        if ($secret !== '') return (string)$secret;
+        if (defined('G5_MYSQL_PASSWORD') && G5_MYSQL_PASSWORD !== '') return (string)G5_MYSQL_PASSWORD;
+        if (defined('G5_COOKIE_DOMAIN') && G5_COOKIE_DOMAIN !== '') return (string)G5_COOKIE_DOMAIN;
+        return 'macomaex_guest_recommend_limit';
+    }
+}
+
+if (!function_exists('company_list_ai_guest_limit_sign_token')) {
+    function company_list_ai_guest_limit_sign_token($token)
+    {
+        return hash_hmac('sha256', (string)$token, company_list_ai_guest_limit_secret());
+    }
+}
+
+if (!function_exists('company_list_ai_guest_limit_pack_token')) {
+    function company_list_ai_guest_limit_pack_token($token)
+    {
+        $token = preg_replace('/[^a-f0-9]/i', '', (string)$token);
+        if (strlen($token) !== 64) return '';
+        return $token . '.' . company_list_ai_guest_limit_sign_token($token);
+    }
+}
+
+if (!function_exists('company_list_ai_guest_limit_unpack_token')) {
+    function company_list_ai_guest_limit_unpack_token($value)
+    {
+        $value = trim((string)$value);
+        if ($value === '') return '';
+
+        $parts = explode('.', $value, 2);
+        if (count($parts) !== 2) return '';
+
+        $token = preg_replace('/[^a-f0-9]/i', '', (string)$parts[0]);
+        $signature = preg_replace('/[^a-f0-9]/i', '', (string)$parts[1]);
+        if (strlen($token) !== 64 || strlen($signature) !== 64) return '';
+
+        $expected = company_list_ai_guest_limit_sign_token($token);
+        if (function_exists('hash_equals')) {
+            return hash_equals($expected, $signature) ? strtolower($token) : '';
+        }
+
+        return ($expected === strtolower($signature)) ? strtolower($token) : '';
+    }
+}
+
+if (!function_exists('company_list_ai_guest_limit_issue_token')) {
+    function company_list_ai_guest_limit_issue_token()
+    {
+        try {
+            return bin2hex(random_bytes(32));
+        } catch (Exception $e) {
+            return hash('sha256', uniqid('', true) . ':' . mt_rand() . ':' . microtime(true));
+        }
+    }
+}
+
+if (!function_exists('company_list_ai_guest_limit_store_token')) {
+    function company_list_ai_guest_limit_store_token($token)
+    {
+        $packed = company_list_ai_guest_limit_pack_token($token);
+        if ($packed === '') return false;
+
+        if (function_exists('set_session')) {
+            set_session(company_list_ai_guest_limit_session_name(), $packed);
+        }
+        if (function_exists('set_cookie')) {
+            set_cookie(company_list_ai_guest_limit_cookie_name(), $packed, 90 * 86400);
+        }
+        return true;
+    }
+}
+
+if (!function_exists('company_list_ai_guest_limit_get_or_issue_token')) {
+    function company_list_ai_guest_limit_get_or_issue_token(&$issued = false)
+    {
+        $issued = false;
+
+        $candidates = array();
+        if (function_exists('get_session')) {
+            $candidates[] = get_session(company_list_ai_guest_limit_session_name());
+        }
+        if (function_exists('get_cookie')) {
+            $candidates[] = get_cookie(company_list_ai_guest_limit_cookie_name());
+        }
+
+        foreach ($candidates as $candidate) {
+            $token = company_list_ai_guest_limit_unpack_token($candidate);
+            if ($token !== '') {
+                company_list_ai_guest_limit_store_token($token);
+                return $token;
+            }
+        }
+
+        $token = company_list_ai_guest_limit_issue_token();
+        if ($token === '') return '';
+        $issued = true;
+        company_list_ai_guest_limit_store_token($token);
+        return $token;
+    }
+}
+
+if (!function_exists('company_list_ai_guest_limit_hash_token')) {
+    function company_list_ai_guest_limit_hash_token($token)
+    {
+        $token = preg_replace('/[^a-f0-9]/i', '', (string)$token);
+        if (strlen($token) !== 64) return '';
+        return hash('sha256', strtolower($token));
+    }
+}
+
+if (!function_exists('company_list_ai_guest_limit_make_company_key')) {
+    function company_list_ai_guest_limit_make_company_key($kedcd, $bizno)
+    {
+        $kedcd = preg_replace('/\D/', '', (string)$kedcd);
+        if (strlen($kedcd) === 10 && !preg_match('/^0+$/', $kedcd)) {
+            return 'K:' . $kedcd;
+        }
+
+        $bizno = preg_replace('/\D/', '', (string)$bizno);
+        if (strlen($bizno) === 10) {
+            return 'B:' . $bizno;
+        }
+
+        return '';
+    }
+}
+
+if (!function_exists('company_list_ai_guest_limit_today_ymd')) {
+    function company_list_ai_guest_limit_today_ymd()
+    {
+        return date('Ymd');
+    }
+}
+
+if (!function_exists('company_list_ai_guest_limit_day_bounds')) {
+    function company_list_ai_guest_limit_day_bounds($ymd)
+    {
+        $ymd = preg_replace('/\D/', '', (string)$ymd);
+        if (strlen($ymd) !== 8) $ymd = company_list_ai_guest_limit_today_ymd();
+
+        $year = (int)substr($ymd, 0, 4);
+        $month = (int)substr($ymd, 4, 2);
+        $day = (int)substr($ymd, 6, 2);
+        if (!checkdate($month, $day, $year)) {
+            $ymd = company_list_ai_guest_limit_today_ymd();
+            $year = (int)substr($ymd, 0, 4);
+            $month = (int)substr($ymd, 4, 2);
+            $day = (int)substr($ymd, 6, 2);
+        }
+
+        $start_ts = mktime(0, 0, 0, $month, $day, $year);
+        return array(
+            'start' => date('Y-m-d H:i:s', $start_ts),
+            'end' => date('Y-m-d H:i:s', strtotime('+1 day', $start_ts)),
+        );
+    }
+}
+
+if (!function_exists('company_list_ai_guest_limit_client_ip')) {
+    function company_list_ai_guest_limit_client_ip()
+    {
+        return trim((string)($_SERVER['REMOTE_ADDR'] ?? ''));
+    }
+}
+
+if (!function_exists('company_list_ai_guest_limit_user_agent_hash')) {
+    function company_list_ai_guest_limit_user_agent_hash()
+    {
+        $user_agent = trim((string)($_SERVER['HTTP_USER_AGENT'] ?? ''));
+        return $user_agent === '' ? '' : hash('sha256', $user_agent);
+    }
+}
+
+if (!function_exists('company_list_ai_guest_limit_fetch_token_company_keys')) {
+    function company_list_ai_guest_limit_fetch_token_company_keys($token_hash, $ymd)
+    {
+        if (!company_list_ai_ensure_guest_daily_limit_table()) return false;
+
+        $token_hash_sql = sql_real_escape_string((string)$token_hash);
+        $ymd_sql = sql_real_escape_string((string)$ymd);
+        $sql = "select company_key
+                  from guest_recommend_daily_limit
+                 where token_hash='{$token_hash_sql}'
+                   and ymd='{$ymd_sql}'";
+        $result = sql_query($sql, false);
+        if (!$result) return false;
+
+        $keys = array();
+        while ($row = sql_fetch_array($result)) {
+            $company_key = trim((string)($row['company_key'] ?? ''));
+            if ($company_key !== '') $keys[$company_key] = true;
+        }
+        return array_keys($keys);
+    }
+}
+
+if (!function_exists('company_list_ai_guest_limit_insert_company_key')) {
+    function company_list_ai_guest_limit_insert_company_key($token_hash, $ymd, $company_key)
+    {
+        if (!company_list_ai_ensure_guest_daily_limit_table()) return false;
+
+        $values = array(
+            'token_hash' => (string)$token_hash,
+            'ymd' => (string)$ymd,
+            'company_key' => (string)$company_key,
+            'ip' => company_list_ai_guest_limit_client_ip(),
+            'user_agent_hash' => company_list_ai_guest_limit_user_agent_hash(),
+            'created_at' => date('Y-m-d H:i:s'),
+        );
+
+        $sets = array();
+        foreach ($values as $key => $value) {
+            $sets[] = $key . "='" . sql_real_escape_string((string)$value) . "'";
+        }
+
+        $sql = "insert ignore guest_recommend_daily_limit set " . implode(',', $sets);
+        return (bool)sql_query($sql, false);
+    }
+}
+
+if (!function_exists('company_list_ai_guest_limit_fetch_ip_log_company_keys')) {
+    function company_list_ai_guest_limit_fetch_ip_log_company_keys($ymd)
+    {
+        if (!company_list_ai_ensure_recommend_log_table()) return false;
+
+        $ip = company_list_ai_guest_limit_client_ip();
+        if ($ip === '') return array();
+
+        $bounds = company_list_ai_guest_limit_day_bounds($ymd);
+        $start = $bounds['start'];
+        $end = $bounds['end'];
+
+        $ip_sql = sql_real_escape_string($ip);
+        $start_sql = sql_real_escape_string($start);
+        $end_sql = sql_real_escape_string($end);
+        $sql = "select c_kedcd, c_bizno
+                  from company_recommend_log
+                 where c_ip='{$ip_sql}'
+                   and c_event_type='request_received'
+                   and c_event_status='success'
+                   and c_source in ('company_list_ai_api', 'company_list_ai')
+                   and c_datetime >= '{$start_sql}'
+                   and c_datetime < '{$end_sql}'";
+        $result = sql_query($sql, false);
+        if (!$result) return false;
+
+        $keys = array();
+        while ($row = sql_fetch_array($result)) {
+            $company_key = company_list_ai_guest_limit_make_company_key($row['c_kedcd'] ?? '', $row['c_bizno'] ?? '');
+            if ($company_key !== '') $keys[$company_key] = true;
+        }
+        return array_keys($keys);
+    }
+}
+
+if (!function_exists('company_list_ai_check_guest_daily_limit')) {
+    function company_list_ai_check_guest_daily_limit($kedcd, $bizno, $options = array())
+    {
+        global $member;
+
+        $options = is_array($options) ? $options : array();
+        $limit = isset($options['limit']) ? (int)$options['limit'] : 5;
+        if ($limit < 1) $limit = 5;
+
+        if (!empty($member['mb_id'])) {
+            return array(
+                'ok' => true,
+                'limited' => false,
+                'member_exempt' => true,
+                'limit' => $limit,
+            );
+        }
+
+        $company_key = company_list_ai_guest_limit_make_company_key($kedcd, $bizno);
+        $ymd = company_list_ai_guest_limit_today_ymd();
+        if ($company_key === '') {
+            return array(
+                'ok' => false,
+                'limited' => false,
+                'fail_open' => true,
+                'reason' => 'missing_company_key',
+                'ymd' => $ymd,
+                'limit' => $limit,
+            );
+        }
+
+        $issued = false;
+        $token = company_list_ai_guest_limit_get_or_issue_token($issued);
+        $token_hash = company_list_ai_guest_limit_hash_token($token);
+        if ($token === '' || $token_hash === '') {
+            return array(
+                'ok' => false,
+                'limited' => false,
+                'fail_open' => true,
+                'reason' => 'token_unavailable',
+                'company_key' => $company_key,
+                'ymd' => $ymd,
+                'limit' => $limit,
+            );
+        }
+
+        $token_keys = company_list_ai_guest_limit_fetch_token_company_keys($token_hash, $ymd);
+        if ($token_keys === false) {
+            return array(
+                'ok' => false,
+                'limited' => false,
+                'fail_open' => true,
+                'reason' => 'token_db_unavailable',
+                'company_key' => $company_key,
+                'ymd' => $ymd,
+                'limit' => $limit,
+            );
+        }
+
+        $token_map = array_fill_keys($token_keys, true);
+        if (isset($token_map[$company_key])) {
+            return array(
+                'ok' => true,
+                'limited' => false,
+                'company_key' => $company_key,
+                'ymd' => $ymd,
+                'limit' => $limit,
+                'used_count' => count($token_map),
+                'remaining' => max(0, $limit - count($token_map)),
+                'limit_source' => '',
+                'token_issued' => $issued,
+                'already_seen' => true,
+            );
+        }
+
+        if ($issued || count($token_map) === 0) {
+            $ip_keys = company_list_ai_guest_limit_fetch_ip_log_company_keys($ymd);
+            if ($ip_keys === false) {
+                $ip_keys = array();
+            }
+            $ip_map = array_fill_keys($ip_keys, true);
+            if (!isset($ip_map[$company_key]) && count($ip_map) >= $limit) {
+                return array(
+                    'ok' => true,
+                    'limited' => true,
+                    'error' => 'guest_daily_limit_exceeded',
+                    'message' => '오늘 비회원 추천 조회 한도를 초과했습니다. 로그인 후 이용해주세요.',
+                    'company_key' => $company_key,
+                    'ymd' => $ymd,
+                    'limit' => $limit,
+                    'used_count' => count($ip_map),
+                    'remaining' => 0,
+                    'limit_source' => 'ip_log',
+                    'token_issued' => $issued,
+                );
+            }
+        }
+
+        if (count($token_map) >= $limit) {
+            return array(
+                'ok' => true,
+                'limited' => true,
+                'error' => 'guest_daily_limit_exceeded',
+                'message' => '오늘 비회원 추천 조회 한도를 초과했습니다. 로그인 후 이용해주세요.',
+                'company_key' => $company_key,
+                'ymd' => $ymd,
+                'limit' => $limit,
+                'used_count' => count($token_map),
+                'remaining' => 0,
+                'limit_source' => 'token_db',
+                'token_issued' => $issued,
+            );
+        }
+
+        if (!company_list_ai_guest_limit_insert_company_key($token_hash, $ymd, $company_key)) {
+            return array(
+                'ok' => false,
+                'limited' => false,
+                'fail_open' => true,
+                'reason' => 'token_db_insert_failed',
+                'company_key' => $company_key,
+                'ymd' => $ymd,
+                'limit' => $limit,
+            );
+        }
+
+        $used_count = count($token_map) + 1;
+        return array(
+            'ok' => true,
+            'limited' => false,
+            'company_key' => $company_key,
+            'ymd' => $ymd,
+            'limit' => $limit,
+            'used_count' => $used_count,
+            'remaining' => max(0, $limit - $used_count),
+            'limit_source' => '',
+            'token_issued' => $issued,
+            'already_seen' => false,
+        );
+    }
+}
+
 if (!function_exists('company_list_ai_normalize_event_type')) {
     function company_list_ai_normalize_event_type($event_type, $payload = array())
     {
