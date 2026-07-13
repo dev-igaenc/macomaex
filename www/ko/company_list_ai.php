@@ -1159,6 +1159,8 @@ $resolve_error_notice = '';
 $guest_limit_blocked = false;
 $guest_limit_notice = '';
 $guest_limit_payload = array('limited' => false);
+$demo_source_bizno = $has_valid_bizno_query ? $bizno_query : '';
+$is_demo_recommendation = ($demo_source_bizno !== '' && company_list_ai_demo_bizno_pair($demo_source_bizno) !== '');
 
 if (!$has_valid_source_input && ($has_kedcd_query_invalid || $has_bizno_query_invalid)) {
     $input_error_notice = '입력값이 올바르지 않습니다. kedcd/bizno는 10자리 숫자여야 합니다.';
@@ -1174,10 +1176,20 @@ if (($has_kedcd_query && strlen($kedcd_query) === 10 && !preg_match('/^0+$/', $k
         $resolved_base_payload = company_list_ai_build_base_payload($_GET);
         $resolved_base_payload['kedcd'] = $kedcd_query;
     } else if ($has_valid_bizno_query) {
-        $resolved = company_list_ai_resolve_base_payload_by_bizno($bizno_query, true, array(
-            'trace_id' => $trace_id,
-            'trade_type' => $partner_filter_trade_type,
-        ));
+        if ($is_demo_recommendation) {
+            $resolved_base_payload = company_list_ai_demo_base_payload_by_bizno($bizno_query);
+            $resolved = array(
+                'ok' => !empty($resolved_base_payload['kedcd']),
+                'base_payload' => $resolved_base_payload,
+                'source' => 'demo_company',
+                'error' => empty($resolved_base_payload['kedcd']) ? '시연 기준 기업 정보를 찾지 못했습니다.' : '',
+            );
+        } else {
+            $resolved = company_list_ai_resolve_base_payload_by_bizno($bizno_query, true, array(
+                'trace_id' => $trace_id,
+                'trade_type' => $partner_filter_trade_type,
+            ));
+        }
         if (!empty($resolved['ok']) && !empty($resolved['base_payload']) && is_array($resolved['base_payload'])) {
             $resolved_base_payload = $resolved['base_payload'];
             $query_override = company_list_ai_build_base_payload(array_merge($_GET, array(
@@ -1327,7 +1339,7 @@ if (!empty($resolved_base_payload['kedcd'])) {
         ), '비회원 추천목록 일일 조회 한도 초과');
     }
 
-    if (!$guest_limit_blocked) {
+    if (!$guest_limit_blocked && !$is_demo_recommendation) {
     // [추천 진입 로그]
     // 기준 기업, 선택 방향, 키워드, 상대 업종코드와 가중치를 최초 스냅샷으로 기록한다.
     company_list_ai_write_event_log('request_received', 'success', array(
@@ -1637,6 +1649,42 @@ if (!empty($resolved_base_payload['kedcd'])) {
         'error_code' => !empty($sell_call['ok']) ? '' : 'recommend_failed',
         'output_data' => company_list_ai_summarize_cards_for_log($seller_cards),
     ), !empty($sell_call['ok']) ? '판매처 추천 카드 출력 완료' : '판매처 추천 실패로 카드 출력 불가');
+    }
+
+    // 시연 환경에서는 외부 ML 호출 대신 반대편 테스트 기업 한 곳만 실제 카드 포맷으로 구성한다.
+    if ($is_demo_recommendation) {
+        $demo_item = company_list_ai_demo_recommendation_item($demo_source_bizno);
+        $demo_card = company_list_ai_ml_item_to_card($demo_item);
+        $demo_cards = is_array($demo_card) ? array($demo_card) : array();
+        $demo_call = array(
+            'ok' => !empty($demo_cards),
+            'from_cache' => true,
+            'data' => array('results' => $demo_item ? array($demo_item) : array()),
+            'error' => empty($demo_cards) ? '시연 추천 대상 기업 정보를 찾지 못했습니다.' : '',
+        );
+
+        if ($partner_filter_trade_type === 1) {
+            $buy_call = $demo_call;
+            $buy_live_ok = !empty($demo_call['ok']);
+            $buyer_cards = $demo_cards;
+            $buy_total_stat = count($demo_cards);
+        } else {
+            $sell_call = $demo_call;
+            $sell_live_ok = !empty($demo_call['ok']);
+            $seller_cards = $demo_cards;
+            $sell_total_stat = count($demo_cards);
+        }
+
+        company_list_ai_write_event_log('output', !empty($demo_call['ok']) ? 'success' : 'fail', array(
+            'trace_id' => $trace_id,
+            'source' => 'company_list_ai_demo',
+            'recommendation_mode' => 'demo_pair',
+            'bizno' => $demo_source_bizno,
+            'kedcd' => $ml_log_kedcd,
+            'trade_type' => $partner_filter_trade_type,
+            'result_count' => count($demo_cards),
+            'output_data' => company_list_ai_summarize_cards_for_log($demo_cards),
+        ), !empty($demo_call['ok']) ? '시연용 상호 추천 카드 출력 완료' : '시연용 추천 카드 생성 실패');
     }
 }
 

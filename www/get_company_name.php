@@ -123,6 +123,35 @@ $sql = "SELECT
         WHERE A.BZNO = '{$comnum}'";
 $comp = sql_fetch($sql);
 
+// 개발 시연용 기업은 외부 KODATA 응답을 기다리지 않고 로컬 company row를 사용한다.
+$demo_enabled = strtolower(trim((string)macomaex_env('DEMO_RECOMMENDATION_ENABLED', '0')));
+if (in_array($demo_enabled, array('1', 'true', 'yes', 'on'), true)
+    && in_array($comnum, array('9000000070', '9000000071'), true)
+    && !empty($comp['KEDCD'])) {
+    $company_name = $comp['ENP_NM_TRD'] ? $comp['ENP_NM_TRD'] : $comp['ENP_NM'];
+    $bizno_token = simple_crypt($comnum, 'e');
+    macomaex_company_list_ai_grant_entry($comnum, $bizno_token);
+    echo json_encode(array(
+        'result' => 'success',
+        'name' => $company_name,
+        'bzc_name' => $comp['BZC_NM'] ? $comp['BZC_NM'] : '기타 업종',
+        'enp_type' => $comp['ENP_TYP'] === '1' ? '법인기업' : '기업',
+        'enp_type_code' => $comp['ENP_TYP'],
+        'bzc_cd' => $comp['BZC_CD'],
+        'original_bzc_cd' => $comp['BZC_CD'],
+        'source_bzc_missing' => $comp['BZC_CD'] ? 0 : 1,
+        'source_bzc_resolved' => 0,
+        'source_bzc_resolve_source' => 'demo_company',
+        'keyword_scope' => $comp['BZC_CD'] ? 'related' : 'all',
+        'fallback_reason' => '',
+        'bizno' => $comnum,
+        'bizno_token' => $bizno_token,
+        'kedcd' => $comp['KEDCD'],
+        'source' => 'demo_company',
+    ), JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
 $resolved_company = macomaex_kodata_resolve_company($comnum, array(
     'persist_company' => false,
     'context' => 'get_company_name',
