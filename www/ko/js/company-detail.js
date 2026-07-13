@@ -29,7 +29,7 @@ function calcYearsInBusiness(foundedStr) {
 	}
 
 	// 브라우저 title도 상세 카드와 같은 기준으로 마스킹/해제 상태를 맞춘다.
-	var pageTitleText = co.is_unlocked
+	var pageTitleText = (co.is_identity_visible || co.is_unlocked)
 		? String(co.title_display || co.title || '기업 상세')
 		: maskedTitle(co.title);
 

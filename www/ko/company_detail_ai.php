@@ -4,6 +4,7 @@ include_once(__DIR__ . '/helper/trade_request_helper.php');
 include_once(__DIR__ . '/helper/company_detail_helper.php');
 include_once(__DIR__ . '/helper/llm_report_trade_helper.php');
 include_once(__DIR__ . '/helper/company_list_ai_helper.php');
+include_once(__DIR__ . '/helper/company_identity_preview_helper.php');
 
 // 재배포 확인 2026-07-06-2: 상세 추천 진입 가드 연동
 $should_open_trade_request_modal = false;
@@ -451,6 +452,8 @@ if (!empty($member['mb_id']) && strlen($kedcd) === 10) {
     ");
     $is_detail_unlocked = !empty($unlock_row['tr_no']);
 }
+$is_identity_preview = company_identity_preview_is_valid('ai_top3', $kedcd, $_GET['identity_preview'] ?? '');
+$is_identity_visible = !empty($member['mb_id']) || $is_detail_unlocked || $is_identity_preview;
 
 // 상세 초기 렌더/JS seed로 함께 쓰는 기본 데이터
 $company_seed = array(
@@ -478,6 +481,7 @@ $company_seed = array(
     'homepage_display' => company_detail_ai_display_value(trim((string)($company['HPAGE_URL'] ?? ''))),
     'product_line' => $seed_product_line,
     'is_unlocked' => $is_detail_unlocked,
+    'is_identity_visible' => $is_identity_visible,
     'region_insensitive' => false,
     'clients' => array(),
     'ai_analysis_html' => ''
@@ -495,10 +499,12 @@ if (empty($member['mb_id'])) {
     $company_seed['tags'] = array();
     $company_seed['tag_total_count'] = 0;
     $company_seed['product_line'] = '';
-    $company_seed['address'] = '';
-    $company_seed['address_display'] = '정보 준비중';
-    $company_seed['homepage'] = '';
-    $company_seed['homepage_display'] = '정보 준비중';
+    if (!$is_identity_visible) {
+        $company_seed['address'] = '';
+        $company_seed['address_display'] = '정보 준비중';
+        $company_seed['homepage'] = '';
+        $company_seed['homepage_display'] = '정보 준비중';
+    }
     $company_seed['clients'] = array();
     $company_seed['ai_analysis_html'] = '';
 }

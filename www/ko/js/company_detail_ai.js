@@ -463,7 +463,7 @@
             if (!visible) return 'AI 추천 기업';
             return prefix + visible + '****';
         }
-        var browserTitleText = co.is_unlocked
+        var browserTitleText = (co.is_identity_visible || co.is_unlocked)
             ? String(co.title_display || co.title || 'AI 추천 기업')
             : maskedBrowserTitle(co.title);
         document.title = browserTitleText + ' · AI 추천 기업 상세 — 매커멕스';
@@ -666,7 +666,7 @@
                 return value ? value : '정보 준비중';
             }
 
-            var isUnlocked = !!co.is_unlocked;
+            var isUnlocked = !!(co.is_identity_visible || co.is_unlocked);
             var titleHtml = isUnlocked ? _esc(_displayOrPending(co.title_display || co.title)) : _maskName(co.title);
             var addressHtml = isUnlocked
                 ? _esc(_displayOrPending(co.address_display || co.address))
@@ -729,7 +729,7 @@
                 '<dt>주소</dt><dd' + addressClass + '>' + addressHtml + '</dd>' +
                 '<dt>홈페이지</dt><dd' + homepageClass + '>' + homepageHtml + '</dd>' +
                 '</dl>' +
-                (isUnlocked ? '' : '<p class="info-mask-notice">거래 요청 시 *** 으로 표시된 정보가 공개됩니다.</p>');
+                (isUnlocked ? '' : '<p class="info-mask-notice">로그인 시 *** 으로 표시된 정보가 공개됩니다.</p>');
         }
 
         /* 별점 HTML */

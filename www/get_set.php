@@ -224,6 +224,17 @@ switch ($type) {
 				exit;
 			}
 
+			// 개발 시연용 테스트 기업은 외부 KODATA 조회 없이 로컬 기업정보로 검색 플로우를 통과시킨다.
+			$demo_enabled = strtolower(trim((string)macomaex_env('DEMO_RECOMMENDATION_ENABLED', '0')));
+			if (in_array($demo_enabled, array('1', 'true', 'yes', 'on'), true)
+				&& in_array($comnum, array('9000000070', '9000000071'), true)) {
+				$demo_company = sql_fetch("SELECT * FROM company WHERE BZNO='" . sql_real_escape_string($comnum) . "' LIMIT 1");
+				if (!empty($demo_company['KEDCD'])) {
+					echo "1000|" . macomaex_kodata_company_to_json($demo_company);
+					exit;
+				}
+			}
+
 			$resolved_company = macomaex_kodata_resolve_company($comnum, array(
 				'persist_company' => false,
 				'context' => 'get_set_main_comp_chk',

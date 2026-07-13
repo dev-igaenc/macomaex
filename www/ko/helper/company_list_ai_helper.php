@@ -70,6 +70,101 @@ if (!function_exists('company_list_ai_env')) {
     }
 }
 
+// 개발 시연에서만 두 테스트 기업을 서로 추천하기 위한 최소 헬퍼다.
+// 환경 스위치를 켜지 않으면 일반 추천/KODATA/ML 흐름에는 전혀 관여하지 않는다.
+if (!function_exists('company_list_ai_demo_recommendation_enabled')) {
+    function company_list_ai_demo_recommendation_enabled()
+    {
+        $value = strtolower(trim((string)company_list_ai_env('DEMO_RECOMMENDATION_ENABLED', '0')));
+        return in_array($value, array('1', 'true', 'yes', 'on'), true);
+    }
+}
+
+if (!function_exists('company_list_ai_demo_bizno_pair')) {
+    function company_list_ai_demo_bizno_pair($bizno)
+    {
+        if (!company_list_ai_demo_recommendation_enabled()) return '';
+
+        $bizno = preg_replace('/\D/', '', (string)$bizno);
+        $pair = array(
+            '9000000070' => '9000000071',
+            '9000000071' => '9000000070',
+        );
+
+        return $pair[$bizno] ?? '';
+    }
+}
+
+if (!function_exists('company_list_ai_demo_fetch_company_by_bizno')) {
+    function company_list_ai_demo_fetch_company_by_bizno($bizno)
+    {
+        $bizno = preg_replace('/\D/', '', (string)$bizno);
+        if ($bizno === '' || company_list_ai_demo_bizno_pair($bizno) === '') return array();
+
+        $bizno_sql = sql_real_escape_string($bizno);
+        $row = sql_fetch("\n            SELECT C.*, COALESCE(K.k_code_name, '') AS BZC_NM\n            FROM company C\n            LEFT JOIN kssc_11 K ON K.k_code=C.BZC_CD\n            WHERE C.BZNO='{$bizno_sql}'\n            LIMIT 1\n        ");
+
+        return is_array($row) ? $row : array();
+    }
+}
+
+if (!function_exists('company_list_ai_demo_base_payload_by_bizno')) {
+    function company_list_ai_demo_base_payload_by_bizno($bizno)
+    {
+        $company = company_list_ai_demo_fetch_company_by_bizno($bizno);
+        if (empty($company['KEDCD'])) return array();
+
+        $payload = company_list_ai_build_base_payload(array(
+            'kedcd' => $company['KEDCD'] ?? '',
+            'bzc_cd' => $company['BZC_CD'] ?? '',
+            'sido' => $company['LOC_ADDRA'] ?? '',
+            'sze' => $company['ENP_SZE'] ?? 0,
+            'estb_dt' => $company['ESTB_DT'] ?? '',
+            'mpd' => $company['PD_NM'] ?? '',
+            'sales' => $company['SALES'] ?? 0,
+        ));
+
+        return company_list_ai_apply_bzc_resolution_meta($payload, $bizno, 'demo_company');
+    }
+}
+
+if (!function_exists('company_list_ai_demo_recommendation_item')) {
+    function company_list_ai_demo_recommendation_item($source_bizno)
+    {
+        $target_bizno = company_list_ai_demo_bizno_pair($source_bizno);
+        if ($target_bizno === '') return array();
+
+        $company = company_list_ai_demo_fetch_company_by_bizno($target_bizno);
+        if (empty($company['KEDCD'])) return array();
+
+        return array(
+            'kedcd' => $company['KEDCD'],
+            'bzno' => $company['BZNO'] ?? '',
+            'enp_nm' => ($company['ENP_NM_TRD'] ?? '') ?: ($company['ENP_NM'] ?? ''),
+            'bzc_cd' => $company['BZC_CD'] ?? '',
+            'bzc_nm' => $company['BZC_NM'] ?? '',
+            'sido' => mb_substr(trim((string)($company['LOC_ADDRA'] ?? '')), 0, 3, 'UTF-8'),
+            'sze' => $company['ENP_SZE'] ?? '',
+            'display_score' => 98,
+            'score' => 0.98,
+            'rank' => 1,
+            'candidate_type' => 'demo_pair',
+            'keywords_json' => $company['keywords_json'] ?? '',
+            'keyword_count' => (int)($company['keyword_count'] ?? 0),
+            'badge_growth' => 5,
+            'badge_stability' => 5,
+            'badge_venture' => 'Y',
+            'radar' => array(
+                'growth_trend' => 96,
+                'financial_health' => 94,
+                'supply_chain' => 98,
+                'market_power' => 93,
+                'company_size' => 91,
+            ),
+        );
+    }
+}
+
 if (!function_exists('company_list_ai_compact_log_message')) {
     function company_list_ai_compact_log_message($message, $max_length = 255)
     {

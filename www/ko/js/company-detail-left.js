@@ -38,7 +38,7 @@ function renderDetailLeftCard(co, scoreHtml) {
     }
 
     // 상세 공개 여부에 따라 카드 내부의 민감 정보 표시 방식을 통일한다.
-    var isUnlocked = !!co.is_unlocked;
+    var isUnlocked = !!(co.is_identity_visible || co.is_unlocked);
     var titleHtml = isUnlocked ? _esc(_displayOrPending(co.title_display || co.title)) : _maskName(co.title);
     var addressHtml = isUnlocked
         ? _esc(_displayOrPending(co.address_display || co.address))
@@ -91,5 +91,5 @@ function renderDetailLeftCard(co, scoreHtml) {
         '<dt>주소</dt><dd' + addressClass + '>' + addressHtml + '</dd>' +
         '<dt>홈페이지</dt><dd' + homepageClass + '>' + homepageHtml + '</dd>' +
         '</dl>' +
-        (isUnlocked ? '' : '<p class="info-mask-notice">거래 요청 시 *** 으로 표시된 정보가 공개됩니다.</p>');
+        (isUnlocked ? '' : '<p class="info-mask-notice">로그인 시 *** 으로 표시된 정보가 공개됩니다.</p>');
 }
