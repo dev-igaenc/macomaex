@@ -463,7 +463,7 @@
             if (!visible) return 'AI 추천 기업';
             return prefix + visible + '****';
         }
-        var browserTitleText = co.is_unlocked
+        var browserTitleText = (co.is_identity_visible || co.is_unlocked)
             ? String(co.title_display || co.title || 'AI 추천 기업')
             : maskedBrowserTitle(co.title);
         document.title = browserTitleText + ' · AI 추천 기업 상세 — 매커멕스';
@@ -666,7 +666,7 @@
                 return value ? value : '정보 준비중';
             }
 
-            var isUnlocked = !!co.is_unlocked;
+            var isUnlocked = !!(co.is_identity_visible || co.is_unlocked);
             var titleHtml = isUnlocked ? _esc(_displayOrPending(co.title_display || co.title)) : _maskName(co.title);
             var addressHtml = isUnlocked
                 ? _esc(_displayOrPending(co.address_display || co.address))

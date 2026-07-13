@@ -2,6 +2,7 @@
 include_once("./_common.php");
 include_once(__DIR__ . '/helper/trade_request_helper.php');
 include_once(__DIR__ . '/helper/company_detail_helper.php');
+include_once(__DIR__ . '/helper/company_identity_preview_helper.php');
 
 $g5['title'] = '기업 상세';
 $shouldOpenTradeRequestModal = false;
@@ -184,6 +185,8 @@ if (!empty($member['mb_id'])) {
 
 	$isDetailUnlocked = !empty($unlockRow['tr_no']);
 }
+$isIdentityPreview = company_identity_preview_is_valid('category_top3', $kedcd, $_GET['identity_preview'] ?? '');
+$isIdentityVisible = !empty($member['mb_id']) || $isDetailUnlocked || $isIdentityPreview;
 
 $companyTitleDisplay = trade_request_display_value($company['ENP_NM'] ?? '');
 $companyAddressDisplay = trade_request_display_value(trim(($company['LOC_ADDRA'] ?? '') . ' ' . ($company['LOC_ADDRB'] ?? '')));
@@ -234,6 +237,7 @@ $companyDetailData = array(
 	'homepage' => $company['HPAGE_URL'] ?? '',
 	'homepage_display' => $companyHomepageDisplay,
 	'is_unlocked' => $isDetailUnlocked,
+	'is_identity_visible' => $isIdentityVisible,
 	'badge_growth' => format_badge_percent_detail($score['badge_growth'] ?? null),
 	'badge_stability' => format_badge_percent_detail($score['badge_stability'] ?? null),
 	'badge_venture' => strtoupper(trim((string)($score['badge_venture'] ?? ''))),

@@ -4,6 +4,7 @@
 // ============================================================
 
 include_once("./_common.php");
+include_once(__DIR__ . '/helper/company_identity_preview_helper.php');
 $is_matching_list_api = defined('MATCHING_LIST_API_MODE') || (isset($_GET['ajax']) && (string)$_GET['ajax'] === '1');
 
 // ----------------------------------------------------------
@@ -203,6 +204,27 @@ function build_company_title_for_list($rawName, $bzno, $unlocked_bzno_map) {
     }
 
     return mask_company_name_like_mock($rawName);
+}
+
+function matching_list_apply_identity_visibility($cards, $is_logged_in, $allow_guest_top3_preview) {
+    if (!is_array($cards)) return array();
+
+    foreach ($cards as $idx => $card) {
+        if (!is_array($card)) continue;
+        $raw_name = trim((string)($card['company_name'] ?? ''));
+        if ($raw_name === '') $raw_name = trim((string)($card['title'] ?? ''));
+        $is_guest_preview = !$is_logged_in && $allow_guest_top3_preview && $idx < 3;
+        $is_identity_visible = $is_logged_in || $is_guest_preview;
+
+        $cards[$idx]['title'] = $is_identity_visible
+            ? $raw_name
+            : mask_company_name_like_mock($raw_name);
+        $cards[$idx]['identity_visible'] = $is_identity_visible;
+        if ($is_guest_preview) {
+            $cards[$idx]['identity_preview_token'] = company_identity_preview_issue('category_top3', $card['kedcd'] ?? '');
+        }
+    }
+    return $cards;
 }
 
 // 레이더 점 좌표 계산
@@ -509,6 +531,7 @@ function fetch_general_cards_by_where($where_clause, $query_type, $show_count_re
             $cards[] = [
                 'type'    => $query_type,
                 'title'   => $title,
+                'company_name' => trim((string)($row['ENP_NM'] ?? '')),
                 'tags'    => $tags,
                 'tag_total_count' => resolve_keyword_tag_total_count($row['keyword_count'] ?? 0, $tags),
                 'score'   => calc_score_avg($row['final_total_score_5']),
@@ -577,7 +600,8 @@ function matching_list_render_cards_grid_html($cards) {
             : count($allTags);
         $restCount = max($totalCount - count($displayTags), 0);
         ?>
-        <a href="/companies/detail?id=<?php echo urlencode(simple_crypt($c['kedcd'] ?? '')); ?>"
+        <?php $previewToken = trim((string)($c['identity_preview_token'] ?? '')); ?>
+        <a href="/companies/detail?id=<?php echo urlencode(simple_crypt($c['kedcd'] ?? '')); ?><?php echo $previewToken !== '' ? '&identity_preview=' . urlencode($previewToken) : ''; ?>"
         class="mCompanyCard detail_view"
         data-type="<?php echo htmlspecialchars($c['type'] ?? 'buyer'); ?>"
         data-rank="<?php echo (int)$idx; ?>"
@@ -632,6 +656,7 @@ $cards_total_count = 0;
 
 $should_use_api_payload_cache = (
     $is_matching_list_api
+    && !empty($member['mb_id'])
     && !$has_comnum
     && $offset_req === 0
 );
@@ -819,6 +844,7 @@ if (!$has_comnum) {
             $out[] = [
                 'type'    => $type,
                 'title'   => $title,
+                'company_name' => trim((string)($row['TXPL_NM'] ?? '')),
                 'tags'    => $tags,
                 'tag_total_count' => resolve_keyword_tag_total_count($row['keyword_count'] ?? 0, $tags),
                 'score'   => calc_score_avg($row['final_total_score_5']),
@@ -847,6 +873,12 @@ if (!$has_comnum) {
     }
     $cards_total_count = count($cards);
 }
+
+$cards = matching_list_apply_identity_visibility(
+    $cards,
+    !empty($member['mb_id']),
+    !$has_comnum && $offset_req === 0
+);
 
 $buyer_loaded_count = 0;
 $seller_loaded_count = 0;

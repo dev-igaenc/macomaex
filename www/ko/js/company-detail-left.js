@@ -38,7 +38,7 @@ function renderDetailLeftCard(co, scoreHtml) {
     }
 
     // 상세 공개 여부에 따라 카드 내부의 민감 정보 표시 방식을 통일한다.
-    var isUnlocked = !!co.is_unlocked;
+    var isUnlocked = !!(co.is_identity_visible || co.is_unlocked);
     var titleHtml = isUnlocked ? _esc(_displayOrPending(co.title_display || co.title)) : _maskName(co.title);
     var addressHtml = isUnlocked
         ? _esc(_displayOrPending(co.address_display || co.address))

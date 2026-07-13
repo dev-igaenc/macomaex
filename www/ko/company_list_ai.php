@@ -1,6 +1,7 @@
 <?php
 include_once('./_common.php');
 include_once(G5_PATH . '/ko/helper/company_list_ai_helper.php');
+include_once(G5_PATH . '/ko/helper/company_identity_preview_helper.php');
 
 $board['bo_10'] = '3';
 $board['bo_9'] = '1';
@@ -293,6 +294,21 @@ function company_list_ai_apply_unlock_state($cards, $unlocked_kedcd_map)
         if (!is_array($card)) continue;
         $kedcd = company_list_ai_normalize_kedcd($card['kedcd'] ?? '');
         $cards[$idx]['is_unlocked'] = ($kedcd !== '' && !empty($unlocked_kedcd_map[$kedcd]));
+    }
+    return $cards;
+}
+
+function company_list_ai_apply_identity_visibility($cards, $is_logged_in)
+{
+    if (!is_array($cards)) return array();
+
+    foreach ($cards as $idx => $card) {
+        if (!is_array($card)) continue;
+        $is_top3 = ($idx < 3);
+        $cards[$idx]['identity_visible'] = $is_logged_in || $is_top3;
+        if (!$is_logged_in && $is_top3) {
+            $cards[$idx]['identity_preview_token'] = company_identity_preview_issue('ai_top3', $card['kedcd'] ?? '');
+        }
     }
     return $cards;
 }
@@ -910,7 +926,7 @@ function company_list_ai_render_card($card, $trade_type, $rank = 0, $src_kedcd =
     }
     $src_kedcd_attr = htmlspecialchars($src_kedcd_raw, ENT_QUOTES, 'UTF-8');
     $title_raw = trim((string)($card['title'] ?? ''));
-    $title_text = !empty($card['is_unlocked'])
+    $title_text = !empty($card['identity_visible']) || !empty($card['is_unlocked'])
         ? ($title_raw !== '' ? $title_raw : '기업 상세')
         : company_list_ai_mask_name($title_raw);
     $title = htmlspecialchars($title_text, ENT_QUOTES, 'UTF-8');
@@ -952,6 +968,10 @@ function company_list_ai_render_card($card, $trade_type, $rank = 0, $src_kedcd =
     $url .= '&recommendation_mode=' . rawurlencode($recommendation_mode);
     if ($context_trace_id !== '') {
         $url .= '&trace_id=' . rawurlencode($context_trace_id);
+    }
+    $identity_preview_token = trim((string)($card['identity_preview_token'] ?? ''));
+    if ($identity_preview_token !== '') {
+        $url .= '&identity_preview=' . rawurlencode($identity_preview_token);
     }
     $selected_keywords_attr = htmlspecialchars(implode(',', $selected_target_keywords), ENT_QUOTES, 'UTF-8');
     $partner_bzc_attr = htmlspecialchars(implode(',', $selected_partner_bzc_cds), ENT_QUOTES, 'UTF-8');
@@ -1698,6 +1718,9 @@ $sell_pool = $sell_live_ok ? $seller_cards : array();
 // company_detail.php와 동일한 해제 기준으로 목록 카드 마스킹 상태를 서버에서 확정한다.
 $buy_pool = company_list_ai_apply_unlock_state($buy_pool, $unlocked_kedcd_map);
 $sell_pool = company_list_ai_apply_unlock_state($sell_pool, $unlocked_kedcd_map);
+$is_logged_in = !empty($member['mb_id']);
+$buy_pool = company_list_ai_apply_identity_visibility($buy_pool, $is_logged_in);
+$sell_pool = company_list_ai_apply_identity_visibility($sell_pool, $is_logged_in);
 
 $detail_recommendation_context = array(
     'selected_target_keywords' => $selected_keywords,
