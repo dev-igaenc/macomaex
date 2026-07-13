@@ -729,7 +729,7 @@
                 '<dt>주소</dt><dd' + addressClass + '>' + addressHtml + '</dd>' +
                 '<dt>홈페이지</dt><dd' + homepageClass + '>' + homepageHtml + '</dd>' +
                 '</dl>' +
-                (isUnlocked ? '' : '<p class="info-mask-notice">거래 요청 시 *** 으로 표시된 정보가 공개됩니다.</p>');
+                (isUnlocked ? '' : '<p class="info-mask-notice">로그인 시 *** 으로 표시된 정보가 공개됩니다.</p>');
         }
 
         /* 별점 HTML */
