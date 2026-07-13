@@ -183,6 +183,461 @@ if (!function_exists('company_list_ai_ensure_recommend_log_table')) {
     }
 }
 
+if (!function_exists('company_list_ai_ensure_guest_daily_limit_table')) {
+    function company_list_ai_ensure_guest_daily_limit_table()
+    {
+        static $ready = null;
+        if ($ready !== null) return $ready;
+
+        // [비회원 일일 제한 상태 테이블]
+        // 추천목록 기준 회사별 1일 1행만 저장해 같은 회사 재조회는 차감하지 않는다.
+        // 비회원 추천목록 일일 제한의 공식 상태 저장소. 토큰 원문은 저장하지 않고 해시만 보관한다.
+        $sql = "CREATE TABLE IF NOT EXISTS guest_recommend_daily_limit (
+            id bigint unsigned NOT NULL AUTO_INCREMENT COMMENT 'PK',
+            token_hash char(64) NOT NULL COMMENT '게스트 토큰 해시값',
+            ymd char(8) NOT NULL COMMENT '제한 기준일 YYYYMMDD',
+            company_key varchar(24) NOT NULL COMMENT '조회 기준 회사 식별자: K:{kedcd} 또는 B:{bizno}',
+            ip varchar(45) NOT NULL DEFAULT '' COMMENT '요청 IP',
+            user_agent_hash char(64) NOT NULL DEFAULT '' COMMENT 'User-Agent 해시값',
+            created_at datetime NOT NULL COMMENT '해당 회사가 최초 기록된 시각',
+            PRIMARY KEY (id),
+            UNIQUE KEY uniq_token_day_company (token_hash, ymd, company_key),
+            KEY idx_token_day (token_hash, ymd),
+            KEY idx_ip_day_company (ip, ymd, company_key),
+            KEY idx_created_at (created_at)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
+          COMMENT='비회원 추천목록 일일 회사 조회 제한 상태'";
+
+        $ready = (bool)sql_query($sql, false);
+        return $ready;
+    }
+}
+
+// [비회원 추천목록 일일 제한 헬퍼]
+// 역할 분리: 쿠키/세션은 익명 토큰 유지, guest_recommend_daily_limit는 공식 카운트,
+// company_recommend_log + IP는 토큰 재발급 우회 보완용으로만 사용한다.
+if (!function_exists('company_list_ai_guest_limit_cookie_name')) {
+    function company_list_ai_guest_limit_cookie_name()
+    {
+        return 'ck_guest_recommend_token';
+    }
+}
+
+if (!function_exists('company_list_ai_guest_limit_session_name')) {
+    function company_list_ai_guest_limit_session_name()
+    {
+        return 'ss_guest_recommend_token';
+    }
+}
+
+if (!function_exists('company_list_ai_guest_limit_secret')) {
+    function company_list_ai_guest_limit_secret()
+    {
+        // 쿠키 토큰 서명용 비밀값. 운영에서는 GUEST_RECOMMEND_TOKEN_SECRET 설정을 우선 사용한다.
+        $secret = company_list_ai_env('GUEST_RECOMMEND_TOKEN_SECRET', '');
+        if ($secret !== '') return (string)$secret;
+        if (defined('G5_MYSQL_PASSWORD') && G5_MYSQL_PASSWORD !== '') return (string)G5_MYSQL_PASSWORD;
+        if (defined('G5_COOKIE_DOMAIN') && G5_COOKIE_DOMAIN !== '') return (string)G5_COOKIE_DOMAIN;
+        return 'macomaex_guest_recommend_limit';
+    }
+}
+
+if (!function_exists('company_list_ai_guest_limit_sign_token')) {
+    function company_list_ai_guest_limit_sign_token($token)
+    {
+        return hash_hmac('sha256', (string)$token, company_list_ai_guest_limit_secret());
+    }
+}
+
+if (!function_exists('company_list_ai_guest_limit_pack_token')) {
+    function company_list_ai_guest_limit_pack_token($token)
+    {
+        $token = preg_replace('/[^a-f0-9]/i', '', (string)$token);
+        if (strlen($token) !== 64) return '';
+        return $token . '.' . company_list_ai_guest_limit_sign_token($token);
+    }
+}
+
+if (!function_exists('company_list_ai_guest_limit_unpack_token')) {
+    function company_list_ai_guest_limit_unpack_token($value)
+    {
+        $value = trim((string)$value);
+        if ($value === '') return '';
+
+        $parts = explode('.', $value, 2);
+        if (count($parts) !== 2) return '';
+
+        $token = preg_replace('/[^a-f0-9]/i', '', (string)$parts[0]);
+        $signature = preg_replace('/[^a-f0-9]/i', '', (string)$parts[1]);
+        if (strlen($token) !== 64 || strlen($signature) !== 64) return '';
+
+        $expected = company_list_ai_guest_limit_sign_token($token);
+        if (function_exists('hash_equals')) {
+            return hash_equals($expected, $signature) ? strtolower($token) : '';
+        }
+
+        return ($expected === strtolower($signature)) ? strtolower($token) : '';
+    }
+}
+
+if (!function_exists('company_list_ai_guest_limit_issue_token')) {
+    function company_list_ai_guest_limit_issue_token()
+    {
+        try {
+            return bin2hex(random_bytes(32));
+        } catch (Exception $e) {
+            return hash('sha256', uniqid('', true) . ':' . mt_rand() . ':' . microtime(true));
+        }
+    }
+}
+
+if (!function_exists('company_list_ai_guest_limit_store_token')) {
+    function company_list_ai_guest_limit_store_token($token)
+    {
+        $packed = company_list_ai_guest_limit_pack_token($token);
+        if ($packed === '') return false;
+
+        // 세션은 현재 접속 보조, 쿠키는 세션 만료 이후 토큰 복원용이다.
+        if (function_exists('set_session')) {
+            set_session(company_list_ai_guest_limit_session_name(), $packed);
+        }
+        if (function_exists('set_cookie')) {
+            set_cookie(company_list_ai_guest_limit_cookie_name(), $packed, 90 * 86400);
+        }
+        return true;
+    }
+}
+
+if (!function_exists('company_list_ai_guest_limit_get_or_issue_token')) {
+    function company_list_ai_guest_limit_get_or_issue_token(&$issued = false)
+    {
+        $issued = false;
+
+        $candidates = array();
+        if (function_exists('get_session')) {
+            $candidates[] = get_session(company_list_ai_guest_limit_session_name());
+        }
+        if (function_exists('get_cookie')) {
+            $candidates[] = get_cookie(company_list_ai_guest_limit_cookie_name());
+        }
+
+        foreach ($candidates as $candidate) {
+            $token = company_list_ai_guest_limit_unpack_token($candidate);
+            if ($token !== '') {
+                company_list_ai_guest_limit_store_token($token);
+                return $token;
+            }
+        }
+
+        $token = company_list_ai_guest_limit_issue_token();
+        if ($token === '') return '';
+        $issued = true;
+        company_list_ai_guest_limit_store_token($token);
+        return $token;
+    }
+}
+
+if (!function_exists('company_list_ai_guest_limit_hash_token')) {
+    function company_list_ai_guest_limit_hash_token($token)
+    {
+        // DB에는 토큰 원문 대신 해시만 저장한다.
+        $token = preg_replace('/[^a-f0-9]/i', '', (string)$token);
+        if (strlen($token) !== 64) return '';
+        return hash('sha256', strtolower($token));
+    }
+}
+
+if (!function_exists('company_list_ai_guest_limit_make_company_key')) {
+    function company_list_ai_guest_limit_make_company_key($kedcd, $bizno)
+    {
+        // 기준 회사는 KED 기업코드를 우선 사용하고, 없을 때만 사업자번호로 대체한다.
+        $kedcd = preg_replace('/\D/', '', (string)$kedcd);
+        if (strlen($kedcd) === 10 && !preg_match('/^0+$/', $kedcd)) {
+            return 'K:' . $kedcd;
+        }
+
+        $bizno = preg_replace('/\D/', '', (string)$bizno);
+        if (strlen($bizno) === 10) {
+            return 'B:' . $bizno;
+        }
+
+        return '';
+    }
+}
+
+if (!function_exists('company_list_ai_guest_limit_today_ymd')) {
+    function company_list_ai_guest_limit_today_ymd()
+    {
+        return date('Ymd');
+    }
+}
+
+if (!function_exists('company_list_ai_guest_limit_day_bounds')) {
+    function company_list_ai_guest_limit_day_bounds($ymd)
+    {
+        $ymd = preg_replace('/\D/', '', (string)$ymd);
+        if (strlen($ymd) !== 8) $ymd = company_list_ai_guest_limit_today_ymd();
+
+        $year = (int)substr($ymd, 0, 4);
+        $month = (int)substr($ymd, 4, 2);
+        $day = (int)substr($ymd, 6, 2);
+        if (!checkdate($month, $day, $year)) {
+            $ymd = company_list_ai_guest_limit_today_ymd();
+            $year = (int)substr($ymd, 0, 4);
+            $month = (int)substr($ymd, 4, 2);
+            $day = (int)substr($ymd, 6, 2);
+        }
+
+        $start_ts = mktime(0, 0, 0, $month, $day, $year);
+        return array(
+            'start' => date('Y-m-d H:i:s', $start_ts),
+            'end' => date('Y-m-d H:i:s', strtotime('+1 day', $start_ts)),
+        );
+    }
+}
+
+if (!function_exists('company_list_ai_guest_limit_client_ip')) {
+    function company_list_ai_guest_limit_client_ip()
+    {
+        return trim((string)($_SERVER['REMOTE_ADDR'] ?? ''));
+    }
+}
+
+if (!function_exists('company_list_ai_guest_limit_user_agent_hash')) {
+    function company_list_ai_guest_limit_user_agent_hash()
+    {
+        $user_agent = trim((string)($_SERVER['HTTP_USER_AGENT'] ?? ''));
+        return $user_agent === '' ? '' : hash('sha256', $user_agent);
+    }
+}
+
+if (!function_exists('company_list_ai_guest_limit_fetch_token_company_keys')) {
+    function company_list_ai_guest_limit_fetch_token_company_keys($token_hash, $ymd)
+    {
+        if (!company_list_ai_ensure_guest_daily_limit_table()) return false;
+
+        $token_hash_sql = sql_real_escape_string((string)$token_hash);
+        $ymd_sql = sql_real_escape_string((string)$ymd);
+        $sql = "select company_key
+                  from guest_recommend_daily_limit
+                 where token_hash='{$token_hash_sql}'
+                   and ymd='{$ymd_sql}'";
+        $result = sql_query($sql, false);
+        if (!$result) return false;
+
+        $keys = array();
+        while ($row = sql_fetch_array($result)) {
+            $company_key = trim((string)($row['company_key'] ?? ''));
+            if ($company_key !== '') $keys[$company_key] = true;
+        }
+        return array_keys($keys);
+    }
+}
+
+if (!function_exists('company_list_ai_guest_limit_insert_company_key')) {
+    function company_list_ai_guest_limit_insert_company_key($token_hash, $ymd, $company_key)
+    {
+        if (!company_list_ai_ensure_guest_daily_limit_table()) return false;
+
+        $values = array(
+            'token_hash' => (string)$token_hash,
+            'ymd' => (string)$ymd,
+            'company_key' => (string)$company_key,
+            'ip' => company_list_ai_guest_limit_client_ip(),
+            'user_agent_hash' => company_list_ai_guest_limit_user_agent_hash(),
+            'created_at' => date('Y-m-d H:i:s'),
+        );
+
+        $sets = array();
+        foreach ($values as $key => $value) {
+            $sets[] = $key . "='" . sql_real_escape_string((string)$value) . "'";
+        }
+
+        $sql = "insert ignore guest_recommend_daily_limit set " . implode(',', $sets);
+        return (bool)sql_query($sql, false);
+    }
+}
+
+if (!function_exists('company_list_ai_guest_limit_fetch_ip_log_company_keys')) {
+    function company_list_ai_guest_limit_fetch_ip_log_company_keys($ymd)
+    {
+        if (!company_list_ai_ensure_recommend_log_table()) return false;
+
+        $ip = company_list_ai_guest_limit_client_ip();
+        if ($ip === '') return array();
+
+        $bounds = company_list_ai_guest_limit_day_bounds($ymd);
+        $start = $bounds['start'];
+        $end = $bounds['end'];
+
+        $ip_sql = sql_real_escape_string($ip);
+        $start_sql = sql_real_escape_string($start);
+        $end_sql = sql_real_escape_string($end);
+        // 토큰이 새로 발급된 경우에도 같은 IP의 당일 추천목록 진입 흔적으로 얕은 우회를 보완한다.
+        $sql = "select c_kedcd, c_bizno
+                  from company_recommend_log
+                 where c_ip='{$ip_sql}'
+                   and c_event_type='request_received'
+                   and c_event_status='success'
+                   and c_source in ('company_list_ai_api', 'company_list_ai')
+                   and c_datetime >= '{$start_sql}'
+                   and c_datetime < '{$end_sql}'";
+        $result = sql_query($sql, false);
+        if (!$result) return false;
+
+        $keys = array();
+        while ($row = sql_fetch_array($result)) {
+            $company_key = company_list_ai_guest_limit_make_company_key($row['c_kedcd'] ?? '', $row['c_bizno'] ?? '');
+            if ($company_key !== '') $keys[$company_key] = true;
+        }
+        return array_keys($keys);
+    }
+}
+
+if (!function_exists('company_list_ai_check_guest_daily_limit')) {
+    function company_list_ai_check_guest_daily_limit($kedcd, $bizno, $options = array())
+    {
+        global $member;
+
+        // 실제 차단 응답은 호출부(API/페이지)가 담당하고, 이 함수는 판정 결과만 반환한다.
+        $options = is_array($options) ? $options : array();
+        $limit = isset($options['limit']) ? (int)$options['limit'] : 5;
+        if ($limit < 1) $limit = 5;
+
+        if (!empty($member['mb_id'])) {
+            return array(
+                'ok' => true,
+                'limited' => false,
+                'member_exempt' => true,
+                'limit' => $limit,
+            );
+        }
+
+        $company_key = company_list_ai_guest_limit_make_company_key($kedcd, $bizno);
+        $ymd = company_list_ai_guest_limit_today_ymd();
+        if ($company_key === '') {
+            return array(
+                'ok' => false,
+                'limited' => false,
+                'fail_open' => true,
+                'reason' => 'missing_company_key',
+                'ymd' => $ymd,
+                'limit' => $limit,
+            );
+        }
+
+        $issued = false;
+        $token = company_list_ai_guest_limit_get_or_issue_token($issued);
+        $token_hash = company_list_ai_guest_limit_hash_token($token);
+        if ($token === '' || $token_hash === '') {
+            return array(
+                'ok' => false,
+                'limited' => false,
+                'fail_open' => true,
+                'reason' => 'token_unavailable',
+                'company_key' => $company_key,
+                'ymd' => $ymd,
+                'limit' => $limit,
+            );
+        }
+
+        $token_keys = company_list_ai_guest_limit_fetch_token_company_keys($token_hash, $ymd);
+        if ($token_keys === false) {
+            return array(
+                'ok' => false,
+                'limited' => false,
+                'fail_open' => true,
+                'reason' => 'token_db_unavailable',
+                'company_key' => $company_key,
+                'ymd' => $ymd,
+                'limit' => $limit,
+            );
+        }
+
+        $token_map = array_fill_keys($token_keys, true);
+        if (isset($token_map[$company_key])) {
+            return array(
+                'ok' => true,
+                'limited' => false,
+                'company_key' => $company_key,
+                'ymd' => $ymd,
+                'limit' => $limit,
+                'used_count' => count($token_map),
+                'remaining' => max(0, $limit - count($token_map)),
+                'limit_source' => '',
+                'token_issued' => $issued,
+                'already_seen' => true,
+            );
+        }
+
+        if ($issued || count($token_map) === 0) {
+            // 새 토큰/빈 토큰 이력일 때만 IP 로그 보조 판정을 적용해 공유망 오탐 가능성을 낮춘다.
+            $ip_keys = company_list_ai_guest_limit_fetch_ip_log_company_keys($ymd);
+            if ($ip_keys === false) {
+                $ip_keys = array();
+            }
+            $ip_map = array_fill_keys($ip_keys, true);
+            if (!isset($ip_map[$company_key]) && count($ip_map) >= $limit) {
+                return array(
+                    'ok' => true,
+                    'limited' => true,
+                    'error' => 'guest_daily_limit_exceeded',
+                    'message' => '오늘 비회원 추천 조회 한도를 초과했습니다. 로그인 후 이용해주세요.',
+                    'company_key' => $company_key,
+                    'ymd' => $ymd,
+                    'limit' => $limit,
+                    'used_count' => count($ip_map),
+                    'remaining' => 0,
+                    'limit_source' => 'ip_log',
+                    'token_issued' => $issued,
+                );
+            }
+        }
+
+        if (count($token_map) >= $limit) {
+            return array(
+                'ok' => true,
+                'limited' => true,
+                'error' => 'guest_daily_limit_exceeded',
+                'message' => '오늘 비회원 추천 조회 한도를 초과했습니다. 로그인 후 이용해주세요.',
+                'company_key' => $company_key,
+                'ymd' => $ymd,
+                'limit' => $limit,
+                'used_count' => count($token_map),
+                'remaining' => 0,
+                'limit_source' => 'token_db',
+                'token_issued' => $issued,
+            );
+        }
+
+        if (!company_list_ai_guest_limit_insert_company_key($token_hash, $ymd, $company_key)) {
+            return array(
+                'ok' => false,
+                'limited' => false,
+                'fail_open' => true,
+                'reason' => 'token_db_insert_failed',
+                'company_key' => $company_key,
+                'ymd' => $ymd,
+                'limit' => $limit,
+            );
+        }
+
+        $used_count = count($token_map) + 1;
+        return array(
+            'ok' => true,
+            'limited' => false,
+            'company_key' => $company_key,
+            'ymd' => $ymd,
+            'limit' => $limit,
+            'used_count' => $used_count,
+            'remaining' => max(0, $limit - $used_count),
+            'limit_source' => '',
+            'token_issued' => $issued,
+            'already_seen' => false,
+        );
+    }
+}
+
 if (!function_exists('company_list_ai_normalize_event_type')) {
     function company_list_ai_normalize_event_type($event_type, $payload = array())
     {

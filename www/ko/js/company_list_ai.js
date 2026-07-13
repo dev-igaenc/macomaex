@@ -108,6 +108,7 @@
     var aiData = normalizeData(restoredSnapshot ? restoredSnapshot.data : window.__COMPANY_LIST_AI_DATA__);
     var aiMeta = restoredSnapshot ? restoredSnapshot.meta : (window.__COMPANY_LIST_AI_META__ || {});
     var aiStats = restoredSnapshot ? restoredSnapshot.stats : (window.__COMPANY_LIST_AI_STATS__ || {});
+    var guestLimit = window.__COMPANY_LIST_AI_GUEST_LIMIT__ || {};
     if (!restoredSnapshot) {
         saveRecommendationSnapshot(window.__COMPANY_LIST_AI_DATA__ || {}, aiMeta, aiStats);
     }
@@ -186,6 +187,71 @@
         setLoadingNoticeVisible(false);
         setLoadingActionsVisible(false);
         if (loadingProgressFill) loadingProgressFill.style.width = '100%';
+    }
+
+    function getLoginReturnUrl() {
+        if (guestLimit && typeof guestLimit.login_url === 'string' && guestLimit.login_url) {
+            return guestLimit.login_url;
+        }
+        return '/bbs/login.php?url=' + encodeURIComponent(window.location.pathname + window.location.search);
+    }
+
+    function openGuestLimitLoginModal() {
+        var modalId = 'companyListAiGuestLimitModal';
+        var overlay = document.getElementById(modalId);
+
+        function closeModal() {
+            if (!overlay) return;
+            overlay.classList.remove('is-open');
+            document.documentElement.classList.remove('hide-scroll');
+        }
+
+        if (!overlay) {
+            overlay = document.createElement('div');
+            overlay.id = modalId;
+            overlay.className = 'login-guard-modal';
+            overlay.innerHTML = ''
+                + '<div class="login-guard">'
+                + '  <div class="login-guard__overlay" aria-hidden="true"></div>'
+                + '  <div class="login-guard__modal" role="dialog" aria-modal="true" aria-labelledby="companyListAiGuestLimitTitle">'
+                + '    <button type="button" class="login-guard__close" aria-label="닫기">'
+                + '      <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>'
+                + '    </button>'
+                + '    <div class="login-guard__icon" aria-hidden="true">'
+                + '      <svg viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1s3.1 1.39 3.1 3.1v2z"/></svg>'
+                + '    </div>'
+                + '    <h3 class="login-guard__title" id="companyListAiGuestLimitTitle">로그인이 필요합니다</h3>'
+                + '    <p class="login-guard__desc" id="companyListAiGuestLimitDesc"></p>'
+                + '    <div class="login-guard__actions">'
+                + '      <a href="/signup" class="login-guard__btn login-guard__btn--ghost">회원가입</a>'
+                + '      <a href="' + getLoginReturnUrl() + '" class="login-guard__btn login-guard__btn--primary">로그인</a>'
+                + '    </div>'
+                + '  </div>'
+                + '</div>';
+            document.body.appendChild(overlay);
+
+            var dim = overlay.querySelector('.login-guard__overlay');
+            if (dim) dim.addEventListener('click', closeModal);
+
+            var closeBtn = overlay.querySelector('.login-guard__close');
+            if (closeBtn) closeBtn.addEventListener('click', closeModal);
+
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape' && overlay.classList.contains('is-open')) closeModal();
+            });
+        }
+
+        var message = guestLimit && typeof guestLimit.message === 'string' && guestLimit.message
+            ? guestLimit.message
+            : '오늘 비회원 추천 조회 한도를 모두 사용했습니다. 로그인 후 계속 이용해주세요.';
+        var descEl = overlay.querySelector('#companyListAiGuestLimitDesc');
+        if (descEl) descEl.innerHTML = escapeHtml(message) + '<br>로그인하면 계속 추천 기업을 확인할 수 있습니다.';
+
+        var loginBtn = overlay.querySelector('.login-guard__btn--primary');
+        if (loginBtn) loginBtn.setAttribute('href', getLoginReturnUrl());
+
+        overlay.classList.add('is-open');
+        document.documentElement.classList.add('hide-scroll');
     }
 
     function clearLoadingTimers() {
@@ -356,7 +422,10 @@
     }
 
     shouldShowLoadingOnce = shouldShowLoadingOverlay();
-    if (shouldShowLoadingOnce) startLoadingOverlay();
+    if (guestLimit && guestLimit.limited) {
+        hideLoadingOverlayImmediately();
+        setTimeout(openGuestLimitLoginModal, 120);
+    } else if (shouldShowLoadingOnce) startLoadingOverlay();
     else hideLoadingOverlayImmediately();
 
     if (!topWrap || !restWrap || !loadMoreBtn) {

@@ -153,6 +153,45 @@ if ($action === 'recommend') {
     $ml_log_bizno = isset($resolve_meta['bizno']) ? company_list_ai_api_normalize_bizno($resolve_meta['bizno']) : '';
     $ml_log_kedcd = isset($resolve_meta['kedcd']) ? company_list_ai_api_normalize_kedcd($resolve_meta['kedcd']) : '';
 
+    // [비회원 추천목록 일일 제한]
+    // 캐시/EC2 호출 전에 차단해 초과 요청이 추천 생성 비용을 발생시키지 않게 한다.
+    $guest_daily_limit = 5;
+    $guest_limit = company_list_ai_check_guest_daily_limit($ml_log_kedcd, $ml_log_bizno, array(
+        'limit' => $guest_daily_limit,
+        'source' => 'company_list_ai_api',
+        'trace_id' => $trace_id,
+    ));
+    if (!empty($guest_limit['limited'])) {
+        $login_url = (defined('G5_BBS_URL') ? G5_BBS_URL : '/bbs') . '/login.php?url=' . urlencode((string)($_SERVER['REQUEST_URI'] ?? '/'));
+        company_list_ai_write_event_log('rate_limited', 'fail', array(
+            'trace_id' => $trace_id,
+            'source' => 'company_list_ai_api',
+            'recommendation_mode' => 'full',
+            'bizno' => $ml_log_bizno,
+            'kedcd' => $ml_log_kedcd,
+            'trade_type' => 0,
+            'error_code' => 'guest_daily_limit_exceeded',
+            'limit_source' => (string)($guest_limit['limit_source'] ?? ''),
+            'company_key' => (string)($guest_limit['company_key'] ?? ''),
+            'ymd' => (string)($guest_limit['ymd'] ?? ''),
+            'limit' => (int)($guest_limit['limit'] ?? $guest_daily_limit),
+            'used_count' => (int)($guest_limit['used_count'] ?? 0),
+            'remaining' => 0,
+            'request_data' => array(
+                'action' => 'recommend',
+                'base_payload' => $base_payload,
+            ),
+        ), '비회원 추천목록 일일 조회 한도 초과');
+        company_list_ai_api_response(429, array(
+            'error' => 'guest_daily_limit_exceeded',
+            'message' => (string)($guest_limit['message'] ?? '오늘 비회원 추천 조회 한도를 초과했습니다. 로그인 후 이용해주세요.'),
+            'limit' => (int)($guest_limit['limit'] ?? $guest_daily_limit),
+            'remaining' => 0,
+            'login_required' => true,
+            'login_url' => $login_url,
+        ));
+    }
+
     $timeout_sec = 8;
     $trace_context = array(
         'trace_id' => $trace_id,
