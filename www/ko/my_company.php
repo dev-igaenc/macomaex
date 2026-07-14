@@ -13,6 +13,14 @@ $board['bo_9']="1"; // 2뎁스
 //로그인 체크
 login_chk();
 
+$return_url = trim((string)($_GET['return_url'] ?? ''));
+if ($return_url !== '') {
+	$return_path = parse_url($return_url, PHP_URL_PATH);
+	if ($return_path === '/account/trades' && strpos($return_url, '//') !== 0) {
+		set_session('ss_my_company_connect_return_url', $return_url);
+	}
+}
+
 $cd=trim((string)$member['mb_company']);
 $com=array();
 $major_service=array();

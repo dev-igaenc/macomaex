@@ -73,7 +73,43 @@ function my_matching_member_bzno($member) {
 	return preg_replace('/[^0-9]/', '', (string)($member['mb_4'] ?? ''));
 }
 
+// 대상 기업의 활성 회원을 수락 시 담당자 지정 목록으로 반환한다.
+function my_matching_handle_trade_request_recipients($member, $request) {
+	if (empty($member['mb_id'])) {
+		my_matching_json_response(array('success' => false, 'login' => false, 'message' => '로그인 후 이용해 주세요.'));
+	}
+
+	$trNo = isset($request['tr_no']) ? (int)$request['tr_no'] : 0;
+	$memberBzno = my_matching_member_bzno($member);
+	if ($trNo < 1 || $memberBzno === '') {
+		my_matching_json_response(array('success' => false, 'message' => '거래 요청 정보가 올바르지 않습니다.'));
+	}
+
+	$tradeRequest = sql_fetch("SELECT target_kedcd, recipient_status FROM trade_request WHERE tr_no='{$trNo}' AND target_bzno='" . sql_escape_string($memberBzno) . "' AND approval_status='0' LIMIT 1");
+	$targetKedcd = trim((string)($tradeRequest['target_kedcd'] ?? ''));
+	if ($targetKedcd === '') {
+		my_matching_json_response(array('success' => false, 'message' => '수락 권한이 없습니다.'));
+	}
+
+	$recipients = array();
+	$result = sql_query("SELECT mb_id, mb_name, mb_6 FROM {$GLOBALS['g5']['member_table']} WHERE mb_company='" . sql_escape_string($targetKedcd) . "' AND mb_id<>'' AND (mb_leave_date='' OR mb_leave_date IS NULL) ORDER BY mb_no ASC", false);
+	if ($result) {
+		while ($row = sql_fetch_array($result)) {
+			$name = trim((string)($row['mb_6'] ?? ''));
+			if ($name === '') $name = trim((string)($row['mb_name'] ?? ''));
+			$recipients[] = array('id' => trim((string)$row['mb_id']), 'name' => $name !== '' ? $name : '담당자');
+		}
+	}
+
+	my_matching_json_response(array(
+		'success' => true,
+		'requires_assignment' => (($tradeRequest['recipient_status'] ?? '') === 'pending_assignment'),
+		'recipients' => $recipients,
+	));
+}
+
 function my_matching_handle_trade_request_approval($member, $request) {
+	global $g5;
 	include_once(__DIR__ . '/trade_chat_helper.php');
 
 	if (empty($member['mb_id'])) {
@@ -97,8 +133,8 @@ function my_matching_handle_trade_request_approval($member, $request) {
 	}
 
 	$memberBznoSql = sql_escape_string($memberBzno);
-		$targetRequest = sql_fetch("
-			select tr_no, approval_status, request_mb_id, request_bzno
+	$targetRequest = sql_fetch("
+			select tr_no, approval_status, request_mb_id, request_bzno, target_kedcd, recipient_status
 			from trade_request
 			where tr_no='{$idx}'
 			  and target_bzno='{$memberBznoSql}'
@@ -109,21 +145,42 @@ function my_matching_handle_trade_request_approval($member, $request) {
 		my_matching_text_response('500');
 	}
 
+	$targetMemberId = trim((string)($request['target_mb_id'] ?? ''));
+	$isPendingAssignment = (($targetRequest['recipient_status'] ?? '') === 'pending_assignment');
+	if ($nextStatus === '1' && $isPendingAssignment) {
+		if ($targetMemberId === '') {
+			my_matching_text_response('422|담당자를 선택해 주세요.');
+		}
+		$targetMember = sql_fetch("SELECT mb_id, mb_name, mb_6 FROM {$GLOBALS['g5']['member_table']} WHERE mb_id='" . sql_escape_string($targetMemberId) . "' AND mb_company='" . sql_escape_string($targetRequest['target_kedcd'] ?? '') . "' AND (mb_leave_date='' OR mb_leave_date IS NULL) LIMIT 1");
+		if (empty($targetMember['mb_id'])) {
+			my_matching_text_response('422|선택한 담당자 정보를 확인할 수 없습니다.');
+		}
+		$targetMemberName = trim((string)($targetMember['mb_6'] ?? ''));
+		if ($targetMemberName === '') $targetMemberName = trim((string)($targetMember['mb_name'] ?? ''));
+	}
+
 	if ($nextStatus === '1') {
 		$updateSql = "
 			update trade_request
 			set approval_status='1',
 				approved_at=now(),
-				rejected_at=NULL
+				rejected_at=NULL" . ($isPendingAssignment ? ",
+				target_mb_id='" . sql_escape_string($targetMemberId) . "',
+				target_member_name='" . sql_escape_string($targetMemberName) . "',
+				recipient_status='accepted',
+				recipient_assigned_at=NOW(),
+				accepted_by_mb_id='" . sql_escape_string($member['mb_id']) . "'" : "") . "
 			where tr_no='{$idx}'
 			  and target_bzno='{$memberBznoSql}'
+			  and approval_status='0'
 		";
 	} else {
 		$updateSql = "
 			update trade_request
 			set approval_status='2',
 				rejected_at=now(),
-				approved_at=NULL
+				approved_at=NULL" . ($isPendingAssignment ? ",
+				recipient_status='rejected'" : "") . "
 			where tr_no='{$idx}'
 			  and target_bzno='{$memberBznoSql}'
 		";
@@ -132,6 +189,9 @@ function my_matching_handle_trade_request_approval($member, $request) {
 	$updated = sql_query($updateSql, false);
 	if (!$updated) {
 		my_matching_text_response('500');
+	}
+	if ($nextStatus === '1' && defined('G5_MYSQLI_USE') && G5_MYSQLI_USE && isset($g5['connect_db']) && mysqli_affected_rows($g5['connect_db']) !== 1) {
+		my_matching_text_response('409|이미 처리되었거나 수락 권한이 없는 요청입니다.');
 	}
 
 		if ($nextStatus === '1' && (int)($targetRequest['approval_status'] ?? 0) !== 1) {

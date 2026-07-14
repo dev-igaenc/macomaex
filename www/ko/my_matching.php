@@ -50,6 +50,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 	if ($action === 'trade_request_approval') {
 		my_matching_handle_trade_request_approval($member, $_POST);
 	}
+	if ($action === 'trade_request_recipients') {
+		my_matching_handle_trade_request_recipients($member, $_POST);
+	}
 
 	if ($action === 'my_matching_sent_status') {
 		my_matching_handle_sent_status($member);
@@ -172,8 +175,15 @@ function my_matching_build_item($row, $starred = false) {
 	);
 }
 
-$memberBzno = preg_replace('/[^0-9]/', '', (string)($member['mb_4'] ?? ''));
+$memberCompanyCode = trim((string)($member['mb_company'] ?? ''));
+$linkedCompany = array();
+if ($memberCompanyCode !== '' && !preg_match('/^M[0-9]{9}$/', $memberCompanyCode)) {
+	$linkedCompany = sql_fetch("SELECT KEDCD, BZNO FROM company WHERE KEDCD='" . sql_escape_string($memberCompanyCode) . "' LIMIT 1");
+}
+$memberBzno = preg_replace('/[^0-9]/', '', (string)($linkedCompany['BZNO'] ?? ($member['mb_4'] ?? '')));
 $memberHasBzno = ($memberBzno !== '');
+$requiresCompanyConnection = empty($linkedCompany['KEDCD']) || !$memberHasBzno;
+$companyConnectUrl = '/account/company?return_url=' . urlencode('/account/trades');
 
 // 관심기업 탭 공통 모달에서도 같은 "우리 기업 정보"를 쓰도록 로그인 기업 데이터를 미리 준비한다.
 $requesterCompanyData = $memberHasBzno ? trade_request_member_company_data($memberBzno) : array();
@@ -217,12 +227,12 @@ $receivedSql = "
 		C.LOC_ADDRA,
 		C.LOC_ADDRB,
 		(SELECT k_code_name FROM kssc_11 WHERE k_code = C.BZC_CD LIMIT 1) AS industry_name,
-		M.mb_6 AS manager_name,
+		COALESCE(NULLIF(TR.request_member_name, ''), NULLIF(M.mb_6, ''), NULLIF(M.mb_name, '')) AS manager_name,
 		M.mb_5 AS manager_email
 	FROM trade_request TR
 	LEFT JOIN trade_chat_room TCR ON TCR.room_id = TR.chat_room_id
 	LEFT JOIN company C ON C.BZNO = TR.request_bzno
-	LEFT JOIN g5_member M ON M.mb_company = C.KEDCD
+	LEFT JOIN g5_member M ON M.mb_id = TR.request_mb_id
 	WHERE TR.target_bzno = '{$memberBznoSql}'
 	ORDER BY TR.tr_no DESC
 ";
@@ -260,12 +270,12 @@ $sentSql = "
 		C.LOC_ADDRA,
 		C.LOC_ADDRB,
 		(SELECT k_code_name FROM kssc_11 WHERE k_code = C.BZC_CD LIMIT 1) AS industry_name,
-		M.mb_6 AS manager_name,
+		COALESCE(NULLIF(TR.target_member_name, ''), NULLIF(M.mb_6, ''), NULLIF(M.mb_name, '')) AS manager_name,
 		M.mb_5 AS manager_email
 	FROM trade_request TR
 	LEFT JOIN trade_chat_room TCR ON TCR.room_id = TR.chat_room_id
 	LEFT JOIN company C ON C.KEDCD = TR.target_kedcd
-	LEFT JOIN g5_member M ON M.mb_company = C.KEDCD
+	LEFT JOIN g5_member M ON M.mb_id = TR.target_mb_id
 	WHERE TR.request_bzno = '{$memberBznoSql}'
 	ORDER BY TR.tr_no DESC
 ";
@@ -367,6 +377,8 @@ $matchingPageData = array(
 	'sent' => $sentRows,
 	'interested' => $interestedRows,
 	'csrfToken' => $csrfToken,
+	'requiresCompanyConnection' => $requiresCompanyConnection,
+	'companyConnectUrl' => $companyConnectUrl,
 );
 
 $matchingPageDataJson = json_encode(
@@ -466,6 +478,22 @@ add_javascript('<script>window.__TRADE_CHAT_MODAL_CONTEXT = { isLoggedIn: true, 
         <div class="confirm-actions">
             <button type="button" id="confirmCancel">취소</button>
             <button type="button" class="confirm-ok" id="confirmOk">확인</button>
+        </div>
+    </div>
+</div>
+
+<div class="confirm-overlay" id="recipientAssignOverlay">
+    <div class="confirm-box">
+        <h4>수신 담당자 지정</h4>
+        <p>수락 후 요청자와 1:1 채팅을 진행할 담당자를 선택해 주세요.</p>
+        <div class="matching-recipient-picker" id="recipientAssignPicker">
+            <input type="hidden" id="recipientAssignSelect" value="">
+            <button type="button" class="matching-recipient-select" id="recipientAssignTrigger" aria-expanded="false" disabled>담당자 정보를 불러오는 중입니다.</button>
+            <div class="matching-recipient-options" id="recipientAssignOptions" hidden></div>
+        </div>
+        <div class="confirm-actions">
+            <button type="button" id="recipientAssignCancel">취소</button>
+            <button type="button" class="confirm-ok" id="recipientAssignOk" disabled>수락하기</button>
         </div>
     </div>
 </div>
