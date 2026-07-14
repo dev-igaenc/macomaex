@@ -1827,3 +1827,29 @@ body.page-my-matching #myMatchingPage .rejected-list.open {
     font-size: 14px;
     font-weight: 700;
 }
+
+/* 관심기업 탭에는 보조 탭이 없으므로, 받은/보낸 요청의 보조 탭 높이만큼 보정한다. */
+body.page-my-matching #myMatchingPage #panel-interested .matching-list--company-connect {
+    margin-top: 58px;
+}
+
+/* 데스크톱에서는 받은 요청 영역의 중앙에 기업 연결 안내를 배치한다. */
+@media (min-width: 769px) {
+    body.page-my-matching #myMatchingPage .matching-list--company-connect {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: calc(60vh - 150px);
+    }
+
+    body.page-my-matching #myMatchingPage .matching-list--company-connect .matching-company-connect-guide {
+        width: min(370px, 100%);
+    }
+}
+
+/* 모바일 안내 카드 위치 */
+@media (max-width: 768px) {
+    body.page-my-matching #myMatchingPage .matching-list--company-connect .matching-company-connect-guide {
+        margin-top: 100px;
+    }
+}

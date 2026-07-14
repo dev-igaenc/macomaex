@@ -318,16 +318,24 @@ function toggleRejected(btn) {
     }
 }
 
+function renderCompanyConnectionGuide(list, title, description) {
+    list.classList.add('matching-list--company-connect');
+    list.innerHTML = '<div class="matching-company-connect-guide">' +
+        '<strong>' + escapeHtml(title) + '</strong>' +
+        '<p>' + escapeHtml(description) + '</p>' +
+        '<a href="' + escapeHtml(companyConnectUrl) + '">내 회사 정보 연결하기</a>' +
+    '</div>';
+}
+
 function renderReceived(filter) {
     var list     = document.getElementById('receivedList');
     if (requiresCompanyConnection) {
-        list.innerHTML = '<div class="matching-company-connect-guide">' +
-            '<strong>받은 거래 요청을 확인하려면 내 회사 정보를 연결해 주세요.</strong>' +
-            '<p>사업자등록번호 확인 후 소속 기업과 연결되면 해당 기업의 받은 요청을 확인하고 담당자를 지정할 수 있습니다.</p>' +
-            '<a href="' + escapeHtml(companyConnectUrl) + '">내 회사 정보 연결하기</a>' +
-        '</div>';
+        renderCompanyConnectionGuide(list,
+            '받은 거래 요청을 확인하려면 내 회사 정보를 연결해 주세요.',
+            '사업자등록번호 확인 후 소속 기업과 연결되면 해당 기업의 받은 요청을 확인하고 담당자를 지정할 수 있습니다.');
         return;
     }
+    list.classList.remove('matching-list--company-connect');
     var allItems = filter === 'all' ? receivedData : receivedData.filter(function(d) { return d.status === filter; });
     var items    = allItems.filter(function(d) { return d.status !== 'R'; });
     var rejected = allItems.filter(function(d) { return d.status === 'R'; });
@@ -343,6 +351,13 @@ function renderReceived(filter) {
 
 function renderSent(filter) {
     var list     = document.getElementById('sentList');
+    if (requiresCompanyConnection) {
+        renderCompanyConnectionGuide(list,
+            '보낸 거래 요청을 확인하려면 내 회사 정보를 연결해 주세요.',
+            '사업자등록번호 확인 후 소속 기업과 연결되면 거래 요청 내역과 진행 상태를 확인할 수 있습니다.');
+        return;
+    }
+    list.classList.remove('matching-list--company-connect');
     var allItems = filter === 'all' ? sentData : sentData.filter(function(d) { return d.status === filter; });
     var items    = allItems.filter(function(d) { return d.status !== 'R'; });
     var rejected = allItems.filter(function(d) { return d.status === 'R'; });
@@ -358,6 +373,13 @@ function renderSent(filter) {
 
 function renderInterested() {
     var list = document.getElementById('interestedList');
+    if (requiresCompanyConnection) {
+        renderCompanyConnectionGuide(list,
+            '관심기업을 확인하려면 내 회사 정보를 연결해 주세요.',
+            '사업자등록번호 확인 후 소속 기업과 연결되면 관심기업과 거래 요청 정보를 이용할 수 있습니다.');
+        return;
+    }
+    list.classList.remove('matching-list--company-connect');
     if (!interestedData.length) {
         list.innerHTML = '<div class="NoData">관심기업 자료가 없습니다.</div>';
     } else {
