@@ -2,7 +2,7 @@
 include_once(__DIR__ . '/_common.php');
 
 // 비로그인 접근은 어떤 후속 로직보다 먼저 로그인 유도 모달로 분기한다.
-login_chk();
+login_chk('account_trades');
 
 include_once(__DIR__ . '/helper/trade_request_helper.php');
 include_once(__DIR__ . '/helper/my_matching_helper.php');

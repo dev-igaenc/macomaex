@@ -9,7 +9,7 @@ include_once(__DIR__ . '/helper/company_identity_preview_helper.php');
 // 재배포 확인 2026-07-06-2: 상세 추천 진입 가드 연동
 $should_open_trade_request_modal = false;
 if (isset($_GET['trade_request_login']) && $_GET['trade_request_login'] === '1') {
-    login_chk();
+    login_chk('company_detail');
     $should_open_trade_request_modal = !empty($member['mb_id']);
 }
 

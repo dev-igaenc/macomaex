@@ -8,7 +8,7 @@ $g5['title'] = '기업 상세';
 $shouldOpenTradeRequestModal = false;
 
 if (isset($_GET['trade_request_login']) && $_GET['trade_request_login'] === '1') {
-	login_chk();
+login_chk('company_detail');
 	$shouldOpenTradeRequestModal = !empty($member['mb_id']);
 }
 

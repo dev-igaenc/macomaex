@@ -43,9 +43,15 @@ macomaex_payment_log_write(array_merge($payment_log_base, array(
 	'reason' => 'not_logged_in',
 	'message' => '로그인 후 이용하세요.'
 )));
+	if (function_exists('login_required_modal')) {
+		login_required_modal(
+			'',
+			macomaex_login_guard_build_login_url('/ko/plan.php'),
+			'credit_payment'
+		);
+	}
 ?>
 <script>
-alert("로그인 후 이용하세요.");
 location.href = "/bbs/login.php?url=/ko/plan.php";
 </script>
 <?php

@@ -10,7 +10,16 @@ $board['bo_9']="5"; // 2뎁스
 // $board['bo_subject'] = "";  // 2뎁스 제목
 //$board['bo_4'] = $config['cf_title']."의 혜택을 확인하세요.";  // 2뎁스 설명
 
-if(!$member['mb_id']) ALERT("로그인 후 이용하세요.","/"); 
+if(!$member['mb_id']) {
+	if (function_exists('login_required_modal')) {
+		login_required_modal(
+			'',
+			macomaex_login_guard_build_login_url(isset($_SERVER['REQUEST_URI']) ? (string)$_SERVER['REQUEST_URI'] : '/ko/my_plan_e.php'),
+			'membership_info'
+		);
+	}
+	ALERT("멤버십 정보를 확인하려면 로그인이 필요합니다.","/");
+}
 
 include_once(G5_THEME_PATH.'/head.php');
 $membership=get_membership();
