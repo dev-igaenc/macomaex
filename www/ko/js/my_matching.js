@@ -581,12 +581,13 @@ function approvalStatusToCode(status) {
     return 'N';
 }
 
-function requestTradeApproval(url, id, action) {
+function requestTradeApproval(url, id, action, targetMemberId) {
     var body = new URLSearchParams();
     body.set('action', 'trade_request_approval');
     body.set('idx', id);
     body.set('typ', action);
     body.set('csrf_token', matchingCsrfToken);
+    if (targetMemberId) body.set('target_mb_id', targetMemberId);
 
     return fetch(url, {
         method: 'POST',
@@ -600,7 +601,7 @@ function requestTradeApproval(url, id, action) {
     });
 }
 
-function submitTradeApproval(id, action) {
+function submitTradeApproval(id, action, targetMemberId) {
     var index = 0;
 
     function tryNext() {
@@ -609,7 +610,7 @@ function submitTradeApproval(id, action) {
         }
 
         var url = tradeRequestActionUrls[index++];
-        return requestTradeApproval(url, id, action)
+        return requestTradeApproval(url, id, action, targetMemberId)
             .then(function(res) {
                 var code = splitResponseParts(res)[0];
                 if (code === '1000' || code === '501') return res;
@@ -750,11 +751,11 @@ function showConfirm(title, msg, cb) {
     confirmCallback = cb;
 }
 
-function handleAccept(id) {
-    showConfirm('요청 수락', '정말 수락하시겠습니까?', function(ok) {
+function completeAccept(id, targetMemberId) {
+    showConfirm('요청 수락', '선택한 담당자로 요청을 수락하시겠습니까?', function(ok) {
         if (!ok) return;
 
-        submitTradeApproval(id, 'accept').then(function(res) {
+        submitTradeApproval(id, 'accept', targetMemberId).then(function(res) {
             var parts = splitResponseParts(res);
             var code = parts[0];
 
@@ -769,7 +770,9 @@ function handleAccept(id) {
                 return;
             }
 
-            if (code === '501') {
+            if (code === '422' || code === '409') {
+                alert(parts[1] || '담당자 정보를 확인해 주세요.');
+            } else if (code === '501') {
                 window.location.href = '/bbs/login.php?url=' + encodeURIComponent(window.location.pathname + window.location.search + window.location.hash);
                 return;
             }
@@ -787,6 +790,60 @@ function handleAccept(id) {
             }
         });
     });
+}
+
+function handleAccept(id) {
+    var overlay = document.getElementById('recipientAssignOverlay');
+    var select = document.getElementById('recipientAssignSelect');
+    var okButton = document.getElementById('recipientAssignOk');
+    if (!overlay || !select || !okButton) {
+        completeAccept(id, '');
+        return;
+    }
+
+    overlay.classList.add('is_open');
+    document.documentElement.classList.add('hide-scroll');
+    select.disabled = true;
+    okButton.disabled = true;
+    select.innerHTML = '<option value="">담당자 정보를 불러오는 중입니다.</option>';
+    var body = new URLSearchParams();
+    body.set('action', 'trade_request_recipients');
+    body.set('tr_no', id);
+    fetch('/ko/my_matching.php', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+        body: body.toString()
+    }).then(function(res) { return res.json(); }).then(function(payload) {
+		if (payload && payload.success && !payload.requires_assignment) {
+			overlay.classList.remove('is_open');
+			document.documentElement.classList.remove('hide-scroll');
+			completeAccept(id, '');
+			return;
+		}
+        var recipients = payload && Array.isArray(payload.recipients) ? payload.recipients : [];
+        if (!payload || !payload.success || !recipients.length) {
+            throw new Error((payload && payload.message) || '지정 가능한 담당자가 없습니다.');
+        }
+        select.disabled = false;
+        select.innerHTML = '<option value="">담당자를 선택해 주세요.</option>' + recipients.map(function(recipient) {
+            var option = document.createElement('option');
+            option.value = String(recipient.id || '');
+            option.textContent = String(recipient.name || '담당자');
+            return option.outerHTML;
+        }).join('');
+        select.onchange = function() { okButton.disabled = !select.value; };
+    }).catch(function(error) {
+        overlay.classList.remove('is_open');
+        document.documentElement.classList.remove('hide-scroll');
+        alert(error.message || '담당자 정보를 불러오지 못했습니다.');
+    });
+    okButton.onclick = function() {
+        if (!select.value) return;
+        overlay.classList.remove('is_open');
+        document.documentElement.classList.remove('hide-scroll');
+        completeAccept(id, select.value);
+    };
 }
 
 function handleReject(id) {
@@ -962,6 +1019,11 @@ function initMyMatchingPage() {
         document.documentElement.classList.remove('hide-scroll');
         if (confirmCallback) confirmCallback(false);
         confirmCallback = null;
+    });
+
+    document.getElementById('recipientAssignCancel').addEventListener('click', function() {
+        document.getElementById('recipientAssignOverlay').classList.remove('is_open');
+        document.documentElement.classList.remove('hide-scroll');
     });
 
     updateCounts();

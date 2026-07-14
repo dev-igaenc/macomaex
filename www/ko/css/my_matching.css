@@ -1304,3 +1304,14 @@ body.page-my-matching #myMatchingPage .rejected-list.open {
         height: 14px;
     }
 }
+/* 거래 요청 수락 시 1:1 채팅 담당자 지정 */
+.matching-recipient-select {
+    width: 100%;
+    min-height: 42px;
+    padding: 0 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    background: #fff;
+    color: #1f2937;
+    margin: 10px 0 4px;
+}

@@ -50,6 +50,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 	if ($action === 'trade_request_approval') {
 		my_matching_handle_trade_request_approval($member, $_POST);
 	}
+	if ($action === 'trade_request_recipients') {
+		my_matching_handle_trade_request_recipients($member, $_POST);
+	}
 
 	if ($action === 'my_matching_sent_status') {
 		my_matching_handle_sent_status($member);
@@ -466,6 +469,20 @@ add_javascript('<script>window.__TRADE_CHAT_MODAL_CONTEXT = { isLoggedIn: true, 
         <div class="confirm-actions">
             <button type="button" id="confirmCancel">취소</button>
             <button type="button" class="confirm-ok" id="confirmOk">확인</button>
+        </div>
+    </div>
+</div>
+
+<div class="confirm-overlay" id="recipientAssignOverlay">
+    <div class="confirm-box">
+        <h4>수신 담당자 지정</h4>
+        <p>수락 후 요청자와 1:1 채팅을 진행할 담당자를 선택해 주세요.</p>
+        <select id="recipientAssignSelect" class="matching-recipient-select" disabled>
+            <option value="">담당자 정보를 불러오는 중입니다.</option>
+        </select>
+        <div class="confirm-actions">
+            <button type="button" id="recipientAssignCancel">취소</button>
+            <button type="button" class="confirm-ok" id="recipientAssignOk" disabled>수락하기</button>
         </div>
     </div>
 </div>
