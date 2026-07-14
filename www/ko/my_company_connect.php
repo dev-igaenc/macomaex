@@ -120,9 +120,14 @@ if (!$update_ok) {
 
 sql_query('COMMIT');
 set_session('ss_my_company_connect_token', '');
+$return_url = trim((string)get_session('ss_my_company_connect_return_url'));
+set_session('ss_my_company_connect_return_url', '');
+if ($return_url === '' || parse_url($return_url, PHP_URL_PATH) !== '/account/trades' || strpos($return_url, '//') === 0) {
+	$return_url = '/account/company';
+}
 my_company_connect_response(200, array(
 	'success' => true,
 	'company' => $company,
-	'redirect' => '/account/company',
+	'redirect' => $return_url,
 ));
 ?>

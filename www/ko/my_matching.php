@@ -175,8 +175,15 @@ function my_matching_build_item($row, $starred = false) {
 	);
 }
 
-$memberBzno = preg_replace('/[^0-9]/', '', (string)($member['mb_4'] ?? ''));
+$memberCompanyCode = trim((string)($member['mb_company'] ?? ''));
+$linkedCompany = array();
+if ($memberCompanyCode !== '' && !preg_match('/^M[0-9]{9}$/', $memberCompanyCode)) {
+	$linkedCompany = sql_fetch("SELECT KEDCD, BZNO FROM company WHERE KEDCD='" . sql_escape_string($memberCompanyCode) . "' LIMIT 1");
+}
+$memberBzno = preg_replace('/[^0-9]/', '', (string)($linkedCompany['BZNO'] ?? ($member['mb_4'] ?? '')));
 $memberHasBzno = ($memberBzno !== '');
+$requiresCompanyConnection = empty($linkedCompany['KEDCD']) || !$memberHasBzno;
+$companyConnectUrl = '/account/company?return_url=' . urlencode('/account/trades');
 
 // 관심기업 탭 공통 모달에서도 같은 "우리 기업 정보"를 쓰도록 로그인 기업 데이터를 미리 준비한다.
 $requesterCompanyData = $memberHasBzno ? trade_request_member_company_data($memberBzno) : array();
@@ -370,6 +377,8 @@ $matchingPageData = array(
 	'sent' => $sentRows,
 	'interested' => $interestedRows,
 	'csrfToken' => $csrfToken,
+	'requiresCompanyConnection' => $requiresCompanyConnection,
+	'companyConnectUrl' => $companyConnectUrl,
 );
 
 $matchingPageDataJson = json_encode(

@@ -1315,3 +1315,38 @@ body.page-my-matching #myMatchingPage .rejected-list.open {
     color: #1f2937;
     margin: 10px 0 4px;
 }
+
+/* 기업 연결 전 받은 요청 안내 */
+.matching-company-connect-guide {
+    width: 100%;
+    padding: 40px 28px;
+    border: 1px solid #dbe5ff;
+    border-radius: 16px;
+    background: #f7f9ff;
+    color: #344054;
+    text-align: center;
+    box-sizing: border-box;
+}
+.matching-company-connect-guide strong {
+    display: block;
+    color: #1d4ed8;
+    font-size: 17px;
+}
+.matching-company-connect-guide p {
+    margin: 12px auto 20px;
+    max-width: 520px;
+    font-size: 14px;
+    line-height: 1.6;
+}
+.matching-company-connect-guide a {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 42px;
+    padding: 0 18px;
+    border-radius: 8px;
+    background: #2563eb;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 700;
+}

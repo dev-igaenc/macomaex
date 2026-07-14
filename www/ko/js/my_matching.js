@@ -3,6 +3,8 @@ var receivedData = Array.isArray(matchingPageData.received) ? matchingPageData.r
 var sentData = Array.isArray(matchingPageData.sent) ? matchingPageData.sent : [];
 var interestedData = Array.isArray(matchingPageData.interested) ? matchingPageData.interested : [];
 var matchingCsrfToken = matchingPageData.csrfToken || '';
+var requiresCompanyConnection = matchingPageData.requiresCompanyConnection === true;
+var companyConnectUrl = matchingPageData.companyConnectUrl || '/account/company';
 
 /* ======================================================
    Rendering Functions
@@ -318,6 +320,14 @@ function toggleRejected(btn) {
 
 function renderReceived(filter) {
     var list     = document.getElementById('receivedList');
+    if (requiresCompanyConnection) {
+        list.innerHTML = '<div class="matching-company-connect-guide">' +
+            '<strong>받은 거래 요청을 확인하려면 내 회사 정보를 연결해 주세요.</strong>' +
+            '<p>사업자등록번호 확인 후 소속 기업과 연결되면 해당 기업의 받은 요청을 확인하고 담당자를 지정할 수 있습니다.</p>' +
+            '<a href="' + escapeHtml(companyConnectUrl) + '">내 회사 정보 연결하기</a>' +
+        '</div>';
+        return;
+    }
     var allItems = filter === 'all' ? receivedData : receivedData.filter(function(d) { return d.status === filter; });
     var items    = allItems.filter(function(d) { return d.status !== 'R'; });
     var rejected = allItems.filter(function(d) { return d.status === 'R'; });
