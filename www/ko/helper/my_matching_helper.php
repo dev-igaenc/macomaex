@@ -290,7 +290,7 @@ function my_matching_handle_trade_request_approval($member, $request) {
 			alimtalk_write_event_log('accmatching2', $alimtalkLogStatus, $alimtalkLogPayload);
 		}
 
-	if ($nextStatus === '1' && !$isPendingAssignment) {
+	if ($nextStatus === '1') {
 		$chatRoomResult = trade_chat_open_or_attach_room($idx, $member);
 		if (empty($chatRoomResult['success'])) {
 			error_log('[trade_chat] room open failed: ' . json_encode(array(
