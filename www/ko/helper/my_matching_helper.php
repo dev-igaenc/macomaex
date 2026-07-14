@@ -85,7 +85,7 @@ function my_matching_handle_trade_request_recipients($member, $request) {
 		my_matching_json_response(array('success' => false, 'message' => '거래 요청 정보가 올바르지 않습니다.'));
 	}
 
-	$tradeRequest = sql_fetch("SELECT target_kedcd, recipient_status FROM trade_request WHERE tr_no='{$trNo}' AND target_bzno='" . sql_escape_string($memberBzno) . "' LIMIT 1");
+	$tradeRequest = sql_fetch("SELECT target_kedcd, recipient_status FROM trade_request WHERE tr_no='{$trNo}' AND target_bzno='" . sql_escape_string($memberBzno) . "' AND approval_status='0' LIMIT 1");
 	$targetKedcd = trim((string)($tradeRequest['target_kedcd'] ?? ''));
 	if ($targetKedcd === '') {
 		my_matching_json_response(array('success' => false, 'message' => '수락 권한이 없습니다.'));
@@ -179,7 +179,8 @@ function my_matching_handle_trade_request_approval($member, $request) {
 			update trade_request
 			set approval_status='2',
 				rejected_at=now(),
-				approved_at=NULL
+				approved_at=NULL" . ($isPendingAssignment ? ",
+				recipient_status='rejected'" : "") . "
 			where tr_no='{$idx}'
 			  and target_bzno='{$memberBznoSql}'
 		";

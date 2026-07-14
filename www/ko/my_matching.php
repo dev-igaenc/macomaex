@@ -220,12 +220,12 @@ $receivedSql = "
 		C.LOC_ADDRA,
 		C.LOC_ADDRB,
 		(SELECT k_code_name FROM kssc_11 WHERE k_code = C.BZC_CD LIMIT 1) AS industry_name,
-		M.mb_6 AS manager_name,
+		COALESCE(NULLIF(TR.request_member_name, ''), NULLIF(M.mb_6, ''), NULLIF(M.mb_name, '')) AS manager_name,
 		M.mb_5 AS manager_email
 	FROM trade_request TR
 	LEFT JOIN trade_chat_room TCR ON TCR.room_id = TR.chat_room_id
 	LEFT JOIN company C ON C.BZNO = TR.request_bzno
-	LEFT JOIN g5_member M ON M.mb_company = C.KEDCD
+	LEFT JOIN g5_member M ON M.mb_id = TR.request_mb_id
 	WHERE TR.target_bzno = '{$memberBznoSql}'
 	ORDER BY TR.tr_no DESC
 ";
@@ -263,12 +263,12 @@ $sentSql = "
 		C.LOC_ADDRA,
 		C.LOC_ADDRB,
 		(SELECT k_code_name FROM kssc_11 WHERE k_code = C.BZC_CD LIMIT 1) AS industry_name,
-		M.mb_6 AS manager_name,
+		COALESCE(NULLIF(TR.target_member_name, ''), NULLIF(M.mb_6, ''), NULLIF(M.mb_name, '')) AS manager_name,
 		M.mb_5 AS manager_email
 	FROM trade_request TR
 	LEFT JOIN trade_chat_room TCR ON TCR.room_id = TR.chat_room_id
 	LEFT JOIN company C ON C.KEDCD = TR.target_kedcd
-	LEFT JOIN g5_member M ON M.mb_company = C.KEDCD
+	LEFT JOIN g5_member M ON M.mb_id = TR.target_mb_id
 	WHERE TR.request_bzno = '{$memberBznoSql}'
 	ORDER BY TR.tr_no DESC
 ";
