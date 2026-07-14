@@ -982,8 +982,13 @@ function company_detail_handle_trade_request_insert($member, $request) {
 
 	$insertSql = "insert into trade_request set
 		request_mb_id='" . sql_escape_string($requestMemberId) . "',
+		target_mb_id=NULL,
+		recipient_status='pending_assignment',
+		recipient_assigned_at=NULL,
 		request_company_name='" . sql_escape_string($requestCompanyName) . "',
+		request_member_name='" . sql_escape_string($managerNameCurrent) . "',
 		target_company_name='" . sql_escape_string($targetCompanyName) . "',
+		target_member_name=NULL,
 		request_bzno='" . sql_escape_string($requestBzno) . "',
 		target_bzno='" . sql_escape_string($targetBzno) . "',
 		target_kedcd='" . sql_escape_string($targetKedcd) . "',
