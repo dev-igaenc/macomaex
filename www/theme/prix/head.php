@@ -261,7 +261,6 @@ window.__AUTH_SESSION_GUARD_CONFIG__ = {
                 </li>
                 <li class="sub one" data-gi="mypage" style="display:none"><a href="<?php echo $link_0601; ?>">내 회사 정보</a></li>
                 <li class="sub one" data-gi="mypage" style="display:none"><a href="<?php echo $link_0602; ?>">거래 히스토리</a></li>
-                <li class="sub one" data-gi="mypage" style="display:none"><a href="<?php echo $link_0606; ?>">셀렉티드</a></li>
                 <li class="sub one" data-gi="mypage" style="display:none"><a href="<?php echo $link_0603; ?>">관심기업</a></li>
                 <li class="sub one" data-gi="mypage" style="display:none"><a href="<?php echo $link_0604; ?>">회원정보수정</a></li>
                 <li class="sub one" data-gi="mypage" style="display:none"><a href="<?php echo $link_0605; ?>">결제정보</a></li>

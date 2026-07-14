@@ -516,7 +516,7 @@ if (!function_exists('macomaex_login_guard_policies')) {
 			'account_trades' => array(
 				'path' => '/account/trades',
 				'titleId' => 'myTradesLoginGuardTitle',
-				'descriptionText' => '매칭 히스토리는 로그인 후 이용하실 수 있습니다.'
+				'descriptionText' => '거래 히스토리는 로그인 후 이용하실 수 있습니다.'
 			),
 			'account_trades_received' => array(
 				'path' => '/account/trades',
