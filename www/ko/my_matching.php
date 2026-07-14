@@ -486,9 +486,11 @@ add_javascript('<script>window.__TRADE_CHAT_MODAL_CONTEXT = { isLoggedIn: true, 
     <div class="confirm-box">
         <h4>수신 담당자 지정</h4>
         <p>수락 후 요청자와 1:1 채팅을 진행할 담당자를 선택해 주세요.</p>
-        <select id="recipientAssignSelect" class="matching-recipient-select" disabled>
-            <option value="">담당자 정보를 불러오는 중입니다.</option>
-        </select>
+        <div class="matching-recipient-picker" id="recipientAssignPicker">
+            <input type="hidden" id="recipientAssignSelect" value="">
+            <button type="button" class="matching-recipient-select" id="recipientAssignTrigger" aria-expanded="false" disabled>담당자 정보를 불러오는 중입니다.</button>
+            <div class="matching-recipient-options" id="recipientAssignOptions" hidden></div>
+        </div>
         <div class="confirm-actions">
             <button type="button" id="recipientAssignCancel">취소</button>
             <button type="button" class="confirm-ok" id="recipientAssignOk" disabled>수락하기</button>

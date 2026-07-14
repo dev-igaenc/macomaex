@@ -805,17 +805,23 @@ function completeAccept(id, targetMemberId) {
 function handleAccept(id) {
     var overlay = document.getElementById('recipientAssignOverlay');
     var select = document.getElementById('recipientAssignSelect');
+    var trigger = document.getElementById('recipientAssignTrigger');
+    var options = document.getElementById('recipientAssignOptions');
     var okButton = document.getElementById('recipientAssignOk');
-    if (!overlay || !select || !okButton) {
+    if (!overlay || !select || !trigger || !options || !okButton) {
         completeAccept(id, '');
         return;
     }
 
     overlay.classList.add('is_open');
     document.documentElement.classList.add('hide-scroll');
-    select.disabled = true;
+    select.value = '';
+    trigger.disabled = true;
+    trigger.textContent = '담당자 정보를 불러오는 중입니다.';
+    trigger.setAttribute('aria-expanded', 'false');
+    options.innerHTML = '';
+    options.hidden = true;
     okButton.disabled = true;
-    select.innerHTML = '<option value="">담당자 정보를 불러오는 중입니다.</option>';
     var body = new URLSearchParams();
     body.set('action', 'trade_request_recipients');
     body.set('tr_no', id);
@@ -835,14 +841,29 @@ function handleAccept(id) {
         if (!payload || !payload.success || !recipients.length) {
             throw new Error((payload && payload.message) || '지정 가능한 담당자가 없습니다.');
         }
-        select.disabled = false;
-        select.innerHTML = '<option value="">담당자를 선택해 주세요.</option>' + recipients.map(function(recipient) {
-            var option = document.createElement('option');
-            option.value = String(recipient.id || '');
+        trigger.disabled = false;
+        trigger.textContent = '담당자를 선택해 주세요.';
+        recipients.forEach(function(recipient) {
+            var option = document.createElement('button');
+            option.type = 'button';
+            option.className = 'matching-recipient-option';
+            option.dataset.memberId = String(recipient.id || '');
             option.textContent = String(recipient.name || '담당자');
-            return option.outerHTML;
-        }).join('');
-        select.onchange = function() { okButton.disabled = !select.value; };
+            option.addEventListener('click', function() {
+                select.value = option.dataset.memberId;
+                trigger.textContent = option.textContent;
+                trigger.setAttribute('aria-expanded', 'false');
+                options.hidden = true;
+                okButton.disabled = !select.value;
+            });
+            options.appendChild(option);
+        });
+        trigger.onclick = function() {
+            if (trigger.disabled) return;
+            var isOpen = !options.hidden;
+            options.hidden = isOpen;
+            trigger.setAttribute('aria-expanded', isOpen ? 'false' : 'true');
+        };
     }).catch(function(error) {
         overlay.classList.remove('is_open');
         document.documentElement.classList.remove('hide-scroll');
@@ -1033,6 +1054,8 @@ function initMyMatchingPage() {
 
     document.getElementById('recipientAssignCancel').addEventListener('click', function() {
         document.getElementById('recipientAssignOverlay').classList.remove('is_open');
+        document.getElementById('recipientAssignOptions').hidden = true;
+        document.getElementById('recipientAssignTrigger').setAttribute('aria-expanded', 'false');
         document.documentElement.classList.remove('hide-scroll');
     });
 
