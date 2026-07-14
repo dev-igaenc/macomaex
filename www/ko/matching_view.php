@@ -12,7 +12,7 @@ $board['bo_9']="1"; // 2뎁스
 //https://macomaex.com/ko/matching_view.php?cd=0000074175
 
 //로그인 체크
-login_chk();
+login_chk('matching_detail');
 
 include_once(G5_THEME_PATH.'/head.php');
 
@@ -144,7 +144,7 @@ if($view_chk=="false"){
                 </li>
 			<?}else{?>
                 <li class="viewOption_bookmark">
-                    <input type="checkbox" name="" onClick="javascript:jAlert('로그인 후 이용하세요.','알림',function(){location.href='/bbs/login.php'}); return false;"  id="viewOption_bookmark">
+                    <input type="checkbox" name="" onClick="return openLoginGuardForMatchingView();"  id="viewOption_bookmark">
                     <label for="viewOption_bookmark"></label>
                 </li>
                 <!-- check 시 별 색상이 바뀜 -->
@@ -152,7 +152,7 @@ if($view_chk=="false"){
                     <a href="javascript:copyUrl()"></a>
                 </li>
                 <li class="viewOption_submit">
-                    <a href="javascript:jAlert('로그인 후 이용하세요.','알림',function(){location.href='/bbs/login.php'}); "><span>매칭 요청</span> <span class="icon"><img src="/img/icon/icon_arr_point.png" alt=""></span></a>
+                    <a href="javascript:openLoginGuardForMatchingView();"><span>매칭 요청</span> <span class="icon"><img src="/img/icon/icon_arr_point.png" alt=""></span></a>
                 </li>
 			<?}?>
             </ul>
@@ -306,6 +306,22 @@ include_once(G5_THEME_PATH.'/tail.php');
 </div>
 
 <script>
+	function openLoginGuardForMatchingView(loginUrl, descriptionText) {
+		var targetUrl = loginUrl || "/bbs/login.php?url=" + encodeURIComponent(location.pathname + location.search);
+		if (window.MacomaLoginGuard && typeof window.MacomaLoginGuard.show === "function") {
+			window.MacomaLoginGuard.show({
+				descriptionText: descriptionText || "서비스를 이용하시려면 로그인이 필요합니다.",
+				loginUrl: targetUrl,
+				signupUrl: (window.MacomaLoginGuard && typeof window.MacomaLoginGuard.buildSignupUrl === "function")
+					? window.MacomaLoginGuard.buildSignupUrl(location.pathname + location.search)
+					: "/signup"
+			});
+			return false;
+		}
+		location.href = targetUrl;
+		return false;
+	}
+
 	//북마크 처리
 	$("#viewOption_bookmark").click(function(){
 		$this=$(this);
@@ -380,9 +396,7 @@ function Encrypt( str , key ){
 							location.href="/ko/plan.php";
 						});
 					}else if(jqXHR[0]=="501" || openMsg.indexOf("로그인 후 이용하세요.") === 0){
-						jAlert("로그인 후 이용하세요.","알림",function(){
-							location.href="/bbs/login.php?url="+encodeURIComponent(location.pathname + location.search);
-						});
+						openLoginGuardForMatchingView("/bbs/login.php?url=" + encodeURIComponent(location.pathname + location.search), "관심기업 등록은 로그인 후 이용하실 수 있습니다.");
 					}else{
 						jAlert(openMsg,"알림",function(){ });
 					}
@@ -442,9 +456,7 @@ function Encrypt( str , key ){
 							location.href="/ko/plan.php";
 						});
 					}else if(parts[0] == "501" || msg.indexOf("로그인 후 이용하세요.") === 0){
-						jAlert("로그인 후 이용하세요.","알림",function(){
-							location.href="/bbs/login.php?url="+encodeURIComponent(location.pathname + location.search);
-						});
+						openLoginGuardForMatchingView("/bbs/login.php?url=" + encodeURIComponent(location.pathname + location.search), "매칭 요청은 로그인 후 이용하실 수 있습니다.");
 					}else{
 						jAlert(msg,"알림",function(){});
 					}

@@ -40,6 +40,22 @@
         }
     }
 
+    function showLoginGuard(opts, descriptionText) {
+        var loginUrl = getLoginUrl(opts);
+        if (window.MacomaLoginGuard && typeof window.MacomaLoginGuard.show === "function") {
+            window.MacomaLoginGuard.show({
+                descriptionText: descriptionText || "서비스를 이용하시려면 로그인이 필요합니다.",
+                loginUrl: loginUrl,
+                signupUrl: (window.MacomaLoginGuard && typeof window.MacomaLoginGuard.buildSignupUrl === "function")
+                    ? window.MacomaLoginGuard.buildSignupUrl(location.pathname + location.search)
+                    : "/signup"
+            });
+            return;
+        }
+
+        location.href = loginUrl;
+    }
+
     function showCreditShortageModal(msg) {
         var text = msg || "매칭 가능 크레딧이 부족합니다.";
         // 기존 거래요청 팝업이 열려 있으면 먼저 닫는다.
@@ -193,9 +209,7 @@
             }
 
             if (parts[0] === "501" || msg.indexOf("로그인 후 이용하세요.") === 0) {
-                showAlert("로그인 후 이용하세요.", function () {
-                    location.href = getLoginUrl(opts);
-                });
+                showLoginGuard(opts, "매칭 요청은 로그인 후 이용하실 수 있습니다.");
                 return;
             }
 
@@ -231,9 +245,7 @@
                         return;
                     }
                     if (code === "501") {
-                        showAlert("로그인 후 이용하세요.", function () {
-                            location.href = getLoginUrl(opts);
-                        });
+                        showLoginGuard(opts, "관심기업 등록은 로그인 후 이용하실 수 있습니다.");
                         return;
                     }
                     $this.toggleClass("active", !chk);
@@ -300,9 +312,7 @@
                     if (parts[0] === "500") {
                         loadingDetail = false;
                         if (parts[1] === "로그인 후 이용하세요.") {
-                            showAlert(parts[1], function () {
-                                location.href = getLoginUrl(opts);
-                            });
+                            showLoginGuard(opts, "기업 상세 조회는 로그인 후 이용하실 수 있습니다.");
                         } else if (parts[1] === "거래처 오픈 회수를 초과했습니다.") {
                             showAlert(parts[1], function () {
                                 location.href = opts.planUrl;

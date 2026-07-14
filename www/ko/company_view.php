@@ -389,9 +389,17 @@ function AutoHypen(companyNum){
 				if(jqXHR==500){
 					if(chk) $this.removeClass("active");
 				}else if(jqXHR==501){
-				jAlert("로그인 후 이용하세요.","알림",function(){
+				if (window.MacomaLoginGuard && typeof window.MacomaLoginGuard.show === "function") {
+					window.MacomaLoginGuard.show({
+						descriptionText: "관심기업 등록은 로그인 후 이용하실 수 있습니다.",
+						loginUrl: "/bbs/login.php?url=/ko/company_view.php?cd=<?=$_REQUEST['cd']?>",
+						signupUrl: (window.MacomaLoginGuard && typeof window.MacomaLoginGuard.buildSignupUrl === "function")
+							? window.MacomaLoginGuard.buildSignupUrl("/ko/company_view.php?cd=<?=$_REQUEST['cd']?>")
+							: "/signup"
+					});
+				} else {
 					location.href="/bbs/login.php?url=/ko/company_view.php?cd=<?=$_REQUEST['cd']?>";
-				});
+				}
 				return false;
 				}else{
 					if(chk) $("button.star_btn[kedcd='"+kedcd+"']").addClass("active");
@@ -414,9 +422,17 @@ function AutoHypen(companyNum){
 				jAlert("매칭 가능 횟수가 없습니다.","알림");
 				return false;
 			}else if(jqXHR[0]==501){
-				jAlert("로그인 후 이용하세요.","알림",function(){
+				if (window.MacomaLoginGuard && typeof window.MacomaLoginGuard.show === "function") {
+					window.MacomaLoginGuard.show({
+						descriptionText: "매칭 요청은 로그인 후 이용하실 수 있습니다.",
+						loginUrl: "/bbs/login.php?url=/ko/matching_list.php",
+						signupUrl: (window.MacomaLoginGuard && typeof window.MacomaLoginGuard.buildSignupUrl === "function")
+							? window.MacomaLoginGuard.buildSignupUrl("/ko/matching_list.php")
+							: "/signup"
+					});
+				} else {
 					location.href="/bbs/login.php?url=/ko/matching_list.php";
-				});
+				}
 				return false;
 			}else{
 				$("button.is-close").click();

@@ -805,7 +805,17 @@ function completeAccept(id, targetMemberId) {
             if (code === '422' || code === '409') {
                 alert(parts[1] || '담당자 정보를 확인해 주세요.');
             } else if (code === '501') {
-                window.location.href = '/bbs/login.php?url=' + encodeURIComponent(window.location.pathname + window.location.search + window.location.hash);
+                if (window.MacomaLoginGuard && typeof window.MacomaLoginGuard.show === 'function') {
+                    window.MacomaLoginGuard.show({
+                        descriptionText: '거래 요청 처리는 로그인 후 이용하실 수 있습니다.',
+                        loginUrl: '/bbs/login.php?url=' + encodeURIComponent(window.location.pathname + window.location.search + window.location.hash),
+                        signupUrl: (window.MacomaLoginGuard && typeof window.MacomaLoginGuard.buildSignupUrl === 'function')
+                            ? window.MacomaLoginGuard.buildSignupUrl(window.location.pathname + window.location.search + window.location.hash)
+                            : '/signup'
+                    });
+                } else {
+                    window.location.href = '/bbs/login.php?url=' + encodeURIComponent(window.location.pathname + window.location.search + window.location.hash);
+                }
                 return;
             }
 
@@ -916,7 +926,17 @@ function handleReject(id) {
             }
 
             if (code === '501') {
-                window.location.href = '/bbs/login.php?url=' + encodeURIComponent(window.location.pathname + window.location.search + window.location.hash);
+                if (window.MacomaLoginGuard && typeof window.MacomaLoginGuard.show === 'function') {
+                    window.MacomaLoginGuard.show({
+                        descriptionText: '거래 요청 처리는 로그인 후 이용하실 수 있습니다.',
+                        loginUrl: '/bbs/login.php?url=' + encodeURIComponent(window.location.pathname + window.location.search + window.location.hash),
+                        signupUrl: (window.MacomaLoginGuard && typeof window.MacomaLoginGuard.buildSignupUrl === 'function')
+                            ? window.MacomaLoginGuard.buildSignupUrl(window.location.pathname + window.location.search + window.location.hash)
+                            : '/signup'
+                    });
+                } else {
+                    window.location.href = '/bbs/login.php?url=' + encodeURIComponent(window.location.pathname + window.location.search + window.location.hash);
+                }
                 return;
             }
 
