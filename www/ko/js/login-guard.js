@@ -146,7 +146,7 @@
         }
 
         if (options.onClose === 'historyBackOrHome') {
-            if (document.referrer) {
+            if (window.history.length > 1) {
                 window.history.back();
             } else {
                 window.location.href = options.closeUrl || '/';
