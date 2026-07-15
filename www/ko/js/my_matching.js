@@ -1105,7 +1105,7 @@ function initMyMatchingPage() {
 
     // Check hash for initial tab
     var hash = window.location.hash.replace('#', '') || 'received';
-    var validTabs = ['interested', 'received', 'sent', 'selected'];
+    var validTabs = ['interested', 'received', 'sent'];
     if (validTabs.indexOf(hash) === -1) hash = 'received';
     switchMainTab(hash);
     // 초기 인디케이터 위치 (레이아웃 완료 후)

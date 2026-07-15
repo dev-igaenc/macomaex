@@ -536,12 +536,6 @@ if (!function_exists('macomaex_login_guard_policies')) {
 				'titleId' => 'interestedTradesLoginGuardTitle',
 				'descriptionText' => '관심기업은 로그인 후 이용하실 수 있습니다.'
 			),
-			'account_trades_selected' => array(
-				'path' => '/account/trades',
-				'hash' => '#selected',
-				'titleId' => 'selectedTradesLoginGuardTitle',
-				'descriptionText' => '셀렉티드는 로그인 후 이용하실 수 있습니다.'
-			),
 			'my_selected' => array(
 				'path' => '/ko/my_selected.php',
 				'titleId' => 'mySelectedLoginGuardTitle',
