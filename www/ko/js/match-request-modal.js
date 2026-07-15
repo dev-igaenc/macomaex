@@ -201,7 +201,9 @@ document.querySelectorAll('[data-close]').forEach(function (btn) {
 function getLoginReturnUrl() {
     return (MATCH_REQUEST_CONTEXT && (MATCH_REQUEST_CONTEXT.tradeRequestLoginUrl || MATCH_REQUEST_CONTEXT.loginCheckUrl))
         ? String(MATCH_REQUEST_CONTEXT.tradeRequestLoginUrl || MATCH_REQUEST_CONTEXT.loginCheckUrl)
-        : ('/bbs/login.php?url=' + encodeURIComponent(window.location.pathname + window.location.search));
+        : ((window.MacomaLoginGuard && typeof window.MacomaLoginGuard.buildLoginUrl === 'function')
+            ? window.MacomaLoginGuard.buildLoginUrl(window.location.pathname + window.location.search)
+            : ('/bbs/login.php?url=' + encodeURIComponent(window.location.pathname + window.location.search)));
 }
 
 function getSignupEntryUrl() {
@@ -215,64 +217,24 @@ function getSignupEntryUrl() {
     } else {
         returnUrl = window.location.pathname + window.location.search;
     }
+    if (window.MacomaLoginGuard && typeof window.MacomaLoginGuard.buildSignupUrl === 'function') {
+        return window.MacomaLoginGuard.buildSignupUrl(returnUrl);
+    }
     return '/signup?url=' + encodeURIComponent(returnUrl);
 }
 
 function openLoginRequiredModal(descriptionHtml) {
-    var modalId = 'tradeRequestLoginRequiredModal';
-    var overlay = document.getElementById(modalId);
-
-    function closeLoginModal() {
-        if (!overlay) return;
-        overlay.classList.remove('is-open');
-        document.documentElement.classList.remove('hide-scroll');
-    }
-
-    if (!overlay) {
-        overlay = document.createElement('div');
-        overlay.id = modalId;
-        overlay.className = 'login-guard-modal';
-        overlay.innerHTML = ''
-            + '<div class="login-guard">'
-            + '  <div class="login-guard__overlay" aria-hidden="true"></div>'
-            + '  <div class="login-guard__modal" role="dialog" aria-modal="true" aria-labelledby="tradeRequestLoginModalTitle">'
-            + '    <button type="button" class="login-guard__close" aria-label="닫기">'
-            + '      <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>'
-            + '    </button>'
-            + '    <div class="login-guard__icon" aria-hidden="true">'
-            + '      <svg viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1s3.1 1.39 3.1 3.1v2z"/></svg>'
-            + '    </div>'
-            + '    <h3 class="login-guard__title" id="tradeRequestLoginModalTitle">로그인이 필요합니다</h3>'
-            + '    <p class="login-guard__desc" id="tradeRequestLoginModalDesc"></p>'
-            + '    <div class="login-guard__actions">'
-            + '      <a href="' + getSignupEntryUrl() + '" class="login-guard__btn login-guard__btn--ghost">회원가입</a>'
-            + '      <a href="' + getLoginReturnUrl() + '" class="login-guard__btn login-guard__btn--primary">로그인</a>'
-            + '    </div>'
-            + '  </div>'
-            + '</div>';
-        document.body.appendChild(overlay);
-
-        var dim = overlay.querySelector('.login-guard__overlay');
-        if (dim) dim.addEventListener('click', closeLoginModal);
-
-        var closeBtn = overlay.querySelector('.login-guard__close');
-        if (closeBtn) closeBtn.addEventListener('click', closeLoginModal);
-
-        document.addEventListener('keydown', function (e) {
-            if (e.key === 'Escape' && overlay.classList.contains('is-open')) closeLoginModal();
+    if (window.MacomaLoginGuard && typeof window.MacomaLoginGuard.show === 'function') {
+        window.MacomaLoginGuard.show({
+            titleId: 'tradeRequestLoginModalTitle',
+            descriptionHtml: descriptionHtml || '거래 요청은<br>로그인 후 이용하실 수 있습니다.',
+            loginUrl: getLoginReturnUrl(),
+            signupUrl: getSignupEntryUrl()
         });
+        return;
     }
 
-    var descEl = overlay.querySelector('#tradeRequestLoginModalDesc');
-    if (descEl) descEl.innerHTML = descriptionHtml || '거래 요청은<br>로그인 후 이용하실 수 있습니다.';
-
-    var loginBtn = overlay.querySelector('.login-guard__btn--primary');
-    if (loginBtn) loginBtn.setAttribute('href', getLoginReturnUrl());
-    var signupBtn = overlay.querySelector('.login-guard__btn--ghost');
-    if (signupBtn) signupBtn.setAttribute('href', getSignupEntryUrl());
-
-    overlay.classList.add('is-open');
-    document.documentElement.classList.add('hide-scroll');
+    window.location.href = getLoginReturnUrl();
 }
 
 /* ---- 거래 요청하기 버튼 → 요청서 작성 먼저 ---- */

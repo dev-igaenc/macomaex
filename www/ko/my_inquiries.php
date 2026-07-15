@@ -11,7 +11,7 @@ if ($menu_context === 'support') {
 }
 
 // 회원 본인 문의만 조회 가능
-login_chk();
+login_chk('account_inquiries');
 
 if (!function_exists('my_inquiries_build_url')) {
     function my_inquiries_build_url($params = array())

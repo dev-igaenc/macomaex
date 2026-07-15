@@ -100,7 +100,9 @@
   }
 
   function handleAuthRequired(reason) {
-    redirectToLogin(reason || 'auth_required');
+    // Guests receive login-required responses during normal protected actions.
+    // Only a page that started authenticated can represent an expired session.
+    onLoggedOut(reason || 'auth_required');
   }
 
   function shouldRedirectByJson(payload) {
@@ -111,22 +113,21 @@
     return false;
   }
 
-  function shouldRedirectByText(url, text) {
+  function shouldRedirectByText(text) {
     var body = String(text || '');
     if (!body) return false;
 
-    // Legacy endpoints (ex: /get_set.php) commonly return "501|로그인 후 이용하세요."
+    // Legacy code 501 is overloaded, so require an explicit login message.
     var code = body.split('|')[0].trim();
     if (code === '501' && /로그인|login/i.test(body)) return true;
-    if (url && /\/get_set\.php(?:\?|$)/.test(url) && code === '501') return true;
 
     return false;
   }
 
-  function inspectResponseForAuth(url, response) {
+  function inspectResponseForAuth(response) {
     if (!response) return;
 
-    if (response.status === 401 || response.status === 403) {
+    if (response.status === 401) {
       handleAuthRequired('http_' + response.status);
       return;
     }
@@ -155,7 +156,7 @@
 
     if (contentType.indexOf('text/') > -1 || contentType.indexOf('application/x-www-form-urlencoded') > -1 || !contentType) {
       cloned.text().then(function (text) {
-        if (shouldRedirectByText(url, text)) {
+        if (shouldRedirectByText(text)) {
           handleAuthRequired('legacy_501');
         }
       }).catch(function () {});
@@ -219,27 +220,18 @@
     var nativeFetch = window.fetch.bind(window);
     window.fetch = function (input, init) {
       return nativeFetch(input, init).then(function (response) {
-        var url = '';
-        if (typeof input === 'string') {
-          url = input;
-        } else if (input && typeof input.url === 'string') {
-          url = input.url;
-        } else if (response && typeof response.url === 'string') {
-          url = response.url;
-        }
-
-        inspectResponseForAuth(url, response);
+        inspectResponseForAuth(response);
         return response;
       });
     };
   }
 
   if (window.jQuery && window.jQuery(document) && typeof window.jQuery(document).ajaxComplete === 'function') {
-    window.jQuery(document).ajaxComplete(function (_event, xhr, settings) {
+    window.jQuery(document).ajaxComplete(function (_event, xhr) {
       if (!xhr) return;
 
       var status = Number(xhr.status || 0);
-      if (status === 401 || status === 403) {
+      if (status === 401) {
         handleAuthRequired('jquery_http_' + status);
         return;
       }
@@ -253,8 +245,6 @@
 
       if (!responseText) return;
 
-      var url = settings && settings.url ? String(settings.url) : '';
-
       var payload = null;
       try {
         payload = JSON.parse(responseText);
@@ -262,7 +252,7 @@
         payload = null;
       }
 
-      if (shouldRedirectByJson(payload) || shouldRedirectByText(url, responseText)) {
+      if (shouldRedirectByJson(payload) || shouldRedirectByText(responseText)) {
         handleAuthRequired('jquery_auth_required');
       }
     });

@@ -22,47 +22,24 @@
     }
     if (typeof window._requireLogin !== 'function') {
         window._requireLogin = function (featureName) {
-            var overlayId = 'aiAnalysisLoginOverlay';
-            var existing = document.getElementById(overlayId);
-            if (existing) {
-                existing.classList.add('is-open');
-                return;
-            }
-
             var loginUrl = (window.MATCH_REQUEST_CONTEXT && window.MATCH_REQUEST_CONTEXT.loginCheckUrl)
                 ? String(window.MATCH_REQUEST_CONTEXT.loginCheckUrl)
                 : detailLoginReturnUrl;
-            var overlay = document.createElement('div');
-            overlay.id = overlayId;
-            overlay.className = 'auth-login-modal_overlay is-open';
-            overlay.innerHTML = '' +
-                '<div class="auth-login-modal auth-login-modal--detail-fit" role="dialog" aria-modal="true" aria-labelledby="aiAnalysisLoginTitle">' +
-                '<button class="auth-login-modal_close" type="button" aria-label="닫기">' +
-                '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' +
-                '</button>' +
-                '<div class="auth-login-modal_icon">' +
-                '<svg viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1s3.1 1.39 3.1 3.1v2z"/></svg>' +
-                '</div>' +
-                '<h3 class="auth-login-modal_title" id="aiAnalysisLoginTitle">로그인이 필요합니다</h3>' +
-                '<p class="auth-login-modal_desc auth-login-modal_desc--detail-fit"><span class="auth-login-modal_lead">로그인 후 아래 정보를 확인할 수 있습니다.</span><span class="auth-login-modal_desc-list">✓ 추천 근거 분석<br>✓ 구매·판매 가능 품목<br>✓ 거래 연결 시나리오<br>✓ AI 거래 전략 리포트</span></p>' +
-                '<div class="auth-login-modal_btns">' +
-                '<a href="/signup" class="auth-login-modal_btn auth-login-modal_btn--cancel">회원가입</a>' +
-                '<a href="' + loginUrl + '" class="auth-login-modal_btn auth-login-modal_btn--login">로그인</a>' +
-                '</div>' +
-                '</div>';
-
-            function closeLoginOverlay() {
-                overlay.classList.remove('is-open');
+            if (window.MacomaLoginGuard && typeof window.MacomaLoginGuard.show === 'function') {
+                window.MacomaLoginGuard.show({
+                    titleId: 'aiAnalysisLoginTitle',
+                    loginUrl: loginUrl,
+                    signupUrl: (window.MacomaLoginGuard && typeof window.MacomaLoginGuard.buildSignupUrl === 'function')
+                        ? window.MacomaLoginGuard.buildSignupUrl(window.location.pathname + window.location.search)
+                        : '/signup',
+                    modalClassName: 'login-guard__modal--compact',
+                    descriptionHtml: '<span class="login-guard__lead">로그인 후 아래 정보를 확인할 수 있습니다.</span>'
+                        + '<span class="login-guard__list">✓ 추천 근거 분석<br>✓ 구매·판매 가능 품목<br>✓ 거래 연결 시나리오<br>✓ AI 거래 전략 리포트</span>'
+                });
+                return;
             }
 
-            overlay.addEventListener('click', function (e) {
-                if (e.target === overlay) closeLoginOverlay();
-            });
-
-            var closeBtn = overlay.querySelector('.auth-login-modal_close');
-            if (closeBtn) closeBtn.addEventListener('click', closeLoginOverlay);
-
-            document.body.appendChild(overlay);
+            window.location.href = loginUrl;
         };
     }
     var detailLoginReturnUrl = '/bbs/login.php?url=' + encodeURIComponent(window.location.pathname + window.location.search);
@@ -987,19 +964,21 @@
                     '</div>' +
                     '</div>';
             }
-            var overlayHtml = '<div class="match-box-login-overlay">' +
-                '<div class="auth-login-modal auth-login-modal--detail-fit" style="position:relative;">' +
-                '<div class="auth-login-modal_icon">' +
-                '<svg viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1s3.1 1.39 3.1 3.1v2z"/></svg>' +
-                '</div>' +
-                '<h3 class="auth-login-modal_title">로그인이 필요합니다</h3>' +
-                '<p class="auth-login-modal_desc auth-login-modal_desc--detail-fit"><span class="auth-login-modal_lead">로그인 후 아래 정보를 확인할 수 있습니다.</span><span class="auth-login-modal_desc-list">✓ 추천 근거 분석<br>✓ 구매·판매 가능 품목<br>✓ 거래 연결 시나리오<br>✓ AI 거래 전략 리포트</span></p>' +
-                '<div class="auth-login-modal_btns">' +
-                '<a href="/signup" class="auth-login-modal_btn auth-login-modal_btn--cancel">회원가입</a>' +
-                '<a href="' + detailLoginReturnUrl + '" class="auth-login-modal_btn auth-login-modal_btn--login">로그인</a>' +
-                '</div>' +
-                '</div>' +
-                '</div>';
+            var overlayHtml = '<div class="match-box-login-overlay">'
+                + (window.MacomaLoginGuard && typeof window.MacomaLoginGuard.buildDialogHtml === 'function'
+                    ? window.MacomaLoginGuard.buildDialogHtml({
+                        titleTag: 'h3',
+                        showCloseButton: false,
+                        loginUrl: detailLoginReturnUrl,
+                        signupUrl: (window.MacomaLoginGuard && typeof window.MacomaLoginGuard.buildSignupUrl === 'function')
+                            ? window.MacomaLoginGuard.buildSignupUrl(window.location.pathname + window.location.search)
+                            : '/signup',
+                        modalClassName: 'login-guard__modal--compact',
+                        descriptionHtml: '<span class="login-guard__lead">로그인 후 아래 정보를 확인할 수 있습니다.</span>'
+                            + '<span class="login-guard__list">✓ 추천 근거 분석<br>✓ 구매·판매 가능 품목<br>✓ 거래 연결 시나리오<br>✓ AI 거래 전략 리포트</span>'
+                    })
+                    : '')
+                + '</div>';
             document.getElementById('rightCard').innerHTML = buildInner(!loggedIn) + (loggedIn ? '' : overlayHtml);
             if (!loggedIn) document.getElementById('rightCard').classList.add('match-box-blur');
             else document.getElementById('rightCard').classList.remove('match-box-blur');
@@ -1029,19 +1008,21 @@
                     '</div>' +
                     '</div>';
             }
-            var overlayHtml = '<div class="match-box-login-overlay">' +
-                '<div class="auth-login-modal auth-login-modal--detail-fit" style="position:relative;">' +
-                '<div class="auth-login-modal_icon">' +
-                '<svg viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1s3.1 1.39 3.1 3.1v2z"/></svg>' +
-                '</div>' +
-                '<h3 class="auth-login-modal_title">로그인이 필요합니다</h3>' +
-                '<p class="auth-login-modal_desc auth-login-modal_desc--detail-fit"><span class="auth-login-modal_lead">로그인 후 아래 정보를 확인할 수 있습니다.</span><span class="auth-login-modal_desc-list">✓ 추천 근거 분석<br>✓ 구매·판매 가능 품목<br>✓ 거래 연결 시나리오<br>✓ AI 거래 전략 리포트</span></p>' +
-                '<div class="auth-login-modal_btns">' +
-                '<a href="/signup" class="auth-login-modal_btn auth-login-modal_btn--cancel">회원가입</a>' +
-                '<a href="' + detailLoginReturnUrl + '" class="auth-login-modal_btn auth-login-modal_btn--login">로그인</a>' +
-                '</div>' +
-                '</div>' +
-                '</div>';
+            var overlayHtml = '<div class="match-box-login-overlay">'
+                + (window.MacomaLoginGuard && typeof window.MacomaLoginGuard.buildDialogHtml === 'function'
+                    ? window.MacomaLoginGuard.buildDialogHtml({
+                        titleTag: 'h3',
+                        showCloseButton: false,
+                        loginUrl: detailLoginReturnUrl,
+                        signupUrl: (window.MacomaLoginGuard && typeof window.MacomaLoginGuard.buildSignupUrl === 'function')
+                            ? window.MacomaLoginGuard.buildSignupUrl(window.location.pathname + window.location.search)
+                            : '/signup',
+                        modalClassName: 'login-guard__modal--compact',
+                        descriptionHtml: '<span class="login-guard__lead">로그인 후 아래 정보를 확인할 수 있습니다.</span>'
+                            + '<span class="login-guard__list">✓ 추천 근거 분석<br>✓ 구매·판매 가능 품목<br>✓ 거래 연결 시나리오<br>✓ AI 거래 전략 리포트</span>'
+                    })
+                    : '')
+                + '</div>';
             document.getElementById('rightCard').innerHTML = buildInner(!loggedIn) + (loggedIn ? '' : overlayHtml);
             if (!loggedIn) document.getElementById('rightCard').classList.add('match-box-blur');
             else document.getElementById('rightCard').classList.remove('match-box-blur');

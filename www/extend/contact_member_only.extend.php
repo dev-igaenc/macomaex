@@ -29,7 +29,7 @@ if (!function_exists('macomaex_require_member_for_board_write')) {
         $login_url = G5_BBS_URL . '/login.php?url=' . urlencode($target_url);
 
         if (function_exists('login_required_modal')) {
-            login_required_modal('서비스를 이용하시려면 로그인이 필요합니다.', $login_url);
+            login_required_modal('', $login_url, 'contact_write');
         }
 
         alert(

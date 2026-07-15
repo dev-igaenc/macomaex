@@ -1,8 +1,9 @@
 <?
 include_once("./_common.php");
 
+$g5['title'] = "셀렉티드";
 $board['bo_10']="6"; // 1뎁스
-$board['bo_9']="6"; // 2뎁스
+$board['bo_9']=""; // 메뉴에서 숨긴 페이지이므로 2뎁스 메뉴를 선택하지 않는다.
 //$board['bo_8']="1"; // 3뎁스
 //$board['bo_7']="1"; // 4뎁스
 // $board['bo_5'] = ""; // 1뎁스 제목
@@ -11,7 +12,7 @@ $board['bo_9']="6"; // 2뎁스
 //$board['bo_4'] = $config['cf_title']."의 혜택을 확인하세요.";  // 2뎁스 설명
 
 //로그인 체크
-login_chk();
+login_chk('my_selected');
 
 include_once(G5_THEME_PATH.'/head.php');
 

@@ -5,7 +5,7 @@ $board['bo_10']="6"; // 1뎁스
 $board['bo_9']="5"; // 2뎁스
 
 //로그인 체크
-login_chk();
+login_chk('account_credits');
 
 $ga4_pending_purchase = get_session('ss_ga4_pending_purchase');
 if (!is_array($ga4_pending_purchase)) {

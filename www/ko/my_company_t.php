@@ -11,7 +11,7 @@ $board['bo_9']="1"; // 2뎁스
 //$board['bo_4'] = $config['cf_title']."의 혜택을 확인하세요.";  // 2뎁스 설명
 
 //로그인 체크
-login_chk();
+login_chk('account_company');
 
 $cd=$member['mb_company'];
 

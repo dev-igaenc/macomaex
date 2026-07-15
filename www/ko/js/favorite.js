@@ -60,6 +60,9 @@
   }
 
   function getLoginUrl() {
+    if (window.MacomaLoginGuard && typeof window.MacomaLoginGuard.buildLoginUrl === "function") {
+      return window.MacomaLoginGuard.buildLoginUrl(window.location.pathname + window.location.search + window.location.hash);
+    }
     return "/bbs/login.php?url=" + encodeURIComponent(window.location.pathname + window.location.search + window.location.hash);
   }
 
@@ -189,6 +192,16 @@
             }
 
             if (code === "501") {
+              if (window.MacomaLoginGuard && typeof window.MacomaLoginGuard.show === "function") {
+                window.MacomaLoginGuard.show({
+                  descriptionText: "관심기업 등록은 로그인 후 이용하실 수 있습니다.",
+                  loginUrl: getLoginUrl(),
+                  signupUrl: (window.MacomaLoginGuard && typeof window.MacomaLoginGuard.buildSignupUrl === "function")
+                    ? window.MacomaLoginGuard.buildSignupUrl(window.location.pathname + window.location.search + window.location.hash)
+                    : "/signup"
+                });
+                return;
+              }
               window.location.href = getLoginUrl();
               return;
             }

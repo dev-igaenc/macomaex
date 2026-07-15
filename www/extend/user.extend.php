@@ -504,21 +504,255 @@ function get_membership(){
 	 return $membership_list;
 }
 
-//로그인 체크
-function login_chk(){
-	global $member;
-	if(!$member['mb_id']) {
-		login_required_modal("로그인 후 이용하세요.", "/bbs/login.php?url=" . urlencode($_SERVER["REQUEST_URI"]));
+if (!function_exists('macomaex_login_guard_policies')) {
+	function macomaex_login_guard_policies()
+	{
+		return array(
+			'account_company' => array(
+				'path' => '/account/company',
+				'titleId' => 'myCompanyLoginGuardTitle',
+				'descriptionText' => '내 회사 정보는 로그인 후 이용하실 수 있습니다.'
+			),
+			'account_trades' => array(
+				'path' => '/account/trades',
+				'titleId' => 'myTradesLoginGuardTitle',
+				'descriptionText' => '거래 히스토리는 로그인 후 이용하실 수 있습니다.'
+			),
+			'account_trades_received' => array(
+				'path' => '/account/trades',
+				'hash' => '#received',
+				'titleId' => 'receivedTradesLoginGuardTitle',
+				'descriptionText' => '받은 요청 확인은 로그인 후 이용하실 수 있습니다.'
+			),
+			'account_trades_sent' => array(
+				'path' => '/account/trades',
+				'hash' => '#sent',
+				'titleId' => 'sentTradesLoginGuardTitle',
+				'descriptionText' => '보낸 요청 확인은 로그인 후 이용하실 수 있습니다.'
+			),
+			'account_trades_interested' => array(
+				'path' => '/account/trades',
+				'hash' => '#interested',
+				'titleId' => 'interestedTradesLoginGuardTitle',
+				'descriptionText' => '관심기업은 로그인 후 이용하실 수 있습니다.'
+			),
+			'my_selected' => array(
+				'path' => '/ko/my_selected.php',
+				'titleId' => 'mySelectedLoginGuardTitle',
+				'descriptionText' => '셀렉티드는 로그인 후 이용하실 수 있습니다.'
+			),
+			'profile_edit' => array(
+				'path' => '/bbs/member_confirm.php',
+				'searchContains' => 'register_form.php',
+				'titleId' => 'editProfileLoginGuardTitle',
+				'descriptionText' => '회원정보 수정은 로그인 후 이용하실 수 있습니다.'
+			),
+			'account_credits' => array(
+				'path' => '/account/credits',
+				'titleId' => 'creditsLoginGuardTitle',
+				'descriptionText' => '결제정보는 로그인 후 이용하실 수 있습니다.'
+			),
+			'account_inquiries' => array(
+				'path' => '/account/inquiries',
+				'titleId' => 'inquiriesLoginGuardTitle',
+				'descriptionText' => '문의 내역은 로그인 후 이용하실 수 있습니다.'
+			),
+			'contact_write' => array(
+				'path' => '/bbs/write.php',
+				'searchContains' => 'bo_table=Contact',
+				'titleId' => 'contactWriteLoginGuardTitle',
+				'descriptionText' => '문의 작성은 로그인 후 이용하실 수 있습니다.'
+			),
+			'member_leave' => array(
+				'client' => false,
+				'descriptionText' => '회원 탈퇴는 로그인 후 이용하실 수 있습니다.'
+			),
+			'membership_info' => array(
+				'client' => false,
+				'descriptionText' => '멤버십 정보를 확인하려면 로그인이 필요합니다.'
+			),
+			'credit_payment' => array(
+				'client' => false,
+				'descriptionText' => '크레딧 결제를 진행하려면 로그인이 필요합니다.'
+			),
+			'company_detail' => array(
+				'client' => false,
+				'descriptionText' => '기업 상세 조회는 로그인 후 이용하실 수 있습니다.'
+			),
+			'matching_detail' => array(
+				'client' => false,
+				'descriptionText' => '매칭 상세 조회는 로그인 후 이용하실 수 있습니다.'
+			)
+		);
 	}
 }
 
-function login_required_modal($msg = "로그인 후 이용하세요.", $loginUrl = "/bbs/login.php")
+if (!function_exists('macomaex_login_guard_client_policies')) {
+	function macomaex_login_guard_client_policies()
+	{
+		$rules = array();
+		foreach (macomaex_login_guard_policies() as $key => $policy) {
+			if (isset($policy['client']) && !$policy['client']) continue;
+			if (empty($policy['path'])) continue;
+			$policy['key'] = $key;
+			unset($policy['client']);
+			$rules[] = $policy;
+		}
+		return $rules;
+	}
+}
+
+if (!function_exists('macomaex_login_guard_get_policy')) {
+	function macomaex_login_guard_get_policy($policyKey = '', $requestUri = '')
+	{
+		$policies = macomaex_login_guard_policies();
+		$policyKey = trim((string)$policyKey);
+		if ($policyKey !== '' && isset($policies[$policyKey])) {
+			$policy = $policies[$policyKey];
+			$policy['key'] = $policyKey;
+			return $policy;
+		}
+
+		$requestUri = trim((string)$requestUri);
+		if ($requestUri === '') {
+			$requestUri = isset($_SERVER['REQUEST_URI']) ? (string)$_SERVER['REQUEST_URI'] : '/';
+		}
+		$parsed = @parse_url($requestUri);
+		$path = is_array($parsed) && isset($parsed['path']) ? rtrim((string)$parsed['path'], '/') : '/';
+		if ($path === '') $path = '/';
+		$search = is_array($parsed) && !empty($parsed['query']) ? '?' . (string)$parsed['query'] : '';
+		$matched = array();
+		$matchedScore = -1;
+
+		foreach ($policies as $key => $policy) {
+			if (empty($policy['path']) || !empty($policy['hash'])) continue;
+			$policyPath = rtrim((string)$policy['path'], '/');
+			if ($policyPath === '') $policyPath = '/';
+			if ($policyPath !== $path) continue;
+			$searchContains = isset($policy['searchContains']) ? (string)$policy['searchContains'] : '';
+			if ($searchContains !== '' && strpos($search, $searchContains) === false) continue;
+			$score = $searchContains !== '' ? 1 : 0;
+			if ($score > $matchedScore) {
+				$matched = $policy;
+				$matched['key'] = $key;
+				$matchedScore = $score;
+			}
+		}
+
+		return $matched;
+	}
+}
+
+if (!function_exists('macomaex_login_guard_policy_message')) {
+	function macomaex_login_guard_policy_message($policyKey = '', $fallback = '')
+	{
+		$policy = macomaex_login_guard_get_policy($policyKey);
+		if (!empty($policy['descriptionText'])) return (string)$policy['descriptionText'];
+		$fallback = trim((string)$fallback);
+		return $fallback !== '' ? $fallback : '서비스를 이용하시려면 로그인이 필요합니다.';
+	}
+}
+
+if (!function_exists('macomaex_login_guard_extract_return_url')) {
+	function macomaex_login_guard_extract_return_url($loginUrl = '')
+	{
+		$loginUrl = trim((string)$loginUrl);
+		if ($loginUrl !== '') {
+			$parsed = @parse_url(html_entity_decode($loginUrl, ENT_QUOTES, 'UTF-8'));
+			if (is_array($parsed) && !empty($parsed['query'])) {
+				$query = array();
+				parse_str((string)$parsed['query'], $query);
+				if (!empty($query['url']) && is_string($query['url'])) {
+					return trim($query['url']);
+				}
+			}
+		}
+
+		return isset($_SERVER['REQUEST_URI']) ? trim((string)$_SERVER['REQUEST_URI']) : '';
+	}
+}
+
+if (!function_exists('macomaex_login_guard_build_login_url')) {
+	function macomaex_login_guard_build_login_url($returnUrl = '')
+	{
+		$returnUrl = trim((string)$returnUrl);
+		if ($returnUrl === '') {
+			$returnUrl = isset($_SERVER['REQUEST_URI']) ? trim((string)$_SERVER['REQUEST_URI']) : '/';
+		}
+
+		return G5_BBS_URL . '/login.php?url=' . urlencode($returnUrl);
+	}
+}
+
+if (!function_exists('macomaex_login_guard_build_signup_url')) {
+	function macomaex_login_guard_build_signup_url($returnUrl = '')
+	{
+		$returnUrl = trim((string)$returnUrl);
+		$signupUrl = '/signup';
+		if ($returnUrl === '') {
+			return $signupUrl;
+		}
+
+		return $signupUrl . '?url=' . urlencode($returnUrl);
+	}
+}
+
+if (!function_exists('macomaex_login_guard_css_url')) {
+	function macomaex_login_guard_css_url()
+	{
+		$assetPath = G5_PATH . '/ko/css/login-guard.css';
+		$assetVersion = @filemtime($assetPath);
+		if (!$assetVersion) $assetVersion = time();
+		return G5_URL . '/ko/css/login-guard.css?ver=' . rawurlencode((string)$assetVersion);
+	}
+}
+
+if (!function_exists('macomaex_login_guard_js_url')) {
+	function macomaex_login_guard_js_url()
+	{
+		$assetPath = G5_PATH . '/ko/js/login-guard.js';
+		$assetVersion = @filemtime($assetPath);
+		if (!$assetVersion) $assetVersion = time();
+		return G5_URL . '/ko/js/login-guard.js?ver=' . rawurlencode((string)$assetVersion);
+	}
+}
+
+//로그인 체크
+function login_chk($policyKey = ''){
+	global $member;
+	if(!$member['mb_id']) {
+		$policy = macomaex_login_guard_get_policy($policyKey);
+		login_required_modal(
+			!empty($policy['descriptionText']) ? (string)$policy['descriptionText'] : '서비스를 이용하시려면 로그인이 필요합니다.',
+			macomaex_login_guard_build_login_url(isset($_SERVER['REQUEST_URI']) ? (string)$_SERVER['REQUEST_URI'] : '/'),
+			!empty($policy['key']) ? (string)$policy['key'] : $policyKey
+		);
+	}
+}
+
+function login_required_modal($msg = "서비스를 이용하시려면 로그인이 필요합니다.", $loginUrl = "/bbs/login.php", $policyKey = '')
 {
-	$msg = '서비스를 이용하시려면 로그인이 필요합니다.';
+	$policy = macomaex_login_guard_get_policy($policyKey);
+	$msg = !empty($policy['descriptionText']) ? (string)$policy['descriptionText'] : trim((string)$msg);
+	if ($msg === '') $msg = '서비스를 이용하시려면 로그인이 필요합니다.';
 
 	$loginUrl = trim((string)$loginUrl);
-	if ($loginUrl === '') $loginUrl = "/bbs/login.php";
-	$signupUrl = "/bbs/register.php";
+	if ($loginUrl === '') $loginUrl = macomaex_login_guard_build_login_url();
+
+	$returnUrl = macomaex_login_guard_extract_return_url($loginUrl);
+	$signupUrl = macomaex_login_guard_build_signup_url($returnUrl);
+	$cssUrl = macomaex_login_guard_css_url();
+	$jsUrl = macomaex_login_guard_js_url();
+	$clientConfig = array(
+		'isLoggedIn' => false,
+		'loginBaseUrl' => G5_BBS_URL . '/login.php',
+		'signupBaseUrl' => '/signup',
+		'defaultTitle' => '로그인이 필요합니다',
+		'defaultDescription' => '서비스를 이용하시려면 로그인이 필요합니다.',
+		'loginText' => '로그인',
+		'signupText' => '회원가입',
+		'protectedLinks' => macomaex_login_guard_client_policies()
+	);
 
 	header('Content-Type: text/html; charset=utf-8');
 	echo '<!doctype html>';
@@ -527,42 +761,24 @@ function login_required_modal($msg = "로그인 후 이용하세요.", $loginUrl
 	echo '<meta charset="utf-8">';
 	echo '<meta name="viewport" content="width=device-width, initial-scale=1">';
 	echo '<title>로그인 안내</title>';
-	echo '<style>';
-	echo ':root{color-scheme:light;--bg:#f5f7fb;--card:#fff;--text:#1f2937;--muted:#6b7280;--line:#e5e7eb;--primary:#2f5fe3;--primary-dark:#1d4ed8;--shadow:0 24px 60px rgba(15,23,42,.16);}';
-	echo '*{box-sizing:border-box}html,body{height:100%}body{margin:0;font-family:Pretendard,Apple SD Gothic Neo,Noto Sans KR,sans-serif;background:linear-gradient(180deg,#f8fbff 0%,#f3f6fb 100%);color:var(--text);}';
-	echo '.login-guard{min-height:100%;display:flex;align-items:center;justify-content:center;padding:24px;}';
-	echo '.login-guard__overlay{position:fixed;inset:0;background:rgba(15,23,42,.18);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);}';
-	echo '.login-guard__modal{position:relative;max-width:380px;width:90%;background:var(--card);border-radius:20px;padding:40px 36px 32px;box-shadow:var(--shadow);text-align:center;animation:loginGuardFade .18s ease-out;}';
-	echo '@keyframes loginGuardFade{from{opacity:0;transform:translateY(10px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}';
-	echo '.login-guard__close{position:absolute;top:12px;right:12px;width:28px;height:28px;border:none;border-radius:50%;background:transparent;color:#9ca3af;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;}';
-	echo '.login-guard__close svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2.2;stroke-linecap:round}';
-	echo '.login-guard__icon{width:56px;height:56px;margin:0 auto 18px;border-radius:999px;background:var(--primary);display:flex;align-items:center;justify-content:center;color:#fff;}';
-	echo '.login-guard__icon svg{width:24px;height:24px;fill:#fff}';
-	echo '.login-guard__title{margin:0 0 10px;font-size:18px;font-weight:700;letter-spacing:-.02em;}';
-	echo '.login-guard__desc{margin:0 0 26px;font-size:14px;line-height:1.5;color:var(--muted);}';
-	echo '.login-guard__actions{display:flex;gap:10px;}';
-	echo '.login-guard__btn{flex:1;display:inline-flex;align-items:center;justify-content:center;height:48px;border-radius:14px;border:1px solid transparent;font-size:15px;font-weight:600;text-decoration:none;cursor:pointer;transition:.18s ease;}';
-	echo '.login-guard__btn--ghost{background:#f3f4f6;color:#4b5563;border-color:#e5e7eb;}';
-	echo '.login-guard__btn--ghost:hover{background:#e5e7eb;}';
-	echo '.login-guard__btn--primary{background:var(--primary);color:#fff;}';
-	echo '.login-guard__btn--primary:hover{background:var(--primary-dark);}';
-	echo '@media (max-width:480px){.login-guard{padding:18px}.login-guard__modal{border-radius:20px;padding:30px 20px 22px}.login-guard__title{font-size:19px}.login-guard__desc{font-size:14px}.login-guard__actions{flex-direction:row;}}';
-	echo '</style>';
+	echo '<link rel="stylesheet" href="' . htmlspecialchars($cssUrl, ENT_QUOTES, 'UTF-8') . '">';
 	echo '</head>';
-	echo '<body>';
-	echo '<div class="login-guard">';
-	echo '<div class="login-guard__overlay" aria-hidden="true"></div>';
-	echo '<div class="login-guard__modal" role="dialog" aria-modal="true" aria-labelledby="loginGuardTitle">';
-	echo '<button type="button" class="login-guard__close" aria-label="닫기" onclick="history.back();"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>';
-	echo '<div class="login-guard__icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1s3.1 1.39 3.1 3.1v2z"/></svg></div>';
-	echo '<h1 class="login-guard__title" id="loginGuardTitle">로그인이 필요합니다</h1>';
-	echo '<p class="login-guard__desc">' . $msg . '</p>';
-	echo '<div class="login-guard__actions">';
-	echo '<a class="login-guard__btn login-guard__btn--ghost" href="' . htmlspecialchars($signupUrl, ENT_QUOTES, 'UTF-8') . '">회원가입</a>';
-	echo '<a class="login-guard__btn login-guard__btn--primary" href="' . htmlspecialchars($loginUrl, ENT_QUOTES, 'UTF-8') . '">로그인</a>';
-	echo '</div>';
-	echo '</div>';
-	echo '</div>';
+	echo '<body class="login-guard-page">';
+	echo '<noscript><div class="login-guard login-guard--page"><div class="login-guard__modal">';
+	echo '<h1 class="login-guard__title">로그인이 필요합니다</h1>';
+	echo '<p class="login-guard__desc">' . htmlspecialchars($msg, ENT_QUOTES, 'UTF-8') . '</p>';
+	echo '<div class="login-guard__actions"><a class="login-guard__btn login-guard__btn--ghost" href="' . htmlspecialchars($signupUrl, ENT_QUOTES, 'UTF-8') . '">회원가입</a>';
+	echo '<a class="login-guard__btn login-guard__btn--primary" href="' . htmlspecialchars($loginUrl, ENT_QUOTES, 'UTF-8') . '">로그인</a></div>';
+	echo '</div></div></noscript>';
+	echo '<script>window.__LOGIN_GUARD_CONFIG__=' . json_encode($clientConfig, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . ';</script>';
+	echo '<script src="' . htmlspecialchars($jsUrl, ENT_QUOTES, 'UTF-8') . '"></script>';
+	echo '<script>(function(){';
+	echo 'var guard=window.MacomaLoginGuard;if(!guard||typeof guard.show!=="function")return;';
+	echo 'var returnUrl=' . json_encode($returnUrl, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . ';';
+	echo 'if(window.location.hash&&returnUrl.indexOf("#")===-1)returnUrl+=window.location.hash;';
+	echo 'var rule=typeof guard.findRuleForUrl==="function"?guard.findRuleForUrl(window.location.href):null;';
+	echo 'guard.show({titleId:rule&&rule.titleId?rule.titleId:"serverLoginGuardTitle",descriptionText:rule&&rule.descriptionText?rule.descriptionText:' . json_encode($msg, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . ',loginUrl:guard.buildLoginUrl(returnUrl),signupUrl:guard.buildSignupUrl(returnUrl),onClose:"historyBackOrHome",closeUrl:"/"});';
+	echo '})();</script>';
 	echo '</body>';
 	echo '</html>';
 	exit;

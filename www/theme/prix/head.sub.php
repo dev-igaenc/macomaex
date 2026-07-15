@@ -146,6 +146,24 @@ var siteTitle = "<?php echo $config['cf_title']; ?>";
 history.scrollRestoration = "auto";
 </script>
 
+<link rel="stylesheet" href="<?php echo $prix_root_asset_url('ko/css/login-guard.css', G5_CSS_VER); ?>">
+<script>
+window.__LOGIN_GUARD_CONFIG__ = {
+    isLoggedIn: <?php echo !empty($member['mb_id']) ? 'true' : 'false'; ?>,
+    loginBaseUrl: <?php echo json_encode(G5_BBS_URL.'/login.php', JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>,
+    signupBaseUrl: <?php echo json_encode('/signup', JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>,
+    defaultTitle: '로그인이 필요합니다',
+    defaultDescription: '서비스를 이용하시려면 로그인이 필요합니다.',
+    loginText: '로그인',
+    signupText: '회원가입',
+    protectedLinks: <?php echo json_encode(
+        function_exists('macomaex_login_guard_client_policies') ? macomaex_login_guard_client_policies() : array(),
+        JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
+    ); ?>
+};
+</script>
+<script type="text/javascript" src="<?php echo $prix_root_asset_url('ko/js/login-guard.js', G5_JS_VER); ?>"></script>
+
 <script type="text/javascript" src="<?php echo $prix_theme_asset_url('js/jquery.lastest.js', G5_JS_VER); ?>"></script>
 <script type="text/javascript" src="<?php echo $prix_theme_asset_url('js/jquery.ui.lastest.js', G5_JS_VER); ?>"></script>
 <script type="text/javascript" src="<?php echo $prix_theme_asset_url('js/TweenMax.min.js', G5_JS_VER); ?>"></script>

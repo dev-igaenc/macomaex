@@ -589,6 +589,12 @@ $stable_list = get_processed_companies('stability_score_5', 3, $unlocked_bzno_ma
     ?>
 
 <script>
+window.__INDEX_LOGIN_GUARD_CONTEXT = {
+    isLoggedIn: <?php echo !empty($member['mb_id']) ? 'true' : 'false'; ?>,
+    returnUrl: "/account/trades#received",
+    loginUrl: "/bbs/login.php?url=<?php echo urlencode('/account/trades#received'); ?>"
+};
+
 window.__TRADE_CHAT_MODAL_CONTEXT = {
     isLoggedIn: <?php echo !empty($member['mb_id']) ? 'true' : 'false'; ?>,
     loginUrl: "/bbs/login.php?url=<?php echo urlencode('/'); ?>",
