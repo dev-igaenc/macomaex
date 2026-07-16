@@ -15,7 +15,13 @@ if ($trade_request_return_url !== '') {
 	$query = isset($parsed['query']) ? (string)$parsed['query'] : '';
 	parse_str($query, $query_params);
 	$trade_login_flag = isset($query_params['trade_request_login']) ? (string)$query_params['trade_request_login'] : '';
-	if (($path === '/ko/company_detail.php' || $path === '/ko/company_detail_ai.php') && $trade_login_flag === '1') {
+	$trade_request_paths = array(
+		'/companies/detail',
+		'/recommendations/detail',
+		'/ko/company_detail.php',
+		'/ko/company_detail_ai.php',
+	);
+	if (in_array($path, $trade_request_paths, true) && $trade_login_flag === '1') {
 		$is_trade_request_return = true;
 		$reg_prev_url = $trade_request_return_url;
 	}

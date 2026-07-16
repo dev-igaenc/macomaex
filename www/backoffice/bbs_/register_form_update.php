@@ -60,8 +60,6 @@ $mb_5           = isset($_POST['mb_5'])             ? trim($_POST['mb_5'])      
 $mb_6           = isset($_POST['mb_6'])             ? trim($_POST['mb_6'])           : "";
 $mb_7           = isset($_POST['mb_7'])             ? trim($_POST['mb_7'])           : "";
 $mb_8           = isset($_POST['mb_8'])             ? trim($_POST['mb_8'])           : "";
-$mb_9           = isset($_POST['mb_9'])             ? trim($_POST['mb_9'])           : "";
-$mb_10          = isset($_POST['mb_10'])            ? trim($_POST['mb_10'])          : "";
 
 $mb_name        = clean_xss_tags($mb_name);
 $mb_email       = get_email_address($mb_email);
@@ -242,9 +240,7 @@ if ($w == '') {
                      mb_5 = '{$mb_5}',
                      mb_6 = '{$mb_6}',
                      mb_7 = '{$mb_7}',
-                     mb_8 = '{$mb_8}',
-                     mb_9 = '{$mb_9}',
-                     mb_10 = '{$mb_10}'
+                     mb_8 = '{$mb_8}'
                      {$sql_certify} ";
 
     // 이메일 인증을 사용하지 않는다면 이메일 인증시간을 바로 넣는다
@@ -361,9 +357,7 @@ if ($w == '') {
                     mb_5 = '{$mb_5}',
                     mb_6 = '{$mb_6}',
                     mb_7 = '{$mb_7}',
-                    mb_8 = '{$mb_8}',
-                    mb_9 = '{$mb_9}',
-                    mb_10 = '{$mb_10}'
+                    mb_8 = '{$mb_8}'
                     {$sql_password}
                     {$sql_nick_date}
                     {$sql_open_date}

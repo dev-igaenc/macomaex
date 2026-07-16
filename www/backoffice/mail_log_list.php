@@ -1,5 +1,6 @@
 <?php
 $sub_menu = '500100';
+$current_menu = '960000';
 include_once('./_common.php');
 include_once(G5_LIB_PATH.'/mailer.lib.php');
 

@@ -12,6 +12,17 @@ $addr1 = $wr_addr[2];
 $addr2 = $wr_addr[3];
 ?>
 <style>.cke_sc{display:none !important;}</style>
+<style>
+/* 사람이 보거나 포커스할 일은 없지만 DOM에는 남겨 두는 honeypot 필드 영역 */
+.hp-field {
+	position:absolute !important;
+	left:-9999px !important;
+	top:auto !important;
+	width:1px !important;
+	height:1px !important;
+	overflow:hidden !important;
+}
+</style>
 
 	<section id="bo_w">
 		<h2 class="sound_only"><?php echo $g5['title'] ?></h2>
@@ -23,14 +34,19 @@ $addr2 = $wr_addr[3];
 		<input type="hidden" name="bo_table" value="<?php echo $bo_table ?>">
 		<input type="hidden" name="wr_id" value="<?php echo $wr_id ?>">
 		<input type="hidden" name="sca" value="<?php echo $sca ?>">
-		<input type="hidden" name="sfl" value="<?php echo $sfl ?>">
-		<input type="hidden" name="stx" value="<?php echo $stx ?>">
-		<input type="hidden" name="spt" value="<?php echo $spt ?>">
-		<input type="hidden" name="sst" value="<?php echo $sst ?>">
-		<input type="hidden" name="sod" value="<?php echo $sod ?>">
-		<input type="hidden" name="page" value="<?php echo $page ?>">
-		<input type="hidden" name="wr_subject" value="">
-		<input type="hidden" name="wr_content" value="&nbsp;">
+			<input type="hidden" name="sfl" value="<?php echo $sfl ?>">
+			<input type="hidden" name="stx" value="<?php echo $stx ?>">
+			<input type="hidden" name="spt" value="<?php echo $spt ?>">
+			<input type="hidden" name="sst" value="<?php echo $sst ?>">
+			<input type="hidden" name="sod" value="<?php echo $sod ?>">
+			<input type="hidden" name="page" value="<?php echo $page ?>">
+			<?php // 봇은 종종 숨겨진 입력칸까지 채우므로 문의 폼에 honeypot 필드를 둔다. ?>
+			<div class="hp-field" aria-hidden="true">
+				<label for="homepage_confirm">홈페이지</label>
+				<input type="text" name="homepage_confirm" id="homepage_confirm" value="" tabindex="-1" autocomplete="off">
+			</div>
+			<input type="hidden" name="wr_subject" value="">
+			<input type="hidden" name="wr_content" value="&nbsp;">
 		<?php
 		$option = '';
 		$option_hidden = '';
@@ -108,18 +124,14 @@ $addr2 = $wr_addr[3];
 							</div>
 						</td>
 					</tr> -->
-					<tr>
-						<th scope="row"><span class="">기업명</span></th>
-						<td><input type="text" name="wr_1" value="<?php echo $wr_1 ?>" id="wr_1"  class=" small" placeholder="기업명"></td>
-					</tr>
-					<tr>
-						<th scope="row"><span class="">직책</span></th>
-						<td><input type="text" name="wr_2" value="<?php echo $wr_2 ?>" id="wr_2"  class=" small" placeholder="직책"></td>
-					</tr>
-					<tr>
-						<th scope="row"><span class="">성함</span></th>
-						<td><input type="text" name="wr_name" value="<?php echo $name ?>" id="wr_name" required class="required small" placeholder="이름"></td>
-					</tr>
+						<tr>
+							<th scope="row"><span class="">기업명</span></th>
+							<td><input type="text" name="wr_1" value="<?php echo $wr_1 ?>" id="wr_1"  class=" small" placeholder="기업명"></td>
+						</tr>
+						<tr>
+							<th scope="row"><span class="">성함</span></th>
+							<td><input type="text" name="wr_name" value="<?php echo $name ?>" id="wr_name" required class="required small" placeholder="이름"></td>
+						</tr>
 					<!-- <tr>
 						<th scope="row"><span class="">일자</span></th>
 						<td><input type="text" name="wr_7" value="<?php echo $wr_7 ?>" id="wr_7" required class="required datetimepicker small" placeholder=""></td>
@@ -370,7 +382,7 @@ $addr2 = $wr_addr[3];
 		<div class="clauseArea">
 			<div class="tit">개인정보 수집 및 이용 동의</div>
 			<div class="scroll">
-				<? include_once(G5_THEME_PATH . '/privacy.php'); ?>
+				<? include_once(G5_THEME_PATH . '/privacy_consent.php'); ?>
 			</div>
 			<p class="checkIn">
 				<input type="checkbox" id="contactCheck" name="contactCheck"/>
@@ -380,7 +392,6 @@ $addr2 = $wr_addr[3];
 
 		<div class="board_btn write">
 			<ul class="board_user">
-				<?php if ($is_member) { ?><li><a href="<?php echo get_pretty_url($bo_table); ?>" class="click big">목록</a></li><? } ?>
 				<li><button type="submit" id="btn_submit" accesskey="s" class="click write big">신청하기</button></li>
 			</ul>
 		</div>
@@ -471,7 +482,7 @@ $addr2 = $wr_addr[3];
 					}
 				}
 
-				<?//php echo $captcha_js; // 캡챠 사용시 자바스크립트에서 입력된 캡챠를 검사함  ?>
+					<?php echo $captcha_js; // 문의 스킨에서도 제출 직전 캡챠 JS 검사를 다시 연결한다. ?>
 
 				document.getElementById("btn_submit").disabled = "disabled";
 

@@ -3,7 +3,7 @@ include_once("./_common.php");
 
 $entry = isset($_GET['entry']) ? trim((string)$_GET['entry']) : '';
 if ($entry !== 'matching_ai_demo') {
-    alert('잘못된 접근입니다.', '/ko/matching_list.php');
+    alert('잘못된 접근입니다.', '/companies');
 }
 
 

@@ -1,5 +1,6 @@
 <?php
 $sub_menu = '100000';
+$current_menu = '970000';
 include_once('./_common.php');
 
 if ($is_admin != 'super') {

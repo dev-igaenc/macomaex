@@ -3,7 +3,7 @@ if (!defined('_GNUBOARD_')) exit;
 
 /*
  * 거래 채팅 도메인 헬퍼.
- * 기업 pair 기준 room 식별 규칙과 권한/조회용 공통 함수를 모아둔다.
+ * 거래 요청 번호 기준 1:1 room 식별 규칙과 권한/조회용 공통 함수를 모아둔다.
  */
 
 include_once(__DIR__ . '/trade_chat_config_helper.php');
@@ -36,12 +36,12 @@ function trade_chat_make_stream_user_id($mbId) {
 	return 'member_' . preg_replace('/[^a-z0-9@_. -]/i', '_', $mbId);
 }
 
-// 기업 pair 하나당 재사용할 고정 Stream channel id를 만든다.
-function trade_chat_make_stream_channel_id($companyPairKey) {
-	$companyPairKey = trim((string)$companyPairKey);
-	if ($companyPairKey === '') return '';
+// 거래 요청 하나당 분리할 고정 Stream channel id를 만든다.
+function trade_chat_make_stream_channel_id($trNo) {
+	$trNo = (int)$trNo;
+	if ($trNo < 1) return '';
 
-	return 'trade-' . substr(hash('sha256', $companyPairKey), 0, 32);
+	return 'trade-' . $trNo;
 }
 
 // 로그/에러 문구를 한 줄 요약으로 정리해 DB 컬럼 길이와 가독성을 맞춘다.
@@ -79,6 +79,7 @@ function trade_chat_error_summary($code, $fallback = '') {
 		'stream_users_not_enough' => '채팅 사용자 정보가 아직 충분하지 않습니다.',
 		'channel_sync_failed' => '채팅 채널 동기화에 실패했습니다.',
 		'request_not_found' => '거래 요청을 찾을 수 없습니다.',
+		'invalid_room_members' => '채팅에 참여할 요청자 또는 수신 담당자 정보가 없습니다.',
 		'invalid_company_pair' => '기업 식별 정보가 올바르지 않습니다.',
 		'room_row_create_failed' => '채팅방 생성에 실패했습니다.',
 		'invalid_room_id' => '채팅방 식별값이 올바르지 않습니다.',
@@ -422,11 +423,13 @@ function trade_chat_get_request_row($trNo) {
 		SELECT
 			tr_no,
 			request_mb_id,
+			target_mb_id,
 			request_company_name,
 			target_company_name,
 			request_bzno,
 			target_bzno,
 			target_kedcd,
+			recipient_status,
 			approval_status,
 			approved_at,
 			chat_room_id,
@@ -438,7 +441,7 @@ function trade_chat_get_request_row($trNo) {
 	");
 }
 
-// 기업 pair key로 기존 채팅방이 있는지 찾는다.
+// 레거시 기업 pair key로 기존 채팅방이 있는지 찾는다. 신규 생성에서는 사용하지 않는다.
 function trade_chat_find_room_by_pair_key($companyPairKey) {
 	$companyPairKey = trim((string)$companyPairKey);
 	if ($companyPairKey === '') return array();
@@ -451,7 +454,7 @@ function trade_chat_find_room_by_pair_key($companyPairKey) {
 	");
 }
 
-// 거래 번호 문맥으로 최근 연결된 채팅방을 찾는다.
+// 거래 번호 문맥으로 정확히 연결된 채팅방을 찾는다.
 function trade_chat_find_room_by_tr_no($trNo) {
 	$trNo = (int)$trNo;
 	if ($trNo < 1) return array();
@@ -459,8 +462,8 @@ function trade_chat_find_room_by_tr_no($trNo) {
 	return sql_fetch("
 		SELECT R.*
 		FROM trade_chat_room R
-		WHERE R.source_tr_no='{$trNo}'
-		   OR R.latest_tr_no='{$trNo}'
+		WHERE R.tr_no='{$trNo}'
+		   OR R.room_id=(SELECT chat_room_id FROM trade_request WHERE tr_no='{$trNo}' LIMIT 1)
 		ORDER BY R.room_id DESC
 		LIMIT 1
 	");
@@ -573,7 +576,7 @@ function trade_chat_fetch_member_by_id($mbId) {
 	");
 }
 
-// room-member 매핑을 upsert해서 기업 pair room 참여자를 고정 관리한다.
+// room-member 매핑을 upsert해서 거래별 1:1 room 참여자를 고정 관리한다.
 function trade_chat_upsert_room_member($roomId, $memberRow, $role) {
 	$roomId = (int)$roomId;
 	$mbId = trim((string)($memberRow['mb_id'] ?? ''));
@@ -610,8 +613,8 @@ function trade_chat_upsert_room_member($roomId, $memberRow, $role) {
 	", false);
 }
 
-// 거래 요청 문맥으로 양쪽 회사 회원을 room-member 테이블과 동기화한다.
-function trade_chat_sync_room_members_for_request($roomId, $requestRow, $currentMember) {
+// 거래 요청 문맥으로 요청자와 지정된 수신 담당자만 room-member 테이블과 동기화한다.
+function trade_chat_sync_room_members_for_request($roomId, $requestRow, $currentMember = array()) {
 	$roomId = (int)$roomId;
 	if ($roomId < 1) {
 		return array(
@@ -632,8 +635,9 @@ function trade_chat_sync_room_members_for_request($roomId, $requestRow, $current
 		$skipped[] = 'requester_not_found';
 	}
 
-	if (!empty($currentMember['mb_id'])) {
-		if (trade_chat_upsert_room_member($roomId, $currentMember, 'target')) {
+	$targetMember = trade_chat_fetch_member_by_id($requestRow['target_mb_id'] ?? '');
+	if (!empty($targetMember['mb_id'])) {
+		if (trade_chat_upsert_room_member($roomId, $targetMember, 'target')) {
 			$synced++;
 		}
 	} else {
@@ -652,12 +656,11 @@ function trade_chat_member_company_bzno($member) {
 	return trade_chat_normalize_bzno($member['mb_4'] ?? '');
 }
 
-// 현재 회원이 해당 room에 접근 가능한지와 활성 상태 요구 조건을 함께 검증한다.
+// 현재 회원이 해당 거래별 room의 정확한 참여자인지와 활성 상태 요구 조건을 함께 검증한다.
 function trade_chat_assert_member_access($room, $member, $requireActive = true) {
 	$memberId = trim((string)($member['mb_id'] ?? ''));
-	$memberBzno = trade_chat_member_company_bzno($member);
 
-	if ($memberId === '' || $memberBzno === '') {
+	if ($memberId === '') {
 		return array(
 			'success' => false,
 			'message' => '회원 정보가 올바르지 않습니다.',
@@ -671,9 +674,8 @@ function trade_chat_assert_member_access($room, $member, $requireActive = true) 
 		);
 	}
 
-	$requestBzno = trade_chat_normalize_bzno($room['request_bzno'] ?? '');
-	$targetBzno = trade_chat_normalize_bzno($room['target_bzno'] ?? '');
-	if ($memberBzno !== $requestBzno && $memberBzno !== $targetBzno) {
+	$roomMember = sql_fetch("SELECT room_member_id FROM trade_chat_room_member WHERE room_id='" . (int)$room['room_id'] . "' AND mb_id='" . sql_escape_string($memberId) . "' AND is_active=1 LIMIT 1");
+	if (empty($roomMember['room_member_id'])) {
 		return array(
 			'success' => false,
 			'message' => '채팅방 접근 권한이 없습니다.',
@@ -900,7 +902,7 @@ function trade_chat_sync_stream_room($roomId, $member = array()) {
 	);
 }
 
-// 거래 수락 시 기업 pair 기준 room을 생성하거나 기존 room에 거래를 연결한다.
+// 거래 수락 시 거래 번호 기준 1:1 room을 생성하거나 같은 거래의 room을 재사용한다.
 function trade_chat_open_or_attach_room($trNo, $member) {
 	$requestRow = trade_chat_get_request_row($trNo);
 	if (empty($requestRow['tr_no'])) {
@@ -919,18 +921,21 @@ function trade_chat_open_or_attach_room($trNo, $member) {
 		);
 	}
 
-	$companyPairKey = trade_chat_make_company_pair_key(
-		$requestRow['request_bzno'] ?? '',
-		$requestRow['target_bzno'] ?? ''
-	);
-	if ($companyPairKey === '') {
-		$errorCode = 'invalid_company_pair';
+	$requestMemberId = trim((string)($requestRow['request_mb_id'] ?? ''));
+	$targetMemberId = trim((string)($requestRow['target_mb_id'] ?? ''));
+	// 정책 전환 전 데이터는 담당자 값이 없으므로, 기존 수락 처리자만 레거시 호환 대상으로 사용한다.
+	if ($targetMemberId === '' && ($requestRow['recipient_status'] ?? '') === 'legacy') {
+		$targetMemberId = trim((string)($member['mb_id'] ?? ''));
+		$requestRow['target_mb_id'] = $targetMemberId;
+	}
+	if ((int)($requestRow['approval_status'] ?? 0) !== 1 || $requestMemberId === '' || $targetMemberId === '') {
+		$errorCode = 'invalid_room_members';
 		$message = trade_chat_error_summary($errorCode);
 		trade_chat_update_request_chat_state($requestRow['tr_no'], 0, 'fail');
 		trade_chat_write_event_log('room_open', 'fail', trade_chat_attach_error_detail(array(
 			'tr_no' => (int)$requestRow['tr_no'],
 			'mb_id' => $member['mb_id'] ?? '',
-			'reason' => 'invalid_company_pair',
+			'reason' => 'invalid_room_members',
 		), $errorCode), $message);
 
 		return array(
@@ -939,25 +944,25 @@ function trade_chat_open_or_attach_room($trNo, $member) {
 		);
 	}
 
-	$existingRoom = trade_chat_find_room_by_pair_key($companyPairKey);
+	$companyPairKey = trade_chat_make_company_pair_key(
+		$requestRow['request_bzno'] ?? '',
+		$requestRow['target_bzno'] ?? ''
+	);
+	$existingRoom = trade_chat_find_room_by_tr_no($requestRow['tr_no']);
 	if (!empty($existingRoom['room_id'])) {
-		sql_query("
-			UPDATE trade_chat_room
-			SET latest_tr_no='" . (int)$requestRow['tr_no'] . "',
-				updated_at=NOW()
-			WHERE room_id='" . (int)$existingRoom['room_id'] . "'
-		", false);
-
-		$existingRoom = trade_chat_find_room_by_pair_key($companyPairKey);
 		$roomId = (int)($existingRoom['room_id'] ?? 0);
-		trade_chat_sync_room_members_for_request($roomId, $requestRow, $member);
+		$memberSync = trade_chat_sync_room_members_for_request($roomId, $requestRow, $member);
 		trade_chat_update_request_chat_state($requestRow['tr_no'], $roomId, 'pending');
+		$streamSync = trade_chat_sync_stream_room($roomId, $member);
+		$existingRoom = trade_chat_find_room_by_id($roomId);
 		trade_chat_write_event_log('room_open', 'skip', array(
 			'room_id' => $roomId,
 			'tr_no' => (int)$requestRow['tr_no'],
 			'mb_id' => $member['mb_id'] ?? '',
-			'reason' => 'room_already_exists',
+			'reason' => 'room_already_exists_for_trade',
 			'company_pair_key' => $companyPairKey,
+			'member_sync' => $memberSync,
+			'stream_sync' => $streamSync,
 		));
 
 		return array(
@@ -970,11 +975,12 @@ function trade_chat_open_or_attach_room($trNo, $member) {
 
 	$settings = trade_chat_settings();
 	$channelType = trade_chat_normalize_channel_type($settings['channel_type'] ?? 'messaging');
-	$streamChannelId = trade_chat_make_stream_channel_id($companyPairKey);
+	$streamChannelId = trade_chat_make_stream_channel_id($requestRow['tr_no']);
 
 	$inserted = sql_query("
 		INSERT INTO trade_chat_room
-		SET company_pair_key='" . sql_escape_string($companyPairKey) . "',
+		SET tr_no='" . (int)$requestRow['tr_no'] . "',
+			company_pair_key='" . sql_escape_string($companyPairKey) . "',
 			request_bzno='" . sql_escape_string(trade_chat_normalize_bzno($requestRow['request_bzno'] ?? '')) . "',
 			target_bzno='" . sql_escape_string(trade_chat_normalize_bzno($requestRow['target_bzno'] ?? '')) . "',
 			request_company_name='" . sql_escape_string($requestRow['request_company_name'] ?? '') . "',
@@ -987,12 +993,10 @@ function trade_chat_open_or_attach_room($trNo, $member) {
 			room_status='pending',
 			opened_at=NULL,
 			created_at=NOW()
-		ON DUPLICATE KEY UPDATE
-			latest_tr_no=VALUES(latest_tr_no),
-			updated_at=NOW()
+		ON DUPLICATE KEY UPDATE updated_at=updated_at
 	", false);
 
-	$room = trade_chat_find_room_by_pair_key($companyPairKey);
+	$room = trade_chat_find_room_by_tr_no($requestRow['tr_no']);
 	if (!$inserted || empty($room['room_id'])) {
 		$errorCode = 'room_row_create_failed';
 		$message = trade_chat_error_summary($errorCode);
@@ -1016,6 +1020,8 @@ function trade_chat_open_or_attach_room($trNo, $member) {
 	$roomId = (int)$room['room_id'];
 	$memberSync = trade_chat_sync_room_members_for_request($roomId, $requestRow, $member);
 	trade_chat_update_request_chat_state($requestRow['tr_no'], $roomId, 'pending');
+	$streamSync = trade_chat_sync_stream_room($roomId, $member);
+	$room = trade_chat_find_room_by_id($roomId);
 	trade_chat_write_event_log('room_open', 'success', array(
 		'room_id' => $roomId,
 		'tr_no' => (int)$requestRow['tr_no'],
@@ -1024,6 +1030,7 @@ function trade_chat_open_or_attach_room($trNo, $member) {
 		'stream_channel_id' => $streamChannelId,
 		'room_status' => $room['room_status'] ?? 'pending',
 		'member_sync' => $memberSync,
+		'stream_sync' => $streamSync,
 	));
 
 	return array(
@@ -1090,17 +1097,20 @@ function trade_chat_make_room_preview($room, $member = array()) {
 
 // 현재 회원이 접근 가능한 room 목록을 모달 sidebar용 구조로 정리한다.
 function trade_chat_list_member_rooms($member) {
+	$memberId = trim((string)($member['mb_id'] ?? ''));
 	$memberBzno = trade_chat_member_company_bzno($member);
-	if ($memberBzno === '') return array();
+	if ($memberId === '') return array();
 
-	$memberBznoSql = sql_escape_string($memberBzno);
+	$memberIdSql = sql_escape_string($memberId);
 	$rooms = array();
 
 	$result = sql_query("
-		SELECT *
-		FROM trade_chat_room
-		WHERE request_bzno='{$memberBznoSql}'
-		   OR target_bzno='{$memberBznoSql}'
+		SELECT R.*
+		FROM trade_chat_room R
+		INNER JOIN trade_chat_room_member RM
+			ON RM.room_id=R.room_id
+		   AND RM.mb_id='{$memberIdSql}'
+		   AND RM.is_active=1
 		ORDER BY FIELD(room_status, 'active', 'pending', 'blocked', 'closed'),
 		         updated_at DESC,
 		         room_id DESC

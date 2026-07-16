@@ -25,6 +25,9 @@
     }
 
     function getLoginReturnUrl() {
+        if (window.MacomaLoginGuard && typeof window.MacomaLoginGuard.buildLoginUrl === 'function') {
+            return window.MacomaLoginGuard.buildLoginUrl(window.location.pathname + window.location.search);
+        }
         return '/bbs/login.php?url=' + encodeURIComponent(window.location.pathname + window.location.search);
     }
 
@@ -59,58 +62,16 @@
 
     // 기업목록(matching_list.js)의 로그인 필요 모달과 동일한 UI/동작을 재사용한다.
     function openLoginRequiredModal(descriptionHtml) {
-        var modalId = 'matchingListLoginRequiredModal';
-        var overlay = document.getElementById(modalId);
-
-        function closeModal() {
-            if (!overlay) return;
-            overlay.classList.remove('is-open');
-            document.documentElement.classList.remove('hide-scroll');
-        }
-
-        if (!overlay) {
-            overlay = document.createElement('div');
-            overlay.id = modalId;
-            overlay.className = 'login-guard-modal';
-            overlay.innerHTML = ''
-                + '<div class="login-guard">'
-                + '  <div class="login-guard__overlay" aria-hidden="true"></div>'
-                + '  <div class="login-guard__modal" role="dialog" aria-modal="true" aria-labelledby="matchingListLoginModalTitle">'
-                + '    <button type="button" class="login-guard__close" aria-label="닫기">'
-                + '      <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>'
-                + '    </button>'
-                + '    <div class="login-guard__icon" aria-hidden="true">'
-                + '      <svg viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1s3.1 1.39 3.1 3.1v2z"/></svg>'
-                + '    </div>'
-                + '    <h3 class="login-guard__title" id="matchingListLoginModalTitle">로그인이 필요합니다</h3>'
-                + '    <p class="login-guard__desc" id="matchingListLoginModalDesc"></p>'
-                + '    <div class="login-guard__actions">'
-                + '      <a href="/bbs/register.php" class="login-guard__btn login-guard__btn--ghost">회원가입</a>'
-                + '      <a href="' + getLoginReturnUrl() + '" class="login-guard__btn login-guard__btn--primary">로그인</a>'
-                + '    </div>'
-                + '  </div>'
-                + '</div>';
-            document.body.appendChild(overlay);
-
-            var dim = overlay.querySelector('.login-guard__overlay');
-            if (dim) dim.addEventListener('click', closeModal);
-
-            var closeBtn = overlay.querySelector('.login-guard__close');
-            if (closeBtn) closeBtn.addEventListener('click', closeModal);
-
-            document.addEventListener('keydown', function(e) {
-                if (e.key === 'Escape' && overlay.classList.contains('is-open')) closeModal();
+        if (window.MacomaLoginGuard && typeof window.MacomaLoginGuard.show === 'function') {
+            window.MacomaLoginGuard.show({
+                titleId: 'matchingListLoginModalTitle',
+                descriptionHtml: descriptionHtml || '더보기는<br>로그인 후 이용하실 수 있습니다.',
+                returnUrl: window.location.pathname + window.location.search
             });
+            return;
         }
 
-        var descEl = overlay.querySelector('#matchingListLoginModalDesc');
-        if (descEl) descEl.innerHTML = descriptionHtml || '더보기는<br>로그인 후 이용하실 수 있습니다.';
-
-        var loginBtn = overlay.querySelector('.login-guard__btn--primary');
-        if (loginBtn) loginBtn.setAttribute('href', getLoginReturnUrl());
-
-        overlay.classList.add('is-open');
-        document.documentElement.classList.add('hide-scroll');
+        window.location.href = getLoginReturnUrl();
     }
 
     $(function() {
@@ -119,8 +80,8 @@
 
         var isMember = String($root.data('isMember')) === '1';
         var getSetUrl = $root.data('getSetUrl') || '../get_set.php';
-        var loginUrl = $root.data('loginUrl') || '/bbs/login.php?url=/ko/plan.php';
-        var myPlanUrl = $root.data('myPlanUrl') || '/ko/my_plan.php';
+        var loginUrl = $root.data('loginUrl') || '/bbs/login.php?url=/plans';
+        var myPlanUrl = $root.data('myPlanUrl') || '/account/credits';
         var creditPayUrl = $root.data('creditPayUrl') || '/ko/credit_pay.php';
         var creditMobilePayUrl = $root.data('creditMobilePayUrl') || '/ko/credit_pay_mobile.php';
         var membershipCreditPayToken = String($root.data('membershipCreditPayToken') || '');

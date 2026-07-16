@@ -12,18 +12,18 @@ $menu_cnt = count($brand_category);
 $link_0000 = "/"; // 홈
 
 // 매커멕스 소개
-$link_0101 = "/ko/greeting.php"; // 매커멕스 소개
+$link_0101 = "/about"; // 매커멕스 소개
 
 // 기업홍보관
 $link_0201 = "/bbs/board.php?bo_table=Promotion"; // 기업홍보관
 
 // 기업매칭
 $link_0301 = "/ko/matching.php"; // 기업매칭 index
-$link_0302 = "/ko/matching_list.php"; // 기업매칭 List
+$link_0302 = "/companies"; // 기업매칭 List
 $link_0303 = "/ko/matching_view.php"; // 기업매칭 View
 
 // 크레딧 요금제
-$link_0401 = "/ko/plan.php"; // 크레딧 요금제
+$link_0401 = "/plans"; // 크레딧 요금제
 
 // 이용자 지원
 $link_0501 = "/bbs/board.php?bo_table=Notice"; // 공지사항
@@ -33,29 +33,23 @@ $link_0503 = "/bbs/write.php?bo_table=Contact"; // 고객문의
 
 /* Member */
 $link_1001 = "/bbs/login.php"; // 로그인
-$link_1002 = "/bbs/register.php"; // 회원가입
+$link_1002 = "/signup"; // 회원가입
 
 /* Mypage */
-/*
-if($member[mb_11]=='dev'){
-	$link_0601 = "/ko/my_company_t.php"; // 내 회사 정보
-}else{
-	$link_0601 = "/ko/my_company.php"; // 내 회사 정보
-}
-*/
-$link_0601 = "/ko/my_company.php"; // 내 회사 정보
-$link_0602 = "/ko/my_matching.php"; // 매칭 히스토리
-$link_0603 = "/ko/my_matching.php#interested"; // 관심기업
+$link_0601 = "/account/company"; // 내 회사 정보
+$link_0602 = "/account/trades"; // 거래 히스토리
+$link_0603 = "/account/trades#interested"; // 관심기업
 $link_0604 = G5_BBS_URL."/member_confirm.php?url=".G5_BBS_URL."/register_form.php";
 //else $link_0604 = "/ko/my_info.php"; // 회원 정보 수정
-$link_0605 = "/ko/my_plan.php"; // 결제정보
-$link_0606 = "/ko/my_selected.php"; // 마이 셀렉티드
+$link_0605 = "/account/credits"; // 결제정보
+$link_0607 = "/account/inquiries"; // 문의 내역
 
 /* etc */
 $link_1201 = "/etc/clause.php";						/* 이용약관 */
 $link_1202 = "/etc/privacy.php";						/* 개인정보처리방침 */
 $link_1203 = "/etc/email.php";						/* 이메일무단수집거부 */
 $link_1204 = "/etc/refund.php";						/* 환불규정 */
+$link_1205 = "/etc/marketing_consent.php";			/* 마케팅 수신 동의 */
 
 /* ADMINISTRATOR */
 $link_9901 = "/bbs/board.php?bo_table=mainVisual";						/* 비쥬얼관리 */
@@ -80,11 +74,11 @@ $link_9701 = "/bbs/new.php";						/* 새글 */
 			,["0503","고객문의", "<?=$link_0503?>", "이용자 지원", "서비스 이용 중 FAQ로 해결하기 힘든 궁금 하신 부분이 있으신 경우, 아래의 폼에 내용을 입력하여 문의해주세요.", ""]
         ,["06","마이페이지", "<?=$link_0601?>", "", "", ""]
 			,["0601","내 회사 정보", "<?=$link_0601?>", "내 회사 정보", "내 회사 정보입니다.", ""]
-			,["0602","매칭 히스토리", "<?=$link_0602?>", "매칭 히스토리", "매칭 기업입니다.", ""]
+			,["0602","거래 히스토리", "<?=$link_0602?>", "거래 히스토리", "거래 내역입니다.", ""]
 			,["0603","관심기업", "<?=$link_0603?>", "관심기업", "관심기업입니다.", ""]
 			,["0604","회원정보수정", "<?=$link_0604?>", "회원정보수정", "기본 정보 * 표시는 필수 입력 사항입니다.", ""]
 			,["0605","결제정보", "<?=$link_0605?>", "결제정보", "이용 상품 안내입니다.", ""]
-			,["0606","셀렉티드", "<?=$link_0606?>", "셀렉티드", "이용 상품 안내입니다.", ""]
+			,["0607","문의 내역", "<?=$link_0607?>", "문의 내역", "작성한 고객문의와 답변 상태를 확인할 수 있습니다.", ""]
 
 
 
@@ -95,7 +89,8 @@ $link_9701 = "/bbs/new.php";						/* 새글 */
 
 		,["12","고객센터", "<?=$link_1201?>", "", "", ""]
 			,["1201","이용약관", "<?=$link_1201?>", "고객센터", "이용약관", ""]
-			,["1202","개인정보처리방침", "<?=$link_1202?>", "고객센터", "개인정보활용동의서 및 처리방침", ""]
+			,["1202","개인정보처리방침", "<?=$link_1202?>", "고객센터", "처리방침", ""]
+			,["1205","마케팅 수신 동의", "<?=$link_1205?>", "고객센터", "마케팅 수신 동의서", ""]
 
 
 
@@ -395,15 +390,19 @@ $link_9701 = "/bbs/new.php";						/* 새글 */
 			h2_title = menuFull[i][1];
 		}
 		//////////////////////////////////////////////////////////////
-		if(pcd.length > 2 || pcd.length == 4){
-			var tcd_02 = pcd.substr(0,4);
-			for(var i=0; i < menuFull.length; i++){
-				if(menuFull[i][0].length==4 && menuFull[i][0] == tcd_02){
-					break;
+			if(pcd.length > 2 || pcd.length == 4){
+				var tcd_02 = pcd.substr(0,4);
+				for(var i=0; i < menuFull.length; i++){
+					if(menuFull[i][0].length==4 && menuFull[i][0] == tcd_02){
+						break;
+					}
 				}
-			}
-			tit_1 = tit_1+" &gt; ";
-			tit_2 = menuFull[i][1];
+				if (tcd_02 !== "1002") {
+					tit_1 = tit_1+" &gt; ";
+				} else {
+					tit_1 = "";
+				}
+				tit_2 = menuFull[i][1];
 
 			pageTopTitle = menuFull[i][1];
 
@@ -412,9 +411,11 @@ $link_9701 = "/bbs/new.php";						/* 새글 */
 
             setTimeout(() => {
                 $("#pageTop h3").text(pageTopTitle)
-                $("#pageTop p").text(pageTopText)
+                if($.trim($("#pageTop p").text()) === ""){
+                    $("#pageTop p").text(pageTopText)
+                }
 
-				if(pageTopText == ""){
+				if($.trim($("#pageTop p").text()) == ""){
 					$("#pageTop p").remove();
 				}
             }, 20);

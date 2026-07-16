@@ -48,7 +48,7 @@ class Hybrid_Providers_Google extends Hybrid_Provider_Model_OAuth2 {
 	 */
 	function loginBegin() {
 		$parameters = array("scope" => $this->scope, "access_type" => "offline");
-		$optionals = array("scope", "access_type", "redirect_uri", "approval_prompt", "hd", "state");
+		$optionals = array("scope", "access_type", "redirect_uri", "approval_prompt", "prompt", "hd", "state");
 
 		foreach ($optionals as $parameter) {
 			if (isset($this->config[$parameter]) && !empty($this->config[$parameter])) {
@@ -57,6 +57,11 @@ class Hybrid_Providers_Google extends Hybrid_Provider_Model_OAuth2 {
 			if (isset($this->config["scope"]) && !empty($this->config["scope"])) {
 				$this->scope = $this->config["scope"];
 			}
+		}
+
+		// Google blocks requests that include both legacy approval_prompt and prompt.
+		if (!empty($parameters['prompt'])) {
+			unset($parameters['approval_prompt']);
 		}
 
 		if (isset($this->config['force']) && $this->config['force'] === true) {

@@ -173,7 +173,6 @@ function company_detail_trade_request_classify_failure($errorCode) {
 		'member_not_logged_in' => 'auth',
 		'requester_bzno_empty' => 'validation',
 		'requester_company_unresolved' => 'resource',
-		'requester_company_persist_failed' => 'resource',
 		'manager_info_missing' => 'validation',
 		'manager_phone_invalid' => 'validation',
 		'member_contact_missing' => 'validation',
@@ -350,6 +349,12 @@ function company_detail_trade_request_valid_email($email) {
 	return filter_var($email, FILTER_VALIDATE_EMAIL) ? $email : '';
 }
 
+function company_detail_trade_request_plain_text($value) {
+	$value = strip_tags((string)$value);
+	$cleaned = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/u', '', $value);
+	return trim($cleaned === null ? $value : $cleaned);
+}
+
 function company_detail_trade_request_send_receiver_mail($tradeRequestNo, $requestMemberId, $requestCompanyName, $targetCompany, $tradeDirection, $desiredItem, $messageContent, $tradeType, $requestBzno = '', $mappedPurposes = array()) {
 	global $config;
 	global $g5;
@@ -379,6 +384,8 @@ function company_detail_trade_request_send_receiver_mail($tradeRequestNo, $reque
 		'sent' => false,
 		'recipient_type' => '',
 		'recipient_email' => '',
+		'recipient_count' => 0,
+		'sent_count' => 0,
 		'reason' => '',
 	);
 
@@ -387,47 +394,48 @@ function company_detail_trade_request_send_receiver_mail($tradeRequestNo, $reque
 		return $result;
 	}
 
-	$receiverMember = sql_fetch(" select mb_id, mb_name, mb_email
+	$recipientMap = array();
+	$receiverMembers = sql_query(" select mb_id, mb_name, mb_email
 		from {$g5['member_table']}
 		where mb_company = '" . sql_escape_string($targetKedcd) . "'
 		  and (mb_leave_date = '' or mb_leave_date is null)
-		order by mb_no asc
-		limit 1 ");
+		order by mb_no asc ", false);
 
-	$receiverMemberId = trim((string)($receiverMember['mb_id'] ?? ''));
-	$receiverMemberEmail = company_detail_trade_request_valid_email($receiverMember['mb_email'] ?? '');
-
-	$recipientEmail = '';
-	$recipientType = '';
-
-	if ($receiverMemberId !== '') {
-		if ($receiverMemberEmail !== '') {
-			$recipientEmail = $receiverMemberEmail;
-			$recipientType = 'member';
-		} else {
-			$result['reason'] = 'member_email_empty';
-			if (function_exists('mailer_log_write')) {
-				$skipContext = $mailLogBaseContext;
-				$skipContext['recipient_route'] = 'member';
-				$skipContext['skip_reason'] = 'member_email_empty';
-				mailer_log_write($skipContext, '', $subject, 'SKIP', '회원 수신 경로이나 member.mb_email이 비어 있습니다.');
+	if ($receiverMembers) {
+		while ($receiverMember = sql_fetch_array($receiverMembers)) {
+			$receiverMemberEmail = company_detail_trade_request_valid_email($receiverMember['mb_email'] ?? '');
+			if ($receiverMemberEmail === '') {
+				continue;
 			}
-			return $result;
-		}
-	} else {
-		if ($companyEmail !== '') {
-			$recipientEmail = $companyEmail;
-			$recipientType = 'company';
-		} else {
-			$result['reason'] = 'company_email_empty';
-			if (function_exists('mailer_log_write')) {
-				$skipContext = $mailLogBaseContext;
-				$skipContext['recipient_route'] = 'company';
-				$skipContext['skip_reason'] = 'company_email_empty';
-				mailer_log_write($skipContext, '', $subject, 'SKIP', '비회원 수신 경로이나 company.EMAIL 값이 비어 있습니다.');
+
+			if (!isset($recipientMap[$receiverMemberEmail])) {
+				$recipientMap[$receiverMemberEmail] = array(
+					'email' => $receiverMemberEmail,
+					'type' => 'member',
+					'name' => trim((string)($receiverMember['mb_name'] ?? '')),
+				);
 			}
-			return $result;
 		}
+	}
+
+	if ($companyEmail !== '' && !isset($recipientMap[$companyEmail])) {
+		$recipientMap[$companyEmail] = array(
+			'email' => $companyEmail,
+			'type' => 'company',
+			'name' => $targetCompanyName,
+		);
+	}
+
+	$recipientList = array_values($recipientMap);
+	if (empty($recipientList)) {
+		$result['reason'] = 'recipient_email_empty';
+		if (function_exists('mailer_log_write')) {
+			$skipContext = $mailLogBaseContext;
+			$skipContext['recipient_route'] = 'member,company';
+			$skipContext['skip_reason'] = 'recipient_email_empty';
+			mailer_log_write($skipContext, '', $subject, 'SKIP', '대상 회사의 활성 회원 이메일과 회사 이메일이 모두 비어 있습니다.');
+		}
+		return $result;
 	}
 
 	$directionLabelMap = array(
@@ -437,10 +445,6 @@ function company_detail_trade_request_send_receiver_mail($tradeRequestNo, $reque
 	);
 	$tradeDirectionLabel = isset($directionLabelMap[$tradeDirection]) ? $directionLabelMap[$tradeDirection] : $tradeDirection;
 	$tradeTypeLabel = ($tradeType === 'TM') ? 'TM' : '기본';
-	$receiverName = $recipientType === 'member'
-		? trim((string)($receiverMember['mb_name'] ?? ''))
-		: $targetCompanyName;
-	if ($receiverName === '') $receiverName = '담당자';
 
 	$purposeLabelMap = array(
 		'BUY_PRODUCT' => '제품·상품 구매',
@@ -532,42 +536,66 @@ function company_detail_trade_request_send_receiver_mail($tradeRequestNo, $reque
 
 	$mailDateLabel = date('Y년 m월 d일 H:i', defined('G5_SERVER_TIME') ? (int)G5_SERVER_TIME : time());
 
-	$mailLogContext = $mailLogBaseContext;
-	$mailLogContext['recipient_route'] = $recipientType;
-	if (function_exists('mailer_prepare_tracking_context')) {
-		$mailLogContext = mailer_prepare_tracking_context(1, $mailLogContext);
+	$recipientTypes = array();
+	$recipientEmails = array();
+	$sentCount = 0;
+
+	foreach ($recipientList as $recipient) {
+		$recipientType = trim((string)($recipient['type'] ?? ''));
+		$recipientEmail = trim((string)($recipient['email'] ?? ''));
+		$receiverName = trim((string)($recipient['name'] ?? ''));
+		if ($receiverName === '') {
+			$receiverName = ($recipientType === 'company' && $targetCompanyName !== '') ? $targetCompanyName : '담당자';
+		}
+
+		$mailLogContext = $mailLogBaseContext;
+		$mailLogContext['recipient_route'] = $recipientType;
+		if (function_exists('mailer_prepare_tracking_context')) {
+			$mailLogContext = mailer_prepare_tracking_context(1, $mailLogContext);
+		}
+
+		$trackToken = trim((string)($mailLogContext['track_token'] ?? ''));
+		$tradeRequestActionUrl = 'https://macomaex.com';
+		if ($trackToken !== '' && function_exists('mailer_tracking_click_url')) {
+			$tradeRequestActionUrl = mailer_tracking_click_url($trackToken, 'https://macomaex.com');
+		}
+		$unsubscribeEmail = $recipientEmail;
+		$unsubscribeUrl = $mailBaseUrl . '/email/unsubscribe?email=' . rawurlencode($unsubscribeEmail);
+
+		ob_start();
+		include G5_BBS_PATH . '/mail/trade_request_received_mail.php';
+		$content = ob_get_clean();
+
+		$result['attempted'] = true;
+		$recipientTypes[] = $recipientType;
+		$recipientEmails[] = $recipientEmail;
+
+		if ((bool)mailer(
+			$config['cf_admin_email_name'],
+			$config['cf_admin_email'],
+			$recipientEmail,
+			$subject,
+			$content,
+			1,
+			"",
+			"",
+			"",
+			$mailLogContext
+		)) {
+			$sentCount++;
+		}
 	}
 
-	$trackToken = trim((string)($mailLogContext['track_token'] ?? ''));
-	$tradeRequestActionUrl = 'https://macomaex.com';
-	if ($trackToken !== '' && function_exists('mailer_tracking_click_url')) {
-		$tradeRequestActionUrl = mailer_tracking_click_url($trackToken, 'https://macomaex.com');
-	}
-	$unsubscribeEmail = $recipientEmail;
-	$unsubscribeUrl = $mailBaseUrl . '/email/unsubscribe?email=' . rawurlencode($unsubscribeEmail);
-
-	ob_start();
-	include G5_BBS_PATH . '/mail/trade_request_received_mail.php';
-	$content = ob_get_clean();
-
-	$result['attempted'] = true;
-	$result['recipient_type'] = $recipientType;
-	$result['recipient_email'] = $recipientEmail;
-	$result['sent'] = (bool)mailer(
-		$config['cf_admin_email_name'],
-		$config['cf_admin_email'],
-		$recipientEmail,
-		$subject,
-		$content,
-		1,
-		"",
-		"",
-		"",
-		$mailLogContext
-	);
+	$recipientTypes = array_values(array_unique(array_filter($recipientTypes)));
+	$recipientEmails = array_values(array_unique(array_filter($recipientEmails)));
+	$result['recipient_type'] = implode(',', $recipientTypes);
+	$result['recipient_email'] = implode(',', $recipientEmails);
+	$result['recipient_count'] = count($recipientEmails);
+	$result['sent_count'] = $sentCount;
+	$result['sent'] = ($result['recipient_count'] > 0 && $sentCount === $result['recipient_count']);
 
 	if (!$result['sent']) {
-		$result['reason'] = 'mailer_failed';
+		$result['reason'] = ($sentCount > 0) ? 'partial_mailer_failed' : 'mailer_failed';
 	}
 
 	return $result;
@@ -604,6 +632,86 @@ function company_detail_should_overwrite_member_company_name($currentValue, $mem
 	if ($currentValue === '') return true;
 	if ($memberId !== '' && $currentValue === $memberId) return true;
 	return false;
+}
+
+function company_detail_trade_request_click_client_ip() {
+	return trim((string)($_SERVER['REMOTE_ADDR'] ?? ''));
+}
+
+function company_detail_trade_request_click_guest_id() {
+	$sessionId = trim((string)session_id());
+	if ($sessionId !== '') {
+		return 'guest:' . $sessionId;
+	}
+
+	$fallbackSeed = company_detail_trade_request_click_client_ip() . '|' . trim((string)($_SERVER['HTTP_USER_AGENT'] ?? ''));
+	return 'guest:' . substr(hash('sha256', $fallbackSeed), 0, 32);
+}
+
+function company_detail_handle_trade_request_click_hit($member, $request, $sourceType) {
+	$sourceType = trim((string)$sourceType);
+	if (!in_array($sourceType, array('category', 'recommend'), true)) {
+		company_detail_trade_request_json_response(false, '유입 구분이 올바르지 않습니다.', array(
+			'error_code' => 'invalid_source_type',
+		));
+	}
+
+	$targetKedcd = preg_replace('/\D/', '', (string)($request['target_kedcd'] ?? ($request['kedcd'] ?? '')));
+	if (strlen($targetKedcd) !== 10 || preg_match('/^0+$/', $targetKedcd)) {
+		company_detail_trade_request_json_response(false, '대상 기업 정보가 올바르지 않습니다.', array(
+			'error_code' => 'invalid_target_kedcd',
+		));
+	}
+
+	$targetCompany = sql_fetch("
+		SELECT KEDCD, ENP_NM, BZNO
+		FROM company
+		WHERE KEDCD = '" . sql_escape_string($targetKedcd) . "'
+		LIMIT 1
+	");
+	$targetCompanyName = trim((string)($targetCompany['ENP_NM'] ?? ''));
+	$targetBzno = preg_replace('/\D/', '', (string)($targetCompany['BZNO'] ?? ''));
+
+	if (empty($targetCompany['KEDCD'])) {
+		$targetCompanyName = trim((string)($request['target_company_name'] ?? ''));
+		$targetBzno = preg_replace('/\D/', '', (string)($request['target_bzno'] ?? ''));
+	}
+	if ($targetCompanyName === '' && $targetBzno === '') {
+		company_detail_trade_request_json_response(false, '대상 기업 정보를 찾지 못했습니다.', array(
+			'error_code' => 'target_company_not_found',
+		));
+	}
+
+	$memberId = trim((string)($member['mb_id'] ?? ''));
+	$mbType = $memberId !== '' ? 'member' : 'guest';
+	$mbId = $memberId !== '' ? $memberId : company_detail_trade_request_click_guest_id();
+	$ipAddress = company_detail_trade_request_click_client_ip();
+
+	$sql = "insert into trade_request_click_hit set
+		target_kedcd='" . sql_escape_string($targetKedcd) . "',
+		target_company_name='" . sql_escape_string($targetCompanyName) . "',
+		target_bzno='" . sql_escape_string($targetBzno) . "',
+		mb_type='" . sql_escape_string($mbType) . "',
+		mb_id='" . sql_escape_string($mbId) . "',
+		source_type='" . sql_escape_string($sourceType) . "',
+		ip_address='" . sql_escape_string($ipAddress) . "',
+		clicked_at=now(),
+		clicked_date=curdate()";
+
+	$result = sql_query($sql, false);
+	if (!$result) {
+		company_detail_trade_request_log('click_hit_insert_failed', array(
+			'target_kedcd' => $targetKedcd,
+			'mb_type' => $mbType,
+			'mb_id' => $mbId,
+			'source_type' => $sourceType,
+		));
+		company_detail_trade_request_json_response(false, '클릭 기록 저장에 실패했습니다.', array(
+			'error_code' => 'click_hit_insert_failed',
+		));
+	}
+
+	company_detail_trade_request_json_response(true, '클릭 기록이 저장되었습니다.');
 }
 
 function company_detail_handle_trade_request_verify_bzno($member, $request) {
@@ -668,6 +776,18 @@ function company_detail_handle_trade_request_insert($member, $request) {
 	}
 	$resolvedCompanyName = trim((string)($resolvedCompany['company']['company'] ?? ''));
 	$resolvedCompanyKedcd = trim((string)($resolvedCompany['company']['kedcd'] ?? ''));
+	// 요청은 계속 처리하되 company에 없는 기업코드는 회원 프로필에 연결하지 않는다.
+	if ($resolvedCompanyKedcd !== '') {
+		$linkableRequesterCompany = sql_fetch(
+			"SELECT KEDCD FROM company
+			 WHERE KEDCD='" . sql_escape_string($resolvedCompanyKedcd) . "'
+			   AND BZNO='" . sql_escape_string($requesterBzno) . "'
+			 LIMIT 1"
+		);
+		if (empty($linkableRequesterCompany['KEDCD'])) {
+			$resolvedCompanyKedcd = '';
+		}
+	}
 
 	$managerNameCurrent = trim((string)($member['mb_6'] ?? ''));
 	$managerPhoneCurrent = trade_request_normalize_phone($member['mb_hp'] ?? '');
@@ -695,8 +815,8 @@ function company_detail_handle_trade_request_insert($member, $request) {
 	$targetKedcd = isset($request['target_kedcd']) ? preg_replace('/[^0-9]/', '', (string)$request['target_kedcd']) : '';
 	$tradeDirectionRaw = isset($request['trade_direction']) ? trim((string)$request['trade_direction']) : '';
 	$tradePurposeRaw = isset($request['trade_purpose']) ? $request['trade_purpose'] : array();
-	$desiredItem = isset($request['desired_item']) ? trim((string)$request['desired_item']) : '';
-	$messageContent = isset($request['message_content']) ? trim((string)$request['message_content']) : '';
+	$desiredItem = company_detail_trade_request_plain_text($request['desired_item'] ?? '');
+	$messageContent = company_detail_trade_request_plain_text($request['message_content'] ?? '');
 	$tradeTypeRaw = isset($request['trade_type']) ? trim((string)$request['trade_type']) : '';
 
 	$directionMap = array(
@@ -873,8 +993,13 @@ function company_detail_handle_trade_request_insert($member, $request) {
 
 	$insertSql = "insert into trade_request set
 		request_mb_id='" . sql_escape_string($requestMemberId) . "',
+		target_mb_id=NULL,
+		recipient_status='pending_assignment',
+		recipient_assigned_at=NULL,
 		request_company_name='" . sql_escape_string($requestCompanyName) . "',
+		request_member_name='" . sql_escape_string($managerNameCurrent) . "',
 		target_company_name='" . sql_escape_string($targetCompanyName) . "',
+		target_member_name=NULL,
 		request_bzno='" . sql_escape_string($requestBzno) . "',
 		target_bzno='" . sql_escape_string($targetBzno) . "',
 		target_kedcd='" . sql_escape_string($targetKedcd) . "',
@@ -950,29 +1075,6 @@ function company_detail_handle_trade_request_insert($member, $request) {
 		));
 	}
 
-	// 거래요청 insert + 크레딧 차감이 모두 성공한 이후에만 기업정보를 DB에 확정 저장한다.
-	$resolvedCompanyPersist = trade_request_resolve_company_data_by_bzno($requesterBzno, array('persist' => true));
-	if (empty($resolvedCompanyPersist['success'])) {
-		company_detail_trade_request_log('requester_company_persist_failed', array(
-			'tr_no' => $insertId,
-			'bzno' => $requesterBzno,
-			'message' => $resolvedCompanyPersist['message'] ?? '',
-		));
-		sql_query("ROLLBACK");
-		company_detail_trade_request_fail_response($resolvedCompanyPersist['message'] ?? '기업 정보 저장 중 오류가 발생했습니다.', 'requester_company_persist_failed', array(
-			'request_id' => $requestId,
-			'tr_no' => $insertId,
-			'member_id' => $member['mb_id'] ?? '',
-			'bzno' => $requesterBzno,
-			'stage' => 'company_persist',
-		));
-	} else {
-		$persistedKedcd = trim((string)($resolvedCompanyPersist['company']['kedcd'] ?? ''));
-		if ($persistedKedcd !== '') {
-			$resolvedCompanyKedcd = $persistedKedcd;
-		}
-	}
-
 	$needMemberUpdate = false;
 	$memberUpdateSet = array();
 	$requesterBznoFormatted = function_exists('licenseNum') ? licenseNum($requesterBzno) : $requesterBzno;
@@ -1021,68 +1123,114 @@ function company_detail_handle_trade_request_insert($member, $request) {
 		'credit_after' => $creditConsume['credit_after'] ?? null,
 	));
 
-	$alimtalkResult = array(
-		'attempted' => false,
-		'sent' => false,
-		'to' => '',
-		'request_id' => '',
-		'error_code' => '',
-		'provider_status' => '',
-		'reason' => '',
-	);
-	$receiverAlimtalk = sql_fetch(" select mb_8
-		from {$g5['member_table']}
-		where mb_company = '" . sql_escape_string($targetKedcd) . "'
-		  and (mb_leave_date = '' or mb_leave_date is null)
-		order by mb_no asc
-		limit 1 ");
-	$receiverHp = trim((string)($receiverAlimtalk['mb_8'] ?? ''));
-	if ($receiverHp === '') {
-		$alimtalkResult['reason'] = 'receiver_hp_empty';
-	} elseif (!class_exists('NCP_SENS_AT')) {
-		$alimtalkResult['reason'] = 'alimtalk_class_missing';
-	} else {
-		$alimtalkResult['attempted'] = true;
-		$alimtalkResult['to'] = $receiverHp;
-		$gw_msg = new NCP_SENS_AT();
-		$gw_msg->templateCode = 'reqmatching2';
-		$gw_msg->to = $receiverHp;
-		$sendRes = $gw_msg->send();
-		if (is_array($sendRes) && !empty($sendRes['requestId'])) {
-			$alimtalkResult['sent'] = true;
-			$alimtalkResult['request_id'] = trim((string)$sendRes['requestId']);
+		$alimtalkResult = array(
+			'attempted' => false,
+			'sent' => false,
+			'to' => '',
+			'request_id' => '',
+			'error_code' => '',
+			'provider_status' => '',
+			'recipient_count' => 0,
+			'sent_count' => 0,
+			'reason' => '',
+		);
+		$receiverPhoneMap = array();
+		$receiverAlimtalkRows = sql_query(" select mb_8
+			from {$g5['member_table']}
+			where mb_company = '" . sql_escape_string($targetKedcd) . "'
+			  and (mb_leave_date = '' or mb_leave_date is null)
+			order by mb_no asc ", false);
+		if ($receiverAlimtalkRows) {
+			while ($receiverAlimtalk = sql_fetch_array($receiverAlimtalkRows)) {
+				$receiverHpRaw = trim((string)($receiverAlimtalk['mb_8'] ?? ''));
+				$receiverHpDigits = trade_request_normalize_phone($receiverHpRaw);
+				if ($receiverHpDigits === '') {
+					continue;
+				}
+				if (!isset($receiverPhoneMap[$receiverHpDigits])) {
+					$receiverPhoneMap[$receiverHpDigits] = $receiverHpRaw !== ''
+						? $receiverHpRaw
+						: company_detail_format_phone_hyphen($receiverHpDigits);
+				}
+			}
+		}
+
+		$receiverPhones = array_values($receiverPhoneMap);
+		$alimtalkResult['recipient_count'] = count($receiverPhones);
+		if (empty($receiverPhones)) {
+			$alimtalkResult['reason'] = 'receiver_hp_empty';
+		} elseif (!class_exists('NCP_SENS_AT')) {
+			$alimtalkResult['reason'] = 'alimtalk_class_missing';
 		} else {
-			$alimtalkResult['reason'] = 'send_failed';
+			$alimtalkResult['attempted'] = true;
+			$alimtalkResult['to'] = implode(',', $receiverPhones);
+			$requestIds = array();
+			$providerStatuses = array();
+			$errorCodes = array();
+			$sentCount = 0;
+
+			foreach ($receiverPhones as $receiverHp) {
+				$gw_msg = new NCP_SENS_AT();
+				$gw_msg->templateCode = 'reqmatching2';
+				$gw_msg->to = $receiverHp;
+				$sendRes = $gw_msg->send();
+				if (is_array($sendRes)) {
+					$requestId = trim((string)($sendRes['requestId'] ?? ''));
+					$providerStatus = trim((string)($sendRes['statusName'] ?? $sendRes['requestStatusName'] ?? ''));
+					$errorCode = trim((string)($sendRes['statusCode'] ?? $sendRes['errorCode'] ?? ''));
+					if ($requestId !== '') {
+						$requestIds[] = $requestId;
+					}
+					if ($providerStatus !== '') {
+						$providerStatuses[] = $providerStatus;
+					}
+					if ($errorCode !== '') {
+						$errorCodes[] = $errorCode;
+					}
+				}
+
+				if (is_array($sendRes) && !empty($sendRes['requestId'])) {
+					$sentCount++;
+				}
+			}
+
+			$alimtalkResult['request_id'] = implode(',', array_values(array_unique($requestIds)));
+			$alimtalkResult['provider_status'] = implode(',', array_values(array_unique($providerStatuses)));
+			$alimtalkResult['error_code'] = implode(',', array_values(array_unique($errorCodes)));
+			$alimtalkResult['sent_count'] = $sentCount;
+			$alimtalkResult['sent'] = ($alimtalkResult['recipient_count'] > 0 && $sentCount === $alimtalkResult['recipient_count']);
+			if (!$alimtalkResult['sent']) {
+				$alimtalkResult['reason'] = ($sentCount > 0) ? 'partial_send_failed' : 'send_failed';
+			}
 		}
-		if (is_array($sendRes)) {
-			$alimtalkResult['error_code'] = trim((string)($sendRes['statusCode'] ?? $sendRes['errorCode'] ?? ''));
-			$alimtalkResult['provider_status'] = trim((string)($sendRes['statusName'] ?? $sendRes['requestStatusName'] ?? ''));
-		}
-	}
-	company_detail_trade_request_log('receiver_alimtalk', array(
-		'tr_no' => $insertId,
-		'attempted' => $alimtalkResult['attempted'],
-		'sent' => $alimtalkResult['sent'],
-		'to' => $alimtalkResult['to'],
-		'request_id' => $alimtalkResult['request_id'],
-		'error_code' => $alimtalkResult['error_code'],
-		'provider_status' => $alimtalkResult['provider_status'],
-		'reason' => $alimtalkResult['reason'],
+		company_detail_trade_request_log('receiver_alimtalk', array(
+			'tr_no' => $insertId,
+			'attempted' => $alimtalkResult['attempted'],
+			'sent' => $alimtalkResult['sent'],
+			'to' => $alimtalkResult['to'],
+			'recipient_count' => $alimtalkResult['recipient_count'],
+			'sent_count' => $alimtalkResult['sent_count'],
+			'request_id' => $alimtalkResult['request_id'],
+			'error_code' => $alimtalkResult['error_code'],
+			'provider_status' => $alimtalkResult['provider_status'],
+			'reason' => $alimtalkResult['reason'],
 	));
 	alimtalk_write_event_log(
 		'reqmatching2',
 		$alimtalkResult['sent'] ? 'success' : ($alimtalkResult['attempted'] ? 'fail' : 'skip'),
-		array(
-			'template_code' => 'reqmatching2',
-			'tr_no' => $insertId,
-			'mb_id' => $requestMemberId,
-			'to' => $alimtalkResult['to'],
-			'request_id' => $alimtalkResult['request_id'],
-			'provider_status' => $alimtalkResult['provider_status'],
-			'error_code' => $alimtalkResult['error_code'],
-			'reason' => $alimtalkResult['reason'],
-		)
-	);
+			array(
+				'template_code' => 'reqmatching2',
+				'tr_no' => $insertId,
+				'mb_id' => $requestMemberId,
+				'to' => isset($receiverPhones[0]) ? $receiverPhones[0] : '',
+				'request_id' => $alimtalkResult['request_id'],
+				'provider_status' => $alimtalkResult['provider_status'],
+				'error_code' => $alimtalkResult['error_code'],
+				'reason' => trim((string)$alimtalkResult['reason']) !== ''
+					? trim((string)$alimtalkResult['reason']) . '|count=' . (int)$alimtalkResult['sent_count'] . '/' . (int)$alimtalkResult['recipient_count']
+					: 'count=' . (int)$alimtalkResult['sent_count'] . '/' . (int)$alimtalkResult['recipient_count'],
+			)
+		);
 
 	$mailResult = company_detail_trade_request_send_receiver_mail(
 		$insertId,
@@ -1103,6 +1251,8 @@ function company_detail_handle_trade_request_insert($member, $request) {
 		'sent' => !empty($mailResult['sent']),
 		'recipient_type' => $mailResult['recipient_type'] ?? '',
 		'recipient_email' => $mailResult['recipient_email'] ?? '',
+		'recipient_count' => (int)($mailResult['recipient_count'] ?? 0),
+		'sent_count' => (int)($mailResult['sent_count'] ?? 0),
 		'reason' => $mailResult['reason'] ?? '',
 	));
 
@@ -1116,7 +1266,9 @@ function company_detail_handle_trade_request_insert($member, $request) {
 		'mail_attempted' => !empty($mailResult['attempted']),
 		'mail_sent' => !empty($mailResult['sent']),
 		'mail_recipient_type' => $mailResult['recipient_type'] ?? '',
-		'mail_reason' => $mailResult['reason'] ?? '',
+		'mail_reason' => trim((string)($mailResult['reason'] ?? '')) !== ''
+			? trim((string)($mailResult['reason'] ?? '')) . '|count=' . (int)($mailResult['sent_count'] ?? 0) . '/' . (int)($mailResult['recipient_count'] ?? 0)
+			: 'count=' . (int)($mailResult['sent_count'] ?? 0) . '/' . (int)($mailResult['recipient_count'] ?? 0),
 	), $mailResult['reason'] ?? '');
 
 	company_detail_trade_request_success_response('거래 요청서가 저장되었습니다.', array(

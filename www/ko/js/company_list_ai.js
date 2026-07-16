@@ -30,9 +30,88 @@
         };
     }
 
-    var aiData = normalizeData(window.__COMPANY_LIST_AI_DATA__);
-    var aiMeta = window.__COMPANY_LIST_AI_META__ || {};
-    var aiStats = window.__COMPANY_LIST_AI_STATS__ || {};
+    function isBackForwardNavigation() {
+        try {
+            var nav = performance.getEntriesByType && performance.getEntriesByType('navigation')[0];
+            return !!(nav && nav.type === 'back_forward');
+        } catch (e) {}
+        return false;
+    }
+
+    function recommendationSnapshotKey() {
+        return 'companyAiListSnapshot:' + window.location.pathname + window.location.search;
+    }
+
+    var recommendationSnapshotMaxAgeMs = 60 * 60 * 1000;
+
+    function removeRecommendationSnapshot(snapshotKey) {
+        try {
+            sessionStorage.removeItem(snapshotKey);
+            if ((sessionStorage.getItem('companyAiListReturnKey') || '') === snapshotKey) {
+                sessionStorage.removeItem('companyAiListReturnKey');
+            }
+        } catch (e) {}
+    }
+
+    function pruneRecommendationSnapshots() {
+        try {
+            var now = Date.now();
+            var removeKeys = [];
+            for (var i = 0; i < sessionStorage.length; i++) {
+                var key = sessionStorage.key(i) || '';
+                if (key.indexOf('companyAiListSnapshot:') !== 0) continue;
+                var raw = sessionStorage.getItem(key);
+                var snapshot = raw ? JSON.parse(raw) : null;
+                var savedAt = Number(snapshot && snapshot.saved_at);
+                if (!Number.isFinite(savedAt) || now - savedAt > recommendationSnapshotMaxAgeMs) {
+                    removeKeys.push(key);
+                }
+            }
+            removeKeys.forEach(removeRecommendationSnapshot);
+        } catch (e) {}
+    }
+
+    function readRecommendationSnapshot() {
+        try {
+            var snapshotKey = recommendationSnapshotKey();
+            var returnKey = sessionStorage.getItem('companyAiListReturnKey') || '';
+            if (!isBackForwardNavigation() && returnKey !== snapshotKey) return null;
+            var raw = sessionStorage.getItem(snapshotKey);
+            if (!raw) return null;
+            var snapshot = JSON.parse(raw);
+            if (!snapshot || !snapshot.data || !snapshot.meta || !snapshot.stats) return null;
+            var savedAt = Number(snapshot.saved_at);
+            if (!Number.isFinite(savedAt) || Date.now() - savedAt > recommendationSnapshotMaxAgeMs) {
+                removeRecommendationSnapshot(snapshotKey);
+                return null;
+            }
+            if (returnKey === snapshotKey) sessionStorage.removeItem('companyAiListReturnKey');
+            return snapshot;
+        } catch (e) {
+            return null;
+        }
+    }
+
+    function saveRecommendationSnapshot(data, meta, stats) {
+        try {
+            pruneRecommendationSnapshots();
+            sessionStorage.setItem(recommendationSnapshotKey(), JSON.stringify({
+                data: data,
+                meta: meta,
+                stats: stats,
+                saved_at: Date.now()
+            }));
+        } catch (e) {}
+    }
+
+    var restoredSnapshot = readRecommendationSnapshot();
+    var aiData = normalizeData(restoredSnapshot ? restoredSnapshot.data : window.__COMPANY_LIST_AI_DATA__);
+    var aiMeta = restoredSnapshot ? restoredSnapshot.meta : (window.__COMPANY_LIST_AI_META__ || {});
+    var aiStats = restoredSnapshot ? restoredSnapshot.stats : (window.__COMPANY_LIST_AI_STATS__ || {});
+    var guestLimit = window.__COMPANY_LIST_AI_GUEST_LIMIT__ || {};
+    if (!restoredSnapshot) {
+        saveRecommendationSnapshot(window.__COMPANY_LIST_AI_DATA__ || {}, aiMeta, aiStats);
+    }
 
     var topWrap = document.querySelector('.ai-top3-swiper .swiper-wrapper');
     var restWrap = document.querySelector('.ai-rest-swiper .swiper-wrapper');
@@ -41,7 +120,7 @@
     var loadMoreBtn = document.getElementById('btnLoadMore');
     var typeBtns = document.querySelectorAll('.list-type-btn');
     var typeSlider = document.querySelector('.list-type-slider');
-    var bannerStatEls = document.querySelectorAll('.ai-banner_stat_value');
+    var activeBannerStatEl = document.querySelector('[data-role="active-recommend-total"]');
     var loadingOverlay = document.getElementById('companyAiLoadingOverlay');
     var loadingDesc = document.getElementById('companyAiLoadingDesc');
     var loadingHelp = document.getElementById('companyAiLoadingHelp');
@@ -94,14 +173,6 @@
         return '';
     }
 
-    function isBackForwardNavigation() {
-        try {
-            var nav = performance.getEntriesByType && performance.getEntriesByType('navigation')[0];
-            return !!(nav && nav.type === 'back_forward');
-        } catch (e) {}
-        return false;
-    }
-
     function shouldShowLoadingOverlay() {
         loadingSourceKey = resolveLoadingSourceKey();
         if (!loadingSourceKey) return false;
@@ -116,6 +187,71 @@
         setLoadingNoticeVisible(false);
         setLoadingActionsVisible(false);
         if (loadingProgressFill) loadingProgressFill.style.width = '100%';
+    }
+
+    function getLoginReturnUrl() {
+        if (guestLimit && typeof guestLimit.login_url === 'string' && guestLimit.login_url) {
+            return guestLimit.login_url;
+        }
+        return '/bbs/login.php?url=' + encodeURIComponent(window.location.pathname + window.location.search);
+    }
+
+    function openGuestLimitLoginModal() {
+        var modalId = 'companyListAiGuestLimitModal';
+        var overlay = document.getElementById(modalId);
+
+        function closeModal() {
+            if (!overlay) return;
+            overlay.classList.remove('is-open');
+            document.documentElement.classList.remove('hide-scroll');
+        }
+
+        if (!overlay) {
+            overlay = document.createElement('div');
+            overlay.id = modalId;
+            overlay.className = 'login-guard-modal';
+            overlay.innerHTML = ''
+                + '<div class="login-guard">'
+                + '  <div class="login-guard__overlay" aria-hidden="true"></div>'
+                + '  <div class="login-guard__modal" role="dialog" aria-modal="true" aria-labelledby="companyListAiGuestLimitTitle">'
+                + '    <button type="button" class="login-guard__close" aria-label="닫기">'
+                + '      <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>'
+                + '    </button>'
+                + '    <div class="login-guard__icon" aria-hidden="true">'
+                + '      <svg viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1s3.1 1.39 3.1 3.1v2z"/></svg>'
+                + '    </div>'
+                + '    <h3 class="login-guard__title" id="companyListAiGuestLimitTitle">로그인이 필요합니다</h3>'
+                + '    <p class="login-guard__desc" id="companyListAiGuestLimitDesc"></p>'
+                + '    <div class="login-guard__actions">'
+                + '      <a href="/signup" class="login-guard__btn login-guard__btn--ghost">회원가입</a>'
+                + '      <a href="' + getLoginReturnUrl() + '" class="login-guard__btn login-guard__btn--primary">로그인</a>'
+                + '    </div>'
+                + '  </div>'
+                + '</div>';
+            document.body.appendChild(overlay);
+
+            var dim = overlay.querySelector('.login-guard__overlay');
+            if (dim) dim.addEventListener('click', closeModal);
+
+            var closeBtn = overlay.querySelector('.login-guard__close');
+            if (closeBtn) closeBtn.addEventListener('click', closeModal);
+
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape' && overlay.classList.contains('is-open')) closeModal();
+            });
+        }
+
+        var message = guestLimit && typeof guestLimit.message === 'string' && guestLimit.message
+            ? guestLimit.message
+            : '오늘 비회원 추천 조회 한도를 모두 사용했습니다. 로그인 후 계속 이용해주세요.';
+        var descEl = overlay.querySelector('#companyListAiGuestLimitDesc');
+        if (descEl) descEl.innerHTML = escapeHtml(message) + '<br>로그인하면 계속 추천 기업을 확인할 수 있습니다.';
+
+        var loginBtn = overlay.querySelector('.login-guard__btn--primary');
+        if (loginBtn) loginBtn.setAttribute('href', getLoginReturnUrl());
+
+        overlay.classList.add('is-open');
+        document.documentElement.classList.add('hide-scroll');
     }
 
     function clearLoadingTimers() {
@@ -286,7 +422,10 @@
     }
 
     shouldShowLoadingOnce = shouldShowLoadingOverlay();
-    if (shouldShowLoadingOnce) startLoadingOverlay();
+    if (guestLimit && guestLimit.limited) {
+        hideLoadingOverlayImmediately();
+        setTimeout(openGuestLimitLoginModal, 120);
+    } else if (shouldShowLoadingOnce) startLoadingOverlay();
     else hideLoadingOverlayImmediately();
 
     if (!topWrap || !restWrap || !loadMoreBtn) {
@@ -294,7 +433,9 @@
         return;
     }
 
-    var currentType = 'buyer';
+    // 서버가 확정한 한 방향만 표시한다. 목록 페이지 내 구매/판매 탭 전환은 비활성화 상태다.
+    var requestedType = window.__COMPANY_LIST_AI_REQUESTED_TYPE__ === 'seller' ? 'seller' : 'buyer';
+    var currentType = requestedType;
     var restPageSize = 9;
     var restPageIndex = 0;
     var top3Swiper = null;
@@ -469,6 +610,12 @@
         return {
             kedcd: kedcd,
             src_kedcd: srcKedcd,
+            selected_target_keywords: String(linkEl.getAttribute('data-selected-keywords') || '').split(',').map(function (value) { return value.trim(); }).filter(Boolean),
+            selected_partner_bzc_cds: String(linkEl.getAttribute('data-partner-bzc-cds') || '').split(',').map(function (value) { return value.trim(); }).filter(Boolean),
+            recommendation_mode: String(linkEl.getAttribute('data-recommendation-mode') || 'full').trim() || 'full',
+            trace_id: String(linkEl.getAttribute('data-trace-id') || '').trim(),
+            analysis_tags: String(linkEl.getAttribute('data-analysis-tags') || '').split(',').map(function (value) { return value.trim(); }).filter(Boolean),
+            tag_source: String(linkEl.getAttribute('data-tag-source') || 'none').trim() || 'none',
             title: titleEl ? String(titleEl.textContent || '').trim() : '',
             industry: bzcCd,
             industry_nm: bzcNm,
@@ -536,13 +683,11 @@
     }
 
     function updateBannerStats(stats) {
-        if (!bannerStatEls || bannerStatEls.length < 3) return;
-        var buyerTotal = parseTotal(stats && stats.buyer_total);
-        var sellerTotal = parseTotal(stats && stats.seller_total);
-        if (buyerTotal === null) buyerTotal = fallbackTotal(aiData.buyer);
-        if (sellerTotal === null) sellerTotal = fallbackTotal(aiData.seller);
-        bannerStatEls[1].textContent = String(buyerTotal);
-        bannerStatEls[2].textContent = String(sellerTotal);
+        if (!activeBannerStatEl) return;
+        var statKey = requestedType === 'seller' ? 'seller_total' : 'buyer_total';
+        var total = parseTotal(stats && stats[statKey]);
+        if (total === null) total = fallbackTotal(aiData[requestedType]);
+        activeBannerStatEl.textContent = String(total);
     }
 
     function renderCurrent(shouldScrollToRest) {
@@ -586,7 +731,7 @@
     }
 
     function setType(type, shouldSyncUrl) {
-        if (type !== 'buyer' && type !== 'seller') type = 'buyer';
+        type = requestedType;
         currentType = type;
         restPageIndex = 0;
         var activeBtn = null;
@@ -601,6 +746,8 @@
         renderCurrent(false);
     }
 
+    /*
+    // 구매처/판매처 찾기 진입 방향과 다른 목록으로 전환되지 않도록 탭 이벤트를 임시 비활성화한다.
     typeBtns.forEach(function(btn) {
         btn.setAttribute('aria-pressed', btn.classList.contains('on') ? 'true' : 'false');
         btn.addEventListener('click', function() {
@@ -609,6 +756,7 @@
             setType(nextType, true);
         });
     });
+    */
 
     loadMoreBtn.addEventListener('click', function() {
         var data = aiData[currentType] || { rest: [] };
@@ -636,6 +784,11 @@
         var linkEl = event.target && event.target.closest ? event.target.closest('.company-ai-link') : null;
         if (!linkEl) return;
         if (linkEl.tagName !== 'A') return;
+        saveRecommendationSnapshot(aiData, aiMeta, aiStats);
+        var opensInCurrentTab = event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey && linkEl.target !== '_blank';
+        if (opensInCurrentTab) {
+            try { sessionStorage.setItem('companyAiListReturnKey', recommendationSnapshotKey()); } catch (e) {}
+        }
         saveCardSnapshot(linkEl);
     });
 
@@ -662,6 +815,7 @@
             };
             updateBannerStats(aiStats);
             restPageIndex = 0;
+            saveRecommendationSnapshot(aiData, aiMeta, aiStats);
             renderCurrent(false);
         },
         setType: function(nextType) {
@@ -672,11 +826,6 @@
         }
     };
 
-    var urlType = null;
-    try {
-        urlType = new URLSearchParams(window.location.search).get('type');
-    } catch (e) {}
     updateBannerStats(aiStats);
-    if (urlType === 'seller') setType('seller', false);
-    else setType('buyer', false);
+    setType(requestedType, false);
 })();

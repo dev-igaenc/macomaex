@@ -11,37 +11,39 @@ include_once (G5_ADMIN_PATH.'/admin.head.php');
 $colspan = 4;
 
 $gw_msg = new NCP_SENS_AT();
+$templateCode = isset($templateCode) ? trim((string)$templateCode) : '';
+$template_content = '';
+$channelId = '';
+$field_arr = array();
+$template = array('buttons' => array());
 
 // 템플릿을 선택하면 해당 템플릿을 가져옴.
 if ($templateCode) {
-    $field_arr = array();
+    $template_res = $gw_msg->get_templates($templateCode);
+    if (is_array($template_res) && isset($template_res[0]) && is_array($template_res[0])) {
+        $template = $template_res[0];
+    }
 
-    $template = $gw_msg->get_templates($templateCode);
-    $template = $template[0];
-
-    $templateCode = $template['templateCode']; // 템플릿 내용
-    $template_content = $template['content']; // 템플릿 내용
-    $channelId = $template['channelId']; // 카카오채널
+    $templateCode = isset($template['templateCode']) ? (string)$template['templateCode'] : ''; // 템플릿 코드
+    $template_content = isset($template['content']) ? (string)$template['content'] : ''; // 템플릿 내용
+    $channelId = isset($template['channelId']) ? (string)$template['channelId'] : ''; // 카카오채널
 
     // 템플릿 내용이 있다면 치환 변수 체크
-    if ($template['content']) {
+    if ($template_content !== '') {
         for ($i=1; $i<=10; $i++) {
-            if (strpos($template['content'], '{필드'.$i.'}')) {
+            if (strpos($template_content, '{필드'.$i.'}') !== false) {
                 $field_arr[$i] = '#{필드'.$i.'}';
             }
         }
     } else {
         $template_content = "현재 네이버 클라우드 플랫폼과의 통신이 원할하지 않습니다.\n\n잠시 후 다시 시도해주세요.";
     }
-} else {
-	$template['buttons'] = array();
 }
 
 add_stylesheet('<link rel="stylesheet" href="http://code.jquery.com/ui/1.11.0/themes/smoothness/jquery-ui.css">', 0);
 add_stylesheet('<link rel="stylesheet" href="'.G5_ADMIN_URL.'/gw_alimtalk_admin/css/jquery-ui-timepicker-addon.css">', 0);
 add_stylesheet('<link rel="stylesheet" href="'.G5_ADMIN_URL.'/gw_alimtalk_admin/css/style.css">', 0);
 add_stylesheet('<link rel="stylesheet" href="'.G5_ADMIN_URL.'/gw_alimtalk_admin/css/alimtalk.css">', 0);
-add_stylesheet('<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css">', 0);
 add_javascript('<script src="//code.jquery.com/ui/1.11.4/jquery-ui.js"></script>', 0);
 add_javascript('<script src="'.G5_ADMIN_URL.'/gw_alimtalk_admin/js/jquery-ui-timepicker-addon.js"></script>', 0);
 ?>
@@ -298,10 +300,10 @@ add_javascript('<script src="'.G5_ADMIN_URL.'/gw_alimtalk_admin/js/jquery-ui-tim
                                         }
                                         ?>
                                         <td>
-                                            <i class="fas fa-plus-circle ulPlus_btn" id="1" onclick="addsend(this)"></i>
+                                            <i class="fa fa-plus-circle ulPlus_btn" id="1" onclick="addsend(this)"></i>
                                         </td>
                                         <td>
-                                            <i class="fas fa-minus-circle ulMinus_btn" onclick="removesend(this.parentNode.parentNode.id)"></i>
+                                            <i class="fa fa-minus-circle ulMinus_btn" onclick="removesend(this.parentNode.parentNode.id)"></i>
                                         </td>
                                     </tr>
                                     <!--list//-->
@@ -418,7 +420,7 @@ add_javascript('<script src="'.G5_ADMIN_URL.'/gw_alimtalk_admin/js/jquery-ui-tim
         <!-- modal | 발송완료 -->
         <div id="md_sendFinsh" class="modal_wrap">
             <div class="modalPopup w800">
-                <i class="far fa-check-circle pop_far"></i>
+                <i class="fa fa-check-circle-o pop_far"></i>
                 <div class="pop_bottom pdt_10">
                     <div class="loader_txt">
                         <h4 class="Alert">발송완료</h4>
@@ -715,7 +717,7 @@ function addsend(elmId){
             }
         }
         ?>
-        "<td><i class=\"fas fa-plus-circle ulPlus_btn\" id=\""+Lcnt+"\" onclick=\"addsend(this)\"></i></td><td><i class=\"fas fa-minus-circle ulMinus_btn\" onclick=\"removesend(this.parentNode.parentNode.id)\"></i></td></tr>";
+        "<td><i class=\"fa fa-plus-circle ulPlus_btn\" id=\""+Lcnt+"\" onclick=\"addsend(this)\"></i></td><td><i class=\"fa fa-minus-circle ulMinus_btn\" onclick=\"removesend(this.parentNode.parentNode.id)\"></i></td></tr>";
     $("#sendlist_"+Tcnt).after(str);
     for(i=1;i<=Lcnt;i++){$(".each_id:eq("+i+")").text(i+1);}
     var f = Lcnt -2;
@@ -747,7 +749,7 @@ function removeck(elm){
                     }
                 }
                 ?>
-                "<td><i class=\"fas fa-plus-circle ulPlus_btn\" id=\"1\" onclick=\"addsend(this)\"></i></td><td><i class=\"fas fa-minus-circle ulMinus_btn\" onclick=\"removesend(this.parentNode.parentNode.id)\"></i></td></tr>";
+                "<td><i class=\"fa fa-plus-circle ulPlus_btn\" id=\"1\" onclick=\"addsend(this)\"></i></td><td><i class=\"fa fa-minus-circle ulMinus_btn\" onclick=\"removesend(this.parentNode.parentNode.id)\"></i></td></tr>";
             $("#Slist").html(str);Lcnt++;
             msgCount();
         }
@@ -858,7 +860,7 @@ function addrList()
                         }
                     }
                     ?>
-                    "<td><i class=\"fas fa-plus-circle ulPlus_btn\" id=\""+i+"\" onclick=\"addsend(this)\"></i></td><td><i class=\"fas fa-minus-circle ulMinus_btn\" onclick=\"removesend(this.parentNode.parentNode.id)\"></i></td></tr>";Lcnt++;
+                    "<td><i class=\"fa fa-plus-circle ulPlus_btn\" id=\""+i+"\" onclick=\"addsend(this)\"></i></td><td><i class=\"fa fa-minus-circle ulMinus_btn\" onclick=\"removesend(this.parentNode.parentNode.id)\"></i></td></tr>";Lcnt++;
             })
             Lcnt=Lcnt-1;
             $("#Slist").html(str);

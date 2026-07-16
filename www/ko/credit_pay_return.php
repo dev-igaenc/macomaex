@@ -354,20 +354,17 @@ try {
 		'pg_response_raw' => json_encode(macomaex_payment_mask_array((array)$resultMap), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
 		'message' => '승인 완료 후 결제 및 크레딧 DB 반영을 완료했습니다.'
 	)));
-	echo "<script>
-		window.dataLayer = window.dataLayer || [];
-		window.dataLayer.push({
-			event: 'purchase',
-			ecommerce: {
-				transaction_id: " . json_encode((string)$order_no, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . ",
-				value: " . (float)$cardApplPrice . ",
-				currency: 'KRW',
-				items: [{
-					item_name: " . json_encode((string)$pinfo['order_goods'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . "
-				}]
-			}
-		});
-	</script>";
+	set_session('ss_ga4_pending_purchase', array(
+		'event' => 'purchase',
+		'ecommerce' => array(
+			'transaction_id' => (string)$order_no,
+			'value' => (float)$cardApplPrice,
+			'currency' => 'KRW',
+			'items' => array(
+				array('item_name' => (string)$pinfo['order_goods'])
+			)
+		)
+	));
 	echo "<script>
 		if(window.opener && !window.opener.closed){
 			window.opener.location.href='/ko/my_plan.php';

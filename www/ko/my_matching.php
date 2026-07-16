@@ -2,7 +2,7 @@
 include_once(__DIR__ . '/_common.php');
 
 // 비로그인 접근은 어떤 후속 로직보다 먼저 로그인 유도 모달로 분기한다.
-login_chk();
+login_chk('account_trades');
 
 include_once(__DIR__ . '/helper/trade_request_helper.php');
 include_once(__DIR__ . '/helper/my_matching_helper.php');
@@ -49,6 +49,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
 	if ($action === 'trade_request_approval') {
 		my_matching_handle_trade_request_approval($member, $_POST);
+	}
+	if ($action === 'trade_request_recipients') {
+		my_matching_handle_trade_request_recipients($member, $_POST);
 	}
 
 	if ($action === 'my_matching_sent_status') {
@@ -172,8 +175,15 @@ function my_matching_build_item($row, $starred = false) {
 	);
 }
 
-$memberBzno = preg_replace('/[^0-9]/', '', (string)($member['mb_4'] ?? ''));
+$memberCompanyCode = trim((string)($member['mb_company'] ?? ''));
+$linkedCompany = array();
+if ($memberCompanyCode !== '' && !preg_match('/^M[0-9]{9}$/', $memberCompanyCode)) {
+	$linkedCompany = sql_fetch("SELECT KEDCD, BZNO FROM company WHERE KEDCD='" . sql_escape_string($memberCompanyCode) . "' LIMIT 1");
+}
+$memberBzno = preg_replace('/[^0-9]/', '', (string)($linkedCompany['BZNO'] ?? ($member['mb_4'] ?? '')));
 $memberHasBzno = ($memberBzno !== '');
+$requiresCompanyConnection = empty($linkedCompany['KEDCD']) || !$memberHasBzno;
+$companyConnectUrl = '/account/company?return_url=' . urlencode('/account/trades');
 
 // 관심기업 탭 공통 모달에서도 같은 "우리 기업 정보"를 쓰도록 로그인 기업 데이터를 미리 준비한다.
 $requesterCompanyData = $memberHasBzno ? trade_request_member_company_data($memberBzno) : array();
@@ -216,13 +226,13 @@ $receivedSql = "
 		C.ENP_NM AS company_name,
 		C.LOC_ADDRA,
 		C.LOC_ADDRB,
-		(SELECT k_code_name FROM kssc WHERE k_code = C.BZC_CD LIMIT 1) AS industry_name,
-		M.mb_6 AS manager_name,
+		(SELECT k_code_name FROM kssc_11 WHERE k_code = C.BZC_CD LIMIT 1) AS industry_name,
+		COALESCE(NULLIF(TR.request_member_name, ''), NULLIF(M.mb_6, ''), NULLIF(M.mb_name, '')) AS manager_name,
 		M.mb_5 AS manager_email
 	FROM trade_request TR
 	LEFT JOIN trade_chat_room TCR ON TCR.room_id = TR.chat_room_id
 	LEFT JOIN company C ON C.BZNO = TR.request_bzno
-	LEFT JOIN g5_member M ON M.mb_company = C.KEDCD
+	LEFT JOIN g5_member M ON M.mb_id = TR.request_mb_id
 	WHERE TR.target_bzno = '{$memberBznoSql}'
 	ORDER BY TR.tr_no DESC
 ";
@@ -259,13 +269,13 @@ $sentSql = "
 		C.ENP_NM AS company_name,
 		C.LOC_ADDRA,
 		C.LOC_ADDRB,
-		(SELECT k_code_name FROM kssc WHERE k_code = C.BZC_CD LIMIT 1) AS industry_name,
-		M.mb_6 AS manager_name,
+		(SELECT k_code_name FROM kssc_11 WHERE k_code = C.BZC_CD LIMIT 1) AS industry_name,
+		COALESCE(NULLIF(TR.target_member_name, ''), NULLIF(M.mb_6, ''), NULLIF(M.mb_name, '')) AS manager_name,
 		M.mb_5 AS manager_email
 	FROM trade_request TR
 	LEFT JOIN trade_chat_room TCR ON TCR.room_id = TR.chat_room_id
 	LEFT JOIN company C ON C.KEDCD = TR.target_kedcd
-	LEFT JOIN g5_member M ON M.mb_company = C.KEDCD
+	LEFT JOIN g5_member M ON M.mb_id = TR.target_mb_id
 	WHERE TR.request_bzno = '{$memberBznoSql}'
 	ORDER BY TR.tr_no DESC
 ";
@@ -317,7 +327,7 @@ $interestedSql = "
 		C.ENP_NM AS company_name,
 		C.LOC_ADDRA,
 		C.LOC_ADDRB,
-		(SELECT k_code_name FROM kssc WHERE k_code = C.BZC_CD LIMIT 1) AS industry_name
+		(SELECT k_code_name FROM kssc_11 WHERE k_code = C.BZC_CD LIMIT 1) AS industry_name
 	FROM g5_favorite F
 	LEFT JOIN company C ON C.KEDCD = F.KEDCD
 	WHERE F.mb_id = '{$memberIdSql}'
@@ -367,30 +377,32 @@ $matchingPageData = array(
 	'sent' => $sentRows,
 	'interested' => $interestedRows,
 	'csrfToken' => $csrfToken,
+	'requiresCompanyConnection' => $requiresCompanyConnection,
+	'companyConnectUrl' => $companyConnectUrl,
 );
 
 $matchingPageDataJson = json_encode(
 	$matchingPageData,
-	JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
+	JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT
 );
 if ($matchingPageDataJson === false) {
 	$matchingPageDataJson = '{"received":[],"sent":[],"interested":[],"csrfToken":""}';
 }
 
-$defaultMessageJson = json_encode($defaultMessage, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+$defaultMessageJson = json_encode($defaultMessage, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
 if ($defaultMessageJson === false) {
 	$defaultMessageJson = '""';
 }
 
-$requesterCompanyDataJson = json_encode($requesterCompanyData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+$requesterCompanyDataJson = json_encode($requesterCompanyData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
 if ($requesterCompanyDataJson === false) {
 	$requesterCompanyDataJson = '{}';
 }
 
 // 공통 모달은 이 컨텍스트만 보고 company_detail 저장 로직을 공통으로 호출한다.
 add_javascript('<script>window.__MATCHING_PAGE_DATA = ' . $matchingPageDataJson . ';</script>', 239);
-add_javascript('<script>window.MATCH_REQUEST_CONTEXT = { defaultRequestMessage: ' . $defaultMessageJson . ', endpoint: "/ko/company_detail.php", sourcePage: "my_matching", isLoggedIn: true, loginCheckUrl: "", autoOpenOnLoad: false, requesterCompany: ' . $requesterCompanyDataJson . ', target: null };</script>', 238);
-add_javascript('<script>window.__TRADE_CHAT_MODAL_CONTEXT = { isLoggedIn: true, loginUrl: "/bbs/login.php?url=' . urlencode('/ko/my_matching.php') . '", bootstrapUrl: "/ko/trade_chat_modal_data.php", uiEventUrl: "/ko/trade_chat_ui_event.php" };</script>', 237);
+add_javascript('<script>window.MATCH_REQUEST_CONTEXT = { defaultRequestMessage: ' . $defaultMessageJson . ', endpoint: "/ko/company_detail.php", verifyEndpoint: "/ko/trade_request_verify_bzno.php", sourcePage: "my_matching", isLoggedIn: true, loginCheckUrl: "", autoOpenOnLoad: false, requesterCompany: ' . $requesterCompanyDataJson . ', target: null };</script>', 238);
+add_javascript('<script>window.__TRADE_CHAT_MODAL_CONTEXT = { isLoggedIn: true, loginUrl: "/bbs/login.php?url=' . urlencode('/account/trades') . '", bootstrapUrl: "/ko/trade_chat_modal_data.php", uiEventUrl: "/ko/trade_chat_ui_event.php" };</script>', 237);
 ?>
 
 <div id="myMatchingPage">
@@ -466,6 +478,22 @@ add_javascript('<script>window.__TRADE_CHAT_MODAL_CONTEXT = { isLoggedIn: true, 
         <div class="confirm-actions">
             <button type="button" id="confirmCancel">취소</button>
             <button type="button" class="confirm-ok" id="confirmOk">확인</button>
+        </div>
+    </div>
+</div>
+
+<div class="confirm-overlay" id="recipientAssignOverlay">
+    <div class="confirm-box">
+        <h4>수신 담당자 지정</h4>
+        <p>수락 후 요청자와 1:1 채팅을 진행할 담당자를 선택해 주세요.</p>
+        <div class="matching-recipient-picker" id="recipientAssignPicker">
+            <input type="hidden" id="recipientAssignSelect" value="">
+            <button type="button" class="matching-recipient-select" id="recipientAssignTrigger" aria-expanded="false" disabled>담당자 정보를 불러오는 중입니다.</button>
+            <div class="matching-recipient-options" id="recipientAssignOptions" hidden></div>
+        </div>
+        <div class="confirm-actions">
+            <button type="button" id="recipientAssignCancel">취소</button>
+            <button type="button" class="confirm-ok" id="recipientAssignOk" disabled>수락하기</button>
         </div>
     </div>
 </div>

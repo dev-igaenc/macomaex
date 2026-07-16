@@ -1,0 +1,35 @@
+{
+  "CONTENTS": [
+    {
+      "ENPintr0000": {
+        "kedcd": "0007654321",
+        "enp_nm": "부분응답기업",
+        "enp_nm_trd": {},
+        "bzc_cd": {},
+        "loc_addra": "부산광역시",
+        "laborer_sum": {},
+        "bzno": "9876543210"
+      }
+    },
+    {
+      "ENPfsdt0001": {
+        "fs_acct_dt": "2024-12-31",
+        "fs_val3": "500000",
+        "fs_val9": {},
+        "fs1_acct_dt": {},
+        "fs2_acct_dt": ""
+      }
+    },
+    {
+      "ENPsthr0001": {
+        "cnt": "1",
+        "list": {
+          "std_dt": "20241231",
+          "own_stk_cn": "1000",
+          "cstk_cn": "1000",
+          "pstk_cn": {}
+        }
+      }
+    }
+  ]
+}

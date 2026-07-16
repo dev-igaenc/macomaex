@@ -44,8 +44,9 @@ if (!empty($_POST['wr_email']))
 if ($is_guest) {
     if ($wr_name == '')
         alert('이름은 필히 입력하셔야 합니다.');
-    //if(!chk_captcha())
-        //alert('자동등록방지 숫자가 틀렸습니다.');
+    // 댓글도 직접 POST로 우회될 수 있어 비회원 작성 시 서버에서 캡챠를 확인한다.
+    if(!chk_captcha())
+        alert('자동등록방지 숫자가 틀렸습니다.');
 }
 
 if ($w == "c" || $w == "cu") {

@@ -110,13 +110,14 @@ function print_menu1($key, $no = '')
 
 function print_menu2($key, $no = '')
 {
-    global $menu, $auth_menu, $is_admin, $auth, $g5, $sub_menu;
+    global $menu, $auth_menu, $is_admin, $auth, $g5, $sub_menu, $current_menu;
 
     $str = "";
     if (!isset($menu[$key]) || !is_array($menu[$key])) {
         return $str;
     }
     $hidden_trade_submenus = array('500200', '500300', '500400');
+    $hidden_duplicate_submenus = array('810100');
     $hidden_payment_menu_links = array(
         '/payment.list.php',
         '/payment.membership.list.php'
@@ -128,6 +129,11 @@ function print_menu2($key, $no = '')
 
         // 거래(menu500)에서는 거래현황(500100)만 노출하고 제조사/유통사/기타는 숨김
         if ($key === 'menu500' && in_array((string)$menu[$key][$i][0], $hidden_trade_submenus, true)) {
+            continue;
+        }
+
+        // 중복 노출되는 쿠폰 생성관리 메뉴는 숨기고 쿠폰관리 하나만 사용
+        if (in_array((string)$menu[$key][$i][0], $hidden_duplicate_submenus, true)) {
             continue;
         }
 
@@ -157,7 +163,8 @@ function print_menu2($key, $no = '')
 
         $current_class = '';
 
-        if ($menu[$key][$i][0] == $sub_menu) {
+        $active_menu = isset($current_menu) && $current_menu ? $current_menu : $sub_menu;
+        if ($menu[$key][$i][0] == $active_menu) {
             $current_class = ' current-page';
         }
 
@@ -218,6 +225,146 @@ if (!empty($_COOKIE['g5_admin_btn_gnb'])) {
     <link href="<?=G5_ADMIN_URL?>/build/css/custom.min.css" rel="stylesheet">
 	<!--link href="<?=G5_ADMIN_URL?>/css/style.css" rel="stylesheet"-->
 	<link href="<?=G5_ADMIN_URL?>/css/login.css" rel="stylesheet">
+    <style>
+    .left_col,
+    .left_col.scroll-view,
+    .nav_title,
+    .profile,
+    #sidebar-menu,
+    .main_menu_side,
+    .menu_section,
+    .menu_section > ul,
+    .nav.side-menu,
+    .sidebar-footer {
+        background: #1f3f5f !important;
+    }
+    .nav-sm ul.nav.child_menu {
+        background: #28557f !important;
+    }
+    .nav.side-menu > li > a,
+    .nav.child_menu > li > a,
+    .menu_section h3,
+    .profile_info span,
+    .profile_info h2,
+    .site_title,
+    .site_title:hover,
+    .site_title:focus,
+    .sidebar-footer a {
+        color: #eef7ff !important;
+    }
+    .nav.side-menu > li,
+    .nav.side-menu > li > a,
+    .nav.side-menu > li:hover,
+    .nav.side-menu > li:hover > a,
+    .nav.side-menu > li.current-page,
+    .nav.side-menu > li.current-page > a,
+    .nav.side-menu > li.active,
+    .nav.side-menu > li.active > a {
+        background: #1f3f5f !important;
+    }
+    .nav.side-menu > li > a {
+        margin-bottom: 0 !important;
+    }
+    .nav.side-menu,
+    .nav.side-menu > li,
+    .nav.side-menu > li > a,
+    .nav.child_menu,
+    .nav.child_menu > li,
+    .nav.child_menu > li > a {
+        border: 0 !important;
+        box-shadow: none !important;
+        outline: 0 !important;
+    }
+    .menu_section > ul,
+    .nav.side-menu,
+    .nav.child_menu {
+        margin-bottom: 0 !important;
+        margin-top: 0 !important;
+        padding-top: 0 !important;
+    }
+    .nav.side-menu > li.current-page,
+    .nav.side-menu > li.active,
+    .nav-sm .nav.child_menu li.active,
+    .nav-sm .nav.side-menu li.active-sm {
+        border-right-color: #8fd8ff !important;
+    }
+    .nav.side-menu > li.active > a {
+        box-shadow: none !important;
+        text-shadow: none !important;
+        color: #ffffff !important;
+    }
+    .nav-sm > .nav.side-menu > li.active-sm > a,
+    .nav.side-menu > li.current-page > a,
+    .nav.side-menu > li.active > a,
+    .nav li.current-page > a {
+        color: #ffffff !important;
+    }
+    .nav.child_menu li.current-page,
+    .nav.child_menu li:hover,
+    .nav.child_menu li.active {
+        background: rgba(143, 216, 255, 0.08) !important;
+    }
+    .nav.child_menu > li > a {
+        color: #d7ebfb !important;
+    }
+    .nav li li.current-page > a,
+    .nav.child_menu li.current-page > a,
+    .nav.child_menu li.active > a,
+    .nav.child_menu li:hover > a {
+        color: #ffffff !important;
+    }
+    .nav-md ul.nav.child_menu li:before {
+        background: #69bfe9 !important;
+    }
+    .nav-md ul.nav.child_menu li:after {
+        border-left-color: rgba(105, 191, 233, 0.45) !important;
+    }
+    .site_title i {
+        border-color: rgba(255, 255, 255, 0.55) !important;
+    }
+    .admin-menu-toggle {
+        display: inline-flex !important;
+        align-items: center;
+        gap: 8px;
+        min-height: 44px;
+        padding: 0 14px !important;
+        border-radius: 999px;
+        color: #1f3f5f !important;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background-color 0.2s ease, color 0.2s ease;
+    }
+    .admin-menu-toggle:hover,
+    .admin-menu-toggle:focus {
+        background: rgba(31, 63, 95, 0.08);
+        color: #16324d !important;
+        text-decoration: none;
+    }
+    .admin-menu-toggle i {
+        font-size: 18px;
+    }
+    .admin-menu-toggle .toggle-label {
+        font-size: 14px;
+        line-height: 1;
+    }
+    @media (min-width: 992px) {
+        .admin-menu-toggle .toggle-label {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            border: 0;
+        }
+        .admin-menu-toggle {
+            min-width: 44px;
+            padding: 0 12px !important;
+            justify-content: center;
+        }
+    }
+    </style>
 
 
 
@@ -263,9 +410,11 @@ if (!empty($_COOKIE['g5_admin_btn_gnb'])) {
 			$idx_v["결제"]="fa-credit-card";
 			$idx_v["배너관리"]="fa-picture-o";
 			$idx_v["공지사항"]="fa-exclamation-circle";
+			$idx_v["고객문의"]="fa-commenting-o";
 			$idx_v["기업홍보관"]="fa-building-o";
 			$idx_v["쿠폰관리"]="fa-tag";
 			$idx_v["알림톡 설정"]="fa-commenting-o";
+			$idx_v["개발/운영도구"]="fa-wrench";
 			//print_r($menu);
 			//print_r($amenu);
 			//print_r($auth_menu);
@@ -283,9 +432,20 @@ if (!empty($_COOKIE['g5_admin_btn_gnb'])) {
                 }
 
                 $current_class = "";
-                if (isset($sub_menu) && (substr($sub_menu, 0, 3) == substr($menu['menu' . $key][0][0], 0, 3))) {
-                    $current_class = " on";
+                $active_menu = isset($current_menu) && $current_menu ? $current_menu : $sub_menu;
+                if ($active_menu && isset($menu['menu' . $key]) && is_array($menu['menu' . $key])) {
+                    foreach ($menu['menu' . $key] as $menu_item) {
+                        if (!isset($menu_item[0])) {
+                            continue;
+                        }
+                        if ((string) $menu_item[0] === (string) $active_menu) {
+                            $current_class = " on";
+                            break;
+                        }
+                    }
                 }
+                $menu_item_class = $current_class ? 'active current-page' : '';
+                $child_menu_style = $current_class ? ' style="display: block;"' : '';
 
 	                $button_title = $menu['menu' . $key][0][1];
 					$button_link = $menu['menu' . $key][0][2];
@@ -297,39 +457,15 @@ if (!empty($_COOKIE['g5_admin_btn_gnb'])) {
 				//$chk = array_search($menu['menu' . $key][0][0], $mb_auth);
 
             ?>
-	                  <li><a <?=$linkz?>><i class="fa <?=$button_icon?>"></i> <?php echo $button_title; ?> <?if($button_one!=1){?><span class="fa fa-chevron-down"></span><?}?></a>
-                    <ul class="nav child_menu">
+	                  <li class="<?php echo $menu_item_class; ?>"><a <?=$linkz?>><i class="fa <?=$button_icon?>"></i> <?php echo $button_title; ?> <?if($button_one!=1){?><span class="fa fa-chevron-down"></span><?}?></a>
+                    <ul class="nav child_menu"<?php echo $child_menu_style; ?>>
                       <?php echo print_menu1('menu' . $key, 1); ?>
                     </ul>
                   </li>
 	            <?php
 	                $jj++;
 	            }     //end foreach
-					$mail_log_can_view = ($is_admin == 'super' || isset($auth['500100']));
-					if ($mail_log_can_view) {
-						$mail_log_current_class = '';
-						if (isset($_SERVER['SCRIPT_NAME']) && basename((string)$_SERVER['SCRIPT_NAME']) === 'mail_log_list.php') {
-							$mail_log_current_class = ' current-page';
-						}
 	            ?>
-	                  <li class="<?=$mail_log_current_class?>"><a href="<?=G5_ADMIN_URL?>/mail_log_list.php"><i class="fa fa-envelope-o"></i> 메일 발송 이력</a></li>
-	            <?php
-					}
-					if ($is_admin == 'super') {
-						$audit_current_class = '';
-						if (isset($_SERVER['SCRIPT_NAME']) && basename((string)$_SERVER['SCRIPT_NAME']) === 'audit_log_list.php') {
-						$audit_current_class = ' current-page';
-					}
-					$error_current_class = '';
-					if (isset($_SERVER['SCRIPT_NAME']) && basename((string)$_SERVER['SCRIPT_NAME']) === 'system_error_list.php') {
-						$error_current_class = ' current-page';
-					}
-            ?>
-                  <li class="<?=$audit_current_class?>"><a href="<?=G5_ADMIN_URL?>/audit_log_list.php"><i class="fa fa-list-alt"></i> 감사로그</a></li>
-                  <li class="<?=$error_current_class?>"><a href="<?=G5_ADMIN_URL?>/system_error_list.php"><i class="fa fa-bug"></i> 시스템에러</a></li>
-            <?php
-				}
-            ?>
                 </ul>
               </div>
 
@@ -363,9 +499,12 @@ if (!empty($_COOKIE['g5_admin_btn_gnb'])) {
 
         <!-- top navigation -->
         <div class="top_nav">
-          <div class="nav_menu">
+              <div class="nav_menu">
               <div class="nav toggle">
-                <a id="menu_toggle"><i class="fa fa-bars"></i></a>
+                <a id="menu_toggle" class="admin-menu-toggle" role="button" aria-label="관리자 메뉴 열기">
+                    <i class="fa fa-bars" aria-hidden="true"></i>
+                    <span class="toggle-label">메뉴</span>
+                </a>
               </div>
               <nav class="nav navbar-nav">
               <ul class=" navbar-right">

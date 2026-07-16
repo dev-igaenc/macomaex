@@ -19,6 +19,7 @@ var DEFAULT_NOTE = MATCH_REQUEST_CONTEXT.defaultRequestMessage
         ? String(window.COMPANY_DETAIL_DATA.defaultRequestMessage)
         : '');
 var REQUEST_ENDPOINT = MATCH_REQUEST_CONTEXT.endpoint || '/ko/company_detail.php';
+var VERIFY_REQUEST_ENDPOINT = MATCH_REQUEST_CONTEXT.verifyEndpoint || '/ko/trade_request_verify_bzno.php';
 var requesterProfile = MATCH_REQUEST_CONTEXT.requesterProfile || {};
 
 function normalizeDigits(value) {
@@ -37,6 +38,53 @@ function formatPhone(value) {
     if (digits.length < 4) return digits;
     if (digits.length < 8) return digits.slice(0, 3) + '-' + digits.slice(3);
     return digits.slice(0, 3) + '-' + digits.slice(3, 7) + '-' + digits.slice(7);
+}
+
+function createClientRequestId() {
+    return Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10);
+}
+
+function logVerifyRequestError(detail) {
+    var payload = new URLSearchParams();
+    payload.set('action', 'client_error');
+    payload.set('client_request_id', detail.clientRequestId || '');
+    payload.set('source_page', MATCH_REQUEST_CONTEXT.sourcePage || '');
+    payload.set('error_type', detail.errorType || 'unknown');
+    payload.set('http_status', String(detail.httpStatus || 0));
+    payload.set('content_type', detail.contentType || '');
+    payload.set('error_message', detail.errorMessage || '');
+    payload.set('response_preview', String(detail.responsePreview || '').slice(0, 500));
+
+    fetch(VERIFY_REQUEST_ENDPOINT, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: payload.toString(),
+        keepalive: true
+    }).catch(function () {});
+}
+
+function recordTradeRequestClickHit() {
+    var target = MATCH_REQUEST_CONTEXT.target || {};
+    if (!target.kedcd) return;
+
+    var payload = new URLSearchParams();
+    payload.set('action', 'trade_request_click_hit');
+    payload.set('target_kedcd', target.kedcd);
+    payload.set('target_company_name', target.company || '');
+    payload.set('target_bzno', target.bzno || '');
+
+    fetch(REQUEST_ENDPOINT, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: payload.toString(),
+        keepalive: true
+    }).catch(function () {});
 }
 
 function isMemberFlagTrue(value) {
@@ -153,7 +201,9 @@ document.querySelectorAll('[data-close]').forEach(function (btn) {
 function getLoginReturnUrl() {
     return (MATCH_REQUEST_CONTEXT && (MATCH_REQUEST_CONTEXT.tradeRequestLoginUrl || MATCH_REQUEST_CONTEXT.loginCheckUrl))
         ? String(MATCH_REQUEST_CONTEXT.tradeRequestLoginUrl || MATCH_REQUEST_CONTEXT.loginCheckUrl)
-        : ('/bbs/login.php?url=' + encodeURIComponent(window.location.pathname + window.location.search));
+        : ((window.MacomaLoginGuard && typeof window.MacomaLoginGuard.buildLoginUrl === 'function')
+            ? window.MacomaLoginGuard.buildLoginUrl(window.location.pathname + window.location.search)
+            : ('/bbs/login.php?url=' + encodeURIComponent(window.location.pathname + window.location.search)));
 }
 
 function getSignupEntryUrl() {
@@ -167,70 +217,32 @@ function getSignupEntryUrl() {
     } else {
         returnUrl = window.location.pathname + window.location.search;
     }
-    return '/bbs/register.php?url=' + encodeURIComponent(returnUrl);
+    if (window.MacomaLoginGuard && typeof window.MacomaLoginGuard.buildSignupUrl === 'function') {
+        return window.MacomaLoginGuard.buildSignupUrl(returnUrl);
+    }
+    return '/signup?url=' + encodeURIComponent(returnUrl);
 }
 
 function openLoginRequiredModal(descriptionHtml) {
-    var modalId = 'tradeRequestLoginRequiredModal';
-    var overlay = document.getElementById(modalId);
-
-    function closeLoginModal() {
-        if (!overlay) return;
-        overlay.classList.remove('is-open');
-        document.documentElement.classList.remove('hide-scroll');
-    }
-
-    if (!overlay) {
-        overlay = document.createElement('div');
-        overlay.id = modalId;
-        overlay.className = 'login-guard-modal';
-        overlay.innerHTML = ''
-            + '<div class="login-guard">'
-            + '  <div class="login-guard__overlay" aria-hidden="true"></div>'
-            + '  <div class="login-guard__modal" role="dialog" aria-modal="true" aria-labelledby="tradeRequestLoginModalTitle">'
-            + '    <button type="button" class="login-guard__close" aria-label="닫기">'
-            + '      <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>'
-            + '    </button>'
-            + '    <div class="login-guard__icon" aria-hidden="true">'
-            + '      <svg viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1s3.1 1.39 3.1 3.1v2z"/></svg>'
-            + '    </div>'
-            + '    <h3 class="login-guard__title" id="tradeRequestLoginModalTitle">로그인이 필요합니다</h3>'
-            + '    <p class="login-guard__desc" id="tradeRequestLoginModalDesc"></p>'
-            + '    <div class="login-guard__actions">'
-            + '      <a href="' + getSignupEntryUrl() + '" class="login-guard__btn login-guard__btn--ghost">회원가입</a>'
-            + '      <a href="' + getLoginReturnUrl() + '" class="login-guard__btn login-guard__btn--primary">로그인</a>'
-            + '    </div>'
-            + '  </div>'
-            + '</div>';
-        document.body.appendChild(overlay);
-
-        var dim = overlay.querySelector('.login-guard__overlay');
-        if (dim) dim.addEventListener('click', closeLoginModal);
-
-        var closeBtn = overlay.querySelector('.login-guard__close');
-        if (closeBtn) closeBtn.addEventListener('click', closeLoginModal);
-
-        document.addEventListener('keydown', function (e) {
-            if (e.key === 'Escape' && overlay.classList.contains('is-open')) closeLoginModal();
+    if (window.MacomaLoginGuard && typeof window.MacomaLoginGuard.show === 'function') {
+        window.MacomaLoginGuard.show({
+            titleId: 'tradeRequestLoginModalTitle',
+            descriptionHtml: descriptionHtml || '거래 요청은<br>로그인 후 이용하실 수 있습니다.',
+            loginUrl: getLoginReturnUrl(),
+            signupUrl: getSignupEntryUrl()
         });
+        return;
     }
 
-    var descEl = overlay.querySelector('#tradeRequestLoginModalDesc');
-    if (descEl) descEl.innerHTML = descriptionHtml || '거래 요청은<br>로그인 후 이용하실 수 있습니다.';
-
-    var loginBtn = overlay.querySelector('.login-guard__btn--primary');
-    if (loginBtn) loginBtn.setAttribute('href', getLoginReturnUrl());
-    var signupBtn = overlay.querySelector('.login-guard__btn--ghost');
-    if (signupBtn) signupBtn.setAttribute('href', getSignupEntryUrl());
-
-    overlay.classList.add('is-open');
-    document.documentElement.classList.add('hide-scroll');
+    window.location.href = getLoginReturnUrl();
 }
 
 /* ---- 거래 요청하기 버튼 → 요청서 작성 먼저 ---- */
 var openMatchBtn = document.getElementById('openTypeModal2');
 if (openMatchBtn) {
     openMatchBtn.addEventListener('click', function () {
+        recordTradeRequestClickHit();
+
         // 비로그인 진입은 각 페이지가 내려준 로그인 유도 URL로만 처리한다.
         if (!isUserLoggedInNow()) {
             MATCH_REQUEST_CONTEXT.isLoggedIn = false;
@@ -268,10 +280,15 @@ if (reqRequesterBznoVerifyBtn) {
         reqRequesterBznoVerifyBtn.classList.add('is-loading');
         reqRequesterBznoVerifyBtn.innerHTML = '<span class="req-btn-spinner" aria-hidden="true"></span><span>확인중</span>';
         var formData = new URLSearchParams();
+        var clientRequestId = createClientRequestId();
+        var verifyResponseReceived = false;
+        var verifyHttpStatus = 0;
+        var verifyContentType = '';
         formData.set('action', 'trade_request_verify_bzno');
         formData.set('bzno', bznoDigits);
+        formData.set('client_request_id', clientRequestId);
 
-        fetch(REQUEST_ENDPOINT, {
+        fetch(VERIFY_REQUEST_ENDPOINT, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
@@ -280,8 +297,37 @@ if (reqRequesterBznoVerifyBtn) {
             body: formData.toString()
         })
         .then(function (response) {
-            if (!response.ok) throw new Error('HTTP_' + response.status);
-            return response.json();
+            verifyResponseReceived = true;
+            verifyHttpStatus = response.status;
+            verifyContentType = response.headers.get('content-type') || '';
+            return response.text().then(function (text) {
+                if (!response.ok) {
+                    var httpError = new Error('HTTP_' + response.status);
+                    httpError.verifyDetail = {
+                        clientRequestId: clientRequestId,
+                        errorType: 'http_error',
+                        httpStatus: response.status,
+                        contentType: verifyContentType,
+                        errorMessage: httpError.message,
+                        responsePreview: text
+                    };
+                    throw httpError;
+                }
+
+                try {
+                    return JSON.parse(text);
+                } catch (parseError) {
+                    parseError.verifyDetail = {
+                        clientRequestId: clientRequestId,
+                        errorType: text ? 'json_parse_error' : 'empty_response',
+                        httpStatus: response.status,
+                        contentType: verifyContentType,
+                        errorMessage: parseError.message,
+                        responsePreview: text
+                    };
+                    throw parseError;
+                }
+            });
         })
         .then(function (data) {
             if (!data || !data.success) {
@@ -296,7 +342,14 @@ if (reqRequesterBznoVerifyBtn) {
                 window._showToast('✓', '사업자번호 확인이 완료되었습니다.', 'success');
             }
         })
-        .catch(function () {
+        .catch(function (error) {
+            logVerifyRequestError((error && error.verifyDetail) || {
+                clientRequestId: clientRequestId,
+                errorType: verifyResponseReceived ? 'client_processing_error' : 'network_error',
+                httpStatus: verifyHttpStatus,
+                contentType: verifyContentType,
+                errorMessage: error && error.message ? error.message : ''
+            });
             showInlineOrToastWarning('서버 통신 중 오류가 발생했습니다.');
         })
         .finally(function () {
@@ -374,7 +427,7 @@ function showCreditShortageModal(message) {
                 okText: '닫기',
                 okVariant: 'outline',
                 secondaryText: '크레딧 충전하러 가기',
-                secondaryHref: '/ko/plan.php'
+                secondaryHref: '/plans'
             });
         }, 0);
         return;

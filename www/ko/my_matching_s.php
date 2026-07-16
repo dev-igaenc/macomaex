@@ -12,7 +12,7 @@ $board['bo_9']="2"; // 2뎁스
 //$board['bo_4'] = $config['cf_title']."의 혜택을 확인하세요.";  // 2뎁스 설명
 
 //로그인 체크
-login_chk();
+login_chk('account_trades_sent');
 
 include_once(G5_THEME_PATH.'/head.php');
 
@@ -86,7 +86,7 @@ if ($page < 1) $page = 1; // 페이지가 없으면 첫 페이지 (1 페이지)
 
 $total_page  = ceil($total_count / $rows);  // 전체 페이지 계산
 
-$sql = " select *, (select k_code_name from kssc where k_code=B.BZC_CD) as BZC_NAME
+$sql = " select *, (select k_code_name from kssc_11 where k_code=B.BZC_CD) as BZC_NAME
             {$sql_common}
             {$sql_search}
             {$sql_order}
@@ -227,9 +227,17 @@ $(".detail_view").click(function(){
 			//if(jqXHR[1]) jAlert(jqXHR[1],"알림");
 
 			if(jqXHR[1]=="로그인 후 이용하세요."){
-				jAlert(jqXHR[1],"알림",function(){
-				location.href="/bbs/login.php?url=/ko/matching_list.php";
-				});
+				if (window.MacomaLoginGuard && typeof window.MacomaLoginGuard.show === "function") {
+					window.MacomaLoginGuard.show({
+						descriptionText: "기업 상세 조회는 로그인 후 이용하실 수 있습니다.",
+						loginUrl: "/bbs/login.php?url=/ko/matching_list.php",
+						signupUrl: (window.MacomaLoginGuard && typeof window.MacomaLoginGuard.buildSignupUrl === "function")
+							? window.MacomaLoginGuard.buildSignupUrl("/ko/matching_list.php")
+							: "/signup"
+					});
+				} else {
+					location.href="/bbs/login.php?url=/ko/matching_list.php";
+				}
 			}else if(jqXHR[1]=="거래처 오픈 회수를 초과했습니다."){
 				jAlert(jqXHR[1],"알림",function(){
 				location.href="/ko/plan.php";

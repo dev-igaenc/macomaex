@@ -3,28 +3,39 @@ var receivedData = Array.isArray(matchingPageData.received) ? matchingPageData.r
 var sentData = Array.isArray(matchingPageData.sent) ? matchingPageData.sent : [];
 var interestedData = Array.isArray(matchingPageData.interested) ? matchingPageData.interested : [];
 var matchingCsrfToken = matchingPageData.csrfToken || '';
+var requiresCompanyConnection = matchingPageData.requiresCompanyConnection === true;
+var companyConnectUrl = matchingPageData.companyConnectUrl || '/account/company';
 
 /* ======================================================
    Rendering Functions
    ====================================================== */
 
+function escapeHtml(value) {
+    return String(value == null ? '' : value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
 function renderMsgHtml(msg) {
     if (msg && typeof msg === 'object') {
         var tags = '<div class="req-msg-tags">';
-        if (msg.direction) tags += '<span class="req-tag dir">' + msg.direction + '</span>';
-        (msg.types || []).forEach(function (t) { tags += '<span class="req-tag type">' + t + '</span>'; });
-        if (msg.matchType) tags += '<span class="req-tag mtype">' + msg.matchType + ' 거래</span>';
+        if (msg.direction) tags += '<span class="req-tag dir">' + escapeHtml(msg.direction) + '</span>';
+        (msg.types || []).forEach(function (t) { tags += '<span class="req-tag type">' + escapeHtml(t) + '</span>'; });
+        if (msg.matchType) tags += '<span class="req-tag mtype">' + escapeHtml(msg.matchType) + ' 거래</span>';
         tags += '</div>';
 
         var itemHtml = '';
         if (msg.item) {
-            itemHtml = '<div class="req-detail"><div class="req-detail-section"><div class="req-detail-row"><span class="req-detail-label">거래 희망 품목</span><span class="req-detail-value">' + msg.item + '</span></div></div></div>';
+            itemHtml = '<div class="req-detail"><div class="req-detail-section"><div class="req-detail-row"><span class="req-detail-label">거래 희망 품목</span><span class="req-detail-value">' + escapeHtml(msg.item) + '</span></div></div></div>';
         }
 
-        var extra = msg.extra ? '<p class="req-msg-extra">' + msg.extra + '</p>' : '';
+        var extra = msg.extra ? '<p class="req-msg-extra">' + escapeHtml(msg.extra) + '</p>' : '';
         return tags + itemHtml + extra;
     }
-    return msg || '';
+    return escapeHtml(msg || '');
 }
 
 /* ======================================================
@@ -307,8 +318,24 @@ function toggleRejected(btn) {
     }
 }
 
+function renderCompanyConnectionGuide(list, title, description) {
+    list.classList.add('matching-list--company-connect');
+    list.innerHTML = '<div class="matching-company-connect-guide">' +
+        '<strong>' + escapeHtml(title) + '</strong>' +
+        '<p>' + escapeHtml(description) + '</p>' +
+        '<a href="' + escapeHtml(companyConnectUrl) + '">내 회사 정보 연결하기</a>' +
+    '</div>';
+}
+
 function renderReceived(filter) {
     var list     = document.getElementById('receivedList');
+    if (requiresCompanyConnection) {
+        renderCompanyConnectionGuide(list,
+            '받은 거래 요청을 확인하려면 내 회사 정보를 연결해 주세요.',
+            '사업자등록번호 확인 후 소속 기업과 연결되면 해당 기업의 받은 요청을 확인하고 담당자를 지정할 수 있습니다.');
+        return;
+    }
+    list.classList.remove('matching-list--company-connect');
     var allItems = filter === 'all' ? receivedData : receivedData.filter(function(d) { return d.status === filter; });
     var items    = allItems.filter(function(d) { return d.status !== 'R'; });
     var rejected = allItems.filter(function(d) { return d.status === 'R'; });
@@ -324,6 +351,13 @@ function renderReceived(filter) {
 
 function renderSent(filter) {
     var list     = document.getElementById('sentList');
+    if (requiresCompanyConnection) {
+        renderCompanyConnectionGuide(list,
+            '보낸 거래 요청을 확인하려면 내 회사 정보를 연결해 주세요.',
+            '사업자등록번호 확인 후 소속 기업과 연결되면 거래 요청 내역과 진행 상태를 확인할 수 있습니다.');
+        return;
+    }
+    list.classList.remove('matching-list--company-connect');
     var allItems = filter === 'all' ? sentData : sentData.filter(function(d) { return d.status === filter; });
     var items    = allItems.filter(function(d) { return d.status !== 'R'; });
     var rejected = allItems.filter(function(d) { return d.status === 'R'; });
@@ -339,6 +373,13 @@ function renderSent(filter) {
 
 function renderInterested() {
     var list = document.getElementById('interestedList');
+    if (requiresCompanyConnection) {
+        renderCompanyConnectionGuide(list,
+            '관심기업을 확인하려면 내 회사 정보를 연결해 주세요.',
+            '사업자등록번호 확인 후 소속 기업과 연결되면 관심기업과 거래 요청 정보를 이용할 수 있습니다.');
+        return;
+    }
+    list.classList.remove('matching-list--company-connect');
     if (!interestedData.length) {
         list.innerHTML = '<div class="NoData">관심기업 자료가 없습니다.</div>';
     } else {
@@ -572,12 +613,13 @@ function approvalStatusToCode(status) {
     return 'N';
 }
 
-function requestTradeApproval(url, id, action) {
+function requestTradeApproval(url, id, action, targetMemberId) {
     var body = new URLSearchParams();
     body.set('action', 'trade_request_approval');
     body.set('idx', id);
     body.set('typ', action);
     body.set('csrf_token', matchingCsrfToken);
+    if (targetMemberId) body.set('target_mb_id', targetMemberId);
 
     return fetch(url, {
         method: 'POST',
@@ -591,7 +633,7 @@ function requestTradeApproval(url, id, action) {
     });
 }
 
-function submitTradeApproval(id, action) {
+function submitTradeApproval(id, action, targetMemberId) {
     var index = 0;
 
     function tryNext() {
@@ -600,7 +642,7 @@ function submitTradeApproval(id, action) {
         }
 
         var url = tradeRequestActionUrls[index++];
-        return requestTradeApproval(url, id, action)
+        return requestTradeApproval(url, id, action, targetMemberId)
             .then(function(res) {
                 var code = splitResponseParts(res)[0];
                 if (code === '1000' || code === '501') return res;
@@ -741,11 +783,11 @@ function showConfirm(title, msg, cb) {
     confirmCallback = cb;
 }
 
-function handleAccept(id) {
-    showConfirm('요청 수락', '정말 수락하시겠습니까?', function(ok) {
+function completeAccept(id, targetMemberId) {
+    showConfirm('요청 수락', '선택한 담당자로 요청을 수락하시겠습니까?', function(ok) {
         if (!ok) return;
 
-        submitTradeApproval(id, 'accept').then(function(res) {
+        submitTradeApproval(id, 'accept', targetMemberId).then(function(res) {
             var parts = splitResponseParts(res);
             var code = parts[0];
 
@@ -760,8 +802,20 @@ function handleAccept(id) {
                 return;
             }
 
-            if (code === '501') {
-                window.location.href = '/bbs/login.php?url=' + encodeURIComponent(window.location.pathname + window.location.search + window.location.hash);
+            if (code === '422' || code === '409') {
+                alert(parts[1] || '담당자 정보를 확인해 주세요.');
+            } else if (code === '501') {
+                if (window.MacomaLoginGuard && typeof window.MacomaLoginGuard.show === 'function') {
+                    window.MacomaLoginGuard.show({
+                        descriptionText: '거래 요청 처리는 로그인 후 이용하실 수 있습니다.',
+                        loginUrl: '/bbs/login.php?url=' + encodeURIComponent(window.location.pathname + window.location.search + window.location.hash),
+                        signupUrl: (window.MacomaLoginGuard && typeof window.MacomaLoginGuard.buildSignupUrl === 'function')
+                            ? window.MacomaLoginGuard.buildSignupUrl(window.location.pathname + window.location.search + window.location.hash)
+                            : '/signup'
+                    });
+                } else {
+                    window.location.href = '/bbs/login.php?url=' + encodeURIComponent(window.location.pathname + window.location.search + window.location.hash);
+                }
                 return;
             }
 
@@ -778,6 +832,81 @@ function handleAccept(id) {
             }
         });
     });
+}
+
+function handleAccept(id) {
+    var overlay = document.getElementById('recipientAssignOverlay');
+    var select = document.getElementById('recipientAssignSelect');
+    var trigger = document.getElementById('recipientAssignTrigger');
+    var options = document.getElementById('recipientAssignOptions');
+    var okButton = document.getElementById('recipientAssignOk');
+    if (!overlay || !select || !trigger || !options || !okButton) {
+        completeAccept(id, '');
+        return;
+    }
+
+    overlay.classList.add('is_open');
+    document.documentElement.classList.add('hide-scroll');
+    select.value = '';
+    trigger.disabled = true;
+    trigger.textContent = '담당자 정보를 불러오는 중입니다.';
+    trigger.setAttribute('aria-expanded', 'false');
+    options.innerHTML = '';
+    options.hidden = true;
+    okButton.disabled = true;
+    var body = new URLSearchParams();
+    body.set('action', 'trade_request_recipients');
+    body.set('tr_no', id);
+    fetch('/ko/my_matching.php', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+        body: body.toString()
+    }).then(function(res) { return res.json(); }).then(function(payload) {
+		if (payload && payload.success && !payload.requires_assignment) {
+			overlay.classList.remove('is_open');
+			document.documentElement.classList.remove('hide-scroll');
+			completeAccept(id, '');
+			return;
+		}
+        var recipients = payload && Array.isArray(payload.recipients) ? payload.recipients : [];
+        if (!payload || !payload.success || !recipients.length) {
+            throw new Error((payload && payload.message) || '지정 가능한 담당자가 없습니다.');
+        }
+        trigger.disabled = false;
+        trigger.textContent = '담당자를 선택해 주세요.';
+        recipients.forEach(function(recipient) {
+            var option = document.createElement('button');
+            option.type = 'button';
+            option.className = 'matching-recipient-option';
+            option.dataset.memberId = String(recipient.id || '');
+            option.textContent = String(recipient.name || '담당자');
+            option.addEventListener('click', function() {
+                select.value = option.dataset.memberId;
+                trigger.textContent = option.textContent;
+                trigger.setAttribute('aria-expanded', 'false');
+                options.hidden = true;
+                okButton.disabled = !select.value;
+            });
+            options.appendChild(option);
+        });
+        trigger.onclick = function() {
+            if (trigger.disabled) return;
+            var isOpen = !options.hidden;
+            options.hidden = isOpen;
+            trigger.setAttribute('aria-expanded', isOpen ? 'false' : 'true');
+        };
+    }).catch(function(error) {
+        overlay.classList.remove('is_open');
+        document.documentElement.classList.remove('hide-scroll');
+        alert(error.message || '담당자 정보를 불러오지 못했습니다.');
+    });
+    okButton.onclick = function() {
+        if (!select.value) return;
+        overlay.classList.remove('is_open');
+        document.documentElement.classList.remove('hide-scroll');
+        completeAccept(id, select.value);
+    };
 }
 
 function handleReject(id) {
@@ -797,7 +926,17 @@ function handleReject(id) {
             }
 
             if (code === '501') {
-                window.location.href = '/bbs/login.php?url=' + encodeURIComponent(window.location.pathname + window.location.search + window.location.hash);
+                if (window.MacomaLoginGuard && typeof window.MacomaLoginGuard.show === 'function') {
+                    window.MacomaLoginGuard.show({
+                        descriptionText: '거래 요청 처리는 로그인 후 이용하실 수 있습니다.',
+                        loginUrl: '/bbs/login.php?url=' + encodeURIComponent(window.location.pathname + window.location.search + window.location.hash),
+                        signupUrl: (window.MacomaLoginGuard && typeof window.MacomaLoginGuard.buildSignupUrl === 'function')
+                            ? window.MacomaLoginGuard.buildSignupUrl(window.location.pathname + window.location.search + window.location.hash)
+                            : '/signup'
+                    });
+                } else {
+                    window.location.href = '/bbs/login.php?url=' + encodeURIComponent(window.location.pathname + window.location.search + window.location.hash);
+                }
                 return;
             }
 
@@ -955,11 +1094,18 @@ function initMyMatchingPage() {
         confirmCallback = null;
     });
 
+    document.getElementById('recipientAssignCancel').addEventListener('click', function() {
+        document.getElementById('recipientAssignOverlay').classList.remove('is_open');
+        document.getElementById('recipientAssignOptions').hidden = true;
+        document.getElementById('recipientAssignTrigger').setAttribute('aria-expanded', 'false');
+        document.documentElement.classList.remove('hide-scroll');
+    });
+
     updateCounts();
 
     // Check hash for initial tab
     var hash = window.location.hash.replace('#', '') || 'received';
-    var validTabs = ['interested', 'received', 'sent', 'selected'];
+    var validTabs = ['interested', 'received', 'sent'];
     if (validTabs.indexOf(hash) === -1) hash = 'received';
     switchMainTab(hash);
     // 초기 인디케이터 위치 (레이아웃 완료 후)

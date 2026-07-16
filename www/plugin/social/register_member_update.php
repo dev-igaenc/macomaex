@@ -2,6 +2,7 @@
 include_once('./_common.php');
 include_once(G5_LIB_PATH.'/register.lib.php');
 include_once(G5_LIB_PATH.'/mailer.lib.php');
+include_once(G5_PATH.'/ko/helper/alimtalk_log_helper.php');
 
 if (!function_exists('macomaex_social_register_fail')) {
     function macomaex_social_register_fail($message)
@@ -65,6 +66,9 @@ $cert_mb_name   = isset($_POST['mb_name']) ? clean_xss_tags(trim(strip_tags($_PO
 $mb_hp          = isset($_POST['mb_hp']) ? trim($_POST['mb_hp']) : '';
 $mb_6           = isset($_POST['mb_6']) ? trim($_POST['mb_6']) : '';
 $mb_8           = isset($_POST['mb_8']) ? trim($_POST['mb_8']) : '';
+$mb_9           = isset($_POST['terms']) ? '1' : '0';
+$mb_10          = isset($_POST['privacy']) ? '1' : '0';
+$mb_11          = isset($_POST['marketing']) ? '1' : '0';
 $mb_email       = get_email_address($mb_email);
 $mb_5           = $mb_email;
 $mb_id          = $mb_email;
@@ -97,6 +101,8 @@ if( ! isset($mb_password) || ! $mb_password ){
 
 if ($msg = empty_mb_name($cert_mb_name))       macomaex_social_register_fail($msg);
 if ($msg = empty_mb_email($mb_email))   macomaex_social_register_fail($msg);
+if ($mb_9 !== '1') macomaex_social_register_fail('이용약관에 동의해 주세요.');
+if ($mb_10 !== '1') macomaex_social_register_fail('개인정보수집에 동의해 주세요.');
 if ($msg = reserve_mb_id($mb_id))       macomaex_social_register_fail($msg);
 if ($msg = empty_mb_nick($mb_nick))     macomaex_social_register_fail('회원 내부정보 생성에 실패했습니다. 다시 시도해 주세요.');
 if ($msg = valid_mb_nick($mb_nick))     macomaex_social_register_fail('회원 내부정보 생성에 실패했습니다. 다시 시도해 주세요.');
@@ -106,7 +112,7 @@ if ($msg = reserve_mb_nick($mb_nick))   macomaex_social_register_fail('회원 �
 //if ($msg = valid_mb_name($mb_name))     alert($msg, "", true, true);
 if ($msg = valid_mb_email($mb_email))   macomaex_social_register_fail($msg);
 if ($msg = prohibit_mb_email($mb_email))macomaex_social_register_fail($msg);
-if ($msg = valid_mb_hp($mb_hp))         macomaex_social_register_fail($msg);
+if ($msg = macomaex_validate_unique_mb_hp($mb_hp, $mb_id)) macomaex_social_register_fail($msg);
 // 소셜 가입도 일반 가입과 동일하게 최종 insert 전에 OTP 인증을 강제합니다.
 if (!macomaex_signup_phone_otp_is_verified($mb_hp)) macomaex_social_register_fail('휴대폰 인증을 완료해 주세요.');
 
@@ -157,10 +163,19 @@ $sql = " insert into {$g5['member_table']}
                 mb_open_date = '".G5_TIME_YMD."',
                 mb_5 = '".sql_real_escape_string($mb_5)."',
                 mb_6 = '".sql_real_escape_string($mb_6)."',
-                mb_8 = '".sql_real_escape_string($mb_8)."' ";
+                mb_8 = '".sql_real_escape_string($mb_8)."',
+                mb_9 = '".sql_real_escape_string($mb_9)."',
+                mb_10 = '".sql_real_escape_string($mb_10)."',
+                mb_11 = '".sql_real_escape_string($mb_11)."' ";
 $result = sql_query($sql, false);
 
 if($result) {
+    // 일반 가입과 동일하게 사업자 미등록 회원용 임시 회사 코드만 연결한다.
+    $registered_member = sql_fetch("select mb_no from {$g5['member_table']} where mb_id = '{$mb_id_sql}'");
+    if (!empty($registered_member['mb_no'])) {
+        $temporary_company_code = 'M'.sprintf('%09d', (int)$registered_member['mb_no']);
+        sql_query("update {$g5['member_table']} set mb_company='".sql_real_escape_string($temporary_company_code)."' where mb_no='".(int)$registered_member['mb_no']."'");
+    }
 
     // 회원가입 포인트 부여
     insert_point($mb_id, $config['cf_register_point'], '회원가입 축하', '@member', $mb_id, '회원가입');
@@ -281,6 +296,11 @@ if($result) {
 
     // 사용자 코드 실행
     @include_once ($member_skin_path.'/register_form_update.tail.skin.php');
+
+    // 네이버/카카오/구글 공통 소셜 가입 완료 시 최종 저장된 휴대폰 번호로 알림톡을 발송합니다.
+    if (function_exists('macomaex_send_signup_alimtalk')) {
+        macomaex_send_signup_alimtalk($mb['mb_id'], isset($mb['mb_8']) ? $mb['mb_8'] : $mb_8);
+    }
 
     goto_url(G5_HTTP_BBS_URL.'/register_result.php');
 

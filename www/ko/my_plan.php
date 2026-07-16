@@ -5,7 +5,13 @@ $board['bo_10']="6"; // 1뎁스
 $board['bo_9']="5"; // 2뎁스
 
 //로그인 체크
-login_chk();
+login_chk('account_credits');
+
+$ga4_pending_purchase = get_session('ss_ga4_pending_purchase');
+if (!is_array($ga4_pending_purchase)) {
+	$ga4_pending_purchase = array();
+}
+set_session('ss_ga4_pending_purchase', '');
 
 $my_plan_css_ver = file_exists(__DIR__ . '/css/my_plan.css') ? filemtime(__DIR__ . '/css/my_plan.css') : time();
 $my_plan_js_ver = file_exists(__DIR__ . '/js/my_plan.js') ? filemtime(__DIR__ . '/js/my_plan.js') : time();
@@ -17,6 +23,14 @@ add_javascript('<script src="/ko/js/my_plan.js?ver=' . $my_plan_js_ver . '"></sc
 $hide_theme_svisual = true;
 $hide_theme_pagetop = true;
 include_once(G5_THEME_PATH.'/head.php');
+if ($ga4_pending_purchase) {
+?>
+<script>
+window.dataLayer = window.dataLayer || [];
+window.dataLayer.push(<?php echo json_encode($ga4_pending_purchase, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>);
+</script>
+<?php
+}
 $membership=get_membership();
 
 //맴버쉽 정보
@@ -77,6 +91,31 @@ if (!function_exists('my_plan_pay_method_text')) {
 		if (strpos($raw, 'HPP') !== false || strpos($raw, 'PHONE') !== false || strpos($raw, 'MOBILE') !== false) return '휴대폰결제';
 		if (strpos($raw, 'KAKAOPAY') !== false || strpos($raw, 'NAVERPAY') !== false || strpos($raw, 'PAYCO') !== false || strpos($raw, 'TOSS') !== false) return '간편결제';
 		return trim((string)$raw);
+	}
+}
+
+if (!function_exists('my_plan_mask_company_name')) {
+	function my_plan_mask_company_name($name)
+	{
+		$raw = trim((string)$name);
+		if ($raw === '') return '';
+
+		// 이미 마스킹된 값이면 그대로 사용
+		if (preg_match('/\*{2,}/u', $raw)) {
+			return $raw;
+		}
+
+		$m = array();
+		preg_match('/^(\(주\)|\(유\)|\(사\))?(.*)$/u', $raw, $m);
+		$prefix = isset($m[1]) ? (string)$m[1] : '';
+		$body = isset($m[2]) ? trim((string)$m[2]) : $raw;
+		if ($body === '') return $prefix . '****';
+
+		$visible = ($prefix !== '')
+			? mb_substr($body, 0, 1, 'UTF-8')
+			: mb_substr($body, 0, 2, 'UTF-8');
+
+		return $prefix . $visible . '****';
 	}
 }
 
@@ -222,7 +261,7 @@ for($i=0; $i<count($payment_rows); $i++){
                             </div>
                         </div>
                         <div class="credit-summary-right">
-                            <a href="/ko/plan.php" class="credit-cta-btn">
+                            <a href="/plans" class="credit-cta-btn">
                                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                                 크레딧 충전하기
                             </a>
@@ -469,7 +508,7 @@ for($i=0; $i<count($payment_rows); $i++){
 	                                }
                                 // memo는 고정값 유지하고, 화면에서만 AI 대상 기업명 suffix 처리
                                 if($use_type=="analyze" && $ai_company_name && strpos((string)$title, "—") === false){
-                                    $title .= " — ".$ai_company_name;
+                                    $title .= " — ".my_plan_mask_company_name($ai_company_name);
                                 }
                             ?>
                             <div class="pay-card" data-type="<?=$use_type?>">

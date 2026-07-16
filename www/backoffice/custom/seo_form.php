@@ -3,7 +3,7 @@ $sub_menu = "100550";
 include_once('./_common.php');
 include_once('../admin.head.php');
 
-auth_check($auth[$sub_menu], 'w');
+auth_check_menu($auth, $sub_menu, 'w');
 
 if ($is_admin != 'super' && $w == '') alert('최고관리자만 접근 가능합니다.');
 

@@ -148,7 +148,7 @@ function no_hp_click(val)
 <input type="hidden" name="token" value="<?php echo $token; ?>">
 <input type="hidden" name="sw" value="">
 <input type="hidden" name="atype" value="del">
-<input type="hidden" name="str_query" value="<?php echo clean_query_string($_SERVER['QUERY_STRING']); ?>" >
+<input type="hidden" name="str_query" value="<?php echo clean_query_string(isset($_SERVER['QUERY_STRING']) ? $_SERVER['QUERY_STRING'] : ''); ?>" >
 
 <div class="tbl_head01 tbl_wrap">
     <table>

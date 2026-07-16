@@ -1,8 +1,169 @@
 <?php
 include_once('./_common.php');
+include_once(G5_PATH . '/ko/helper/company_list_ai_helper.php');
+include_once(G5_PATH . '/ko/helper/company_identity_preview_helper.php');
 
 $board['bo_10'] = '3';
 $board['bo_9'] = '1';
+
+if (!function_exists('company_list_ai_guard_now')) {
+    // 목록 진입 세션 유효시간 계산용 현재 시간
+    function company_list_ai_guard_now()
+    {
+        return defined('G5_SERVER_TIME') ? (int)G5_SERVER_TIME : time();
+    }
+}
+
+if (!function_exists('company_list_ai_entry_map_session_key')) {
+    // 추천 목록 승인 목록을 저장하는 세션 키
+    function company_list_ai_entry_map_session_key()
+    {
+        return 'ss_company_list_ai_entry_map';
+    }
+}
+
+if (!function_exists('company_list_ai_load_entry_map')) {
+    // 만료된 승인 목록은 제외하고 세션 승인 목록을 복원
+    function company_list_ai_load_entry_map()
+    {
+        $raw = (string)get_session(company_list_ai_entry_map_session_key());
+        $decoded = json_decode($raw, true);
+        if (!is_array($decoded)) return array();
+
+        $now = company_list_ai_guard_now();
+        $clean = array();
+        foreach ($decoded as $bizno => $entry) {
+            $bizno = preg_replace('/\D/', '', (string)$bizno);
+            $token = trim((string)($entry['token'] ?? ''));
+            $expires = (int)($entry['expires'] ?? 0);
+            $updated_at = (int)($entry['updated_at'] ?? 0);
+
+            if (strlen($bizno) !== 10 || $token === '' || $expires < $now) continue;
+
+            $clean[$bizno] = array(
+                'token' => $token,
+                'expires' => $expires,
+                'updated_at' => $updated_at,
+            );
+        }
+
+        return $clean;
+    }
+}
+
+if (!function_exists('company_list_ai_save_entry_map')) {
+    // 최근 정상 진입 목록만 세션에 짧게 유지
+    function company_list_ai_save_entry_map($entry_map)
+    {
+        if (!is_array($entry_map) || empty($entry_map)) {
+            set_session(company_list_ai_entry_map_session_key(), '');
+            return;
+        }
+
+        uasort($entry_map, function ($a, $b) {
+            return (int)($b['updated_at'] ?? 0) <=> (int)($a['updated_at'] ?? 0);
+        });
+
+        $trimmed = array_slice($entry_map, 0, 20, true);
+        set_session(
+            company_list_ai_entry_map_session_key(),
+            json_encode($trimmed, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
+        );
+    }
+}
+
+if (!function_exists('company_list_ai_normalize_guard_bizno')) {
+    // URL의 bizno/comnum 값을 세션 검증용 10자리 숫자로 통일
+    function company_list_ai_normalize_guard_bizno($value)
+    {
+        $raw = trim((string)$value);
+        if ($raw === '') return '';
+        if (preg_match('/^[0-9]{10}$/', $raw)) return $raw;
+
+        $decoded = simple_crypt($raw, 'd');
+        if (!is_string($decoded) || $decoded === '') return '';
+
+        $decoded_digits = preg_replace('/\D/', '', $decoded);
+        return strlen($decoded_digits) === 10 ? $decoded_digits : '';
+    }
+}
+
+if (!function_exists('company_list_ai_has_valid_entry_session')) {
+    // URL 토큰과 세션 승인값이 모두 맞아야 목록 진입을 허용
+    function company_list_ai_has_valid_entry_session($bizno_token_raw, $bizno)
+    {
+        $bizno = preg_replace('/\D/', '', (string)$bizno);
+        $bizno_token_raw = trim((string)$bizno_token_raw);
+        if (strlen($bizno) !== 10 || $bizno_token_raw === '') return false;
+
+        $entry_map = company_list_ai_load_entry_map();
+        if (!empty($entry_map[$bizno]['token'])) {
+            $session_token = trim((string)$entry_map[$bizno]['token']);
+            return function_exists('hash_equals')
+                ? hash_equals($session_token, $bizno_token_raw)
+                : ($session_token === $bizno_token_raw);
+        }
+
+        // 기존 마지막 1건 세션도 잠시 하위호환으로 허용
+        $session_bizno = preg_replace('/\D/', '', (string)get_session('ss_company_list_ai_bizno'));
+        $session_token = trim((string)get_session('ss_company_list_ai_bizno_token'));
+        $session_expires = (int)get_session('ss_company_list_ai_expires');
+
+        if ($session_bizno !== $bizno) return false;
+        if ($session_token === '' || $session_expires < company_list_ai_guard_now()) return false;
+
+        return function_exists('hash_equals')
+            ? hash_equals($session_token, $bizno_token_raw)
+            : ($session_token === $bizno_token_raw);
+    }
+}
+
+if (!function_exists('company_list_ai_touch_entry_session')) {
+    // 현재 보고 있는 추천 목록의 세션 만료를 연장
+    function company_list_ai_touch_entry_session($bizno, $bizno_token_raw)
+    {
+        $bizno = preg_replace('/\D/', '', (string)$bizno);
+        $bizno_token_raw = trim((string)$bizno_token_raw);
+        if (strlen($bizno) !== 10 || $bizno_token_raw === '') return;
+
+        $now = company_list_ai_guard_now();
+        $entry_map = company_list_ai_load_entry_map();
+        if (!empty($entry_map[$bizno]['token'])) {
+            $entry_token = trim((string)$entry_map[$bizno]['token']);
+            $is_match = function_exists('hash_equals')
+                ? hash_equals($entry_token, $bizno_token_raw)
+                : ($entry_token === $bizno_token_raw);
+
+            if ($is_match) {
+                $entry_map[$bizno]['expires'] = $now + 1800;
+                $entry_map[$bizno]['updated_at'] = $now;
+                company_list_ai_save_entry_map($entry_map);
+            }
+        }
+
+        $legacy_bizno = preg_replace('/\D/', '', (string)get_session('ss_company_list_ai_bizno'));
+        $legacy_token = trim((string)get_session('ss_company_list_ai_bizno_token'));
+        $legacy_match = ($legacy_bizno === $bizno) && (
+            function_exists('hash_equals')
+                ? hash_equals($legacy_token, $bizno_token_raw)
+                : ($legacy_token === $bizno_token_raw)
+        );
+        if ($legacy_match) {
+            set_session('ss_company_list_ai_expires', (string)($now + 1800));
+        }
+    }
+}
+
+// 재배포 확인 2026-07-06-2: 추천 목록 직접 URL 차단
+// 추천 목록은 검색 버튼을 통해 발급된 세션이 있는 경우에만 연다
+$company_list_ai_entry_token = trim((string)($_GET['bizno'] ?? ($_GET['comnum'] ?? '')));
+$company_list_ai_entry_bizno = company_list_ai_normalize_guard_bizno($company_list_ai_entry_token);
+// 메인 검색 흐름을 거치지 않은 직접 URL 진입은 목록에서 차단
+if (!company_list_ai_has_valid_entry_session($company_list_ai_entry_token, $company_list_ai_entry_bizno)) {
+    alert('비정상적인 접근입니다. 메인페이지로 이동합니다.', G5_URL);
+}
+// 정상 사용자 흐름에서는 현재 보고 있는 목록의 승인 세션만 조금씩 연장
+company_list_ai_touch_entry_session($company_list_ai_entry_bizno, $company_list_ai_entry_token);
 
 $company_list_ai_css_ver = @filemtime(G5_PATH . '/ko/css/company_list_ai.css');
 if (!$company_list_ai_css_ver) $company_list_ai_css_ver = G5_CSS_VER;
@@ -22,20 +183,13 @@ add_stylesheet('<link rel="stylesheet" href="' . G5_URL . '/ko/css/favorite.css?
 add_stylesheet('<link rel="stylesheet" href="' . G5_URL . '/ko/css/section-header.css?ver=' . G5_CSS_VER . '">', 210);
 add_stylesheet('<link rel="stylesheet" href="' . G5_URL . '/ko/css/verify-modal.css?ver=' . G5_CSS_VER . '">', 215);
 add_stylesheet('<link rel="stylesheet" href="' . G5_URL . '/ko/css/ai-loading.css?ver=' . G5_CSS_VER . '">', 216);
+add_stylesheet('<link rel="stylesheet" href="' . G5_URL . '/ko/css/match-request-modal.css?ver=' . G5_CSS_VER . '">', 217);
 add_stylesheet('<link rel="stylesheet" href="' . G5_URL . '/ko/css/company_list_ai.css?ver=' . (int)$company_list_ai_css_ver . '">', 220);
 
 $g5['body_script'] = ' class="page-company-list-ai"';
 include_once(G5_THEME_PATH . '/head.php');
 
 echo '<style>#pageTop,#sVisual{display:none !important;}</style>';
-
-function company_list_ai_cards()
-{
-    return [
-        'buyer' => [],
-        'seller' => [],
-    ];
-}
 
 function company_list_ai_translate_radar($radar)
 {
@@ -140,6 +294,21 @@ function company_list_ai_apply_unlock_state($cards, $unlocked_kedcd_map)
         if (!is_array($card)) continue;
         $kedcd = company_list_ai_normalize_kedcd($card['kedcd'] ?? '');
         $cards[$idx]['is_unlocked'] = ($kedcd !== '' && !empty($unlocked_kedcd_map[$kedcd]));
+    }
+    return $cards;
+}
+
+function company_list_ai_apply_identity_visibility($cards, $is_logged_in)
+{
+    if (!is_array($cards)) return array();
+
+    foreach ($cards as $idx => $card) {
+        if (!is_array($card)) continue;
+        $is_top3 = ($idx < 3);
+        $cards[$idx]['identity_visible'] = $is_logged_in || $is_top3;
+        if (!$is_logged_in && $is_top3) {
+            $cards[$idx]['identity_preview_token'] = company_identity_preview_issue('ai_top3', $card['kedcd'] ?? '');
+        }
     }
     return $cards;
 }
@@ -335,19 +504,23 @@ function company_list_ai_ml_item_to_card($item)
     $badges = $badge_fields['badges'];
 
     $tags = array();
+    $tag_source = 'none';
     if (isset($item['keywords_json'])) {
         if (is_array($item['keywords_json'])) {
             $tags = company_list_ai_normalize_tags($item['keywords_json']);
         } else {
             $tags = company_list_ai_parse_keywords_json((string)$item['keywords_json']);
         }
+        if (!empty($tags)) $tag_source = 'actual';
     }
     if (empty($tags) && isset($item['tags']) && is_array($item['tags'])) {
         $tags = company_list_ai_normalize_tags($item['tags']);
+        if (!empty($tags)) $tag_source = 'actual';
     } else if (empty($tags) && isset($item['tags']) && is_string($item['tags']) && trim($item['tags']) !== '') {
         $tags_from_json = company_list_ai_parse_keywords_json((string)$item['tags']);
         if (!empty($tags_from_json)) {
             $tags = $tags_from_json;
+            $tag_source = 'actual';
         } else {
             $parts = preg_split('/\s*,\s*/u', trim((string)$item['tags']));
             foreach ($parts as $tag) {
@@ -355,17 +528,24 @@ function company_list_ai_ml_item_to_card($item)
                 if ($t === '' || in_array($t, $tags, true)) continue;
                 $tags[] = $t;
             }
+            if (!empty($tags)) $tag_source = 'actual';
         }
     }
     if (empty($tags)) {
         $biz_category = trim((string)($item['biz_category'] ?? ''));
         if ($biz_category !== '') {
             $tags[] = $biz_category;
+            $tag_source = 'industry_inferred';
         } else {
             $tags = company_list_ai_get_item_tags_by_industry($bzc_nm, $bzc_cd, $kedcd);
+            $tag_source = 'generic_fallback';
         }
     }
-    if (empty($tags)) $tags[] = 'AI추천';
+    if (empty($tags)) {
+        $tags[] = 'AI추천';
+        $tag_source = 'generic_fallback';
+    }
+    $analysis_tags = $tags;
     $tag_total_count = company_list_ai_resolve_tag_total_count($item['keyword_count'] ?? 0, $tags);
 
     return array(
@@ -381,14 +561,8 @@ function company_list_ai_ml_item_to_card($item)
         'sales_growth_pct' => (isset($item['sales_growth_pct']) && $item['sales_growth_pct'] !== '' && $item['sales_growth_pct'] !== null)
             ? (float)$item['sales_growth_pct']
             : null,
-        'debt_ratio_pct' => (isset($item['debt_ratio_pct']) && $item['debt_ratio_pct'] !== '' && $item['debt_ratio_pct'] !== null)
-            ? (float)$item['debt_ratio_pct']
-            : null,
         'consec_profit_2y' => (isset($item['consec_profit_2y']) && $item['consec_profit_2y'] !== '' && $item['consec_profit_2y'] !== null)
             ? ((int)$item['consec_profit_2y'] ? 1 : 0)
-            : null,
-        'capital_negative' => (isset($item['capital_negative']) && $item['capital_negative'] !== '' && $item['capital_negative'] !== null)
-            ? ((int)$item['capital_negative'] ? 1 : 0)
             : null,
         'one_line' => trim((string)($item['one_line'] ?? '')),
         'score' => $score,
@@ -397,9 +571,29 @@ function company_list_ai_ml_item_to_card($item)
         'badge_stability' => $badge_fields['badge_stability'],
         'badge_venture' => $badge_fields['badge_venture'],
         'tags' => $tags,
+        'analysis_tags' => $analysis_tags,
+        'tag_source' => $tag_source,
         'tag_total_count' => $tag_total_count,
         'radar' => company_list_ai_translate_radar(isset($item['radar']) ? $item['radar'] : array()),
     );
+}
+
+function company_list_ai_summarize_cards_for_log($cards)
+{
+    $summary = array();
+    foreach ((array)$cards as $card) {
+        if (!is_array($card)) continue;
+        $summary[] = array(
+            'kedcd' => (string)($card['kedcd'] ?? ''),
+            'title' => (string)($card['title'] ?? ''),
+            'industry' => (string)($card['industry'] ?? ''),
+            'industry_nm' => (string)($card['industry_nm'] ?? ''),
+            'score' => (int)($card['score'] ?? 0),
+            'tags' => array_values((array)($card['tags'] ?? array())),
+            'badges' => array_values((array)($card['badges'] ?? array())),
+        );
+    }
+    return $summary;
 }
 
 function company_list_ai_render_badges($badges)
@@ -722,7 +916,7 @@ function company_list_ai_render_rank_medal($rank)
     '</span>';
 }
 
-function company_list_ai_render_card($card, $trade_type, $rank = 0, $src_kedcd = '')
+function company_list_ai_render_card($card, $trade_type, $rank = 0, $src_kedcd = '', $recommendation_context = array())
 {
     $kedcd = htmlspecialchars($card['kedcd'], ENT_QUOTES, 'UTF-8');
     // 상세에서 동일 추천 컨텍스트를 복원할 수 있도록 기준기업(src) kedcd를 함께 전달
@@ -732,7 +926,7 @@ function company_list_ai_render_card($card, $trade_type, $rank = 0, $src_kedcd =
     }
     $src_kedcd_attr = htmlspecialchars($src_kedcd_raw, ENT_QUOTES, 'UTF-8');
     $title_raw = trim((string)($card['title'] ?? ''));
-    $title_text = !empty($card['is_unlocked'])
+    $title_text = !empty($card['identity_visible']) || !empty($card['is_unlocked'])
         ? ($title_raw !== '' ? $title_raw : '기업 상세')
         : company_list_ai_mask_name($title_raw);
     $title = htmlspecialchars($title_text, ENT_QUOTES, 'UTF-8');
@@ -745,17 +939,44 @@ function company_list_ai_render_card($card, $trade_type, $rank = 0, $src_kedcd =
     $sze_attr = (int)($card['sze'] ?? 0);
     $company_age_attr = (int)($card['company_age'] ?? 0);
     $sales_growth_attr = (isset($card['sales_growth_pct']) && $card['sales_growth_pct'] !== null && $card['sales_growth_pct'] !== '') ? (string)$card['sales_growth_pct'] : '';
-    $debt_ratio_attr = (isset($card['debt_ratio_pct']) && $card['debt_ratio_pct'] !== null && $card['debt_ratio_pct'] !== '') ? (string)$card['debt_ratio_pct'] : '';
     $consec_profit_attr = (isset($card['consec_profit_2y']) && $card['consec_profit_2y'] !== null && $card['consec_profit_2y'] !== '') ? ((int)$card['consec_profit_2y'] ? '1' : '0') : '';
-    $capital_negative_attr = (isset($card['capital_negative']) && $card['capital_negative'] !== null && $card['capital_negative'] !== '') ? ((int)$card['capital_negative'] ? '1' : '0') : '';
     $one_line_attr = htmlspecialchars((string)($card['one_line'] ?? ''), ENT_QUOTES, 'UTF-8');
+    $analysis_tags_attr = htmlspecialchars(implode(',', (array)($card['analysis_tags'] ?? array())), ENT_QUOTES, 'UTF-8');
+    $tag_source_attr = htmlspecialchars((string)($card['tag_source'] ?? 'none'), ENT_QUOTES, 'UTF-8');
     $trade_q = (int)$trade_type;
     $card_cd = simple_crypt((string)$card['kedcd'], 'e');
-    $url = '/ko/company_detail_ai.php?cd=' . rawurlencode((string)$card_cd) . '&trade_type=' . $trade_q;
+    $url = '/recommendations/detail?id=' . rawurlencode((string)$card_cd) . '&trade_type=' . $trade_q;
     if ($src_kedcd_raw !== '') {
         $src_cd = simple_crypt((string)$src_kedcd_raw, 'e');
         $url .= '&src_cd=' . rawurlencode((string)$src_cd);
     }
+    $selected_target_keywords = isset($recommendation_context['selected_target_keywords']) && is_array($recommendation_context['selected_target_keywords'])
+        ? array_values(array_filter(array_map('trim', $recommendation_context['selected_target_keywords'])))
+        : array();
+    $selected_partner_bzc_cds = isset($recommendation_context['selected_partner_bzc_cds']) && is_array($recommendation_context['selected_partner_bzc_cds'])
+        ? array_values(array_filter(array_map('trim', $recommendation_context['selected_partner_bzc_cds'])))
+        : array();
+    $recommendation_mode = trim((string)($recommendation_context['recommendation_mode'] ?? 'full'));
+    if (!in_array($recommendation_mode, array('keyword', 'full'), true)) $recommendation_mode = 'full';
+    $context_trace_id = company_list_ai_normalize_trace_id($recommendation_context['trace_id'] ?? '');
+    if (!empty($selected_target_keywords)) {
+        $url .= '&selected_keyword=' . rawurlencode(implode(',', $selected_target_keywords));
+    }
+    if (!empty($selected_partner_bzc_cds)) {
+        $url .= '&partner_bzc=' . rawurlencode(implode(',', $selected_partner_bzc_cds));
+    }
+    $url .= '&recommendation_mode=' . rawurlencode($recommendation_mode);
+    if ($context_trace_id !== '') {
+        $url .= '&trace_id=' . rawurlencode($context_trace_id);
+    }
+    $identity_preview_token = trim((string)($card['identity_preview_token'] ?? ''));
+    if ($identity_preview_token !== '') {
+        $url .= '&identity_preview=' . rawurlencode($identity_preview_token);
+    }
+    $selected_keywords_attr = htmlspecialchars(implode(',', $selected_target_keywords), ENT_QUOTES, 'UTF-8');
+    $partner_bzc_attr = htmlspecialchars(implode(',', $selected_partner_bzc_cds), ENT_QUOTES, 'UTF-8');
+    $recommendation_mode_attr = htmlspecialchars($recommendation_mode, ENT_QUOTES, 'UTF-8');
+    $trace_id_attr = htmlspecialchars($context_trace_id, ENT_QUOTES, 'UTF-8');
     $is_top3 = ($rank > 0);
 
     $tags_html = '';
@@ -781,7 +1002,7 @@ function company_list_ai_render_card($card, $trade_type, $rank = 0, $src_kedcd =
     $radar_tags = company_list_ai_render_radar_tags($card['radar'] ?? []);
     $html = '<div class="swiper-slide">';
     if ($is_top3) $html .= company_list_ai_render_rank_medal($rank);
-    $html .= '<a href="' . $url . '" class="company-ai-link" data-kedcd="' . $kedcd . '" data-src-kedcd="' . $src_kedcd_attr . '" data-trade-type="' . $trade_q . '" data-score="' . $score . '" data-candidate-type="' . $candidate_type . '" data-bzc-cd="' . $industry . '" data-bzc-nm="' . $industry_nm . '" data-sido="' . $region . '" data-sze="' . $sze_attr . '" data-company-age="' . $company_age_attr . '" data-sales-growth-pct="' . htmlspecialchars($sales_growth_attr, ENT_QUOTES, 'UTF-8') . '" data-debt-ratio-pct="' . htmlspecialchars($debt_ratio_attr, ENT_QUOTES, 'UTF-8') . '" data-consec-profit-2y="' . $consec_profit_attr . '" data-capital-negative="' . $capital_negative_attr . '" data-one-line="' . $one_line_attr . '" style="text-decoration:none;color:inherit;">';
+    $html .= '<a href="' . $url . '" class="company-ai-link" data-kedcd="' . $kedcd . '" data-src-kedcd="' . $src_kedcd_attr . '" data-trade-type="' . $trade_q . '" data-selected-keywords="' . $selected_keywords_attr . '" data-partner-bzc-cds="' . $partner_bzc_attr . '" data-recommendation-mode="' . $recommendation_mode_attr . '" data-trace-id="' . $trace_id_attr . '" data-analysis-tags="' . $analysis_tags_attr . '" data-tag-source="' . $tag_source_attr . '" data-score="' . $score . '" data-candidate-type="' . $candidate_type . '" data-bzc-cd="' . $industry . '" data-bzc-nm="' . $industry_nm . '" data-sido="' . $region . '" data-sze="' . $sze_attr . '" data-company-age="' . $company_age_attr . '" data-sales-growth-pct="' . htmlspecialchars($sales_growth_attr, ENT_QUOTES, 'UTF-8') . '" data-consec-profit-2y="' . $consec_profit_attr . '" data-one-line="' . $one_line_attr . '" style="text-decoration:none;color:inherit;">';
     $html .= '<div class="mCompanyCard company-ai-card" style="position:relative;">';
     $html .= '<div class="mCompanyCard_content">';
     $html .= '<div class="mCompanyCard_ai_match"><span class="mCompanyCard_ai_match_label">AI 추천점수</span><span><span class="mCompanyCard_ai_match_value">' . $score . '</span><span class="mCompanyCard_ai_match_unit">    점</span></span></div>';
@@ -801,26 +1022,13 @@ function company_list_ai_render_card($card, $trade_type, $rank = 0, $src_kedcd =
     return $html;
 }
 
-function company_list_ai_expand_cards($source_cards, $target_count = 48)
-{
-    if (!is_array($source_cards) || !$source_cards) return array();
-    $source_cards = array_values($source_cards);
-    $out = array();
-    $idx = 0;
-    while (count($out) < $target_count) {
-        $out[] = $source_cards[$idx % count($source_cards)];
-        $idx++;
-    }
-    return $out;
-}
-
-function company_list_ai_build_slide_sets($cards, $trade_type = 1, $src_kedcd = '')
+function company_list_ai_build_slide_sets($cards, $trade_type = 1, $src_kedcd = '', $recommendation_context = array())
 {
     $top3 = array();
     $rest = array();
     foreach ($cards as $idx => $card) {
-        if ($idx < 3) $top3[] = company_list_ai_render_card($card, $trade_type, $idx + 1, $src_kedcd);
-        else $rest[] = company_list_ai_render_card($card, $trade_type, 0, $src_kedcd);
+        if ($idx < 3) $top3[] = company_list_ai_render_card($card, $trade_type, $idx + 1, $src_kedcd, $recommendation_context);
+        else $rest[] = company_list_ai_render_card($card, $trade_type, 0, $src_kedcd, $recommendation_context);
     }
     return array('top3' => $top3, 'rest' => $rest);
 }
@@ -885,32 +1093,36 @@ function company_list_ai_filter_results_by_partner_bzc($results, $partner_bzc_fi
     return $filtered;
 }
 
-function company_list_ai_add_partner_bzc_filter_payload($payload, $partner_bzc_filters)
+function company_list_ai_add_partner_bzc_filter_payload($payload, $partner_bzc_filters, $partner_bzc_weights = array())
 {
     if (!is_array($payload) || empty($partner_bzc_filters)) return $payload;
 
     $filter_bzc_cds = array();
+    $filter_bzc_weights = array();
     foreach ($partner_bzc_filters as $code) {
         $normalized = strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', (string)$code), 0, 10));
         if ($normalized === '' || in_array($normalized, $filter_bzc_cds, true)) continue;
         $filter_bzc_cds[] = $normalized;
+        $weight_idx = count($filter_bzc_cds) - 1;
+        $filter_bzc_weights[] = max(1, (int)($partner_bzc_weights[$weight_idx] ?? 1));
     }
 
     if (!empty($filter_bzc_cds)) {
         $payload['filter_bzc_cds'] = $filter_bzc_cds;
-        $payload['filter_bzc_weights'] = array_fill(0, count($filter_bzc_cds), 1);
+        $payload['filter_bzc_weights'] = $filter_bzc_weights;
     }
 
     return $payload;
 }
 
-$cards = company_list_ai_cards();
-$buyer_cards = isset($cards['buyer']) && is_array($cards['buyer']) ? $cards['buyer'] : array();
-$seller_cards = isset($cards['seller']) && is_array($cards['seller']) ? $cards['seller'] : array();
+$buyer_cards = array();
+$seller_cards = array();
 $buy_total_stat = count($buyer_cards);
 $sell_total_stat = count($seller_cards);
 $buy_live_ok = false;
 $sell_live_ok = false;
+$buy_result_source = 'not_requested';
+$sell_result_source = 'not_requested';
 $buy_call = array('ok' => false, 'error' => '', 'http_code' => 0);
 $sell_call = array('ok' => false, 'error' => '', 'http_code' => 0);
 $unlocked_kedcd_map = company_list_ai_fetch_unlocked_kedcd_map_for_member($member['mb_id'] ?? '');
@@ -928,14 +1140,47 @@ $partner_bzc_filters = company_list_ai_parse_partner_cd_filters($_GET['partner_c
 if (empty($partner_bzc_filters)) {
     $partner_bzc_filters = company_list_ai_parse_partner_bzc_filters($_GET['partner_bzc'] ?? '');
 }
+// [추천 방향 확정]
+// 구매처 찾기와 판매처 찾기가 섞이지 않도록 목록 진입 시 trade_type을 반드시 1 또는 2로 확정한다.
+// 기존 링크처럼 trade_type이 없으면 type=seller만 판매처(2), 나머지는 구매처(1)로 보정한다.
+$requested_type = trim((string)($_GET['type'] ?? ''));
 $partner_filter_trade_type = (int)($_GET['trade_type'] ?? 0);
-if (!in_array($partner_filter_trade_type, array(1, 2), true)) $partner_filter_trade_type = 0;
+if (!in_array($partner_filter_trade_type, array(1, 2), true)) {
+    // 전체 추천처럼 trade_type이 없는 기존 링크도 type을 기준으로 반드시 한 방향만 선택한다.
+    $partner_filter_trade_type = ($requested_type === 'seller') ? 2 : 1;
+}
+$requested_type = ($partner_filter_trade_type === 2) ? 'seller' : 'buyer';
+$partner_bzc_weights = array_map('intval', preg_split('/\s*,\s*/', trim((string)($_GET['partner_weight'] ?? '')), -1, PREG_SPLIT_NO_EMPTY));
+$partner_bzc_weights = array_slice($partner_bzc_weights, 0, count($partner_bzc_filters));
+while (count($partner_bzc_weights) < count($partner_bzc_filters)) $partner_bzc_weights[] = 1;
+$selected_keywords = array_values(array_filter(array_map('trim', preg_split('/\s*,\s*/u', (string)($_GET['selected_keyword'] ?? '')))));
+$keyword_source_bzc_cds = company_list_ai_parse_partner_bzc_filters($_GET['keyword_source_bzc'] ?? '');
+$keyword_match_types = array_values(array_filter(array_map(function ($value) {
+    $value = trim((string)$value);
+    return in_array($value, array('exact', 'prefix_5', 'prefix_4', 'all', 'global_all'), true) ? $value : '';
+}, preg_split('/\s*,\s*/', (string)($_GET['keyword_match_type'] ?? ''), -1, PREG_SPLIT_NO_EMPTY))));
+$requested_keyword_scope = trim((string)($_GET['keyword_scope'] ?? ''));
+if (!in_array($requested_keyword_scope, array('related', 'all'), true)) $requested_keyword_scope = '';
+$requested_source_bzc_missing = (int)($_GET['source_bzc_missing'] ?? 0) ? 1 : 0;
+$requested_source_bzc_resolved = (int)($_GET['source_bzc_resolved'] ?? 0) ? 1 : 0;
+$requested_source_bzc_resolve_source = preg_replace('/[^a-z0-9_-]/i', '', (string)($_GET['source_bzc_resolve_source'] ?? ''));
+$requested_fallback_reason = preg_replace('/[^a-z0-9_-]/i', '', (string)($_GET['fallback_reason'] ?? ''));
+$recommendation_action = trim((string)($_GET['recommendation_action'] ?? ''));
+if (!in_array($recommendation_action, array('skip', 'keyword_select'), true)) $recommendation_action = '';
+// [추천 흐름 추적 ID]
+// 추천 버튼으로 서버에 진입한 시점부터 캐시/EC2 응답과 카드 출력까지 동일한 trace_id로 연결한다.
+$trace_id = company_list_ai_normalize_trace_id($_GET['trace_id'] ?? '');
 $has_partner_bzc_filters = !empty($partner_bzc_filters);
-$use_buy_partner_filter = $has_partner_bzc_filters && ($partner_filter_trade_type === 0 || $partner_filter_trade_type === 1);
-$use_sell_partner_filter = $has_partner_bzc_filters && ($partner_filter_trade_type === 0 || $partner_filter_trade_type === 2);
+$use_buy_partner_filter = $has_partner_bzc_filters && $partner_filter_trade_type === 1;
+$use_sell_partner_filter = $has_partner_bzc_filters && $partner_filter_trade_type === 2;
 $resolved_base_payload = array();
 $input_error_notice = '';
 $resolve_error_notice = '';
+$guest_limit_blocked = false;
+$guest_limit_notice = '';
+$guest_limit_payload = array('limited' => false);
+$demo_source_bizno = $has_valid_bizno_query ? $bizno_query : '';
+$is_demo_recommendation = ($demo_source_bizno !== '' && company_list_ai_demo_bizno_pair($demo_source_bizno) !== '');
 
 if (!$has_valid_source_input && ($has_kedcd_query_invalid || $has_bizno_query_invalid)) {
     $input_error_notice = '입력값이 올바르지 않습니다. kedcd/bizno는 10자리 숫자여야 합니다.';
@@ -951,7 +1196,20 @@ if (($has_kedcd_query && strlen($kedcd_query) === 10 && !preg_match('/^0+$/', $k
         $resolved_base_payload = company_list_ai_build_base_payload($_GET);
         $resolved_base_payload['kedcd'] = $kedcd_query;
     } else if ($has_valid_bizno_query) {
-        $resolved = company_list_ai_resolve_base_payload_by_bizno($bizno_query, true);
+        if ($is_demo_recommendation) {
+            $resolved_base_payload = company_list_ai_demo_base_payload_by_bizno($bizno_query);
+            $resolved = array(
+                'ok' => !empty($resolved_base_payload['kedcd']),
+                'base_payload' => $resolved_base_payload,
+                'source' => 'demo_company',
+                'error' => empty($resolved_base_payload['kedcd']) ? '시연 기준 기업 정보를 찾지 못했습니다.' : '',
+            );
+        } else {
+            $resolved = company_list_ai_resolve_base_payload_by_bizno($bizno_query, true, array(
+                'trace_id' => $trace_id,
+                'trade_type' => $partner_filter_trade_type,
+            ));
+        }
         if (!empty($resolved['ok']) && !empty($resolved['base_payload']) && is_array($resolved['base_payload'])) {
             $resolved_base_payload = $resolved['base_payload'];
             $query_override = company_list_ai_build_base_payload(array_merge($_GET, array(
@@ -968,118 +1226,332 @@ if (($has_kedcd_query && strlen($kedcd_query) === 10 && !preg_match('/^0+$/', $k
 }
 
 if (!empty($resolved_base_payload['kedcd'])) {
+    // bzc_meta는 로그/화면 흐름 전용이다. 실제 EC2 payload에는 내부 추적값을 보내지 않는다.
+    $bzc_meta = isset($resolved_base_payload['_bzc_meta']) && is_array($resolved_base_payload['_bzc_meta'])
+        ? $resolved_base_payload['_bzc_meta']
+        : array();
+    if (!isset($bzc_meta['source_bzc_cd'])) {
+        $bzc_meta['source_bzc_cd'] = (string)($resolved_base_payload['bzc_cd'] ?? '');
+    }
+    if ($requested_keyword_scope !== '') $bzc_meta['keyword_scope'] = $requested_keyword_scope;
+    if ($requested_source_bzc_missing) $bzc_meta['source_bzc_missing'] = 1;
+    if ($requested_source_bzc_resolved) $bzc_meta['source_bzc_resolved'] = 1;
+    if ($requested_source_bzc_resolve_source !== '') $bzc_meta['source_bzc_resolve_source'] = $requested_source_bzc_resolve_source;
+    if ($requested_fallback_reason !== '') $bzc_meta['fallback_reason'] = $requested_fallback_reason;
+    // URL로 넘어온 scope가 있으면 우선 적용해 키워드 조회 단계와 최종 추천 로그를 같은 기준으로 묶는다.
+    $keyword_scope = in_array((string)($bzc_meta['keyword_scope'] ?? ''), array('related', 'all'), true)
+        ? (string)$bzc_meta['keyword_scope']
+        : (!empty($resolved_base_payload['bzc_cd']) ? 'related' : 'all');
+    $bzc_meta['keyword_scope'] = $keyword_scope;
+    if ($keyword_scope === 'all' && empty($bzc_meta['match_type'])) $bzc_meta['match_type'] = 'global_all';
+
     $source_kedcd_for_detail = str_pad(preg_replace('/\D/', '', (string)$resolved_base_payload['kedcd']), 10, '0', STR_PAD_LEFT);
     if (strlen($source_kedcd_for_detail) !== 10 || preg_match('/^0+$/', $source_kedcd_for_detail)) {
         $source_kedcd_for_detail = '';
     }
 
-    // 화면 렌더 전에 buy/sell을 모두 받아 탭 전환 시 즉시 표시
+    // [EC2 요청 payload 구성]
+    // 구매처 찾기는 trade_type=1 payload만, 판매처 찾기는 trade_type=2 payload만 실제 조회한다.
+    // 키워드 추천이면 사용자가 고른 상대 업종코드와 선택 횟수 기반 가중치를 해당 방향 payload에 추가한다.
     $base_payload = $resolved_base_payload;
+    // 내부 fallback 메타는 request_received/external 로그에만 남기고 EC2 추천 요청에서는 제거한다.
+    unset($base_payload['_bzc_meta']);
     $buy_payload = $base_payload;
     $buy_payload['trade_type'] = 1;
     if ($use_buy_partner_filter) {
-        $buy_payload = company_list_ai_add_partner_bzc_filter_payload($buy_payload, $partner_bzc_filters);
+        $buy_payload = company_list_ai_add_partner_bzc_filter_payload($buy_payload, $partner_bzc_filters, $partner_bzc_weights);
     }
 
     $sell_payload = $base_payload;
     $sell_payload['trade_type'] = 2;
     if ($use_sell_partner_filter) {
-        $sell_payload = company_list_ai_add_partner_bzc_filter_payload($sell_payload, $partner_bzc_filters);
+        $sell_payload = company_list_ai_add_partner_bzc_filter_payload($sell_payload, $partner_bzc_filters, $partner_bzc_weights);
     }
 
-    // company_api_log와 동일하게 당일 company_ml_log 캐시 우선 사용
+    // [한 달 추천 캐시 조건 구성]
+    // 전체/키워드 추천 모두 한 달 이내 company_ml_log를 우선 사용한다.
+    // 키워드 추천은 업종코드+가중치 조합이 완전히 같은 캐시만 복원하여 다른 선택 조건과 섞이지 않게 한다.
     $ml_log_bizno = $has_valid_bizno_query ? $bizno_query : '';
     $ml_log_kedcd = isset($resolved_base_payload['kedcd']) ? (string)$resolved_base_payload['kedcd'] : '';
     $recommendation_mode = $has_partner_bzc_filters ? 'keyword' : 'full';
+    $unique_keyword_match_types = array_values(array_unique($keyword_match_types));
+    if ($recommendation_mode === 'full') {
+        $recommendation_match_type = $recommendation_action === 'skip' ? 'skip' : 'full';
+    } else if ($keyword_scope === 'all' && empty($unique_keyword_match_types)) {
+        // 과거 링크처럼 match_type이 없더라도 전체 업종 fallback 추천임을 명확히 기록한다.
+        $recommendation_match_type = 'global_all';
+    } else if (count($unique_keyword_match_types) === 1) {
+        $recommendation_match_type = $unique_keyword_match_types[0];
+    } else if (empty($unique_keyword_match_types)) {
+        // 변경 전 링크나 외부 진입은 세부 fallback 정보가 없으므로 키워드 선택 추천으로만 식별한다.
+        $recommendation_match_type = 'selected_keyword';
+    } else {
+        $recommendation_match_type = 'mixed';
+    }
     $partner_bzc_cds_for_log = implode(',', $partner_bzc_filters);
-    $cache_policy_for_log = $has_partner_bzc_filters ? 'keyword_filter_bypass_ml_log' : 'full_allow_today_ml_log';
-
-    company_list_ai_write_event_log('recommend_entry', 'success', array(
-        'action' => 'list_enter',
-        'source' => 'company_list_ai',
-        'recommendation_mode' => $recommendation_mode,
-        'requested_type' => trim((string)($_GET['type'] ?? '')),
+    $buy_cache_context = company_list_ai_normalize_ml_cache_context($use_buy_partner_filter ? array(
+        'filter_bzc_cds' => $partner_bzc_filters,
+        'filter_bzc_weights' => $partner_bzc_weights,
+    ) : array());
+    $sell_cache_context = company_list_ai_normalize_ml_cache_context($use_sell_partner_filter ? array(
+        'filter_bzc_cds' => $partner_bzc_filters,
+        'filter_bzc_weights' => $partner_bzc_weights,
+    ) : array());
+    $buy_cache_policy = $buy_cache_context['recommendation_mode'] . '_allow_1month_ml_log';
+    $sell_cache_policy = $sell_cache_context['recommendation_mode'] . '_allow_1month_ml_log';
+    $cache_policy_for_log = ($buy_cache_policy === $sell_cache_policy)
+        ? $buy_cache_policy
+        : 'mixed_allow_1month_ml_log';
+    $trace_context = array(
+        'trace_id' => $trace_id,
         'bizno' => $ml_log_bizno,
         'kedcd' => $ml_log_kedcd,
-        'selected_trade_type' => $partner_filter_trade_type,
-        'source_bzc_cd' => (string)($resolved_base_payload['bzc_cd'] ?? ''),
-        'partner_bzc_count' => count($partner_bzc_filters),
+        'keywords' => implode(',', $selected_keywords),
+        'match_type' => $recommendation_match_type,
+        'original_source_bzc_cd' => (string)($bzc_meta['original_source_bzc_cd'] ?? ''),
+        'source_bzc_missing' => (int)($bzc_meta['source_bzc_missing'] ?? 0),
+        'source_bzc_resolved' => (int)($bzc_meta['source_bzc_resolved'] ?? 0),
+        'source_bzc_resolve_source' => (string)($bzc_meta['source_bzc_resolve_source'] ?? ''),
+        'keyword_scope' => $keyword_scope,
+        'fallback_reason' => (string)($bzc_meta['fallback_reason'] ?? ''),
+    );
+
+    // [비회원 추천목록 일일 제한]
+    // 화면 경로도 API와 동일하게 캐시/EC2 조회 전에 차단한다.
+    $guest_daily_limit = 5;
+    $guest_limit_result = company_list_ai_check_guest_daily_limit($ml_log_kedcd, $ml_log_bizno, array(
+        'limit' => $guest_daily_limit,
+        'source' => 'company_list_ai',
+        'trace_id' => $trace_id,
+    ));
+    if (!empty($guest_limit_result['limited'])) {
+        $guest_limit_blocked = true;
+        $guest_limit_notice = (string)($guest_limit_result['message'] ?? '오늘 비회원 추천 조회 한도를 초과했습니다. 로그인 후 이용해주세요.');
+        $guest_limit_payload = array(
+            'limited' => true,
+            'message' => $guest_limit_notice,
+            'limit' => (int)($guest_limit_result['limit'] ?? $guest_daily_limit),
+            'remaining' => 0,
+            'login_required' => true,
+            'login_url' => (defined('G5_BBS_URL') ? G5_BBS_URL : '/bbs') . '/login.php?url=' . urlencode((string)($_SERVER['REQUEST_URI'] ?? '/')),
+        );
+        company_list_ai_write_event_log('rate_limited', 'fail', array(
+            'trace_id' => $trace_id,
+            'source' => 'company_list_ai',
+            'recommendation_mode' => $recommendation_mode,
+            'match_type' => $recommendation_match_type,
+            'bizno' => $ml_log_bizno,
+            'kedcd' => $ml_log_kedcd,
+            'trade_type' => $partner_filter_trade_type,
+            'error_code' => 'guest_daily_limit_exceeded',
+            'limit_source' => (string)($guest_limit_result['limit_source'] ?? ''),
+            'company_key' => (string)($guest_limit_result['company_key'] ?? ''),
+            'ymd' => (string)($guest_limit_result['ymd'] ?? ''),
+            'limit' => (int)($guest_limit_result['limit'] ?? $guest_daily_limit),
+            'used_count' => (int)($guest_limit_result['used_count'] ?? 0),
+            'remaining' => 0,
+            'request_data' => array(
+                'resolved_base_payload' => $resolved_base_payload,
+                'selected_keywords' => $selected_keywords,
+                'filter_bzc_cds' => $partner_bzc_filters,
+                'filter_bzc_weights' => $partner_bzc_weights,
+            ),
+        ), '비회원 추천목록 일일 조회 한도 초과');
+    }
+
+    if (!$guest_limit_blocked && !$is_demo_recommendation) {
+    // [추천 진입 로그]
+    // 기준 기업, 선택 방향, 키워드, 상대 업종코드와 가중치를 최초 스냅샷으로 기록한다.
+    company_list_ai_write_event_log('request_received', 'success', array(
+        'action' => 'list_enter',
+        'trace_id' => $trace_id,
+        'stage' => 'entry',
+        'source' => 'company_list_ai',
+        'recommendation_mode' => $recommendation_mode,
+        'match_type' => $recommendation_match_type,
+        'requested_type' => $requested_type,
+        'trade_type' => $partner_filter_trade_type,
+        'bizno' => $ml_log_bizno,
+        'kedcd' => $ml_log_kedcd,
+	        'selected_trade_type' => $partner_filter_trade_type,
+	        'source_bzc_cd' => (string)($resolved_base_payload['bzc_cd'] ?? ''),
+	        'original_source_bzc_cd' => (string)($bzc_meta['original_source_bzc_cd'] ?? ''),
+	        'source_bzc_missing' => (int)($bzc_meta['source_bzc_missing'] ?? 0),
+	        'source_bzc_resolved' => (int)($bzc_meta['source_bzc_resolved'] ?? 0),
+	        'source_bzc_resolve_source' => (string)($bzc_meta['source_bzc_resolve_source'] ?? ''),
+	        'keyword_scope' => $keyword_scope,
+	        'fallback_reason' => (string)($bzc_meta['fallback_reason'] ?? ''),
+	        'partner_bzc_count' => count($partner_bzc_filters),
         'partner_bzc_cds' => $partner_bzc_cds_for_log,
         'filter_bzc_count' => count($partner_bzc_filters),
         'filter_bzc_cds' => $partner_bzc_cds_for_log,
-        'filter_bzc_weights' => $has_partner_bzc_filters ? implode(',', array_fill(0, count($partner_bzc_filters), 1)) : '',
+        'filter_bzc_weights' => $has_partner_bzc_filters ? implode(',', $partner_bzc_weights) : '',
         'cache_policy' => $cache_policy_for_log,
+        'keywords' => implode(',', $selected_keywords),
+        'matched_source_bzc_cds' => implode(',', $keyword_source_bzc_cds),
+        'request_data' => array(
+            'resolved_base_payload' => $resolved_base_payload,
+            'selected_keywords' => $selected_keywords,
+	            'keyword_source_bzc_cds' => $keyword_source_bzc_cds,
+	            'keyword_match_types' => $keyword_match_types,
+	            'keyword_scope' => $keyword_scope,
+	            'bzc_meta' => $bzc_meta,
+	            'recommendation_action' => $recommendation_action,
+            'filter_bzc_cds' => $partner_bzc_filters,
+            'filter_bzc_weights' => $partner_bzc_weights,
+        ),
     ));
 
-    $buy_call = null;
-    $buy_cached_call = null;
-    if (!$use_buy_partner_filter) {
-        $buy_cached_row = company_list_ai_pick_ml_log($ml_log_bizno, $ml_log_kedcd, 1, true);
-        $buy_cached_call = company_list_ai_restore_call_from_ml_log($buy_cached_row);
-    } else {
-        company_list_ai_write_event_log('ml_cache_lookup', 'skip', array(
-            'action' => 'cache_lookup',
+    if ($partner_filter_trade_type === 1) {
+        // [구매처 추천]
+        // 구매처 한 달 캐시를 먼저 조회하고, 캐시 미스일 때만 EC2에 trade_type=1로 요청한다.
+        $buy_call = null;
+        $buy_cached_call = null;
+        company_list_ai_write_event_log('cache_lookup', 'success', array(
+        'trace_id' => $trace_id,
+        'stage' => 'request',
+        'action' => 'cache_lookup',
+        'source' => 'company_ml_log',
+        'recommendation_mode' => $buy_cache_context['recommendation_mode'],
+        'bizno' => $ml_log_bizno,
+        'kedcd' => $ml_log_kedcd,
+	        'trade_type' => 1,
+	        'source_bzc_cd' => (string)($resolved_base_payload['bzc_cd'] ?? ''),
+	        'original_source_bzc_cd' => (string)($bzc_meta['original_source_bzc_cd'] ?? ''),
+	        'source_bzc_missing' => (int)($bzc_meta['source_bzc_missing'] ?? 0),
+	        'source_bzc_resolved' => (int)($bzc_meta['source_bzc_resolved'] ?? 0),
+	        'source_bzc_resolve_source' => (string)($bzc_meta['source_bzc_resolve_source'] ?? ''),
+	        'keyword_scope' => $keyword_scope,
+	        'fallback_reason' => (string)($bzc_meta['fallback_reason'] ?? ''),
+	        'matched_source_bzc_cds' => implode(',', $keyword_source_bzc_cds),
+        'keywords' => implode(',', $selected_keywords),
+        'filter_bzc_cds' => implode(',', $buy_cache_context['filter_bzc_cds']),
+        'filter_bzc_weights' => implode(',', $buy_cache_context['filter_bzc_weights']),
+        'cache_policy' => $buy_cache_policy,
+        'request_data' => $buy_payload,
+        ), '추천 요청 조건 및 한 달 캐시 조회');
+        $buy_cached_row = company_list_ai_pick_ml_log($ml_log_bizno, $ml_log_kedcd, 1, false, 1, $buy_cache_context);
+        $buy_cached_call = company_list_ai_restore_call_from_ml_log($buy_cached_row, array(
+            'trace_id' => $trace_id,
+            'recommendation_mode' => $buy_cache_context['recommendation_mode'],
+            'keywords' => implode(',', $selected_keywords),
+        ));
+        if (is_array($buy_cached_call)) {
+            $buy_call = $buy_cached_call;
+            $buy_result_source = 'ml_cache_1m';
+            company_list_ai_write_event_log('cache_response', 'success', array(
+            'trace_id' => $trace_id,
+            'stage' => 'response',
             'source' => 'company_ml_log',
-            'recommendation_mode' => 'keyword',
+            'recommendation_mode' => $buy_cache_context['recommendation_mode'],
+            'match_type' => $recommendation_match_type,
             'bizno' => $ml_log_bizno,
             'kedcd' => $ml_log_kedcd,
-            'trade_type' => 1,
-            'selected_trade_type' => $partner_filter_trade_type,
-            'source_bzc_cd' => (string)($resolved_base_payload['bzc_cd'] ?? ''),
-            'partner_bzc_count' => count($partner_bzc_filters),
-            'partner_bzc_cds' => $partner_bzc_cds_for_log,
-            'filter_bzc_count' => count($partner_bzc_filters),
-            'filter_bzc_cds' => $partner_bzc_cds_for_log,
-            'filter_bzc_weights' => implode(',', array_fill(0, count($partner_bzc_filters), 1)),
-            'cache_policy' => 'keyword_filter_bypass_ml_log',
-            'reason' => 'keyword_filter_request',
-        ));
-    }
-    if (is_array($buy_cached_call)) {
-        $buy_call = $buy_cached_call;
-    } else {
-        $buy_call = company_list_ai_call_recommend($buy_payload, 8);
+	            'trade_type' => 1,
+	            'source_bzc_cd' => (string)($resolved_base_payload['bzc_cd'] ?? ''),
+	            'original_source_bzc_cd' => (string)($bzc_meta['original_source_bzc_cd'] ?? ''),
+	            'source_bzc_missing' => (int)($bzc_meta['source_bzc_missing'] ?? 0),
+	            'source_bzc_resolved' => (int)($bzc_meta['source_bzc_resolved'] ?? 0),
+	            'source_bzc_resolve_source' => (string)($bzc_meta['source_bzc_resolve_source'] ?? ''),
+	            'keyword_scope' => $keyword_scope,
+	            'fallback_reason' => (string)($bzc_meta['fallback_reason'] ?? ''),
+	            'keywords' => implode(',', $selected_keywords),
+            'filter_bzc_cds' => implode(',', $buy_cache_context['filter_bzc_cds']),
+            'filter_bzc_weights' => implode(',', $buy_cache_context['filter_bzc_weights']),
+            'from_cache' => 1,
+            'result_count' => count((array)($buy_call['data']['results'] ?? array())),
+            'response_data' => company_list_ai_summarize_recommend_results($buy_call['data']),
+            ), '한 달 추천 캐시 응답 사용');
+        } else {
+            $buy_call = company_list_ai_call_recommend($buy_payload, 8, $trace_context);
+            $buy_result_source = !empty($buy_call['ok']) ? 'ec2' : 'error';
+        }
     }
 
-    $sell_call = null;
-    $sell_cached_call = null;
-    if (!$use_sell_partner_filter) {
-        $sell_cached_row = company_list_ai_pick_ml_log($ml_log_bizno, $ml_log_kedcd, 2, true);
-        $sell_cached_call = company_list_ai_restore_call_from_ml_log($sell_cached_row);
-    } else {
-        company_list_ai_write_event_log('ml_cache_lookup', 'skip', array(
-            'action' => 'cache_lookup',
+    if ($partner_filter_trade_type === 2) {
+        // [판매처 추천]
+        // 판매처 한 달 캐시를 먼저 조회하고, 캐시 미스일 때만 EC2에 trade_type=2로 요청한다.
+        $sell_call = null;
+        $sell_cached_call = null;
+        company_list_ai_write_event_log('cache_lookup', 'success', array(
+        'trace_id' => $trace_id,
+        'stage' => 'request',
+        'action' => 'cache_lookup',
+        'source' => 'company_ml_log',
+        'recommendation_mode' => $sell_cache_context['recommendation_mode'],
+        'bizno' => $ml_log_bizno,
+        'kedcd' => $ml_log_kedcd,
+	        'trade_type' => 2,
+	        'source_bzc_cd' => (string)($resolved_base_payload['bzc_cd'] ?? ''),
+	        'original_source_bzc_cd' => (string)($bzc_meta['original_source_bzc_cd'] ?? ''),
+	        'source_bzc_missing' => (int)($bzc_meta['source_bzc_missing'] ?? 0),
+	        'source_bzc_resolved' => (int)($bzc_meta['source_bzc_resolved'] ?? 0),
+	        'source_bzc_resolve_source' => (string)($bzc_meta['source_bzc_resolve_source'] ?? ''),
+	        'keyword_scope' => $keyword_scope,
+	        'fallback_reason' => (string)($bzc_meta['fallback_reason'] ?? ''),
+	        'matched_source_bzc_cds' => implode(',', $keyword_source_bzc_cds),
+        'keywords' => implode(',', $selected_keywords),
+        'filter_bzc_cds' => implode(',', $sell_cache_context['filter_bzc_cds']),
+        'filter_bzc_weights' => implode(',', $sell_cache_context['filter_bzc_weights']),
+        'cache_policy' => $sell_cache_policy,
+        'request_data' => $sell_payload,
+        ), '추천 요청 조건 및 한 달 캐시 조회');
+        $sell_cached_row = company_list_ai_pick_ml_log($ml_log_bizno, $ml_log_kedcd, 2, false, 1, $sell_cache_context);
+        $sell_cached_call = company_list_ai_restore_call_from_ml_log($sell_cached_row, array(
+            'trace_id' => $trace_id,
+            'recommendation_mode' => $sell_cache_context['recommendation_mode'],
+            'keywords' => implode(',', $selected_keywords),
+        ));
+        if (is_array($sell_cached_call)) {
+            $sell_call = $sell_cached_call;
+            $sell_result_source = 'ml_cache_1m';
+            company_list_ai_write_event_log('cache_response', 'success', array(
+            'trace_id' => $trace_id,
+            'stage' => 'response',
             'source' => 'company_ml_log',
-            'recommendation_mode' => 'keyword',
+            'recommendation_mode' => $sell_cache_context['recommendation_mode'],
+            'match_type' => $recommendation_match_type,
             'bizno' => $ml_log_bizno,
             'kedcd' => $ml_log_kedcd,
-            'trade_type' => 2,
-            'selected_trade_type' => $partner_filter_trade_type,
-            'source_bzc_cd' => (string)($resolved_base_payload['bzc_cd'] ?? ''),
-            'partner_bzc_count' => count($partner_bzc_filters),
-            'partner_bzc_cds' => $partner_bzc_cds_for_log,
-            'filter_bzc_count' => count($partner_bzc_filters),
-            'filter_bzc_cds' => $partner_bzc_cds_for_log,
-            'filter_bzc_weights' => implode(',', array_fill(0, count($partner_bzc_filters), 1)),
-            'cache_policy' => 'keyword_filter_bypass_ml_log',
-            'reason' => 'keyword_filter_request',
-        ));
-    }
-    if (is_array($sell_cached_call)) {
-        $sell_call = $sell_cached_call;
-    } else {
-        $sell_call = company_list_ai_call_recommend($sell_payload, 8);
-    }
-
-    // 캐시 미스 후 EC2 실호출 성공 건만 적재
-    if (!$use_buy_partner_filter && !empty($buy_call['ok']) && empty($buy_call['from_cache'])) {
-        company_list_ai_save_ml_log($ml_log_bizno, $ml_log_kedcd, 1, $buy_call);
-    }
-    if (!$use_sell_partner_filter && !empty($sell_call['ok']) && empty($sell_call['from_cache'])) {
-        company_list_ai_save_ml_log($ml_log_bizno, $ml_log_kedcd, 2, $sell_call);
+	            'trade_type' => 2,
+	            'source_bzc_cd' => (string)($resolved_base_payload['bzc_cd'] ?? ''),
+	            'original_source_bzc_cd' => (string)($bzc_meta['original_source_bzc_cd'] ?? ''),
+	            'source_bzc_missing' => (int)($bzc_meta['source_bzc_missing'] ?? 0),
+	            'source_bzc_resolved' => (int)($bzc_meta['source_bzc_resolved'] ?? 0),
+	            'source_bzc_resolve_source' => (string)($bzc_meta['source_bzc_resolve_source'] ?? ''),
+	            'keyword_scope' => $keyword_scope,
+	            'fallback_reason' => (string)($bzc_meta['fallback_reason'] ?? ''),
+	            'keywords' => implode(',', $selected_keywords),
+            'filter_bzc_cds' => implode(',', $sell_cache_context['filter_bzc_cds']),
+            'filter_bzc_weights' => implode(',', $sell_cache_context['filter_bzc_weights']),
+            'from_cache' => 1,
+            'result_count' => count((array)($sell_call['data']['results'] ?? array())),
+            'response_data' => company_list_ai_summarize_recommend_results($sell_call['data']),
+            ), '한 달 추천 캐시 응답 사용');
+        } else {
+            $sell_call = company_list_ai_call_recommend($sell_payload, 8, $trace_context);
+            $sell_result_source = !empty($sell_call['ok']) ? 'ec2' : 'error';
+        }
     }
 
-    if (!empty($buy_call['ok']) && !empty($buy_call['data']['results']) && is_array($buy_call['data']['results'])) {
+    // [추천 응답 캐시 저장]
+    // 캐시 미스 후 EC2 실호출이 성공한 경우에만 응답과 필터 조합을 company_ml_log에 적재한다.
+    if ($partner_filter_trade_type === 1 && !empty($buy_call['ok']) && empty($buy_call['from_cache'])) {
+        company_list_ai_save_ml_log($ml_log_bizno, $ml_log_kedcd, 1, $buy_call, array_merge($buy_cache_context, array(
+            'trace_id' => $trace_id,
+            'keywords' => implode(',', $selected_keywords),
+        )));
+    }
+    if ($partner_filter_trade_type === 2 && !empty($sell_call['ok']) && empty($sell_call['from_cache'])) {
+        company_list_ai_save_ml_log($ml_log_bizno, $ml_log_kedcd, 2, $sell_call, array_merge($sell_cache_context, array(
+            'trace_id' => $trace_id,
+            'keywords' => implode(',', $selected_keywords),
+        )));
+    }
+
+    // [추천 응답 -> 화면 카드 변환]
+    // 선택 방향의 EC2 결과만 업종 필터링하고, 기업 키워드/배지 정보를 합쳐 화면 카드 데이터로 변환한다.
+    if ($partner_filter_trade_type === 1 && !empty($buy_call['ok']) && !empty($buy_call['data']['results']) && is_array($buy_call['data']['results'])) {
         $buy_live_ok = true;
         $buy_results = company_list_ai_filter_results_by_partner_bzc($buy_call['data']['results'], $use_buy_partner_filter ? $partner_bzc_filters : array());
         $buy_bucket = company_list_ai_build_bucket($buy_results, 45);
@@ -1106,14 +1578,14 @@ if (!empty($resolved_base_payload['kedcd'])) {
         }
         $buyer_cards = $mapped_buy;
         $buy_total_stat = isset($buy_bucket['total']) ? (int)$buy_bucket['total'] : count($mapped_buy);
-    } else if (!empty($buy_call['ok'])) {
+    } else if ($partner_filter_trade_type === 1 && !empty($buy_call['ok'])) {
         // 실호출 성공 + 0건도 실제 결과로 취급
         $buy_live_ok = true;
         $buyer_cards = array();
         $buy_total_stat = 0;
     }
 
-    if (!empty($sell_call['ok']) && !empty($sell_call['data']['results']) && is_array($sell_call['data']['results'])) {
+    if ($partner_filter_trade_type === 2 && !empty($sell_call['ok']) && !empty($sell_call['data']['results']) && is_array($sell_call['data']['results'])) {
         $sell_live_ok = true;
         $sell_results = company_list_ai_filter_results_by_partner_bzc($sell_call['data']['results'], $use_sell_partner_filter ? $partner_bzc_filters : array());
         $sell_bucket = company_list_ai_build_bucket($sell_results, 45);
@@ -1140,11 +1612,99 @@ if (!empty($resolved_base_payload['kedcd'])) {
         }
         $seller_cards = $mapped_sell;
         $sell_total_stat = isset($sell_bucket['total']) ? (int)$sell_bucket['total'] : count($mapped_sell);
-    } else if (!empty($sell_call['ok'])) {
+    } else if ($partner_filter_trade_type === 2 && !empty($sell_call['ok'])) {
         // 실호출 성공 + 0건도 실제 결과로 취급
         $sell_live_ok = true;
         $seller_cards = array();
         $sell_total_stat = 0;
+    }
+
+    // [최종 카드 출력 로그]
+    // 사용자에게 실제 출력된 카드만 선택 방향별로 기록하여 요청 결과와 화면 결과를 대조할 수 있게 한다.
+    if ($partner_filter_trade_type === 1) company_list_ai_write_event_log('output', !empty($buy_call['ok']) ? 'success' : 'fail', array(
+        'trace_id' => $trace_id,
+        'stage' => 'card_output',
+        'source' => 'company_list_ai',
+        'recommendation_mode' => $buy_cache_context['recommendation_mode'],
+        'match_type' => $recommendation_match_type,
+        'bizno' => $ml_log_bizno,
+        'kedcd' => $ml_log_kedcd,
+	        'trade_type' => 1,
+	        'source_bzc_cd' => (string)($resolved_base_payload['bzc_cd'] ?? ''),
+	        'original_source_bzc_cd' => (string)($bzc_meta['original_source_bzc_cd'] ?? ''),
+	        'source_bzc_missing' => (int)($bzc_meta['source_bzc_missing'] ?? 0),
+	        'source_bzc_resolved' => (int)($bzc_meta['source_bzc_resolved'] ?? 0),
+	        'source_bzc_resolve_source' => (string)($bzc_meta['source_bzc_resolve_source'] ?? ''),
+	        'keyword_scope' => $keyword_scope,
+	        'fallback_reason' => (string)($bzc_meta['fallback_reason'] ?? ''),
+	        'keywords' => implode(',', $selected_keywords),
+        'filter_bzc_cds' => implode(',', $buy_cache_context['filter_bzc_cds']),
+        'filter_bzc_weights' => implode(',', $buy_cache_context['filter_bzc_weights']),
+        'from_cache' => !empty($buy_call['from_cache']),
+        'result_count' => count($buyer_cards),
+        'error_code' => !empty($buy_call['ok']) ? '' : 'recommend_failed',
+        'output_data' => company_list_ai_summarize_cards_for_log($buyer_cards),
+    ), !empty($buy_call['ok']) ? '구매처 추천 카드 출력 완료' : '구매처 추천 실패로 카드 출력 불가');
+    if ($partner_filter_trade_type === 2) company_list_ai_write_event_log('output', !empty($sell_call['ok']) ? 'success' : 'fail', array(
+        'trace_id' => $trace_id,
+        'stage' => 'card_output',
+        'source' => 'company_list_ai',
+        'recommendation_mode' => $sell_cache_context['recommendation_mode'],
+        'match_type' => $recommendation_match_type,
+        'bizno' => $ml_log_bizno,
+        'kedcd' => $ml_log_kedcd,
+	        'trade_type' => 2,
+	        'source_bzc_cd' => (string)($resolved_base_payload['bzc_cd'] ?? ''),
+	        'original_source_bzc_cd' => (string)($bzc_meta['original_source_bzc_cd'] ?? ''),
+	        'source_bzc_missing' => (int)($bzc_meta['source_bzc_missing'] ?? 0),
+	        'source_bzc_resolved' => (int)($bzc_meta['source_bzc_resolved'] ?? 0),
+	        'source_bzc_resolve_source' => (string)($bzc_meta['source_bzc_resolve_source'] ?? ''),
+	        'keyword_scope' => $keyword_scope,
+	        'fallback_reason' => (string)($bzc_meta['fallback_reason'] ?? ''),
+	        'keywords' => implode(',', $selected_keywords),
+        'filter_bzc_cds' => implode(',', $sell_cache_context['filter_bzc_cds']),
+        'filter_bzc_weights' => implode(',', $sell_cache_context['filter_bzc_weights']),
+        'from_cache' => !empty($sell_call['from_cache']),
+        'result_count' => count($seller_cards),
+        'error_code' => !empty($sell_call['ok']) ? '' : 'recommend_failed',
+        'output_data' => company_list_ai_summarize_cards_for_log($seller_cards),
+    ), !empty($sell_call['ok']) ? '판매처 추천 카드 출력 완료' : '판매처 추천 실패로 카드 출력 불가');
+    }
+
+    // 시연 환경에서는 외부 ML 호출 대신 반대편 테스트 기업 한 곳만 실제 카드 포맷으로 구성한다.
+    if ($is_demo_recommendation) {
+        $demo_item = company_list_ai_demo_recommendation_item($demo_source_bizno);
+        $demo_card = company_list_ai_ml_item_to_card($demo_item);
+        $demo_cards = is_array($demo_card) ? array($demo_card) : array();
+        $demo_call = array(
+            'ok' => !empty($demo_cards),
+            'from_cache' => true,
+            'data' => array('results' => $demo_item ? array($demo_item) : array()),
+            'error' => empty($demo_cards) ? '시연 추천 대상 기업 정보를 찾지 못했습니다.' : '',
+        );
+
+        if ($partner_filter_trade_type === 1) {
+            $buy_call = $demo_call;
+            $buy_live_ok = !empty($demo_call['ok']);
+            $buyer_cards = $demo_cards;
+            $buy_total_stat = count($demo_cards);
+        } else {
+            $sell_call = $demo_call;
+            $sell_live_ok = !empty($demo_call['ok']);
+            $seller_cards = $demo_cards;
+            $sell_total_stat = count($demo_cards);
+        }
+
+        company_list_ai_write_event_log('output', !empty($demo_call['ok']) ? 'success' : 'fail', array(
+            'trace_id' => $trace_id,
+            'source' => 'company_list_ai_demo',
+            'recommendation_mode' => 'demo_pair',
+            'bizno' => $demo_source_bizno,
+            'kedcd' => $ml_log_kedcd,
+            'trade_type' => $partner_filter_trade_type,
+            'result_count' => count($demo_cards),
+            'output_data' => company_list_ai_summarize_cards_for_log($demo_cards),
+        ), !empty($demo_call['ok']) ? '시연용 상호 추천 카드 출력 완료' : '시연용 추천 카드 생성 실패');
     }
 }
 
@@ -1152,22 +1712,24 @@ if ($source_kedcd_for_detail === '' && $has_kedcd_query && strlen($kedcd_query) 
     $source_kedcd_for_detail = $kedcd_query;
 }
 
-$use_live_pool = ($buy_live_ok || $sell_live_ok);
-if ($use_live_pool) {
-    $buy_pool = $buy_live_ok ? $buyer_cards : array();
-    $sell_pool = $sell_live_ok ? $seller_cards : array();
-} else {
-    $buy_pool = company_list_ai_expand_cards($buyer_cards, 48);
-    $sell_source = !empty($seller_cards) ? $seller_cards : $buyer_cards;
-    $sell_pool = company_list_ai_expand_cards($sell_source, 48);
-}
+$buy_pool = $buy_live_ok ? $buyer_cards : array();
+$sell_pool = $sell_live_ok ? $seller_cards : array();
 
 // company_detail.php와 동일한 해제 기준으로 목록 카드 마스킹 상태를 서버에서 확정한다.
 $buy_pool = company_list_ai_apply_unlock_state($buy_pool, $unlocked_kedcd_map);
 $sell_pool = company_list_ai_apply_unlock_state($sell_pool, $unlocked_kedcd_map);
+$is_logged_in = !empty($member['mb_id']);
+$buy_pool = company_list_ai_apply_identity_visibility($buy_pool, $is_logged_in);
+$sell_pool = company_list_ai_apply_identity_visibility($sell_pool, $is_logged_in);
 
-$buy_slides = company_list_ai_build_slide_sets($buy_pool, 1, $source_kedcd_for_detail);
-$sell_slides = company_list_ai_build_slide_sets($sell_pool, 2, $source_kedcd_for_detail);
+$detail_recommendation_context = array(
+    'selected_target_keywords' => $selected_keywords,
+    'selected_partner_bzc_cds' => $partner_bzc_filters,
+    'recommendation_mode' => $has_partner_bzc_filters ? 'keyword' : 'full',
+    'trace_id' => $trace_id,
+);
+$buy_slides = company_list_ai_build_slide_sets($buy_pool, 1, $source_kedcd_for_detail, $detail_recommendation_context);
+$sell_slides = company_list_ai_build_slide_sets($sell_pool, 2, $source_kedcd_for_detail, $detail_recommendation_context);
 
 $buy_top3 = isset($buy_slides['top3']) ? $buy_slides['top3'] : array();
 $buy_rest_pool = isset($buy_slides['rest']) ? $buy_slides['rest'] : array();
@@ -1185,6 +1747,11 @@ if ($input_error_notice !== '') {
     $buy_rest_notice = $input_error_notice;
     $sell_top3_notice = $input_error_notice;
     $sell_rest_notice = $input_error_notice;
+} else if ($guest_limit_blocked) {
+    $buy_top3_notice = $guest_limit_notice;
+    $buy_rest_notice = $guest_limit_notice;
+    $sell_top3_notice = $guest_limit_notice;
+    $sell_rest_notice = $guest_limit_notice;
 } else {
     if (empty($buy_top3)) $buy_top3_notice = !empty($resolve_error_notice) ? $resolve_error_notice : (!empty($buy_call['error']) ? '구매 추천 데이터를 불러오지 못했습니다.' : '구매 추천 결과가 없습니다.');
     if (empty($buy_rest_pool)) $buy_rest_notice = !empty($resolve_error_notice) ? $resolve_error_notice : '추가 구매 추천 결과가 없습니다.';
@@ -1192,9 +1759,15 @@ if ($input_error_notice !== '') {
     if (empty($sell_rest_pool)) $sell_rest_notice = !empty($resolve_error_notice) ? $resolve_error_notice : '추가 판매 추천 결과가 없습니다.';
 }
 
-// 시안과 동일하게 배너 통계는 고정 노출
-$banner_buy_stat = 12;
-$banner_sell_stat = 12;
+$active_top3 = ($partner_filter_trade_type === 2) ? $sell_top3 : $buy_top3;
+$active_rest_pool = ($partner_filter_trade_type === 2) ? $sell_rest_pool : $buy_rest_pool;
+$active_rest_first = array_slice($active_rest_pool, 0, 9);
+$active_top3_notice = ($partner_filter_trade_type === 2) ? $sell_top3_notice : $buy_top3_notice;
+$active_rest_notice = ($partner_filter_trade_type === 2) ? $sell_rest_notice : $buy_rest_notice;
+
+// 추천 모달에서 선택한 방향의 실제 추천 결과 수만 배너에 노출한다.
+$active_total_stat = ($partner_filter_trade_type === 2) ? $sell_total_stat : $buy_total_stat;
+$active_total_label = ($partner_filter_trade_type === 2) ? '판매처' : '구매처';
 
 ?>
 
@@ -1257,12 +1830,8 @@ $banner_sell_stat = 12;
                     <span class="ai-banner_stat_label">거래 데이터</span>
                 </div>
                 <div class="ai-banner_stat">
-                    <span class="ai-banner_stat_value"><?php echo (int)$banner_buy_stat; ?></span>
-                    <span class="ai-banner_stat_label">구매처</span>
-                </div>
-                <div class="ai-banner_stat">
-                    <span class="ai-banner_stat_value"><?php echo (int)$banner_sell_stat; ?></span>
-                    <span class="ai-banner_stat_label">판매처</span>
+                    <span class="ai-banner_stat_value" data-role="active-recommend-total"><?php echo (int)$active_total_stat; ?></span>
+                    <span class="ai-banner_stat_label"><?php echo htmlspecialchars($active_total_label, ENT_QUOTES, 'UTF-8'); ?></span>
                 </div>
             </div>
         </div>
@@ -1271,6 +1840,8 @@ $banner_sell_stat = 12;
     <div class="list-body">
         <div class="inner">
             <main class="list-main">
+                <?php /*
+                구매처/판매처 찾기 진입 방향과 다른 목록으로 전환되지 않도록 하단 탭 영역 전체를 임시 비활성화한다.
                 <div class="list-top">
                     <div class="list-type-wrap">
                         <div class="list-type-switch" role="group" aria-label="구매하기/판매하기">
@@ -1280,8 +1851,9 @@ $banner_sell_stat = 12;
                         </div>
                     </div>
                 </div>
+                */ ?>
 
-                <div class="ai-list-panel is-active" data-type="buyer">
+                <div class="ai-list-panel is-active" data-type="<?php echo htmlspecialchars($requested_type, ENT_QUOTES, 'UTF-8'); ?>">
                     <section class="ai-top3-section-top">
                         <div class="ai-top3">
                             <div class="mHookSection_header">
@@ -1296,13 +1868,13 @@ $banner_sell_stat = 12;
                             </div>
                             <div class="ai-top3-swiper swiper">
                                 <div class="swiper-wrapper">
-                                <?php if (!empty($buy_top3)): ?>
-                                    <?php foreach ($buy_top3 as $slide_html): ?>
+                                <?php if (!empty($active_top3)): ?>
+                                    <?php foreach ($active_top3 as $slide_html): ?>
                                         <?php echo $slide_html; ?>
                                     <?php endforeach; ?>
                                 <?php else: ?>
                                     <div class="ai-empty-state">
-                                        <p class="ai-empty-state_text"><?php echo htmlspecialchars($buy_top3_notice, ENT_QUOTES, 'UTF-8'); ?></p>
+                                        <p class="ai-empty-state_text"><?php echo htmlspecialchars($active_top3_notice, ENT_QUOTES, 'UTF-8'); ?></p>
                                     </div>
                                 <?php endif; ?>
                                 </div>
@@ -1323,13 +1895,13 @@ $banner_sell_stat = 12;
                         </div>
                         <div class="ai-rest-swiper swiper">
                             <div class="swiper-wrapper">
-                                <?php if (!empty($buy_rest_first)): ?>
-                                    <?php foreach ($buy_rest_first as $slide_html): ?>
+                                <?php if (!empty($active_rest_first)): ?>
+                                    <?php foreach ($active_rest_first as $slide_html): ?>
                                         <?php echo $slide_html; ?>
                                     <?php endforeach; ?>
                                 <?php else: ?>
                                     <div class="ai-empty-state">
-                                        <p class="ai-empty-state_text"><?php echo htmlspecialchars($buy_rest_notice, ENT_QUOTES, 'UTF-8'); ?></p>
+                                        <p class="ai-empty-state_text"><?php echo htmlspecialchars($active_rest_notice, ENT_QUOTES, 'UTF-8'); ?></p>
                                     </div>
                                 <?php endif; ?>
                             </div>
@@ -1346,6 +1918,7 @@ $banner_sell_stat = 12;
 </div>
 
 <script>
+window.__COMPANY_LIST_AI_REQUESTED_TYPE__ = <?php echo json_encode($requested_type, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
 window.__COMPANY_LIST_AI_DATA__ = {
     buyer: {
         top3: <?php echo json_encode(array_values($buy_top3), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>,
@@ -1358,10 +1931,14 @@ window.__COMPANY_LIST_AI_DATA__ = {
 };
 window.__COMPANY_LIST_AI_META__ = {
     buyer: {
+        result_source: <?php echo json_encode($buy_result_source, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>,
+        from_cache: <?php echo !empty($buy_call['from_cache']) ? 'true' : 'false'; ?>,
         top3_notice: <?php echo json_encode($buy_top3_notice, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>,
         rest_notice: <?php echo json_encode($buy_rest_notice, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>
     },
     seller: {
+        result_source: <?php echo json_encode($sell_result_source, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>,
+        from_cache: <?php echo !empty($sell_call['from_cache']) ? 'true' : 'false'; ?>,
         top3_notice: <?php echo json_encode($sell_top3_notice, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>,
         rest_notice: <?php echo json_encode($sell_rest_notice, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>
     }
@@ -1370,6 +1947,7 @@ window.__COMPANY_LIST_AI_STATS__ = {
     buyer_total: <?php echo (int)$buy_total_stat; ?>,
     seller_total: <?php echo (int)$sell_total_stat; ?>
 };
+window.__COMPANY_LIST_AI_GUEST_LIMIT__ = <?php echo json_encode($guest_limit_payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
 </script>
 <script src="<?php echo G5_URL; ?>/ko/js/company_list_ai.js?ver=<?php echo (int)$company_list_ai_js_ver; ?>"></script>
 

@@ -22,7 +22,7 @@ switch ($type) {
 			$log_chk=sql_fetch("select * from company_api_log where c_bizno='{$comnum}' and DATE(c_datetime)='".date("Y-m-d")."'");
 			if(!$log_chk['c_content']){
 				//사용자 토큰 받기
-				$TOKEN_URL = "https://218.55.37.214:6059/enpinfo?userid=igaenconl&process=S&bzno={$comnum}&pidagryn=Y&jmno=ig001&format=XML&Length=10000";
+				$TOKEN_URL = macomaex_kodata_build_url($comnum);
 				//----------curl 변수 세팅----------
 				 $agent = 'Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.0)'; //cURL 옵션에 넣을 Agent 정보
 				 $cookie_nm = './cookie.txt'; 
@@ -326,7 +326,6 @@ switch ($type) {
 						$sql.="FAX_NO='{$fax_no}', ";
 						$sql.="LABORER_SUM='{$row_data[38]}', ";
 						$sql.="PD_NM='".addslashes($mpd)."', ";
-						$sql.="KSIC9_BZC_CD='{$row_data[40]}', ";
 						$sql.="REL_KEDCD='{$row_data[41]}', ";
 						$sql.="REL_ESTB_DT='{$row_data[42]}', ";
 						$sql.="LOC_RDNM_ZIP='{$row_data[43]}', ";

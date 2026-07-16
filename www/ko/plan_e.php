@@ -144,7 +144,17 @@ $("body").on("click",".plan_payment",function () {
 <?}else{?>
 $("body").on("click",".plan_payment",function () {
 	event.preventDefault();
-	jAlert("로그인후 이용해 주세요.","알림");
+	if (window.MacomaLoginGuard && typeof window.MacomaLoginGuard.show === "function") {
+		window.MacomaLoginGuard.show({
+			descriptionText: "멤버십 결제는 로그인 후 이용하실 수 있습니다.",
+			loginUrl: "/bbs/login.php?url=/ko/plan.php",
+			signupUrl: (window.MacomaLoginGuard && typeof window.MacomaLoginGuard.buildSignupUrl === "function")
+				? window.MacomaLoginGuard.buildSignupUrl("/ko/plan.php")
+				: "/signup"
+		});
+		return false;
+	}
+	jAlert("멤버십 결제는 로그인 후 이용하실 수 있습니다.","알림");
 })
 <?}?>
 </script>

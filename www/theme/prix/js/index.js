@@ -73,7 +73,7 @@
     setInterval(function() { show(current + 1); }, 2000);
 })();
 
-// 모바일 전용: 카테고리 2줄 스와이프 캐러셀 (대분류 8개)
+// 모바일 전용: 카테고리 2줄 스와이프 캐러셀 (대분류 18개)
 (function() {
     var wrap = document.querySelector('.mCategories_carousel_wrap');
     var el = document.querySelector('.mCategories_swiper');
@@ -300,7 +300,7 @@
             popupSelector: '.popup_submit',
             requestTypeSelector: '#request_type',
             receiverNameSelector: '#recv',
-            planUrl: '/ko/plan.php',
+            planUrl: '/plans',
             loginUrl: function () {
                 return '/bbs/login.php?url=' + encodeURIComponent(location.pathname + location.search);
             },
@@ -321,3 +321,34 @@
             }
         });
     }
+
+    (function initHomepageRequestLoginGuard() {
+        var guardContext = window.__INDEX_LOGIN_GUARD_CONTEXT || {};
+        var requestLink = document.querySelector('.mVisual_quick_item--request');
+        var returnUrl = guardContext.returnUrl || '/account/trades#received';
+
+        if (!requestLink || guardContext.isLoggedIn) return;
+
+        requestLink.addEventListener('click', function (event) {
+            var loginGuard = window.MacomaLoginGuard;
+            var loginUrl = guardContext.loginUrl || '/bbs/login.php?url=' + encodeURIComponent(returnUrl);
+
+            event.preventDefault();
+            event.stopPropagation();
+
+            if (!loginGuard || typeof loginGuard.show !== 'function') {
+                window.location.href = loginUrl;
+                return;
+            }
+
+            loginGuard.show({
+                titleId: 'homepageReceivedRequestLoginTitle',
+                descriptionText: '받은 요청 확인은 로그인 후 이용하실 수 있습니다.',
+                returnUrl: returnUrl,
+                loginUrl: loginUrl,
+                signupUrl: typeof loginGuard.buildSignupUrl === 'function'
+                    ? loginGuard.buildSignupUrl(returnUrl)
+                    : '/signup?url=' + encodeURIComponent(returnUrl)
+            });
+        });
+    })();

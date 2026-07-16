@@ -22,70 +22,37 @@
     }
     if (typeof window._requireLogin !== 'function') {
         window._requireLogin = function (featureName) {
-            var overlayId = 'aiAnalysisLoginOverlay';
-            var existing = document.getElementById(overlayId);
-            if (existing) {
-                existing.classList.add('is-open');
-                return;
-            }
-
             var loginUrl = (window.MATCH_REQUEST_CONTEXT && window.MATCH_REQUEST_CONTEXT.loginCheckUrl)
                 ? String(window.MATCH_REQUEST_CONTEXT.loginCheckUrl)
                 : detailLoginReturnUrl;
-            var title = '로그인이 필요합니다';
-            var desc = (featureName ? String(featureName) + ' 결과는' : '서비스 이용을 위해서는') + '<br>로그인 후 확인하실 수 있습니다.';
-
-            var overlay = document.createElement('div');
-            overlay.id = overlayId;
-            overlay.className = 'auth-login-modal_overlay is-open';
-            overlay.innerHTML = '' +
-                '<div class="auth-login-modal" role="dialog" aria-modal="true" aria-labelledby="aiAnalysisLoginTitle">' +
-                '<button class="auth-login-modal_close" type="button" aria-label="닫기">' +
-                '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' +
-                '</button>' +
-                '<div class="auth-login-modal_icon">' +
-                '<svg viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1s3.1 1.39 3.1 3.1v2z"/></svg>' +
-                '</div>' +
-                '<h3 class="auth-login-modal_title" id="aiAnalysisLoginTitle">' + title + '</h3>' +
-                '<p class="auth-login-modal_desc">' + desc + '</p>' +
-                '<div class="auth-login-modal_btns">' +
-                '<a href="/bbs/register.php" class="auth-login-modal_btn auth-login-modal_btn--cancel">회원가입</a>' +
-                '<a href="' + loginUrl + '" class="auth-login-modal_btn auth-login-modal_btn--login">로그인</a>' +
-                '</div>' +
-                '</div>';
-
-            function closeLoginOverlay() {
-                overlay.classList.remove('is-open');
+            if (window.MacomaLoginGuard && typeof window.MacomaLoginGuard.show === 'function') {
+                window.MacomaLoginGuard.show({
+                    titleId: 'aiAnalysisLoginTitle',
+                    loginUrl: loginUrl,
+                    signupUrl: (window.MacomaLoginGuard && typeof window.MacomaLoginGuard.buildSignupUrl === 'function')
+                        ? window.MacomaLoginGuard.buildSignupUrl(window.location.pathname + window.location.search)
+                        : '/signup',
+                    modalClassName: 'login-guard__modal--compact',
+                    descriptionHtml: '<span class="login-guard__lead">로그인 후 아래 정보를 확인할 수 있습니다.</span>'
+                        + '<span class="login-guard__list">✓ 추천 근거 분석<br>✓ 구매·판매 가능 품목<br>✓ 거래 연결 시나리오<br>✓ AI 거래 전략 리포트</span>'
+                });
+                return;
             }
 
-            overlay.addEventListener('click', function (e) {
-                if (e.target === overlay) closeLoginOverlay();
-            });
-
-            var closeBtn = overlay.querySelector('.auth-login-modal_close');
-            if (closeBtn) closeBtn.addEventListener('click', closeLoginOverlay);
-
-            document.body.appendChild(overlay);
+            window.location.href = loginUrl;
         };
     }
     var detailLoginReturnUrl = '/bbs/login.php?url=' + encodeURIComponent(window.location.pathname + window.location.search);
-
-    // BFCache(뒤로가기 복원)로 비로그인 렌더가 남는 경우 방지
-    window.addEventListener('pageshow', function (event) {
-        if (event && event.persisted) {
-            window.location.reload();
-        }
-    });
 
     /* AI 기업 상세 스크립트 */
     (function () {
         'use strict';
 
         /* 초기 데이터 */
-        var COMPANIES = window.MOCK_COMPANIES;
+        var COMPANIES = {};
         var seedCompany = (window.MATCH_REQUEST_CONTEXT && window.MATCH_REQUEST_CONTEXT.seedCompany) || null;
         if (seedCompany && seedCompany.id) {
-            COMPANIES[seedCompany.id] = Object.assign({}, COMPANIES[seedCompany.id] || {}, seedCompany);
+            COMPANIES[seedCompany.id] = Object.assign({}, seedCompany);
         }
 
         /* 분석 템플릿 데이터 */
@@ -93,10 +60,23 @@
         /* URL 파라미터 */
         var params = new URLSearchParams(window.location.search);
         var contextKedcd = String((window.MATCH_REQUEST_CONTEXT && window.MATCH_REQUEST_CONTEXT.target && window.MATCH_REQUEST_CONTEXT.target.kedcd) || '').replace(/\D/g, '');
-        var demoId = params.get('id') || params.get('kedcd') || contextKedcd || '';
-        demoId = String(demoId).replace(/\D/g, '');
+        var queryKedcd = String(params.get('kedcd') || '').replace(/\D/g, '');
+        var demoId = /^\d{10}$/.test(queryKedcd) ? queryKedcd : contextKedcd;
         var pageTradeType = parseInt(params.get('trade_type') || '1', 10);
         if (pageTradeType !== 2) pageTradeType = 1;
+        var pageRecommendationContext = (window.MATCH_REQUEST_CONTEXT && window.MATCH_REQUEST_CONTEXT.recommendationContext) || {};
+        function contextList(paramName, contextName) {
+            var fromQuery = String(params.get(paramName) || '').split(',').map(function (value) { return value.trim(); }).filter(Boolean);
+            if (fromQuery.length) return fromQuery;
+            return Array.isArray(pageRecommendationContext[contextName])
+                ? pageRecommendationContext[contextName].map(function (value) { return String(value || '').trim(); }).filter(Boolean)
+                : [];
+        }
+        var selectedTargetKeywords = contextList('selected_keyword', 'selected_target_keywords');
+        var selectedPartnerBzcCds = contextList('partner_bzc', 'selected_partner_bzc_cds');
+        var recommendationMode = String(params.get('recommendation_mode') || pageRecommendationContext.recommendation_mode || 'full').trim();
+        if (recommendationMode !== 'keyword') recommendationMode = 'full';
+        var recommendationTraceId = String(params.get('trace_id') || pageRecommendationContext.trace_id || '').trim();
         var srcKedcdParam = String(params.get('src_kedcd') || '').replace(/\D/g, '');
         if (srcKedcdParam.length !== 10) {
             srcKedcdParam = String((window.MATCH_REQUEST_CONTEXT && window.MATCH_REQUEST_CONTEXT.sourceKedcd) || '').replace(/\D/g, '');
@@ -104,6 +84,7 @@
         if (srcKedcdParam.length === 10) {
             try { sessionStorage.setItem('_aiSrcKedcd', srcKedcdParam); } catch (e) { }
         }
+        // 재배포 확인 2026-07-06-2: 상세 추천 컨텍스트 유지
         // src_kedcd가 같은 스냅샷만 사용
         var expectedSrcKedcd = srcKedcdParam;
         if (expectedSrcKedcd.length !== 10) {
@@ -300,8 +281,8 @@
         }
 
         if (!demoId || !COMPANIES[demoId]) {
-            if (!/^\d{10}$/.test(demoId)) demoId = 'beauty-factory';
-            else COMPANIES[demoId] = Object.assign({}, seedCompany || {}, { id: demoId });
+            if (!/^\d{10}$/.test(demoId)) return;
+            COMPANIES[demoId] = Object.assign({}, seedCompany || {}, { id: demoId });
         }
         var co = COMPANIES[demoId];
 
@@ -383,6 +364,10 @@
                     var snapshot = Object.assign({}, currentCard || {}, {
                         kedcd: targetKedcd,
                         src_kedcd: srcKedcd,
+                        selected_target_keywords: selectedTargetKeywords,
+                        selected_partner_bzc_cds: selectedPartnerBzcCds,
+                        recommendation_mode: recommendationMode,
+                        trace_id: recommendationTraceId,
                         title: String(found.enp_nm || co.title || ''),
                         // 상세 보고서 payload에서 쓰는 카드 메타 필드
                         industry: String(found.bzc_cd || ''),
@@ -391,14 +376,12 @@
                         sze: Number(found.sze || 0) || 0,
                         company_age: Number(found.company_age || 0) || 0,
                         sales_growth_pct: (found.sales_growth_pct != null && found.sales_growth_pct !== '' && Number.isFinite(Number(found.sales_growth_pct))) ? Number(found.sales_growth_pct) : null,
-                        debt_ratio_pct: (found.debt_ratio_pct != null && found.debt_ratio_pct !== '' && Number.isFinite(Number(found.debt_ratio_pct))) ? Number(found.debt_ratio_pct) : null,
                         consec_profit_2y: (found.consec_profit_2y != null && found.consec_profit_2y !== '') ? (Number(found.consec_profit_2y) ? 1 : 0) : null,
-                        capital_negative: (found.capital_negative != null && found.capital_negative !== '') ? (Number(found.capital_negative) ? 1 : 0) : null,
                         radar: found.radar,
                         trade_type: pageTradeType,
                         ai_match: Math.round(scorePct),
                         score: Number((scorePct / 20).toFixed(2)),
-                        candidate_type: String(found.candidate_type || (currentCard && currentCard.candidate_type) || 'chain2'),
+                        candidate_type: String(found.candidate_type || (currentCard && currentCard.candidate_type) || ''),
                         one_line: String(found.one_line || '')
                     });
                     var foundTags = [];
@@ -416,6 +399,10 @@
                         });
                     }
                     if (foundTags.length) snapshot.tags = foundTags;
+                    if (foundTags.length) {
+                        snapshot.analysis_tags = foundTags;
+                        snapshot.tag_source = String(found.tag_source || snapshot.tag_source || 'actual');
+                    }
 
                     var foundTagTotalCount = Number(found.tag_total_count || found.keyword_count || 0);
                     if (!Number.isFinite(foundTagTotalCount) || foundTagTotalCount <= 0) {
@@ -453,7 +440,7 @@
             if (!visible) return 'AI 추천 기업';
             return prefix + visible + '****';
         }
-        var browserTitleText = co.is_unlocked
+        var browserTitleText = (co.is_identity_visible || co.is_unlocked)
             ? String(co.title_display || co.title || 'AI 추천 기업')
             : maskedBrowserTitle(co.title);
         document.title = browserTitleText + ' · AI 추천 기업 상세 — 매커멕스';
@@ -656,7 +643,7 @@
                 return value ? value : '정보 준비중';
             }
 
-            var isUnlocked = !!co.is_unlocked;
+            var isUnlocked = !!(co.is_identity_visible || co.is_unlocked);
             var titleHtml = isUnlocked ? _esc(_displayOrPending(co.title_display || co.title)) : _maskName(co.title);
             var addressHtml = isUnlocked
                 ? _esc(_displayOrPending(co.address_display || co.address))
@@ -719,7 +706,7 @@
                 '<dt>주소</dt><dd' + addressClass + '>' + addressHtml + '</dd>' +
                 '<dt>홈페이지</dt><dd' + homepageClass + '>' + homepageHtml + '</dd>' +
                 '</dl>' +
-                (isUnlocked ? '' : '<p class="info-mask-notice">거래 요청 및 수락 시 *** 으로 표시된 정보가 공개됩니다.</p>');
+                (isUnlocked ? '' : '<p class="info-mask-notice">로그인 시 *** 으로 표시된 정보가 공개됩니다.</p>');
         }
 
         /* 별점 HTML */
@@ -891,7 +878,7 @@
             // 신규 키
             supply_chain: '기존 거래망으로 접근 가능',
             network_overlap: '공통 거래처 연결 유사도',
-            financial_health: '신용등급 · 부채 안정성',
+            financial_health: '신용등급 · 재무 안정성',
             market_power: '업계 거래 규모 · 인지도',
             trade_diversity: '거래처 집중도 낮을수록 우수',
             scale_match: '매출 · 자산 규모 유사성',
@@ -909,7 +896,7 @@
             industry: '거래 네트워크상 얼마나 가까운지',
             network: '귀사와 비슷한 거래처를 보유',
             trust: '다양한 기업과 활발히 거래 중',
-            finance: '신용점수와 부채비율 기반 재무 안정성',
+            finance: '신용점수 기반 재무 안정성',
             region: '물류/방문이 편리한 거리',
             scale: '거래하기에 적절한 기업 규모'
         };
@@ -977,19 +964,21 @@
                     '</div>' +
                     '</div>';
             }
-            var overlayHtml = '<div class="match-box-login-overlay">' +
-                '<div class="auth-login-modal" style="position:relative;">' +
-                '<div class="auth-login-modal_icon">' +
-                '<svg viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1s3.1 1.39 3.1 3.1v2z"/></svg>' +
-                '</div>' +
-                '<h3 class="auth-login-modal_title">로그인이 필요합니다</h3>' +
-                '<p class="auth-login-modal_desc">AI 추천점수 예측 결과는<br>로그인 후 확인하실 수 있습니다.</p>' +
-                '<div class="auth-login-modal_btns">' +
-                '<a href="/bbs/register.php" class="auth-login-modal_btn auth-login-modal_btn--cancel">회원가입</a>' +
-                '<a href="' + detailLoginReturnUrl + '" class="auth-login-modal_btn auth-login-modal_btn--login">로그인</a>' +
-                '</div>' +
-                '</div>' +
-                '</div>';
+            var overlayHtml = '<div class="match-box-login-overlay">'
+                + (window.MacomaLoginGuard && typeof window.MacomaLoginGuard.buildDialogHtml === 'function'
+                    ? window.MacomaLoginGuard.buildDialogHtml({
+                        titleTag: 'h3',
+                        showCloseButton: false,
+                        loginUrl: detailLoginReturnUrl,
+                        signupUrl: (window.MacomaLoginGuard && typeof window.MacomaLoginGuard.buildSignupUrl === 'function')
+                            ? window.MacomaLoginGuard.buildSignupUrl(window.location.pathname + window.location.search)
+                            : '/signup',
+                        modalClassName: 'login-guard__modal--compact',
+                        descriptionHtml: '<span class="login-guard__lead">로그인 후 아래 정보를 확인할 수 있습니다.</span>'
+                            + '<span class="login-guard__list">✓ 추천 근거 분석<br>✓ 구매·판매 가능 품목<br>✓ 거래 연결 시나리오<br>✓ AI 거래 전략 리포트</span>'
+                    })
+                    : '')
+                + '</div>';
             document.getElementById('rightCard').innerHTML = buildInner(!loggedIn) + (loggedIn ? '' : overlayHtml);
             if (!loggedIn) document.getElementById('rightCard').classList.add('match-box-blur');
             else document.getElementById('rightCard').classList.remove('match-box-blur');
@@ -1019,19 +1008,21 @@
                     '</div>' +
                     '</div>';
             }
-            var overlayHtml = '<div class="match-box-login-overlay">' +
-                '<div class="auth-login-modal" style="position:relative;">' +
-                '<div class="auth-login-modal_icon">' +
-                '<svg viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1s3.1 1.39 3.1 3.1v2z"/></svg>' +
-                '</div>' +
-                '<h3 class="auth-login-modal_title">로그인이 필요합니다</h3>' +
-                '<p class="auth-login-modal_desc">AI 추천점수 예측 결과는<br>로그인 후 확인하실 수 있습니다.</p>' +
-                '<div class="auth-login-modal_btns">' +
-                '<a href="/bbs/register.php" class="auth-login-modal_btn auth-login-modal_btn--cancel">회원가입</a>' +
-                '<a href="' + detailLoginReturnUrl + '" class="auth-login-modal_btn auth-login-modal_btn--login">로그인</a>' +
-                '</div>' +
-                '</div>' +
-                '</div>';
+            var overlayHtml = '<div class="match-box-login-overlay">'
+                + (window.MacomaLoginGuard && typeof window.MacomaLoginGuard.buildDialogHtml === 'function'
+                    ? window.MacomaLoginGuard.buildDialogHtml({
+                        titleTag: 'h3',
+                        showCloseButton: false,
+                        loginUrl: detailLoginReturnUrl,
+                        signupUrl: (window.MacomaLoginGuard && typeof window.MacomaLoginGuard.buildSignupUrl === 'function')
+                            ? window.MacomaLoginGuard.buildSignupUrl(window.location.pathname + window.location.search)
+                            : '/signup',
+                        modalClassName: 'login-guard__modal--compact',
+                        descriptionHtml: '<span class="login-guard__lead">로그인 후 아래 정보를 확인할 수 있습니다.</span>'
+                            + '<span class="login-guard__list">✓ 추천 근거 분석<br>✓ 구매·판매 가능 품목<br>✓ 거래 연결 시나리오<br>✓ AI 거래 전략 리포트</span>'
+                    })
+                    : '')
+                + '</div>';
             document.getElementById('rightCard').innerHTML = buildInner(!loggedIn) + (loggedIn ? '' : overlayHtml);
             if (!loggedIn) document.getElementById('rightCard').classList.add('match-box-blur');
             else document.getElementById('rightCard').classList.remove('match-box-blur');
@@ -1151,7 +1142,7 @@
 
             function updateBenefitText() {
                 if (!benefitText) return;
-                benefitText.innerHTML = '두 기업 간 시너지, 거래 적합도, 협력 전략까지<br>AI가 심층 분석한 맞춤 리포트를 받아보세요.';
+                benefitText.innerHTML = '<span class="ai-cta-benefit-title">왜 이 기업이 추천되었는지 궁금하신가요?</span><span class="ai-cta-benefit-body"><span class="ai-cta-benefit-intro">AI 분석 리포트에서 아래 정보를 확인할 수 있습니다.</span><span class="ai-cta-benefit-list">✓ 연결 근거 분석<br>✓ 거래 기회 분석<br>✓ 거래 신뢰도 분석<br>✓ 실행 제안 리포트</span></span>';
             }
             function updateTradeTypeText() {
                 if (!tradeTypeText) return;
@@ -1240,8 +1231,429 @@
                 setTimeout(function () { btn.disabled = false; }, items.length * 60);
             }
 
+            function arrOrEmpty(v) {
+                return Array.isArray(v)
+                    ? v.filter(function (x) {
+                        var s = String(x || '').trim();
+                        return s !== '' && s !== '미확인' && s !== '없음';
+                    })
+                    : [];
+            }
+
+            function llmReportConnectionTypeDesc(type) {
+                var normalized = String(type || '').trim();
+                if (normalized.indexOf('chain') === 0) return '공통 거래처 네트워크 연결';
+                if (normalized.indexOf('partner') === 0) return '동종 기업 실거래 검증 파트너';
+                if (normalized === 'industry') return '동일 업종 공급망 파트너';
+                if (normalized === 'neighbor') return '지역 기반 근접 파트너';
+                return '거래 연결';
+            }
+
+            function formatStrengthValue(value, suffix) {
+                var text = String(value || '').trim();
+                if (!text) return '';
+                return suffix ? (text + suffix) : text;
+            }
+
+            function truncateStrengthText(value, maxLength) {
+                var text = String(value || '').trim();
+                if (!text) return '';
+                if (text.length <= maxLength) return text;
+                return text.slice(0, Math.max(0, maxLength - 1)).trim() + '…';
+            }
+
+            function resolveCompanyAge(card) {
+                var companyAge = Number(card && card.company_age);
+                if (!Number.isFinite(companyAge) || companyAge <= 0) {
+                    var foundedYear = parseInt(String(co && co.founded || '').replace(/\D/g, '').slice(0, 4), 10);
+                    if (Number.isFinite(foundedYear) && foundedYear > 1900) {
+                        companyAge = Math.max(1, (new Date().getFullYear() - foundedYear) + 1);
+                    }
+                }
+                return Number.isFinite(companyAge) && companyAge > 0 ? companyAge : 0;
+            }
+
+            function radarStrengthTitleMap() {
+                return {
+                    supply_chain: '공급망 연결',
+                    network_overlap: '거래 연결성',
+                    financial_health: '재무 안정성',
+                    market_power: '시장성',
+                    trade_diversity: '거래 구조',
+                    scale_match: '규모 적합성',
+                    company_size: '사업 규모',
+                    accessibility: '접근성',
+                    industry_fit: '업종 연관성',
+                    trade_loyalty: '거래 안정성',
+                    product_fit: '품목 적합성',
+                    growth_trend: '성장성'
+                };
+            }
+
+            function radarStrengthDescMap() {
+                return {
+                    supply_chain: '기존 거래망 기반 접근 가능',
+                    network_overlap: '공통 거래처 연결 가능성',
+                    financial_health: '신용등급 · 재무 안정성',
+                    market_power: '업계 거래 규모 · 인지도',
+                    trade_diversity: '고르게 분산된 거래 구조',
+                    scale_match: '매출 · 자산 규모 유사성',
+                    company_size: '사업 운영 규모 경쟁력',
+                    accessibility: '물류 · 방문 접근 편의',
+                    industry_fit: '업종 코드 유사도',
+                    trade_loyalty: '안정적인 거래 유지 가능성',
+                    product_fit: '주력 품목 간 연결 가능성',
+                    growth_trend: '최근 매출 성장 흐름 반영'
+                };
+            }
+
+            function radarStrengthValueMap() {
+                return {
+                    supply_chain: ['연결 가능', '연결성 양호', '연결성 우수'],
+                    network_overlap: ['연결 가능성 확인', '연결성 양호', '연결성 우수'],
+                    financial_health: ['안정적', '안정성 양호', '안정성 우수'],
+                    market_power: ['거래 기반 보유', '시장성 양호', '시장성 우수'],
+                    trade_diversity: ['거래 구조 확인', '거래 구조 양호', '거래 구조 우수'],
+                    scale_match: ['거래 가능 규모', '규모 적합성 양호', '규모 적합성 우수'],
+                    company_size: ['운영 기반 보유', '사업 규모 양호', '사업 규모 우수'],
+                    accessibility: ['접근 가능', '접근성 양호', '접근성 우수'],
+                    industry_fit: ['업종 연관성 확인', '업종 연관성 양호', '업종 연관성 우수'],
+                    trade_loyalty: ['거래 가능성 확인', '거래 안정성 양호', '거래 안정성 우수'],
+                    product_fit: ['품목 연결 가능', '품목 적합성 양호', '품목 적합성 우수'],
+                    growth_trend: ['성장 흐름 확인', '성장성 양호', '성장성 우수']
+                };
+            }
+
+            function pickStrengthBucketIndex(score100) {
+                if (score100 >= 90) return 2;
+                if (score100 >= 80) return 1;
+                return 0;
+            }
+
+            function buildCareerStrengthCard(card) {
+                var companyAge = resolveCompanyAge(card);
+                var desc = '사업 기반을 구축';
+                if (companyAge >= 10) {
+                    desc = '지속적인 운영 이력을 보유';
+                } else if (companyAge >= 3) {
+                    desc = '운영 경험이 축적';
+                }
+                return {
+                    id: 'fixed_company_age',
+                    source: 'fixed',
+                    title: '업력',
+                    value: companyAge > 0 ? formatStrengthValue(companyAge, '년') : '확인 필요',
+                    desc: companyAge > 0 ? desc : '기업 기본 정보 기준'
+                };
+            }
+
+            // 레이더 12축에서 60점 이상인 상위 항목만 핵심요약 후보로 사용
+            function buildRadarStrengthCards(card, limit) {
+                var radarNorm = normalizeRadarLikeList((card && card.radar) || {});
+                var titleMap = radarStrengthTitleMap();
+                var descMap = radarStrengthDescMap();
+                var valueMap = radarStrengthValueMap();
+                var axisOrder = [
+                    'supply_chain',
+                    'network_overlap',
+                    'financial_health',
+                    'market_power',
+                    'trade_diversity',
+                    'scale_match',
+                    'company_size',
+                    'accessibility',
+                    'industry_fit',
+                    'trade_loyalty',
+                    'product_fit',
+                    'growth_trend'
+                ];
+                var candidates = axisOrder.map(function (key, idx) {
+                    var rawScore = Number(radarNorm[key]);
+                    if (!Number.isFinite(rawScore)) return null;
+                    if (rawScore < 0) rawScore = 0;
+                    if (rawScore > 100) rawScore = 100;
+                    var bucketIdx = pickStrengthBucketIndex(rawScore);
+                    var values = valueMap[key] || ['확인', '양호', '우수'];
+                    return {
+                        id: 'radar_' + key,
+                        source: 'radar',
+                        title: titleMap[key] || (RADAR_LABEL_MAP_D[key] || key),
+                        value: values[bucketIdx] || values[0] || '',
+                        desc: descMap[key] || (AXIS_DESC_MAP[key] || ''),
+                        rawScore: rawScore,
+                        sortIdx: idx
+                    };
+                }).filter(Boolean);
+
+                candidates.sort(function (a, b) {
+                    if (a.rawScore === b.rawScore) return a.sortIdx - b.sortIdx;
+                    return b.rawScore - a.rawScore;
+                });
+
+                var preferred = candidates.filter(function (item) {
+                    return item.rawScore >= 60;
+                });
+                return preferred.slice(0, limit || 2);
+            }
+
+            // 레이더 강점이 부족할 때만 ML 메타 정보로 남은 카드를 채움
+            function buildMetaFallbackCards(card, limit, activeRadarCards) {
+                var candidates = [];
+                var candidateType = String(card && card.candidate_type || '').trim();
+                var consecProfit2y = Number(card && card.consec_profit_2y);
+                var salesGrowthPct = Number(card && card.sales_growth_pct);
+                var industryName = String(card && card.industry_nm || '').trim();
+                var oneLine = String(card && card.one_line || '').trim();
+                var corpType = String((co && co.corp_type) || (co && co.biz_type) || '').trim();
+                var activeRadarIds = Array.isArray(activeRadarCards)
+                    ? activeRadarCards.map(function (item) { return String(item && item.id || ''); })
+                    : [];
+
+                function hasActiveRadar(id) {
+                    return activeRadarIds.indexOf(String(id || '')) >= 0;
+                }
+
+                if (candidateType && !hasActiveRadar('radar_supply_chain') && !hasActiveRadar('radar_network_overlap')) {
+                    candidates.push({
+                        id: 'meta_candidate_type',
+                        source: 'meta',
+                        title: '연결 유형',
+                        value: llmReportConnectionTypeDesc(candidateType),
+                        desc: '추천 연결 방식 기준'
+                    });
+                }
+
+                if (Number.isFinite(consecProfit2y) && consecProfit2y > 0 && !hasActiveRadar('radar_financial_health')) {
+                    candidates.push({
+                        id: 'meta_consec_profit_2y',
+                        source: 'meta',
+                        title: '수익성',
+                        value: '최근 2년 연속 흑자',
+                        desc: '안정적인 수익 흐름 확인'
+                    });
+                }
+
+                if (Number.isFinite(salesGrowthPct) && salesGrowthPct > 0 && !hasActiveRadar('radar_growth_trend')) {
+                    var growthLabel = '성장 흐름 확인';
+                    if (salesGrowthPct >= 10) {
+                        growthLabel = '성장세 우수';
+                    } else if (salesGrowthPct >= 5) {
+                        growthLabel = '성장세 양호';
+                    }
+                    candidates.push({
+                        id: 'meta_sales_growth',
+                        source: 'meta',
+                        title: '성장성',
+                        value: growthLabel,
+                        desc: '최근 매출 성장률 반영'
+                    });
+                }
+
+                if (industryName && !hasActiveRadar('radar_industry_fit')) {
+                    candidates.push({
+                        id: 'meta_industry',
+                        source: 'meta',
+                        title: '업종',
+                        value: industryName,
+                        desc: '추천 기업 업종 기준'
+                    });
+                }
+
+                if (oneLine) {
+                    candidates.push({
+                        id: 'meta_one_line',
+                        source: 'meta',
+                        title: '추천 포인트',
+                        value: truncateStrengthText(oneLine, 20),
+                        desc: 'ML 추천 카드 요약'
+                    });
+                }
+
+                if (corpType) {
+                    candidates.push({
+                        id: 'meta_corp_type',
+                        source: 'meta',
+                        title: '기업유형',
+                        value: corpType,
+                        desc: '기업 기본 정보 기준'
+                    });
+                }
+
+                return candidates.slice(0, limit || 0);
+            }
+
+            function buildRecommendationFitCard(card) {
+                var aiMatch = Number(card && card.ai_match);
+                if (!Number.isFinite(aiMatch)) aiMatch = Number(co && co.ai_match);
+                if (!Number.isFinite(aiMatch)) aiMatch = Number(card && card.display_score);
+                if (!Number.isFinite(aiMatch) && Number.isFinite(Number(card && card.score))) {
+                    aiMatch = Number(card.score) * 100;
+                }
+                if (!Number.isFinite(aiMatch)) {
+                    return {
+                        id: 'fixed_recommendation_fit',
+                        source: 'meta',
+                        title: '추천 적합도',
+                        value: '확인 필요',
+                        desc: 'AI 추천점수 예측 기반'
+                    };
+                }
+                if (aiMatch < 0) aiMatch = 0;
+                if (aiMatch > 100) aiMatch = 100;
+                var bucketIdx = pickStrengthBucketIndex(aiMatch);
+                var labels = ['적합', '양호', '우수'];
+                return {
+                    id: 'fixed_recommendation_fit',
+                    source: 'meta',
+                    title: '추천 적합도',
+                    value: labels[bucketIdx] || labels[0],
+                    desc: 'AI 추천점수 예측 기반'
+                };
+            }
+
+            // 업력 1개, 강점 2개, 추천 적합도 1개로 핵심요약 4칸을 구성
+            function renderStrengthSummaryHtml() {
+                var card = getCardSnapshotForDemo(demoId) || {};
+                var cards = [buildCareerStrengthCard(card)];
+                var radarCards = buildRadarStrengthCards(card, 2);
+                radarCards.forEach(function (item) {
+                    cards.push(item);
+                });
+                if (radarCards.length < 2) {
+                    var fallbackCards = buildMetaFallbackCards(card, 2 - radarCards.length, radarCards);
+                    fallbackCards.forEach(function (item) {
+                        cards.push(item);
+                    });
+                }
+                cards.push(buildRecommendationFitCard(card));
+
+                cards = cards.filter(Boolean).slice(0, 4);
+                if (!cards.length) return '';
+
+                function pickStrengthIconType(item) {
+                    var id = String(item && item.id || '');
+                    if (id === 'fixed_company_age') return 'career';
+                    if (id === 'fixed_recommendation_fit') return 'score';
+                    if (id === 'meta_candidate_type') return 'network';
+                    if (id === 'meta_consec_profit_2y') return 'shield';
+                    if (id === 'meta_sales_growth') return 'growth';
+                    if (id === 'meta_industry') return 'industry';
+                    if (id === 'meta_one_line') return 'spark';
+                    if (id === 'meta_corp_type') return 'scale';
+                    if (id === 'radar_financial_health') return 'shield';
+                    if (id === 'radar_growth_trend') return 'growth';
+                    if (id === 'radar_trade_loyalty') return 'network';
+                    if (id === 'radar_company_size' || id === 'radar_scale_match') return 'scale';
+                    if (id === 'radar_accessibility') return 'location';
+                    if (id === 'radar_industry_fit') return 'industry';
+                    return 'chart';
+                }
+
+                function strengthCardIconSvg(type) {
+                    if (type === 'career') {
+                        return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V8l7-4 7 4v13"/><path d="M9 10h.01"/><path d="M9 14h.01"/><path d="M15 10h.01"/><path d="M15 14h.01"/></svg>';
+                    }
+                    if (type === 'shield') {
+                        return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.6-2.8 8.7-7 10-4.2-1.3-7-5.4-7-10V6l7-3z"/></svg>';
+                    }
+                    if (type === 'growth') {
+                        return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19h16"/><path d="M7 15l3-3 3 2 5-6"/><path d="M15 8h3v3"/></svg>';
+                    }
+                    if (type === 'network') {
+                        return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="12" r="2.2"/><circle cx="18" cy="7" r="2.2"/><circle cx="18" cy="17" r="2.2"/><path d="M8.1 11.1l7.7-3"/><path d="M8.1 12.9l7.7 3"/></svg>';
+                    }
+                    if (type === 'industry') {
+                        return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V9l5 3V9l5 3V5l4 2v14"/><path d="M9 17h.01"/><path d="M13 17h.01"/><path d="M17 17h.01"/></svg>';
+                    }
+                    if (type === 'location') {
+                        return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s6-4.7 6-10a6 6 0 1 0-12 0c0 5.3 6 10 6 10z"/><circle cx="12" cy="11" r="2.2"/></svg>';
+                    }
+                    if (type === 'score') {
+                        return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.8 5.7 6.2.9-4.5 4.4 1.1 6.2L12 17.3 6.4 20.2l1.1-6.2L3 9.6l6.2-.9L12 3z"/></svg>';
+                    }
+                    if (type === 'scale') {
+                        return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="6" width="16" height="4" rx="1.2"/><rect x="4" y="14" width="16" height="4" rx="1.2"/></svg>';
+                    }
+                    if (type === 'spark') {
+                        return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.7 4.3L18 9l-4.3 1.7L12 15l-1.7-4.3L6 9l4.3-1.7L12 3z"/><path d="M18.5 15.5l.8 2 .2.8.8.2 2 .8-2 .8-.8.2-.2.8-.8 2-.8-2-.2-.8-.8-.2-2-.8 2-.8.8-.2.2-.8.8-2z"/></svg>';
+                    }
+                    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19h16"/><path d="M7 15V9"/><path d="M12 15V5"/><path d="M17 15v-3"/></svg>';
+                }
+
+                var summaryCountClass = 'ai-strength-summary--count-' + Math.max(1, Math.min(4, cards.length));
+                var html = '<h3>핵심 요약</h3><div class="ai-strength-summary ' + summaryCountClass + '">';
+                cards.slice(0, 4).forEach(function (item, idx) {
+                    var iconType = pickStrengthIconType(item);
+                    var slotClass = 'ai-strength-card--slot-' + (idx + 1);
+                    html += '<div class="ai-strength-card ai-strength-card--' + esc(item.source || 'default') + ' ai-strength-card--tone-' + esc(iconType) + ' ' + slotClass + '">';
+                    html += '<span class="ai-strength-card_icon ai-strength-card_icon--' + esc(iconType) + '" aria-hidden="true">' + strengthCardIconSvg(iconType) + '</span>';
+                    html += '<span class="ai-strength-card_label">' + esc(item.title || '') + '</span>';
+                    html += '<strong class="ai-strength-card_value">' + esc(item.value || '') + '</strong>';
+                    html += '<p class="ai-strength-card_desc">' + esc(item.desc || '') + '</p>';
+                    html += '</div>';
+                });
+                html += '</div>';
+                return html;
+            }
+
+            function parseTradeJson(raw) {
+                if (!raw || typeof raw !== 'string') return null;
+                var cleaned = raw.trim();
+                cleaned = cleaned.replace(/^```json\s*/i, '').replace(/^```\s*/, '').replace(/\s*```$/, '').trim();
+                try { return JSON.parse(cleaned); } catch (e) { }
+                var start = cleaned.indexOf('{');
+                var end = cleaned.lastIndexOf('}');
+                if (start === -1 || end === -1 || end <= start) return null;
+                try { return JSON.parse(cleaned.slice(start, end + 1)); } catch (e2) { }
+                return null;
+            }
+
+            function renderTradeJsonToHtml(raw) {
+                var data = parseTradeJson(raw);
+                if (!data || typeof data !== 'object') return '';
+                var buyItems = arrOrEmpty(data.buy_items);
+                var sellItems = arrOrEmpty(data.sell_items);
+                var tradeLabel = String(data.trade_label || '').trim();
+                var showBuyItems = tradeLabel !== '판매처';
+                var primaryItems = showBuyItems ? buyItems : sellItems;
+                var primaryLabel = showBuyItems ? '구매 가능 품목' : '판매 가능 품목';
+                var reasons = arrOrEmpty(data.reasons);
+                var scenarios = arrOrEmpty(data.trade_scenarios);
+                var actions = arrOrEmpty(data.first_touch_actions);
+                var considerations = arrOrEmpty(data.considerations);
+                var strengthSummaryHtml = renderStrengthSummaryHtml();
+                var html = '';
+                html += '<h1>' + esc(data.title || '거래 가능성 분석') + '</h1>';
+                html += '<blockquote>추천 유형: ' + esc(tradeLabel || '') + ' | 점수: ' + esc(data.score || '') + ' | 연결: ' + esc(data.connection_type || '') + '</blockquote>';
+                if (strengthSummaryHtml) {
+                    html += strengthSummaryHtml;
+                }
+                if (primaryItems.length) {
+                    html += '<h2>' + esc(primaryLabel) + '</h2>';
+                    html += '<p>' + esc(primaryItems.map(function (item, idx) { return String.fromCharCode(9312 + idx) + ' ' + item; }).join('  ')) + '</p>';
+                }
+                html += '<h2>핵심 추천 사유</h2>';
+                html += '<ul>' + (reasons.length ? reasons : ['미확인']).map(function (item) { return '<li>' + esc(item) + '</li>'; }).join('') + '</ul>';
+                html += '<h2>1. 어떤 거래처인가</h2>';
+                html += '<h3>1-1. 거래 언어로 본 기업 포지션</h3><p>' + esc(data.positioning || '') + '</p>';
+                html += '<h3>1-2. 거래 가능 품목 상세</h3><p>' + esc(data.tradable_items_detail || '') + '</p>';
+                html += '<h2>2. 왜 우리 회사와 연결되는가</h2>';
+                html += '<h3>2-1. 거래 연결 배경</h3><p>' + esc(data.connection_background || '') + '</p>';
+                html += '<h3>2-2. 공급망·공정 연결성</h3><p>' + esc(data.supply_chain_fit || '') + '</p>';
+                html += '<h3>2-3. 거래 시나리오</h3><ul>' + (scenarios.length ? scenarios : ['미확인']).map(function (item) { return '<li>' + esc(item) + '</li>'; }).join('') + '</ul>';
+                html += '<h2>3. 거래 신뢰도 분석</h2>';
+                html += '<h3>3-1. 거래 안정성</h3><p>' + esc(data.stability_analysis || '') + '</p>';
+                html += '<h3>3-2. 재무 건전성</h3><p>' + esc(data.financial_analysis || '') + '</p>';
+                html += '<h2>4. 실행 제안 및 감안할 사항</h2>';
+                html += '<h3>4-1. 첫 거래 접점</h3><ul>' + (actions.length ? actions : ['미확인']).map(function (item) { return '<li>' + esc(item) + '</li>'; }).join('') + '</ul>';
+                html += '<h3>4-2. 감안할 사항</h3><ul>' + (considerations.length ? considerations : ['미확인']).map(function (item) { return '<li>' + esc(item) + '</li>'; }).join('') + '</ul>';
+                return html;
+            }
+
             function renderMarkdownToSafeHtml(markdownText) {
                 var md = String(markdownText || '');
+                var tradeHtml = renderTradeJsonToHtml(md);
+                if (tradeHtml) return tradeHtml;
                 if (typeof marked === 'undefined') {
                     return '<pre style="white-space:pre-wrap">' + esc(md) + '</pre>';
                 }
@@ -1310,8 +1722,35 @@
                     stepTimers.forEach(function (t) { clearTimeout(t); });
                 }
 
+                var preloadedSourceContext = (window.PRELOADED_AI_SOURCE_CONTEXT && typeof window.PRELOADED_AI_SOURCE_CONTEXT === 'object')
+                    ? window.PRELOADED_AI_SOURCE_CONTEXT
+                    : {};
+
                 function tryGet(k) {
                     try { return sessionStorage.getItem(k) || ''; } catch (e) { return ''; }
+                }
+
+                function sourceValue(sessionKey, contextKey, fallback) {
+                    if (Object.prototype.hasOwnProperty.call(preloadedSourceContext, contextKey)) {
+                        var ctxVal = preloadedSourceContext[contextKey];
+                        if (ctxVal != null && ctxVal !== '') return ctxVal;
+                    }
+                    var sessionVal = tryGet(sessionKey);
+                    if (sessionVal !== '') return sessionVal;
+                    return fallback;
+                }
+
+                function sourceArray(sessionKey, contextKey) {
+                    var ctxVal = preloadedSourceContext[contextKey];
+                    if (Array.isArray(ctxVal)) {
+                        var contextItems = ctxVal.map(function (item) { return String(item || '').trim(); }).filter(Boolean);
+                        if (contextItems.length) return contextItems;
+                    }
+                    var sessionVal = tryGet(sessionKey);
+                    if (sessionVal !== '') {
+                        return sessionVal.split('|').map(function (item) { return String(item || '').trim(); }).filter(Boolean);
+                    }
+                    return [];
                 }
 
                 var card = getCardSnapshotForDemo(demoId);
@@ -1323,9 +1762,28 @@
                     return;
                 }
 
-                var custRaw = tryGet('_aiCustNames');
-                var suppRaw = tryGet('_aiSuppNames');
+                var sourceMpd = String(sourceValue('_aiExtMpd', 'source_mpd', '') || '');
+                var sourceName = String(sourceValue('_aiSrcCompName', 'source_enp_nm', '') || '');
+                var sourceBzcCd = String(sourceValue('_aiExtBzcCd', 'source_bzc_cd', '') || '');
+                var sourceBzcNm = String(sourceValue('_aiExtBzcNm', 'source_bzc_nm', '') || '');
+                var sourceSido = String(sourceValue('_aiExtSido', 'source_sido', '') || '');
+                var sourceSze = String(sourceValue('_aiExtSze', 'source_sze', '3') || '3');
+                var sourceSales = Number(sourceValue('_aiExtSales', 'source_sales', 0) || 0);
+                var sourceCustNames = sourceArray('_aiCustNames', 'source_cust_names');
+                var sourceSuppNames = sourceArray('_aiSuppNames', 'source_supp_names');
                 var isSell = (card.trade_type === 2);
+                var recKeywords = Array.isArray(card.analysis_tags)
+                    ? card.analysis_tags.filter(Boolean)
+                    : (String(card.tag_source || '') === 'actual' && Array.isArray(card.tags)
+                        ? card.tags.filter(Boolean)
+                        : []);
+                // 상세 preload에 실제 키워드 배열이 있으면 그것을 우선하고, 없을 때만 기존 세션/mpd fallback을 사용한다.
+                var preloadedSrcKeywords = Array.isArray(preloadedSourceContext.src_keywords)
+                    ? preloadedSourceContext.src_keywords.map(function (item) { return String(item || '').trim(); }).filter(Boolean)
+                    : [];
+                var srcKeywords = preloadedSrcKeywords.length
+                    ? preloadedSrcKeywords
+                    : parseTagListFromLine(tryGet('_aiExtKeywords') || sourceMpd || '');
                 var recObj = {
                     kedcd: card.kedcd || '',
                     enp_nm: card.title || '',
@@ -1334,31 +1792,32 @@
                     sido: card.region || '',
                     sze: card.sze || 3,
                     display_score: card.ai_match || 0,
-                    candidate_type: card.candidate_type || 'chain2',
+                    candidate_type: card.candidate_type || '',
                     radar: card.radar || {},
                     company_age: card.company_age || 0,
                     sales_growth_pct: card.sales_growth_pct != null ? card.sales_growth_pct : null,
-                    debt_ratio_pct: card.debt_ratio_pct != null ? card.debt_ratio_pct : null,
                     consec_profit_2y: card.consec_profit_2y != null ? card.consec_profit_2y : null,
-                    capital_negative: card.capital_negative || 0
+                    keywords: recKeywords,
+                    keyword_source: String(card.tag_source || (recKeywords.length ? 'actual' : 'none'))
                 };
 
-                // EC2/ML 추천 카드 + 의뢰사 세션값을 합쳐 LLM 보고서 요청 payload 구성
+                // EC2 추천 카드와 의뢰사 컨텍스트를 합쳐 상세 리포트 payload를 생성
                 var payload = {
                     data: {
                         trade_type: card.trade_type || 1,
                         // 서버 once_key 생성용 식별값
-                        source_kedcd: card.src_kedcd || tryGet('_aiSrcKedcd') || '',
+                        source_kedcd: card.src_kedcd || tryGet('_aiSrcKedcd') || String(preloadedSourceContext.source_kedcd || ''),
                         target_kedcd: card.kedcd || '',
-                        source_enp_nm: tryGet('_aiSrcCompName'),
-                        source_bzc_cd: tryGet('_aiExtBzcCd'),
-                        source_bzc_nm: tryGet('_aiExtBzcNm'),
-                        source_sido: tryGet('_aiExtSido'),
-                        source_sze: tryGet('_aiExtSze') || '3',
-                        source_mpd: tryGet('_aiExtMpd'),
-                        source_sales: parseFloat(tryGet('_aiExtSales')) || 0,
-                        source_cust_names: custRaw ? custRaw.split('|').filter(Boolean) : [],
-                        source_supp_names: suppRaw ? suppRaw.split('|').filter(Boolean) : [],
+                        source_enp_nm: sourceName,
+                        source_bzc_cd: sourceBzcCd,
+                        source_bzc_nm: sourceBzcNm,
+                        source_sido: sourceSido,
+                        source_sze: sourceSze,
+                        source_mpd: sourceMpd,
+                        src_keywords: srcKeywords,
+                        source_sales: Number.isFinite(sourceSales) ? sourceSales : 0,
+                        source_cust_names: sourceCustNames,
+                        source_supp_names: sourceSuppNames,
                         buy_top1: isSell ? null : recObj,
                         sell_top1: isSell ? recObj : null
                     }
@@ -1410,17 +1869,22 @@
                     .catch(function (err) {
                         clearStepTimers();
                         var errMsg = String(err && err.message ? err.message : '알 수 없는 오류');
+                        var genericAiErrorTitle = 'AI 분석 안내';
+                        var genericAiErrorMessage = 'AI 분석 중 일시적인 오류가 발생했습니다.';
+                        var genericAiErrorSubMessage = '잠시 후 다시 시도해 주세요.';
                         var isCreditError = !!(err && err.planRequired)
                             || Number(err && err.httpStatus) === 402
                             || /크레딧.*부족/.test(errMsg)
                             || /credit/i.test(errMsg);
 
+                        if (blurBg) blurBg.style.display = '';
+                        if (ctaOverlay) ctaOverlay.style.display = '';
+                        body.style.display = 'none';
+                        body.classList.remove('ai-analysis-result-ready');
+                        body.innerHTML = '';
+                        btn.disabled = false;
+
                         if (isCreditError && (typeof window.openCreditShortageGuide === 'function' || typeof window.openAiGuideModal === 'function')) {
-                            if (blurBg) blurBg.style.display = '';
-                            if (ctaOverlay) ctaOverlay.style.display = '';
-                            body.style.display = 'none';
-                            body.classList.remove('ai-analysis-result-ready');
-                            body.innerHTML = '';
                             if (typeof window.openCreditShortageGuide === 'function') {
                                 window.openCreditShortageGuide({
                                     text: 'AI 분석 가능 크레딧이 부족합니다.',
@@ -1437,13 +1901,22 @@
                                     secondaryHref: '/ko/plan.php'
                                 });
                             }
-                            btn.disabled = false;
                             return;
                         }
 
-                        body.innerHTML = '<div class="ai-analysis-result"><p style="color:#e53935;">분석 중 오류가 발생했습니다: ' + esc(err && err.message ? err.message : '알 수 없는 오류') + '</p></div>';
-                        body.classList.add('ai-analysis-result-ready');
-                        btn.disabled = false;
+                        if (typeof window.openAiGuideModal === 'function') {
+                            window.openAiGuideModal({
+                                title: genericAiErrorTitle,
+                                text: genericAiErrorMessage,
+                                text2: genericAiErrorSubMessage,
+                                okText: '확인했어요',
+                                okVariant: 'outline',
+                                hideSecondary: true
+                            });
+                            return;
+                        }
+
+                        window.alert(genericAiErrorMessage + ' ' + genericAiErrorSubMessage);
                     });
             }
 
@@ -1497,6 +1970,46 @@
             if (ov) { ov.classList.add('is_open'); ov.setAttribute('aria-hidden', 'false'); }
         }
 
+        // 목록 진입 전 서버에서 승인 세션과 bizno 토큰을 먼저 발급받는다.
+        function goToAiRecommendationList(comnum) {
+            var digits = String(comnum || '').replace(/[^0-9]/g, '');
+            if (digits.length !== 10) {
+                if (window.openAiGuideModal) openAiGuideModal({ title: '추천 페이지 이동 실패', text: '사업자번호 확인이 필요합니다.', text2: '사업자번호를 다시 확인한 뒤 AI 추천받기를 눌러주세요.' });
+                return;
+            }
+
+            fetch('/get_company_name.php', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+                body: new URLSearchParams({ comnum: digits }).toString()
+            })
+                .then(function (r) { return r.text(); })
+                .then(function (txt) {
+                    var data = null;
+                    try {
+                        data = JSON.parse(txt || '{}');
+                    } catch (e) {
+                        data = null;
+                    }
+
+                    if (!data || data.result !== 'success' || !data.bizno_token) {
+                        if (window.openAiGuideModal) openAiGuideModal({ title: '추천 페이지 이동 실패', text: '추천 목록 진입 정보를 준비하지 못했습니다.', text2: '잠시 후 다시 시도해 주세요.' });
+                        return;
+                    }
+
+                    // 추천 목록은 승인된 bizno 토큰으로만 진입시킨다.
+                    var url = '/recommendations?bizno=' + encodeURIComponent(String(data.bizno_token))
+                        + '&type=buyer&trade_type=1&recommendation_action=skip';
+
+                    if (typeof showAiLoading === 'function') { showAiLoading(url); }
+                    else { location.href = url; }
+                })
+                .catch(function () {
+                    if (window.openAiGuideModal) openAiGuideModal({ title: '추천 페이지 이동 실패', text: '추천 목록 이동 중 일시적인 오류가 발생했습니다.', text2: '잠시 후 다시 시도해 주세요.' });
+                });
+        }
+
         function doSearch() {
             var inp = document.getElementById('comnum');
             if (inp) inp.blur();
@@ -1529,15 +2042,32 @@
                         try {
                             var info = JSON.parse(p.slice(1).join('|'));
                             var enp = info.CONTENTS && info.CONTENTS.ENPintr0000;
+                            var fsdt = info.CONTENTS && info.CONTENTS.ENPfsdt0001;
+                            var cust = info.CONTENTS && info.CONTENTS.ENPcust0001;
+                            var supp = info.CONTENTS && info.CONTENTS.ENPsupp0001;
                             var compName = (enp && (enp.enp_nm_trd || enp.enp_nm)) || '';
                             _pendingKedcd = String(enp && enp.kedcd || '').replace(/\D/g, '').padStart(10, '0');
-                            // 상세 LLM 보고서 프롬프트에서 쓰는 의뢰사 컨텍스트 세션값 저장
+                            var sales = Number(fsdt && fsdt.fs_val9 || 0) || 0;
+                            var custNames = [];
+                            var suppNames = [];
+                            for (var i = 1; i <= 10; i++) {
+                                var cn = String(cust && cust['cust_nm' + i] || '').trim();
+                                var sn = String(supp && supp['supp_nm' + i] || '').trim();
+                                if (cn && cn !== '기타') custNames.push(cn);
+                                if (sn && sn !== '기타') suppNames.push(sn);
+                            }
+                            // 상세 AI 리포트 요청에 재사용할 의뢰사 컨텍스트 세션에 저장
                             try {
                                 sessionStorage.setItem('_aiSrcCompName', compName);
                                 sessionStorage.setItem('_aiExtBzcNm', String(enp && enp.bzc_nm || ''));
                                 sessionStorage.setItem('_aiExtBzcCd', String(enp && enp.bzc_cd || ''));
                                 sessionStorage.setItem('_aiExtSido', String(enp && enp.loc_addra || '').trim().slice(0, 3));
                                 sessionStorage.setItem('_aiExtSze', String(enp && enp.enp_sze || '3'));
+                                sessionStorage.setItem('_aiExtMpd', String(enp && enp.mpd || ''));
+                                sessionStorage.setItem('_aiExtKeywords', String(enp && enp.mpd || ''));
+                                sessionStorage.setItem('_aiExtSales', String(sales || 0));
+                                sessionStorage.setItem('_aiCustNames', custNames.join('|'));
+                                sessionStorage.setItem('_aiSuppNames', suppNames.join('|'));
                             } catch (e2) { }
                             openVerify(compName);
                         } catch (e) { openVerify(''); }
@@ -1566,11 +2096,9 @@
         if (vGo) {
             vGo.addEventListener('click', function () {
                 if (window.closeVerifyModal) window.closeVerifyModal();
-                var url = '/ko/company_list_ai.php?type=buyer';
-                var _kedcd = _pendingKedcd || _pendingComnum;
-                if (_kedcd) url += '&comnum=' + encodeURIComponent(_kedcd);
-                if (typeof showAiLoading === 'function') { showAiLoading(url); }
-                else { location.href = url; }
+
+                // 상세 검색 플로우도 직접 URL 대신 서버 승인 경로를 거친다.
+                goToAiRecommendationList(_pendingComnum);
             });
         }
     })();

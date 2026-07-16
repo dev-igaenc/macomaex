@@ -32,6 +32,26 @@ if($board['bo_10']) $depth_1 = $board['bo_10']; else $depth_1 = 0; // 1뎁스 �
 $g5['title'] = strip_tags($g5['title']);
 $g5_head_title = strip_tags($g5_head_title);
 
+$prix_theme_asset_url = static function ($relative_path, $fallback_version) {
+	$relative_path = ltrim($relative_path, '/');
+	$asset_path = G5_THEME_PATH.'/'.$relative_path;
+	$asset_version = @filemtime($asset_path);
+	if (!$asset_version) {
+		$asset_version = $fallback_version;
+	}
+	return G5_THEME_URL.'/'.$relative_path.'?ver='.rawurlencode((string)$asset_version);
+};
+
+$prix_root_asset_url = static function ($relative_path, $fallback_version) {
+	$relative_path = ltrim($relative_path, '/');
+	$asset_path = G5_PATH.'/'.$relative_path;
+	$asset_version = @filemtime($asset_path);
+	if (!$asset_version) {
+		$asset_version = $fallback_version;
+	}
+	return G5_URL.'/'.$relative_path.'?ver='.rawurlencode((string)$asset_version);
+};
+
 // 현재 접속자
 // 게시판 제목에 ' 포함되면 오류 발생
 $g5['lo_location'] = addslashes($g5['title']);
@@ -84,26 +104,26 @@ if($config['cf_add_meta'])
 <!-- <link href="https://cdn.jsdelivr.net/gh/sunn-us/SUIT/fonts/variable/woff2/SUIT-Variable.css" rel="stylesheet"> -->
 
 <title><?php echo $g5_head_title; ?></title>
-<link href="/theme/prix/font/SUIT-Variable.css" rel="stylesheet">
-<link href="/theme/prix/mont/font.css" rel="stylesheet">
-<link href="/theme/prix/css/main.css" rel="stylesheet">
-<link href="/theme/prix/css/sub.css" rel="stylesheet">
+<link href="<?php echo $prix_theme_asset_url('font/SUIT-Variable.css', G5_CSS_VER); ?>" rel="stylesheet">
+<link href="<?php echo $prix_theme_asset_url('mont/font.css', G5_CSS_VER); ?>" rel="stylesheet">
+<link href="<?php echo $prix_theme_asset_url('css/main.css', G5_CSS_VER); ?>" rel="stylesheet">
+<link href="<?php echo $prix_theme_asset_url('css/sub.css', G5_CSS_VER); ?>" rel="stylesheet">
 
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
 <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
 
 
 
-<link rel="stylesheet" href="<?php echo G5_THEME_CSS_URL; ?>/front.css?ver=<?php echo G5_CSS_VER; ?>">
+<link rel="stylesheet" href="<?php echo $prix_theme_asset_url('css/front.css', G5_CSS_VER); ?>">
 <?php if (G5_IS_MOBILE) {?>
-<link rel="stylesheet" href="<?php echo G5_THEME_CSS_URL; ?>/mobile.css?ver=<?php echo G5_CSS_VER; ?>">
-<link rel="stylesheet" href="<?php echo G5_THEME_CSS_URL; ?>/layout_m.css?ver=<?php echo G5_CSS_VER; ?>">
-<link rel="stylesheet" href="<?php echo G5_THEME_CSS_URL; ?>/front_m.css?ver=<?php echo G5_CSS_VER; ?>">
-<link rel="stylesheet" href="<?php echo G5_THEME_CSS_URL; ?>/contents_m.css?ver=<?php echo G5_CSS_VER; ?>">
+<link rel="stylesheet" href="<?php echo $prix_theme_asset_url('css/mobile.css', G5_CSS_VER); ?>">
+<link rel="stylesheet" href="<?php echo $prix_theme_asset_url('css/layout_m.css', G5_CSS_VER); ?>">
+<link rel="stylesheet" href="<?php echo $prix_theme_asset_url('css/front_m.css', G5_CSS_VER); ?>">
+<link rel="stylesheet" href="<?php echo $prix_theme_asset_url('css/contents_m.css', G5_CSS_VER); ?>">
 <?php }else{?>
-<link rel="stylesheet" href="<?php echo G5_THEME_CSS_URL; ?>/default.css">
-<link rel="stylesheet" href="<?php echo G5_THEME_CSS_URL; ?>/layout.css?ver=<?php echo G5_CSS_VER; ?>">
-<link rel="stylesheet" href="<?php echo G5_THEME_CSS_URL; ?>/contents.css?ver=<?php echo G5_CSS_VER; ?>">
+<link rel="stylesheet" href="<?php echo $prix_theme_asset_url('css/default.css', G5_CSS_VER); ?>">
+<link rel="stylesheet" href="<?php echo $prix_theme_asset_url('css/layout.css', G5_CSS_VER); ?>">
+<link rel="stylesheet" href="<?php echo $prix_theme_asset_url('css/contents.css', G5_CSS_VER); ?>">
 <?php }?>
 
 
@@ -126,29 +146,47 @@ var siteTitle = "<?php echo $config['cf_title']; ?>";
 history.scrollRestoration = "auto";
 </script>
 
-<script type="text/javascript" src="<?php echo G5_THEME_JS_URL ?>/jquery.lastest.js"></script>
-<script type="text/javascript" src="<?php echo G5_THEME_JS_URL ?>/jquery.ui.lastest.js"></script>
-<script type="text/javascript" src="<?php echo G5_THEME_JS_URL; ?>/TweenMax.min.js"></script>
-<script type="text/javascript" src="<?php echo G5_THEME_JS_URL; ?>/BezierPlugin.min.js"></script>
-<script type="text/javascript" src="<?php echo G5_THEME_JS_URL; ?>/jquery.throttledresize.js"></script>
-<script type="text/javascript" src="<?php echo G5_THEME_JS_URL; ?>/jquery.rwdImageMaps.min.js"></script>
-<script type="text/javascript" src="<?php echo G5_THEME_JS_URL; ?>/ofi.js"></script>
-<script type="text/javascript" src="<?php echo G5_THEME_JS_URL; ?>/picturefill.min.js"></script>
-<script type="text/javascript" src="<?php echo G5_THEME_JS_URL; ?>/jquery-input-file-text.js"></script>
+<link rel="stylesheet" href="<?php echo $prix_root_asset_url('ko/css/login-guard.css', G5_CSS_VER); ?>">
+<script>
+window.__LOGIN_GUARD_CONFIG__ = {
+    isLoggedIn: <?php echo !empty($member['mb_id']) ? 'true' : 'false'; ?>,
+    loginBaseUrl: <?php echo json_encode(G5_BBS_URL.'/login.php', JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>,
+    signupBaseUrl: <?php echo json_encode('/signup', JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>,
+    defaultTitle: '로그인이 필요합니다',
+    defaultDescription: '서비스를 이용하시려면 로그인이 필요합니다.',
+    loginText: '로그인',
+    signupText: '회원가입',
+    protectedLinks: <?php echo json_encode(
+        function_exists('macomaex_login_guard_client_policies') ? macomaex_login_guard_client_policies() : array(),
+        JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
+    ); ?>
+};
+</script>
+<script type="text/javascript" src="<?php echo $prix_root_asset_url('ko/js/login-guard.js', G5_JS_VER); ?>"></script>
 
-<link rel="stylesheet" href="<?php echo G5_THEME_CSS_URL; ?>/aos.css">
-<script type="text/javascript" src="<?php echo G5_THEME_JS_URL ?>/aos.js"></script>
+<script type="text/javascript" src="<?php echo $prix_theme_asset_url('js/jquery.lastest.js', G5_JS_VER); ?>"></script>
+<script type="text/javascript" src="<?php echo $prix_theme_asset_url('js/jquery.ui.lastest.js', G5_JS_VER); ?>"></script>
+<script type="text/javascript" src="<?php echo $prix_theme_asset_url('js/TweenMax.min.js', G5_JS_VER); ?>"></script>
+<script type="text/javascript" src="<?php echo $prix_theme_asset_url('js/BezierPlugin.min.js', G5_JS_VER); ?>"></script>
+<script type="text/javascript" src="<?php echo $prix_theme_asset_url('js/jquery.throttledresize.js', G5_JS_VER); ?>"></script>
+<script type="text/javascript" src="<?php echo $prix_theme_asset_url('js/jquery.rwdImageMaps.min.js', G5_JS_VER); ?>"></script>
+<script type="text/javascript" src="<?php echo $prix_theme_asset_url('js/ofi.js', G5_JS_VER); ?>"></script>
+<script type="text/javascript" src="<?php echo $prix_theme_asset_url('js/picturefill.min.js', G5_JS_VER); ?>"></script>
+<script type="text/javascript" src="<?php echo $prix_theme_asset_url('js/jquery-input-file-text.js', G5_JS_VER); ?>"></script>
 
-<link rel="stylesheet" href="<?php echo G5_THEME_CSS_URL; ?>/slick.css">
-<script type="text/javascript" src="<?php echo G5_THEME_JS_URL; ?>/slick.js"></script>
+<link rel="stylesheet" href="<?php echo $prix_theme_asset_url('css/aos.css', G5_CSS_VER); ?>">
+<script type="text/javascript" src="<?php echo $prix_theme_asset_url('js/aos.js', G5_JS_VER); ?>"></script>
 
-<link rel="stylesheet" href="<?php echo G5_THEME_CSS_URL; ?>/jquery.fancybox.css">
-<script type="text/javascript" src="<?php echo G5_THEME_JS_URL; ?>/jquery.fancybox.js"></script>
+<link rel="stylesheet" href="<?php echo $prix_theme_asset_url('css/slick.css', G5_CSS_VER); ?>">
+<script type="text/javascript" src="<?php echo $prix_theme_asset_url('js/slick.js', G5_JS_VER); ?>"></script>
 
-<script type="text/javascript" src="<?php echo G5_THEME_JS_URL ?>/publisher.js?ver=<?php echo G5_JS_VER; ?>"></script>
-<script type="text/javascript" src="<?php echo G5_THEME_JS_URL ?>/company-detail-actions.js?ver=<?php echo G5_JS_VER; ?>"></script>
+<link rel="stylesheet" href="<?php echo $prix_theme_asset_url('css/jquery.fancybox.css', G5_CSS_VER); ?>">
+<script type="text/javascript" src="<?php echo $prix_theme_asset_url('js/jquery.fancybox.js', G5_JS_VER); ?>"></script>
 
-<script type="text/javascript" src="/build/jquery.waypoints.min.js"></script>
+<script type="text/javascript" src="<?php echo $prix_theme_asset_url('js/publisher.js', G5_JS_VER); ?>"></script>
+<script type="text/javascript" src="<?php echo $prix_theme_asset_url('js/company-detail-actions.js', G5_JS_VER); ?>"></script>
+
+<script type="text/javascript" src="<?php echo $prix_root_asset_url('build/jquery.waypoints.min.js', G5_JS_VER); ?>"></script>
 
 <?php
 //add_javascript('<script src="'.G5_JS_URL.'/jquery-1.12.4.min.js"></script>', 0);
@@ -175,10 +213,16 @@ if(!defined('G5_IS_ADMIN')) {
 	echo $cf_add_script;
 }
 ?>
-<link rel="stylesheet" href="<?php echo G5_THEME_CSS_URL; ?>/jquery.alerts.css">
-<script type="text/javascript" src="<?php echo G5_THEME_JS_URL; ?>/jquery.alerts.js"></script>
+<link rel="stylesheet" href="<?php echo $prix_theme_asset_url('css/jquery.alerts.css', G5_CSS_VER); ?>">
+<script type="text/javascript" src="<?php echo $prix_theme_asset_url('js/jquery.alerts.js', G5_JS_VER); ?>"></script>
 
 
+<?php
+$analytics_host = strtolower(trim(isset($_SERVER['HTTP_HOST']) ? (string)$_SERVER['HTTP_HOST'] : ''));
+$analytics_host = preg_replace('/:\d+$/', '', $analytics_host);
+$analytics_enabled = in_array($analytics_host, array('macomaex.com', 'www.macomaex.com'), true);
+?>
+<?php if ($analytics_enabled) { ?>
 <!-- Google Tag Manager 2025-02-07 -->
 <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
 new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
@@ -186,17 +230,20 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
 })(window,document,'script','dataLayer','GTM-PRWD7J9P');</script>
 <!-- End Google Tag Manager -->
+<?php } ?>
 
 </head>
 <body<?php echo isset($g5['body_script']) ? $g5['body_script'] : ''; ?>>
 
+<?php if ($analytics_enabled) { ?>
 <!-- Google Tag Manager (noscript) 2025-02-07-->
 <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-PRWD7J9P"
 height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 <!-- End Google Tag Manager (noscript) -->
+<?php } ?>
 
 
-<div id="wrap" class="<?php if (!defined("_INDEX_")) { ?> sub<?php } ?>">
+<div id="wrap" class="<?php if (!defined("_INDEX_")) { ?> sub<?php } ?>"<?php echo !empty($theme_wrap_inline_style) ? ' style="'.htmlspecialchars($theme_wrap_inline_style, ENT_QUOTES, 'UTF-8').'"' : ''; ?>>
 
 <?php
 if ($is_member) { // 회원이라면 로그인 중이라는 메세지를 출력해준다.

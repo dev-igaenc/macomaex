@@ -1,0 +1,226 @@
+name: Deploy Develop to SFTP
+
+on:
+  push:
+    branches:
+      - develop
+    paths:
+      - 'www/**'
+      - '.github/workflows/deploy-develop-ftp.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-develop-ftp
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Deploy changed www files to dev server
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate SFTP settings
+        env:
+          CAFE24_SFTP_HOST: ${{ secrets.CAFE24_SFTP_HOST }}
+          CAFE24_SFTP_PORT: ${{ secrets.CAFE24_SFTP_PORT }}
+          CAFE24_SFTP_USER: ${{ secrets.CAFE24_SFTP_USER }}
+          CAFE24_SFTP_PASSWORD: ${{ secrets.CAFE24_SFTP_PASSWORD }}
+          CAFE24_REMOTE_PATH: ${{ secrets.CAFE24_REMOTE_PATH }}
+        run: |
+          test -n "$CAFE24_SFTP_HOST" || { echo "Missing secret: CAFE24_SFTP_HOST"; exit 1; }
+          test -n "$CAFE24_SFTP_PORT" || { echo "Missing secret: CAFE24_SFTP_PORT"; exit 1; }
+          test -n "$CAFE24_SFTP_USER" || { echo "Missing secret: CAFE24_SFTP_USER"; exit 1; }
+          test -n "$CAFE24_SFTP_PASSWORD" || { echo "Missing secret: CAFE24_SFTP_PASSWORD"; exit 1; }
+          test -n "$CAFE24_REMOTE_PATH" || { echo "Missing secret: CAFE24_REMOTE_PATH"; exit 1; }
+
+      - name: Detect deploy diff
+        id: diff-files
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "push" ] && [ -n "${{ github.event.before }}" ] && [ "${{ github.event.before }}" != "0000000000000000000000000000000000000000" ]; then
+            BASE_SHA="${{ github.event.before }}"
+          elif git rev-parse HEAD^ >/dev/null 2>&1; then
+            BASE_SHA="$(git rev-parse HEAD^)"
+          else
+            BASE_SHA="$(git rev-list --max-parents=0 HEAD)"
+          fi
+
+          echo "Comparing changes from $BASE_SHA to $GITHUB_SHA"
+
+          git diff --name-only --diff-filter=ACMR "$BASE_SHA" "$GITHUB_SHA" -- www > .deploy_all.txt
+          git diff --name-only --diff-filter=D "$BASE_SHA" "$GITHUB_SHA" -- www > .deploy_deleted_raw.txt
+
+          if grep -Eq '^www/(composer\.json|composer\.lock)$' .deploy_all.txt .deploy_deleted_raw.txt 2>/dev/null; then
+            echo "any_composer_changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "any_composer_changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Setup PHP
+        if: steps.diff-files.outputs.any_composer_changed == 'true'
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          tools: composer:v2
+          coverage: none
+
+      - name: Install PHP dependencies
+        if: steps.diff-files.outputs.any_composer_changed == 'true'
+        working-directory: www
+        run: composer install --no-dev --prefer-dist --no-interaction --no-progress
+
+      - name: Build changed file lists
+        run: |
+          awk '
+            NF &&
+            $0 ~ /^www\// &&
+            $0 !~ /^www\/data\// &&
+            $0 !~ /^www\/logs\// &&
+            $0 !~ /^www\/vendor\// &&
+            $0 !~ /^www\/plugin\/[^/]+\/key\// &&
+            $0 !~ /^www\/plugin\/[^/]+\/cert\// &&
+            $0 !~ /^www\/plugin\/[^/]+\/log\// &&
+            $0 !~ /^www\/plugin\/okname(\/|$)/ &&
+            $0 !~ /^www\/plugin\/kcpcert(\/|$)/ &&
+            $0 !~ /^www\/plugin\/inicert(\/|$)/
+          ' .deploy_all.txt | sort -u > .deploy_changed.txt
+
+          awk '
+            NF &&
+            $0 ~ /^www\// &&
+            $0 !~ /^www\/data\// &&
+            $0 !~ /^www\/logs\// &&
+            $0 !~ /^www\/vendor\// &&
+            $0 !~ /^www\/plugin\/[^/]+\/key\// &&
+            $0 !~ /^www\/plugin\/[^/]+\/cert\// &&
+            $0 !~ /^www\/plugin\/[^/]+\/log\// &&
+            $0 !~ /^www\/plugin\/okname(\/|$)/ &&
+            $0 !~ /^www\/plugin\/kcpcert(\/|$)/ &&
+            $0 !~ /^www\/plugin\/inicert(\/|$)/
+          ' .deploy_deleted_raw.txt | sort -u > .deploy_deleted.txt
+
+          if [ "${{ steps.diff-files.outputs.any_composer_changed }}" = "true" ] && [ -d www/vendor ]; then
+            find www/vendor -type f | sort -u > .deploy_vendor.txt
+            cat .deploy_vendor.txt >> .deploy_changed.txt
+            sort -u .deploy_changed.txt -o .deploy_changed.txt
+          else
+            : > .deploy_vendor.txt
+          fi
+
+          echo "Changed deploy files: $(wc -l < .deploy_changed.txt)"
+          echo "Deleted deploy files: $(wc -l < .deploy_deleted.txt)"
+          echo "Composer vendor files: $(wc -l < .deploy_vendor.txt)"
+
+      - name: Validate deploy file lists
+        shell: bash
+        run: |
+          validate_list() {
+            local list_file="$1"
+            local must_exist="$2"
+
+            [ -f "$list_file" ] || return 0
+
+            while IFS= read -r file; do
+              [ -n "$file" ] || continue
+
+              case "$file" in
+                www/*) ;;
+                *)
+                  echo "Invalid deploy path outside www/: $file"
+                  exit 1
+                  ;;
+              esac
+
+              if printf '%s\n' "$file" | grep -Eq '\*\*\*|^www/.+www/'; then
+                echo "Suspicious deploy path detected: $file"
+                exit 1
+              fi
+
+              if [ "$must_exist" = "true" ] && [ ! -e "$file" ]; then
+                echo "Changed deploy path does not exist in workspace: $file"
+                exit 1
+              fi
+            done < "$list_file"
+          }
+
+          validate_list .deploy_changed.txt true
+          validate_list .deploy_deleted.txt false
+
+      - name: Show deploy target
+        run: |
+          echo "Deploying changed files to ${{ secrets.CAFE24_REMOTE_PATH }}"
+          sed -n '1,40p' .deploy_changed.txt
+          sed -n '1,40p' .deploy_deleted.txt
+
+      - name: Build deploy bundle
+        shell: bash
+        run: |
+          rm -rf .deploy_bundle
+          mkdir -p .deploy_bundle
+
+          while IFS= read -r file; do
+            [ -n "$file" ] || continue
+            rel="${file#www/}"
+            mkdir -p ".deploy_bundle/$(dirname "$rel")"
+            cp "$file" ".deploy_bundle/$rel"
+          done < .deploy_changed.txt
+
+          echo "Deploy bundle files:"
+          find .deploy_bundle -type f | sed -n '1,80p'
+
+      - name: Install lftp
+        run: sudo apt-get update && sudo apt-get install -y lftp
+
+      - name: Upload composer vendor via SFTP mirror
+        if: steps.diff-files.outputs.any_composer_changed == 'true'
+        env:
+          CAFE24_SFTP_HOST: ${{ secrets.CAFE24_SFTP_HOST }}
+          CAFE24_SFTP_PORT: ${{ secrets.CAFE24_SFTP_PORT }}
+          CAFE24_SFTP_USER: ${{ secrets.CAFE24_SFTP_USER }}
+          CAFE24_SFTP_PASSWORD: ${{ secrets.CAFE24_SFTP_PASSWORD }}
+          CAFE24_REMOTE_PATH: ${{ secrets.CAFE24_REMOTE_PATH }}
+        run: |
+          if [ ! -d www/vendor ]; then
+            echo "www/vendor not found after composer install"
+            exit 1
+          fi
+
+          lftp -u "$CAFE24_SFTP_USER","$CAFE24_SFTP_PASSWORD" "sftp://$CAFE24_SFTP_HOST:$CAFE24_SFTP_PORT" <<EOF
+          set sftp:auto-confirm yes
+          set cmd:fail-exit yes
+          cd "$CAFE24_REMOTE_PATH"
+          mirror -R --delete --verbose ./www/vendor vendor
+          bye
+          EOF
+
+      - name: Upload changed tracked files via SFTP
+        env:
+          CAFE24_SFTP_HOST: ${{ secrets.CAFE24_SFTP_HOST }}
+          CAFE24_SFTP_PORT: ${{ secrets.CAFE24_SFTP_PORT }}
+          CAFE24_SFTP_USER: ${{ secrets.CAFE24_SFTP_USER }}
+          CAFE24_SFTP_PASSWORD: ${{ secrets.CAFE24_SFTP_PASSWORD }}
+          CAFE24_REMOTE_PATH: ${{ secrets.CAFE24_REMOTE_PATH }}
+        run: |
+          if [ ! -s .deploy_changed.txt ] && [ ! -s .deploy_deleted.txt ]; then
+            echo "No deployable file changes detected."
+            exit 0
+          fi
+          lftp -u "$CAFE24_SFTP_USER","$CAFE24_SFTP_PASSWORD" "sftp://$CAFE24_SFTP_HOST:$CAFE24_SFTP_PORT" <<EOF
+          set sftp:auto-confirm yes
+          set cmd:fail-exit yes
+          cd "$CAFE24_REMOTE_PATH"
+          mirror -R --verbose ./.deploy_bundle/ .
+          $(while IFS= read -r file; do
+              [ -n "$file" ] || continue
+              rel="${file#www/}"
+              printf 'rm -f "%s"\n' "$rel"
+            done < .deploy_deleted.txt)
+          bye
+          EOF

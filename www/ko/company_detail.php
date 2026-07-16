@@ -2,12 +2,13 @@
 include_once("./_common.php");
 include_once(__DIR__ . '/helper/trade_request_helper.php');
 include_once(__DIR__ . '/helper/company_detail_helper.php');
+include_once(__DIR__ . '/helper/company_identity_preview_helper.php');
 
 $g5['title'] = '기업 상세';
 $shouldOpenTradeRequestModal = false;
 
 if (isset($_GET['trade_request_login']) && $_GET['trade_request_login'] === '1') {
-	login_chk();
+login_chk('company_detail');
 	$shouldOpenTradeRequestModal = !empty($member['mb_id']);
 }
 
@@ -73,6 +74,9 @@ function resolve_keyword_tag_total_count_detail($keyword_count, $tags) {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
+	if ($_POST['action'] === 'trade_request_click_hit') {
+		company_detail_handle_trade_request_click_hit($member, $_POST, 'category');
+	}
 	if ($_POST['action'] === 'trade_request_verify_bzno') {
 		company_detail_handle_trade_request_verify_bzno($member, $_POST);
 	}
@@ -87,7 +91,7 @@ $kedcd = $cd ? simple_crypt($cd, 'd') : '';
 
 // 기업코드 값 최소 검증
 if (!preg_match('/^\d{10}$/', $kedcd)) {
-	alert('잘못된 접근입니다.', '/ko/matching_list.php');
+	alert('잘못된 접근입니다.', '/companies');
 }
 
 $kedcdSql = sql_escape_string($kedcd);
@@ -112,7 +116,7 @@ $company = sql_fetch("
 ");
 
 if (empty($company['KEDCD'])) {
-	alert('기업 정보를 찾을 수 없습니다.', '/ko/matching_list.php');
+	alert('기업 정보를 찾을 수 없습니다.', '/companies');
 }
 
 $favorite_company = array();
@@ -131,7 +135,7 @@ if (!empty($company['BZC_CD'])) {
 	$companyBzcCdSql = sql_escape_string($company['BZC_CD']);
 	$industry = sql_fetch("
 		SELECT k_code, k_code_name
-		FROM kssc
+		FROM kssc_11
 		WHERE k_code = '{$companyBzcCdSql}'
 	");
 }
@@ -181,6 +185,8 @@ if (!empty($member['mb_id'])) {
 
 	$isDetailUnlocked = !empty($unlockRow['tr_no']);
 }
+$isIdentityPreview = company_identity_preview_is_valid('category_top3', $kedcd, $_GET['identity_preview'] ?? '');
+$isIdentityVisible = !empty($member['mb_id']) || $isDetailUnlocked || $isIdentityPreview;
 
 $companyTitleDisplay = trade_request_display_value($company['ENP_NM'] ?? '');
 $companyAddressDisplay = trade_request_display_value(trim(($company['LOC_ADDRA'] ?? '') . ' ' . ($company['LOC_ADDRB'] ?? '')));
@@ -203,8 +209,13 @@ $requesterProfileState = !empty($member['mb_id'])
 	: array();
 
 $tradeRequestLoginParams = $_GET;
+$tradeRequestDetailId = isset($tradeRequestLoginParams['id'])
+	? trim((string)$tradeRequestLoginParams['id'])
+	: (isset($tradeRequestLoginParams['cd']) ? trim((string)$tradeRequestLoginParams['cd']) : '');
+unset($tradeRequestLoginParams['id'], $tradeRequestLoginParams['cd']);
 $tradeRequestLoginParams['trade_request_login'] = '1';
-$tradeRequestReturnUrl = '/ko/company_detail.php?' . http_build_query($tradeRequestLoginParams);
+$tradeRequestReturnQuery = array_merge(array('id' => $tradeRequestDetailId), $tradeRequestLoginParams);
+$tradeRequestReturnUrl = '/companies/detail?' . http_build_query($tradeRequestReturnQuery);
 $tradeRequestLoginUrl = '/bbs/login.php?url=' . urlencode($tradeRequestReturnUrl);
 
 // 프론트 렌더링과 마스킹 분기에 필요한 상세 페이지 데이터 구조를 한 번에 정리해 JS로 내려준다.
@@ -226,6 +237,7 @@ $companyDetailData = array(
 	'homepage' => $company['HPAGE_URL'] ?? '',
 	'homepage_display' => $companyHomepageDisplay,
 	'is_unlocked' => $isDetailUnlocked,
+	'is_identity_visible' => $isIdentityVisible,
 	'badge_growth' => format_badge_percent_detail($score['badge_growth'] ?? null),
 	'badge_stability' => format_badge_percent_detail($score['badge_stability'] ?? null),
 	'badge_venture' => strtoupper(trim((string)($score['badge_venture'] ?? ''))),
@@ -345,6 +357,7 @@ include_once(G5_THEME_PATH . '/head.php');
 window.COMPANY_DETAIL_DATA = <?php echo json_encode($companyDetailData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
 window.MATCH_REQUEST_CONTEXT = {
 	endpoint: "/ko/company_detail.php",
+	verifyEndpoint: "/ko/trade_request_verify_bzno.php",
 	sourcePage: "company_detail",
 	isLoggedIn: <?php echo !empty($member['mb_id']) ? 'true' : 'false'; ?>,
 	loginCheckUrl: <?php echo json_encode($tradeRequestLoginUrl, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>,

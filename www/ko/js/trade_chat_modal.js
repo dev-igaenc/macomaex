@@ -70,6 +70,12 @@
 		// 데스크톱에서는 room list 폭을 토글하고, 모바일에서는 기존 전환 흐름을 유지한다.
 		function syncSidebarToggleState() {
 			if (!sidebarToggleBtn) return;
+			if (isMobileViewport()) {
+				sidebarToggleBtn.setAttribute('aria-pressed', 'false');
+				sidebarToggleBtn.setAttribute('aria-label', '닫기');
+				sidebarToggleBtn.setAttribute('title', '닫기');
+				return;
+			}
 			var collapsed = modal.classList.contains('chat-demo-modal--sidebar-collapsed');
 			sidebarToggleBtn.setAttribute('aria-pressed', collapsed ? 'true' : 'false');
 			sidebarToggleBtn.setAttribute('aria-label', collapsed ? '목록 펼치기' : '목록 접기');
@@ -85,57 +91,23 @@
 			syncSidebarToggleState();
 		}
 
-		function ensureLoginGuardModal() {
-			var guard = document.getElementById('tradeChatLoginGuard');
-			if (guard) return guard;
-
-			// 비로그인 상태에서는 빈 채팅 모달 대신 로그인 가드만 단독으로 띄운다.
-			guard = document.createElement('div');
-			guard.id = 'tradeChatLoginGuard';
-			guard.className = 'login-guard-modal';
-			guard.innerHTML = '' +
-				'<div class="login-guard">' +
-				'<div class="login-guard__overlay" aria-hidden="true"></div>' +
-				'<div class="login-guard__modal" role="dialog" aria-modal="true" aria-labelledby="tradeChatLoginGuardTitle">' +
-				'<button type="button" class="login-guard__close" id="tradeChatLoginGuardClose" aria-label="닫기">' +
-				'<svg viewBox="0 0 24 24">' +
-				'<line x1="18" y1="6" x2="6" y2="18"></line>' +
-				'<line x1="6" y1="6" x2="18" y2="18"></line>' +
-				'</svg>' +
-				'</button>' +
-				'<div class="login-guard__icon" aria-hidden="true">' +
-				'<svg viewBox="0 0 24 24">' +
-				'<path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1s3.1 1.39 3.1 3.1v2z"></path>' +
-				'</svg>' +
-				'</div>' +
-				'<h1 class="login-guard__title" id="tradeChatLoginGuardTitle">로그인이 필요합니다</h1>' +
-				'<p class="login-guard__desc" id="tradeChatLoginGuardDesc">채팅을 확인하시려면 로그인이 필요합니다.</p>' +
-				'<div class="login-guard__actions">' +
-				'<a class="login-guard__btn login-guard__btn--ghost" id="tradeChatLoginGuardSignupLink" href="/bbs/register.php">회원가입</a>' +
-				'<a class="login-guard__btn login-guard__btn--primary" id="tradeChatLoginGuardLink" href="/bbs/login.php">로그인</a>' +
-				'</div>' +
-				'</div>' +
-				'</div>';
-
-			document.body.appendChild(guard);
-
-			guard.querySelector('#tradeChatLoginGuardClose').addEventListener('click', function () {
-				document.documentElement.classList.remove('hide-scroll');
-				guard.classList.remove('is-open');
-			});
-
-			return guard;
-		}
-
 		function redirectToLogin() {
-			var loginUrl = context.loginUrl || '/bbs/login.php?url=' + encodeURIComponent(window.location.pathname + window.location.search);
-			var guard = ensureLoginGuardModal();
+			var loginUrl = context.loginUrl || ((window.MacomaLoginGuard && typeof window.MacomaLoginGuard.buildLoginUrl === 'function')
+				? window.MacomaLoginGuard.buildLoginUrl(window.location.pathname + window.location.search)
+				: '/bbs/login.php?url=' + encodeURIComponent(window.location.pathname + window.location.search));
 			closeModal();
-			guard.querySelector('#tradeChatLoginGuardLink').setAttribute('href', loginUrl);
-			guard.querySelector('#tradeChatLoginGuardSignupLink').setAttribute('href', '/bbs/register.php');
-			guard.querySelector('#tradeChatLoginGuardDesc').textContent = '채팅을 확인하시려면 로그인이 필요합니다.';
-			document.documentElement.classList.add('hide-scroll');
-			guard.classList.add('is-open');
+			if (window.MacomaLoginGuard && typeof window.MacomaLoginGuard.show === 'function') {
+				window.MacomaLoginGuard.show({
+					titleId: 'tradeChatLoginGuardTitle',
+					descriptionText: '채팅을 확인하시려면 로그인이 필요합니다.',
+					loginUrl: loginUrl,
+					signupUrl: (window.MacomaLoginGuard && typeof window.MacomaLoginGuard.buildSignupUrl === 'function')
+						? window.MacomaLoginGuard.buildSignupUrl(window.location.pathname + window.location.search)
+						: '/signup'
+				});
+				return;
+			}
+			window.location.href = loginUrl;
 		}
 
 		function isMobileViewport() {
@@ -712,6 +684,16 @@
 			}).join('');
 		}
 
+		function showRoomListLanding() {
+			cleanupActiveChannel();
+			state.activeRoomId = 0;
+			modal.classList.remove('chat-demo-modal--mobile-chat');
+			renderRoomList();
+			setMainHeader(null, '연결 대기 중', 'waiting');
+			renderEmptyMessages('채팅방을 선택하면 대화 내용을 불러옵니다.');
+			setComposerEnabled(false, '채팅방을 먼저 선택해 주세요.');
+		}
+
 		async function ensureClient(roomPayload) {
 			var bootstrap = roomPayload || state.bootstrap || {};
 			var StreamChatCtor = window.StreamChat && (window.StreamChat.StreamChat || window.StreamChat);
@@ -870,7 +852,7 @@
 				return true;
 			}
 
-			await bindRoom(state.bootstrap.initialRoomId || initialRoomId || state.bootstrap.rooms[0].roomId);
+			showRoomListLanding();
 			return true;
 		}
 
@@ -912,6 +894,8 @@
 					renderEmptyMessages(error && error.message ? error.message : '채팅 정보를 불러오지 못했습니다.');
 					setComposerEnabled(false, '채팅 정보를 다시 확인해 주세요.');
 				}
+			} else if (state.bootstrap && roomListEl) {
+				showRoomListLanding();
 			}
 		}
 
@@ -953,6 +937,10 @@
 
 		if (sidebarToggleBtn) {
 			sidebarToggleBtn.addEventListener('click', function () {
+				if (isMobileViewport()) {
+					closeModal();
+					return;
+				}
 				toggleSidebarCollapsed();
 			});
 			syncSidebarToggleState();

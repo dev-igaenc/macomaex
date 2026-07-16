@@ -50,6 +50,7 @@ if (!defined('_GNUBOARD_')) exit; // 개별 페이지 접근 불가
     #join_single .phone_cert_code{display:none; margin-top:0.8rem;}
     #join_single .phone_cert_status{margin-top:0.8rem; color:#666; font-size:1.4rem; line-height:1.5;}
     #join_single .phone_cert_status.success{color:#2563eb;}
+    #join_single .phone_cert_status.warning{color:#b45309;}
     #join_single .phone_cert_status.error{color:#d92d20;}
     @media (max-width: 640px){
         #join_single .cert_input_group{display:block;}
@@ -71,6 +72,7 @@ if (!defined('_GNUBOARD_')) exit; // 개별 페이지 접근 불가
             <input type="hidden" name="com_chk" id="com_chk" class="com_chk" value="true">
             <input type="hidden" name="mb_company" id="mb_company" value="">
             <input type="hidden" name="register_flow" value="single_join_v1">
+            <input type="hidden" name="use_member_consent" value="1">
             <input type="hidden" name="provider" value="<?php echo $provider ?? ''; ?>">
             <input type="hidden" name="id" value="<?php echo $mb_id ?? ''; ?>">
             <input type="hidden" name="mb_6" id="mb_6" value="">
@@ -162,15 +164,6 @@ if (!defined('_GNUBOARD_')) exit; // 개별 페이지 접근 불가
                         </div>
                     </div>
 
-                    <div class="formBox">
-                        <div class="inputBox type2 type3 Product">
-                            <p class="title">주요 서비스/제품</p>
-                            <div class="products addz">
-                                <input name="mb_9[]" type="text" maxlength="32">
-                                <button type="button" class="add">+</button>
-                            </div>
-                        </div>
-                    </div>
                     -->
 
                     <div class="section_divider"></div>
@@ -179,7 +172,7 @@ if (!defined('_GNUBOARD_')) exit; // 개별 페이지 접근 불가
 						<div class="formBox terms_all_box">
                         	<div class="checkBox all"><input type="checkbox" name="agreeAll" id="agreeAll"><label for="agreeAll">모두 동의합니다.</label></div>
                     	</div>
-						<p>회원 가입 및 회원 관리 등의 목적으로 서비스 이용약관, 개인정보를 수집 및 이용하고 있습니다.</p>
+						<p>회원가입 및 회원 관리를 위해 서비스 이용약관, 개인정보 수집 및 이용, 마케팅 수신 동의 내용을 확인해 주세요.</p>
 					</div>
 
                     <div class="formBox terms_box">
@@ -195,7 +188,16 @@ if (!defined('_GNUBOARD_')) exit; // 개별 페이지 접근 불가
                         <div class="checkBox">
                             <input type="checkbox" name="privacy" id="privacy" class="req">
                             <span class="consent_text">
-                                <a href="<?= $link_1202 ?? '/etc/privacy.php' ?>" target="_blank" rel="noopener noreferrer">개인정보 수집 및 이용동의</a>에 동의합니다.
+                                <a href="/etc/privacy_consent.php" target="_blank" rel="noopener noreferrer">개인정보 수집 및 이용동의</a>에 동의합니다.
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="formBox terms_box">
+                        <div class="checkBox">
+                            <input type="checkbox" name="marketing" id="marketing">
+                            <span class="consent_text">
+                                <a href="<?= $link_1205 ?? '/etc/marketing_consent.php' ?>" target="_blank" rel="noopener noreferrer">마케팅 수신 동의</a>에 동의합니다. (선택)
                             </span>
                         </div>
                     </div>
@@ -376,7 +378,7 @@ var signupPhoneVerifiedValue = "";
 
 function setSignupPhoneStatus(message, type) {
     var $status = $("#signup_phone_status");
-    $status.removeClass("success error");
+    $status.removeClass("success warning error");
     if (type) $status.addClass(type);
     $status.text(message || "");
 }
@@ -462,7 +464,7 @@ $("#signup_phone_send").on("click", function(){
             }
             if (resp.ok) {
                 $("#signup_phone_code_wrap").css("display", window.matchMedia("(max-width: 640px)").matches ? "block" : "flex");
-                setSignupPhoneStatus(resp.message || "인증번호를 발송했습니다.", "success");
+                setSignupPhoneStatus(resp.message || "인증번호 발송 요청을 처리했습니다.", "success");
                 $("#signup_phone_code").focus();
             } else {
                 setSignupPhoneStatus(getSignupPhoneErrorMessage(resp, "인증번호 발송에 실패했습니다."), "error");
@@ -523,8 +525,16 @@ $("#reg_mb_name").on("input blur change", function(){
 
 $("#agreeAll").click(function(){
     var chk = $(this).is(":checked");
-    if(chk) $("input.req").prop("checked", true);
-    else $("input.req").prop("checked", false);
+    $("input[name='terms'], input[name='privacy'], input[name='marketing']").prop("checked", chk);
+});
+
+$("input[name='terms'], input[name='privacy'], input[name='marketing']").on("change", function(){
+    var allChecked =
+        $("#terms").is(":checked") &&
+        $("#privacy").is(":checked") &&
+        $("#marketing").is(":checked");
+
+    $("#agreeAll").prop("checked", allChecked);
 });
 
 // 사업자등록번호 자동조회 기능 이관 예정으로 임시 비활성화
@@ -710,7 +720,12 @@ $("#join_submit").on("click", function(){
     $("#reg_mb_id").val(email);
     if(!fregisterform_submit()) return false;
 
-    $("#agree_chk").val("#terms#privacy");
+    var agreeTokens = ["#terms", "#privacy"];
+    if($("#marketing").is(":checked")) {
+        agreeTokens.push("#marketing");
+    }
+
+    $("#agree_chk").val(agreeTokens.join(""));
     $("#mb_id").val(email);
     $("#mb_6").val(realName);
     $("#mb_8").val($.trim($("#reg_mb_hp").val()));

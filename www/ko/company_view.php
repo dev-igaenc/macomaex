@@ -20,8 +20,7 @@ if($cd && strlen($cd)==10){
 	ALERT("정상적으로 이용하세요.","/");
 }
 
-if($com['BZC_CD']) $kssc=sql_fetch("SELECT * from kssc where k_code='{$com['BZC_CD']}'");
-if($com['KSIC9_BZC_CD']) $kssc_9=sql_fetch("SELECT * from kssc_9 where k_code='{$com['KSIC9_BZC_CD']}'");
+if($com['BZC_CD']) $kssc=sql_fetch("SELECT * from kssc_11 where k_code='{$com['BZC_CD']}'");
 
 //사업자번호
 function addh_bzno($bz){
@@ -59,8 +58,6 @@ $tel=explode("-",$com['TEL_NO']);
 if($com['CONO_PID']) $com['CONO_PID']=substr($com['CONO_PID'],0,6)."-".substr($com['CONO_PID'],-7);
 
 $view_chk="true"; //임시처리
-$kssc9=getKsscInfo9($com['KSIC9_BZC_CD']);
-
 if($member['mb_id']){
 	$matcing=sql_fetch("SELECT * from g5_matching where del != 'D' and  request_id='{$member['mb_id']}' and KEDCD='{$cd}'");//매칭요청
 	if($matcing['receive_approval']=="Y") $receve_info=getUserInfo($matcing['receive_id']);
@@ -149,11 +146,7 @@ $sales=getFinanceInfo($cd);
 				</dl>
 
 				<dl>
-					<dt>표준산업분류(9차)</dt>
-					<dd>(<?=$com['KSIC9_BZC_CD']?>) <?=$kssc9['k_code_name']?></dd>
-				</dl>
-				<dl>
-					<dt>표준산업분류</dt>
+					<dt>표준산업분류(11차)</dt>
 					<dd>(<?=$com['BZC_CD']?>) <?=$kssc['k_code_name']?></dd>
 				</dl>
 
@@ -396,9 +389,17 @@ function AutoHypen(companyNum){
 				if(jqXHR==500){
 					if(chk) $this.removeClass("active");
 				}else if(jqXHR==501){
-				jAlert("로그인 후 이용하세요.","알림",function(){
+				if (window.MacomaLoginGuard && typeof window.MacomaLoginGuard.show === "function") {
+					window.MacomaLoginGuard.show({
+						descriptionText: "관심기업 등록은 로그인 후 이용하실 수 있습니다.",
+						loginUrl: "/bbs/login.php?url=/ko/company_view.php?cd=<?=$_REQUEST['cd']?>",
+						signupUrl: (window.MacomaLoginGuard && typeof window.MacomaLoginGuard.buildSignupUrl === "function")
+							? window.MacomaLoginGuard.buildSignupUrl("/ko/company_view.php?cd=<?=$_REQUEST['cd']?>")
+							: "/signup"
+					});
+				} else {
 					location.href="/bbs/login.php?url=/ko/company_view.php?cd=<?=$_REQUEST['cd']?>";
-				});
+				}
 				return false;
 				}else{
 					if(chk) $("button.star_btn[kedcd='"+kedcd+"']").addClass("active");
@@ -421,9 +422,17 @@ function AutoHypen(companyNum){
 				jAlert("매칭 가능 횟수가 없습니다.","알림");
 				return false;
 			}else if(jqXHR[0]==501){
-				jAlert("로그인 후 이용하세요.","알림",function(){
+				if (window.MacomaLoginGuard && typeof window.MacomaLoginGuard.show === "function") {
+					window.MacomaLoginGuard.show({
+						descriptionText: "매칭 요청은 로그인 후 이용하실 수 있습니다.",
+						loginUrl: "/bbs/login.php?url=/ko/matching_list.php",
+						signupUrl: (window.MacomaLoginGuard && typeof window.MacomaLoginGuard.buildSignupUrl === "function")
+							? window.MacomaLoginGuard.buildSignupUrl("/ko/matching_list.php")
+							: "/signup"
+					});
+				} else {
 					location.href="/bbs/login.php?url=/ko/matching_list.php";
-				});
+				}
 				return false;
 			}else{
 				$("button.is-close").click();

@@ -186,8 +186,8 @@ if (!function_exists('plan_display_title_en')) {
     id="planWrap"
     data-is-member="<?= $member['mb_id'] ? '1' : '0' ?>"
     data-get-set-url="../get_set.php"
-    data-login-url="/bbs/login.php?url=/ko/plan.php"
-    data-my-plan-url="/ko/my_plan.php"
+    data-login-url="/bbs/login.php?url=/plans"
+    data-my-plan-url="/account/credits"
     data-credit-pay-url="/ko/credit_pay.php"
     data-credit-mobile-pay-url="/ko/credit_pay_mobile.php"
     data-membership-credit-pay-token="<?= htmlspecialchars($membership_credit_pay_token, ENT_QUOTES) ?>"
@@ -209,7 +209,7 @@ if (!function_exists('plan_display_title_en')) {
             <div class="ic"><?= plan_icon_svg('gift') ?></div>
             <div class="txt">
                 <div class="name">지금 충전하면 크레딧 2배!</div>
-                <div class="desc">더블 크레딧 Event · 6월 30일 까지 (신규 가입 시 <?= number_format($signup_bonus) ?> 크레딧 제공)</div>
+                <div class="desc">더블 크레딧 Event · 7월 31일 까지 (신규 가입 시 <?= number_format($signup_bonus) ?> 크레딧 제공)</div>
             </div>
         </div>
 

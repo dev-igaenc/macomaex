@@ -8,6 +8,7 @@ $mb = array(
 'mb_certify' => null,
 'mb_adult' => null,
 'mb_sms' => null,
+'mb_auth' => '',
 'mb_intercept_date' => null,
 'mb_id' => null,
 'mb_name' => null,
@@ -35,8 +36,6 @@ $mb = array(
 'mb_6' => null,
 'mb_7' => null,
 'mb_8' => null,
-'mb_9' => null,
-'mb_10' => null,
 );
 
 $sound_only = '';
@@ -88,8 +87,6 @@ else if ($w == 'u')
     $mb['mb_6'] = get_text($mb['mb_6']);
     $mb['mb_7'] = get_text($mb['mb_7']);
     $mb['mb_8'] = get_text($mb['mb_8']);
-    $mb['mb_9'] = get_text($mb['mb_9']);
-    $mb['mb_10'] = get_text($mb['mb_10']);
 }
 else
     alert('제대로 된 값이 넘어오지 않았습니다.');
@@ -295,8 +292,8 @@ add_javascript(G5_POSTCODE_JS, 0);    //다음 주소 js
 				<a id="ch_all" href="javascript:;" class="btn_admin btn_03">전체선택</a>
 				<a id="unch_all" href="javascript:;" class="btn_admin btn_02">전체해제</a>
 			</p>
-                    <?php
-					$mb_auth=explode("|",$mb['mb_auth']);
+	                    <?php
+					$mb_auth = array_filter(explode("|", isset($mb['mb_auth']) ? (string)$mb['mb_auth'] : ''));
 					
                     foreach($menu as $key=>$value)
                     {
@@ -305,22 +302,26 @@ add_javascript(G5_POSTCODE_JS, 0);    //다음 주소 js
 								foreach($value as $key2=>$value2)
 								{
 									//print_r($value);
-					
-									$chk = array_search($value2[0], $mb_auth);
-									$chk2 = array_search($value[0][0], $mb_auth);
-									$chk2="";
-									foreach($mb_auth as $val){
-										if(substr($val,0,3)==substr($value[0][0],0,3)) $chk2="true";
+									$chk_hide = '';
+									$chk_txt = '';
+									$chk_txt2 = '';
+									$chk = in_array($value2[0], $mb_auth, true);
+									$chk2 = false;
+									foreach($value as $group_menu){
+										if (!isset($group_menu[0]) || $group_menu === $value[0]) {
+											continue;
+										}
+										if (in_array($group_menu[0], $mb_auth, true)) {
+											$chk2 = true;
+											break;
+										}
+									}
+									if (!$chk2 && $chk && $key2 === 0) {
+										$chk2 = true;
 									}
 									if($chk) $chk_txt="checked";
-									else $chk_txt="";
 
-									if(!$chk2) {
-										//$chk_hide="class='hide'";
-										$chk_txt2="";
-										
-									}else{ 
-										$chk_hide="";
+									if($chk2) {
 										$chk_txt2="checked";
 									}
 

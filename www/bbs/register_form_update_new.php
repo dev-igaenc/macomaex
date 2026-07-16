@@ -60,11 +60,6 @@ $mb_5           = isset($_POST['mb_5'])             ? trim($_POST['mb_5'])      
 $mb_6           = isset($_POST['mb_6'])             ? trim($_POST['mb_6'])           : "";
 $mb_7           = isset($_POST['mb_7'])             ? trim($_POST['mb_7'])           : "";
 $mb_8           = isset($_POST['mb_8'])             ? trim($_POST['mb_8'])           : "";
-$mb_9           = isset($_POST['mb_9'])             ? trim($_POST['mb_9'])           : "";
-$mb_10          = isset($_POST['mb_10'])            ? trim($_POST['mb_10'])          : "";
-
-$_POST['mb_9']=array_filter($_POST['mb_9']);
-$mb_9=implode(":|:",$_POST['mb_9']);
 
 $mb_name        = clean_xss_tags($mb_name);
 $mb_email       = get_email_address($mb_email);
@@ -251,9 +246,7 @@ if ($w == '') {
                      mb_5 = '{$mb_5}',
                      mb_6 = '{$mb_6}',
                      mb_7 = '{$mb_7}',
-                     mb_8 = '{$mb_8}',
-                     mb_9 = '{$mb_9}',
-                     mb_10 = '{$mb_10}'
+                     mb_8 = '{$mb_8}'
                      {$sql_certify} ";
 
     // 이메일 인증을 사용하지 않는다면 이메일 인증시간을 바로 넣는다
@@ -262,17 +255,12 @@ if ($w == '') {
     sql_query($sql);
 
 
-	// 회사정보 추가
-	if(!$mb_company){
-			//검색된 회사정보가 없다면 신규 회사 DB 추가함
-			$lastid=sql_fetch("select * from {$g5['member_table']} where mb_id = '{$mb_id}'");
-			$kedcd="M".sprintf('%09d',$lastid['mb_no']);
-			$new_comp_q="insert company set KEDCD='{$kedcd}',";
-			$new_comp_q.="ENP_NM='{$mb_name}',";
-			$new_comp_q.="BZNO='{$comnum}'";
-			sql_query($new_comp_q);
-			sql_query("update {$g5['member_table']}  set mb_company='$kedcd' where mb_no='{$lastid['mb_no']}'");
-	}
+		// 사업자 정보가 없는 신규 회원은 company 행을 만들지 않고 임시 회사 코드만 연결한다.
+		if(!$mb_company){
+				$lastid=sql_fetch("select * from {$g5['member_table']} where mb_id = '{$mb_id}'");
+				$kedcd="M".sprintf('%09d',$lastid['mb_no']);
+				sql_query("update {$g5['member_table']}  set mb_company='$kedcd' where mb_no='{$lastid['mb_no']}'");
+		}
 	
 
 
@@ -388,8 +376,6 @@ if($mb_5) $sql .= "                    mb_5 = '{$mb_5}',";
 $sql .= "                    mb_6 = '{$mb_6}',";
 $sql .= "                    mb_7 = '{$mb_7}',";
 $sql .= "                    mb_8 = '{$mb_8}',";
-if($mb_9) $sql .= "                    mb_9 = '{$mb_9}',";
-if($mb_10) $sql .= "                    mb_10 = '{$mb_10}'";
 if(substr($sql,-1)==",") $sql=substr($sql,0,-1);
 //$sql .= "                    {$sql_password}";
 //$sql .= "                    {$sql_nick_date}";

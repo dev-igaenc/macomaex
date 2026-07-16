@@ -11,7 +11,7 @@ $board['bo_9']="1"; // 2뎁스
 //$board['bo_4'] = $config['cf_title']."의 혜택을 확인하세요.";  // 2뎁스 설명
 
 //로그인 체크
-login_chk();
+login_chk('account_company');
 
 $cd=$member['mb_company'];
 
@@ -45,8 +45,7 @@ if($com['BZNO']) {
  if($com['ext_1']=="API 입력") {
 	//updateKODATA($com['BZNO']);
  }
-if($com['BZC_CD']) $kssc=sql_fetch("SELECT * from kssc where k_code='{$com['BZC_CD']}'");
-if($com['KSIC9_BZC_CD']) $kssc_9=sql_fetch("SELECT * from kssc_9 where k_code='{$com['KSIC9_BZC_CD']}'");
+if($com['BZC_CD']) $kssc=sql_fetch("SELECT * from kssc_11 where k_code='{$com['BZC_CD']}'");
 
 //맴버쉽 정보 가져오기
 $minfo=getUserMembership();
@@ -199,11 +198,7 @@ if($com['HPAGE_URL']) {
 				</dl>
 
 				<dl>
-					<dt>표준산업분류(9차)</dt>
-					<dd><?if($com['KSIC9_BZC_CD']){?>(<?=$com['KSIC9_BZC_CD']?>) <?=$kssc_9['k_code_name']?><?}?></dd>
-				</dl>
-				<dl>
-					<dt>표준산업분류</dt>
+					<dt>표준산업분류(11차)</dt>
 					<dd><?if($com['BZC_CD']){?>(<?=$com['BZC_CD']?>) <?=$kssc['k_code_name']?><?}?></dd>
 				</dl>
 

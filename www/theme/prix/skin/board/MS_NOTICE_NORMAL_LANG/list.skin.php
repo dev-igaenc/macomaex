@@ -2,7 +2,8 @@
 if (!defined('_GNUBOARD_')) exit; // 개별 페이지 접근 불가
 
 // 선택옵션으로 인해 셀합치기가 가변적으로 변함
-$colspan = 4;
+$colspan = 3;
+// $colspan = 4; // 조회수 컬럼 숨김
 
 if ($is_checkbox) $colspan++;
 if ($is_good) $colspan++;
@@ -63,14 +64,14 @@ if ($is_nogood) $colspan++;
 					<col width="7%">
 					<col width="*">
 					<col width="15%">
-					<col width="7%">
+					<!-- <col width="7%"> -->
 				</colgroup>
 				<thead>
 				<tr>
 					<th scope="col">No</th>
 					<th scope="col"><?=$lang_list_subject?></th>
 					<th scope="col"><?=$lang_list_date?></th>
-					<th scope="col"><?=$lang_list_hit?></a></th>
+					<!-- <th scope="col"><?=$lang_list_hit?></a></th> -->
 				</tr>
 				</thead>
 				<tbody>
@@ -118,7 +119,7 @@ if ($is_nogood) $colspan++;
 						</div>
 					</td>
 					<td class="btm"><?php echo date("Y.m.d", strtotime($list[$i]['wr_datetime'])) ?></td>
-					<td class="btm"><?php echo $list[$i]['wr_hit'] ?></td>
+					<!-- <td class="btm"><?php echo $list[$i]['wr_hit'] ?></td> -->
 				</tr>
 				<?php } ?>
 				<?php if (count($list) == 0) { echo '<tr class="noPost"><td colspan="'.$colspan.'">'.$lang_list_no.'</td></tr>'; } ?>

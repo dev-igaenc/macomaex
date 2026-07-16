@@ -10,17 +10,18 @@
 
     // PHP에서 내려준 페이지 설정값
     var cfg = window.MATCHING_LIST_CONFIG || {};
-    var pageSize = parseInt(cfg.pageSize, 10) || parseInt(cfg.freeLimit, 10) || 24;
+    var pageSize = parseInt(cfg.pageSize, 10) || parseInt(cfg.freeLimit, 10) || 9;
     var canLoadMore = !!cfg.canLoadMore;
     var isServerPaged = !!cfg.isServerPaged;
     var totalByType = cfg.totalByType || { buyer: 0, seller: 0 };
-    var currentType = cfg.currentType === 'seller' ? 'seller' : 'buyer';
+    var totalCount = parseInt(cfg.totalCount, 10);
+    if (isNaN(totalCount)) {
+        totalCount = (parseInt(totalByType.buyer, 10) || 0) + (parseInt(totalByType.seller, 10) || 0);
+    }
     var currentCat = cfg.currentCat || 'all';
     var categories = Array.isArray(cfg.listCategories) ? cfg.listCategories : [];
-    var showCount = { buyer: pageSize, seller: pageSize };
     var isLoadingMore = false;
     var moreBtnDefaultText = '더보기';
-    var prefetchedByType = {};
 
     var sortLabelMap = {
         rank: '랭킹순',
@@ -35,82 +36,75 @@
         return div.innerHTML;
     }
 
+    function centerItemInScroller(scroller, item, behavior) {
+        if (!scroller || !item || !scroller.clientWidth) return;
+
+        var targetLeft = item.offsetLeft - ((scroller.clientWidth - item.offsetWidth) / 2);
+        var maxLeft = scroller.scrollWidth - scroller.clientWidth;
+        targetLeft = Math.max(0, Math.min(targetLeft, maxLeft));
+
+        if (typeof scroller.scrollTo === 'function') {
+            try {
+                scroller.scrollTo({
+                    left: targetLeft,
+                    behavior: behavior || 'auto'
+                });
+                return;
+            } catch (err) {}
+        }
+
+        scroller.scrollLeft = targetLeft;
+    }
+
+    function centerActiveCategoryItem(scroller, behavior) {
+        if (!scroller) return;
+
+        window.requestAnimationFrame(function () {
+            window.requestAnimationFrame(function () {
+                centerItemInScroller(scroller, scroller.querySelector('a.on'), behavior);
+            });
+        });
+    }
+
     function getLoginReturnUrl() {
+        if (window.MacomaLoginGuard && typeof window.MacomaLoginGuard.buildLoginUrl === 'function') {
+            return window.MacomaLoginGuard.buildLoginUrl(window.location.pathname + window.location.search);
+        }
         return '/bbs/login.php?url=' + encodeURIComponent(window.location.pathname + window.location.search);
     }
 
     function openLoginRequiredModal(descriptionHtml) {
-        var modalId = 'matchingListLoginRequiredModal';
-        var overlay = document.getElementById(modalId);
-
-        function closeModal() {
-            if (!overlay) return;
-            overlay.classList.remove('is-open');
-            document.documentElement.classList.remove('hide-scroll');
-        }
-
-        if (!overlay) {
-            overlay = document.createElement('div');
-            overlay.id = modalId;
-            overlay.className = 'login-guard-modal';
-            overlay.innerHTML = ''
-                + '<div class="login-guard">'
-                + '  <div class="login-guard__overlay" aria-hidden="true"></div>'
-                + '  <div class="login-guard__modal" role="dialog" aria-modal="true" aria-labelledby="matchingListLoginModalTitle">'
-                + '    <button type="button" class="login-guard__close" aria-label="닫기">'
-                + '      <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>'
-                + '    </button>'
-                + '    <div class="login-guard__icon" aria-hidden="true">'
-                + '      <svg viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1s3.1 1.39 3.1 3.1v2z"/></svg>'
-                + '    </div>'
-                + '    <h3 class="login-guard__title" id="matchingListLoginModalTitle">로그인이 필요합니다</h3>'
-                + '    <p class="login-guard__desc" id="matchingListLoginModalDesc"></p>'
-                + '    <div class="login-guard__actions">'
-                + '      <a href="/bbs/register.php" class="login-guard__btn login-guard__btn--ghost">회원가입</a>'
-                + '      <a href="' + getLoginReturnUrl() + '" class="login-guard__btn login-guard__btn--primary">로그인</a>'
-                + '    </div>'
-                + '  </div>'
-                + '</div>';
-            document.body.appendChild(overlay);
-
-            var dim = overlay.querySelector('.login-guard__overlay');
-            if (dim) dim.addEventListener('click', closeModal);
-
-            var closeBtn = overlay.querySelector('.login-guard__close');
-            if (closeBtn) closeBtn.addEventListener('click', closeModal);
-
-            document.addEventListener('keydown', function (e) {
-                if (e.key === 'Escape' && overlay.classList.contains('is-open')) closeModal();
+        if (window.MacomaLoginGuard && typeof window.MacomaLoginGuard.show === 'function') {
+            window.MacomaLoginGuard.show({
+                titleId: 'matchingListLoginModalTitle',
+                descriptionHtml: descriptionHtml || '더보기는<br>로그인 후 이용하실 수 있습니다.',
+                returnUrl: window.location.pathname + window.location.search
             });
+            return;
         }
 
-        var descEl = overlay.querySelector('#matchingListLoginModalDesc');
-        if (descEl) descEl.innerHTML = descriptionHtml || '더보기는<br>로그인 후 이용하실 수 있습니다.';
-
-        var loginBtn = overlay.querySelector('.login-guard__btn--primary');
-        if (loginBtn) loginBtn.setAttribute('href', getLoginReturnUrl());
-
-        overlay.classList.add('is-open');
-        document.documentElement.classList.add('hide-scroll');
+        window.location.href = getLoginReturnUrl();
     }
 
     // 카테고리 이동 시 정렬은 항상 랭킹순으로 고정
     function buildCategoryHref(catSlug) {
         var params = new URLSearchParams(window.location.search);
-        params.set('cat', catSlug);
+        params.set('category', catSlug);
+        params.delete('cat');
         params.delete('offset');
         params.set('page_size', pageSize);
-        if (!params.get('type')) params.set('type', currentType);
+        params.delete('type');
         params.set('sort', 'rank');
-        return '?' + params.toString();
+        return '/companies?' + params.toString();
     }
 
-    // 사이드바/모바일 카테고리 링크의 type/sort 파라미터 동기화
+    // 사이드바/모바일 카테고리 링크의 sort/page 파라미터 동기화
     function syncNavLinkParams() {
         var selectors = [
             '.list-sidebar a[href]',
             '.list-cat-tabs a[href]',
-            '.list-cat-sub a[href]'
+            '.list-cat-sub a[href]',
+            '.list-cat-dropdown a[href]'
         ];
 
         var links = document.querySelectorAll(selectors.join(','));
@@ -126,12 +120,16 @@
                 return;
             }
 
-            url.searchParams.set('type', currentType);
+            url.searchParams.delete('type');
             url.searchParams.set('sort', 'rank');
             url.searchParams.set('page_size', pageSize);
             url.searchParams.delete('offset');
+            if (url.searchParams.has('cat') && !url.searchParams.has('category')) {
+                url.searchParams.set('category', url.searchParams.get('cat'));
+            }
+            url.searchParams.delete('cat');
 
-            a.setAttribute('href', url.pathname + '?' + url.searchParams.toString());
+            a.setAttribute('href', '/companies?' + url.searchParams.toString());
         });
     }
 
@@ -174,6 +172,7 @@
                 html += '<a href="' + buildCategoryHref(sub.slug) + '" class="' + (currentCat === sub.slug ? 'on' : '') + '">' + escapeHtml(sub.label) + '</a>';
             });
             subEl.innerHTML = html;
+            centerActiveCategoryItem(subEl, 'auto');
         }
 
         if (activeGroup) renderSub(activeGroup);
@@ -189,12 +188,53 @@
             });
             a.classList.add('on');
             renderSub(a.getAttribute('data-group'));
+            centerItemInScroller(tabsEl, a, 'smooth');
         });
 
         var activeTab = tabsEl.querySelector('a.on');
         if (activeTab) {
+            centerActiveCategoryItem(tabsEl, 'auto');
+        }
+    }
+
+    function initMobileCategoryDropdown() {
+        var wrap = document.getElementById('catDropdown');
+        var btn = document.getElementById('catDropdownBtn');
+        var panel = document.getElementById('catDropdownPanel');
+        if (!wrap || !btn || !panel) return;
+
+        function closePanel() {
+            wrap.classList.remove('is-open');
+            btn.setAttribute('aria-expanded', 'false');
+        }
+
+        function openPanel() {
+            wrap.classList.add('is-open');
+            btn.setAttribute('aria-expanded', 'true');
+        }
+
+        btn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            if (wrap.classList.contains('is-open')) closePanel();
+            else openPanel();
+        });
+
+        panel.addEventListener('click', function (e) {
+            if (e.target.closest('a[href]')) closePanel();
+        });
+
+        document.addEventListener('click', function (e) {
+            if (!wrap.contains(e.target)) closePanel();
+        });
+
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') closePanel();
+        });
+
+        var active = panel.querySelector('a.on');
+        if (active) {
             setTimeout(function () {
-                activeTab.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
+                active.scrollIntoView({ block: 'nearest', inline: 'nearest' });
             }, 100);
         }
     }
@@ -303,20 +343,13 @@
         });
     }
 
-    // 구매/판매 탭, 정렬, 더보기 등 목록 동작
+    // 정렬, 더보기 등 목록 동작
     function initTypeSwitchAndList() {
-        var wrap = document.querySelector('.list-type-switch');
-        if (!wrap) return;
-
-        var slider = wrap.querySelector('.list-type-slider');
-        var btns = wrap.querySelectorAll('.list-type-btn');
         var moreBtn = document.getElementById('listMoreBtn');
         var sortSelect = document.getElementById('sortSelect');
         var grid = document.querySelector('.list-grid');
         if (!grid) return;
         var activeFetchController = null;
-        var prefetchFetchControllerByType = { buyer: null, seller: null };
-        var prefetchPrimed = false;
 
         initSortDropdown(sortSelect);
         if (moreBtn && moreBtn.textContent) moreBtnDefaultText = moreBtn.textContent.trim() || moreBtnDefaultText;
@@ -333,36 +366,20 @@
             activeFetchController = null;
         }
 
-        // 탭 슬라이더 위치/크기 업데이트
-        function updateSlider() {
-            var active = wrap.querySelector('.list-type-btn.on');
-            if (!slider || !active) return;
-            var wrapRect = wrap.getBoundingClientRect();
-            var btnRect = active.getBoundingClientRect();
-            slider.style.width = btnRect.width + 'px';
-            slider.style.left = (btnRect.left - wrapRect.left) + 'px';
-        }
-
-        // 현재 타입(buyer/seller)에 맞는 카드만 표시
-        function renderType(type) {
-            currentType = type;
+        // 현재 목록 상태 렌더링
+        function renderList() {
             var cards = document.querySelectorAll('.list-grid .mCompanyCard');
-            var matched = [];
-
             cards.forEach(function (card) {
-                if (card.getAttribute('data-type') === type) matched.push(card);
-                card.style.display = 'none';
+                card.style.display = '';
             });
 
-            var visibleCount = isServerPaged ? matched.length : Math.min(showCount[type], matched.length);
-            for (var i = 0; i < visibleCount; i++) matched[i].style.display = '';
+            var visibleCount = cards.length;
 
             var countEl = document.querySelector('.list-count strong');
-            if (countEl) countEl.textContent = totalByType[type] || 0;
+            if (countEl) countEl.textContent = totalCount || visibleCount;
 
             if (moreBtn) {
-                var totalCountForType = totalByType[type] || 0;
-                var shouldShowMoreBtn = totalCountForType > visibleCount;
+                var shouldShowMoreBtn = (totalCount || 0) > visibleCount;
                 moreBtn.style.display = shouldShowMoreBtn ? '' : 'none';
                 moreBtn.textContent = moreBtnDefaultText;
                 moreBtn.disabled = false;
@@ -380,15 +397,7 @@
         // 선택한 기준으로 카드 정렬
         function sortCards(key) {
             var cards = Array.from(grid.querySelectorAll('.mCompanyCard'));
-            var buyers = [];
-            var sellers = [];
-
-            cards.forEach(function (card) {
-                (card.getAttribute('data-type') === 'seller' ? sellers : buyers).push(card);
-            });
-
-            var compareFn;
-            compareFn = function (a, b) {
+            var compareFn = function (a, b) {
                 var aValue = getScore(a, key === 'rank' ? 'total' : key);
                 var bValue = getScore(b, key === 'rank' ? 'total' : key);
                 var aRank = parseInt(a.getAttribute('data-rank'), 10) || 0;
@@ -401,11 +410,10 @@
                 return bValue - aValue;
             };
 
-            buyers.sort(compareFn);
-            sellers.sort(compareFn);
+            cards.sort(compareFn);
 
             grid.innerHTML = '';
-            buyers.concat(sellers).forEach(function (card) {
+            cards.forEach(function (card) {
                 grid.appendChild(card);
             });
         }
@@ -423,96 +431,31 @@
             return Array.from(holder.querySelectorAll('.mCompanyCard'));
         }
 
-        function applyPrefetchedType(type, prefetched) {
-            if (!prefetched || !prefetched.gridHtml) return false;
-            if (prefetched.totalByType) totalByType = prefetched.totalByType;
-            grid.innerHTML = prefetched.gridHtml;
-            currentType = type;
-            btns.forEach(function (btn) {
-                var isActive = btn.getAttribute('data-type') === currentType;
-                btn.classList.toggle('on', isActive);
-                btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
-            });
-            updateSlider();
-            renderType(currentType);
-            syncNavLinkParams();
-            return true;
-        }
-
-        // 반대 탭(구매하기 - 판매하기)선 조회
-        function prefetchType(type) {
-            if (!isServerPaged) return false;
-            if (isLoadingMore) return false;
-            if (prefetchedByType[type]) return true;
-            if (prefetchFetchControllerByType[type]) return true;
-            var preUrl = new URL(window.location.href);
-            preUrl.searchParams.set('type', type);
-            preUrl.searchParams.set('sort', sortSelect ? (sortSelect.value || 'rank') : 'rank');
-            preUrl.searchParams.set('page_size', pageSize);
-            preUrl.searchParams.set('offset', 0);
-            var preApiUrl = buildApiUrl(preUrl);
-            prefetchFetchControllerByType[type] = new AbortController();
-            fetch(preApiUrl.toString(), buildFetchOptions(prefetchFetchControllerByType[type]))
-                .then(function (res) { return res.json(); })
-                .then(function (payload) {
-                    if (!payload || payload.ok !== true || !payload.gridHtml) return;
-                    prefetchedByType[type] = {
-                        gridHtml: payload.gridHtml,
-                        totalByType: payload.totalByType || null,
-                        url: preUrl.toString()
-                    };
-                })
-                .catch(function (err) {
-                    if (err && err.name === 'AbortError') return;
-                })
-                .finally(function () {
-                    prefetchFetchControllerByType[type] = null;
-                });
-            return true;
-        }
-
-        function prefetchOppositeTypeOnce() {
-            if (!isServerPaged || prefetchPrimed) return;
-            if (prefetchType(currentType === 'buyer' ? 'seller' : 'buyer')) {
-                prefetchPrimed = true;
-            }
-        }
-
         // 서버에서 새 목록으로 교체 로드
-        function fetchAndReplaceGrid(url, preserveScroll, nextType) {
+        function fetchAndReplaceGrid(url, preserveScroll) {
             var prevScrollY = window.scrollY || window.pageYOffset || 0;
             abortActiveRequest();
             activeFetchController = new AbortController();
             isLoadingMore = true;
-            wrap.classList.add('is-loading');
+            grid.classList.add('is-loading');
             if (moreBtn) {
                 moreBtn.disabled = true;
                 moreBtn.textContent = '불러오는 중...';
             }
-            btns.forEach(function (btn) {
-                btn.disabled = true;
-            });
 
             var apiUrl = buildApiUrl(url);
             return fetch(apiUrl.toString(), buildFetchOptions(activeFetchController))
                 .then(function (res) { return res.json(); })
                 .then(function (payload) {
                     if (!payload || payload.ok !== true || !payload.gridHtml) throw new Error('grid payload not found');
-                    if (payload.totalByType) totalByType = payload.totalByType;
+                    if (payload.totalCount != null) totalCount = parseInt(payload.totalCount, 10) || 0;
 
                     grid.innerHTML = payload.gridHtml;
                     if (!isServerPaged) sortCards(sortSelect ? (sortSelect.value || 'rank') : 'rank');
-                    if (nextType) currentType = nextType;
-                    btns.forEach(function (btn) {
-                        var isActive = btn.getAttribute('data-type') === currentType;
-                        btn.classList.toggle('on', isActive);
-                        btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
-                    });
-                    updateSlider();
-                    renderType(currentType);
+                    renderList();
                     syncNavLinkParams();
                     if (preserveScroll) window.scrollTo(0, prevScrollY);
-                    window.history.replaceState({ type: currentType }, '', url.toString());
+                    window.history.replaceState({}, '', url.toString());
                 })
                 .catch(function (err) {
                     if (err && err.name === 'AbortError') return;
@@ -521,14 +464,11 @@
                 .finally(function () {
                     activeFetchController = null;
                     isLoadingMore = false;
-                    wrap.classList.remove('is-loading');
+                    grid.classList.remove('is-loading');
                     if (moreBtn) {
                         moreBtn.disabled = false;
                         moreBtn.textContent = moreBtnDefaultText;
                     }
-                    btns.forEach(function (btn) {
-                        btn.disabled = false;
-                    });
                 });
         }
 
@@ -548,12 +488,12 @@
                 .then(function (res) { return res.json(); })
                 .then(function (payload) {
                     if (!payload || payload.ok !== true || payload.gridHtml == null) throw new Error('grid payload not found');
-                    if (payload.totalByType) totalByType = payload.totalByType;
+                    if (payload.totalCount != null) totalCount = parseInt(payload.totalCount, 10) || 0;
 
                     var nodes = parseCardsFromGridHtml(payload.gridHtml);
                     if (!nodes.length) {
-                        totalByType[currentType] = document.querySelectorAll('.list-grid .mCompanyCard[data-type="' + currentType + '"]').length;
-                        renderType(currentType);
+                        totalCount = document.querySelectorAll('.list-grid .mCompanyCard').length;
+                        renderList();
                         return;
                     }
                     nodes.forEach(function (card) {
@@ -561,9 +501,9 @@
                     });
 
                     if (!isServerPaged) sortCards(sortSelect ? (sortSelect.value || 'rank') : 'rank');
-                    renderType(currentType);
+                    renderList();
                     if (preserveScroll) window.scrollTo(0, prevScrollY);
-                    window.history.replaceState({ type: currentType }, '', url.toString());
+                    window.history.replaceState({}, '', url.toString());
                 })
                 .catch(function (err) {
                     if (err && err.name === 'AbortError') return;
@@ -579,58 +519,8 @@
                 });
         }
 
-        // 타입 전환 처리 (server/client 모드 분기)
-        function setType(type) {
-            if (isServerPaged && type !== currentType) {
-                if (isLoadingMore) return;
-                var prefetched = prefetchedByType[type];
-                var moveUrl = new URL(window.location.href);
-                moveUrl.searchParams.set('type', type);
-                moveUrl.searchParams.set('sort', sortSelect ? (sortSelect.value || 'rank') : 'rank');
-                moveUrl.searchParams.set('page_size', pageSize);
-                moveUrl.searchParams.set('offset', 0);
-
-                if (applyPrefetchedType(type, prefetched)) {
-                    window.history.replaceState({ type: type }, '', moveUrl.toString());
-                    // 사용한 prefetch는 소모 처리
-                    delete prefetchedByType[type];
-                    return;
-                }
-
-                fetchAndReplaceGrid(moveUrl, true, type);
-                return;
-            }
-
-            btns.forEach(function (btn) {
-                var isActive = btn.getAttribute('data-type') === type;
-                btn.classList.toggle('on', isActive);
-                btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
-            });
-
-            updateSlider();
-            renderType(type);
-
-            var url = new URL(window.location.href);
-            url.searchParams.set('type', type);
-            window.history.replaceState({ type: type }, '', url.toString());
-
-            syncNavLinkParams();
-        }
-
-        btns.forEach(function (btn) {
-            btn.setAttribute('aria-pressed', btn.classList.contains('on') ? 'true' : 'false');
-            btn.addEventListener('click', function () {
-                setType(btn.getAttribute('data-type'));
-            });
-        });
-
-        var urlType = new URLSearchParams(window.location.search).get('type');
-        setType(urlType === 'seller' ? 'seller' : 'buyer');
-
         if (sortSelect) {
             sortSelect.addEventListener('change', function () {
-                prefetchedByType = {};
-                prefetchPrimed = false;
                 if (isServerPaged) {
                     if (isLoadingMore) return;
                     var selectedSort = sortSelect.value || 'rank';
@@ -638,19 +528,18 @@
                     replaceUrl.searchParams.set('sort', selectedSort);
                     replaceUrl.searchParams.set('offset', 0);
                     replaceUrl.searchParams.set('page_size', pageSize);
+                    replaceUrl.searchParams.delete('type');
                     fetchAndReplaceGrid(replaceUrl, true);
-                    prefetchOppositeTypeOnce();
                     return;
                 }
 
-                showCount[currentType] = pageSize;
                 sortCards(sortSelect.value || 'rank');
-                renderType(currentType);
+                renderList();
                 syncNavLinkParams();
             });
 
             if (!isServerPaged) sortCards(sortSelect.value || 'rank');
-            renderType(currentType);
+            renderList();
             syncNavLinkParams();
         }
 
@@ -663,9 +552,9 @@
 
                 if (isServerPaged) {
                     if (isLoadingMore) return;
-                    var currentShown = document.querySelectorAll('.list-grid .mCompanyCard[data-type="' + currentType + '"]').length;
-                    if (currentShown >= (totalByType[currentType] || 0)) {
-                        renderType(currentType);
+                    var currentShown = document.querySelectorAll('.list-grid .mCompanyCard').length;
+                    if (currentShown >= (totalCount || 0)) {
+                        renderList();
                         return;
                     }
 
@@ -673,17 +562,14 @@
                     appendUrl.searchParams.set('offset', currentShown);
                     appendUrl.searchParams.set('sort', sortSelect ? (sortSelect.value || 'rank') : 'rank');
                     appendUrl.searchParams.set('page_size', pageSize);
+                    appendUrl.searchParams.delete('type');
                     fetchAndAppendGrid(appendUrl, true);
                     return;
                 }
 
-                showCount[currentType] += pageSize;
-                renderType(currentType);
+                renderList();
             });
         }
-
-        window.addEventListener('resize', updateSlider);
-        if (isServerPaged) prefetchOppositeTypeOnce();
     }
 
     // 매칭 요청 팝업(템플릿/메시지/검증) 동작
@@ -798,7 +684,7 @@
                 popupSelector: '.popup_submit',
                 requestTypeSelector: '#request_type',
                 receiverNameSelector: '#recv',
-                planUrl: '/ko/plan.php',
+                planUrl: '/plans',
                 loginUrl: function () {
                     return '/bbs/login.php?url=' + encodeURIComponent(window.location.pathname + window.location.search);
                 },
@@ -826,6 +712,7 @@
 
     // 페이지 초기화
     initMobileCategoryTabs();
+    initMobileCategoryDropdown();
     initSidebarAccordion();
     initTypeSwitchAndList();
     initMatchingPopupLogic();

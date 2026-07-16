@@ -11,19 +11,35 @@ $board['bo_9']="1"; // 2뎁스
 //$board['bo_4'] = $config['cf_title']."의 혜택을 확인하세요.";  // 2뎁스 설명
 
 //로그인 체크
-login_chk();
+login_chk('account_company');
 
-$cd=$member['mb_company'];
-
-if($cd){
-	$com=sql_fetch("SELECT * from company where KEDCD='$cd'");
-	$major_service=sql_fetch("SELECT * from g5_member where mb_company='$cd'");
-}else{
-	ALERT("정상적으로 이용하세요.","/");
+$return_url = trim((string)($_GET['return_url'] ?? ''));
+if ($return_url !== '') {
+	$return_path = parse_url($return_url, PHP_URL_PATH);
+	if ($return_path === '/account/trades' && strpos($return_url, '//') !== 0) {
+		set_session('ss_my_company_connect_return_url', $return_url);
+	}
 }
+
+$cd=trim((string)$member['mb_company']);
+$com=array();
+$major_service=array();
+if($cd && !preg_match('/^M[0-9]{9}$/', $cd)){
+	$cd_sql=sql_escape_string($cd);
+	$com=sql_fetch("SELECT * from company where KEDCD='{$cd_sql}'");
+	if(!empty($com['KEDCD'])) $major_service=sql_fetch("SELECT * from g5_member where mb_company='{$cd_sql}'");
+}
+$has_linked_company=!empty($com['KEDCD']);
 
 include_once(G5_THEME_PATH.'/head.php');
 
+if(!$has_linked_company){
+	$my_company_connect_token=bin2hex(random_bytes(24));
+	set_session('ss_my_company_connect_token', $my_company_connect_token);
+	include_once(G5_PATH.'/ko/my_company_onboarding.php');
+	include_once(G5_THEME_PATH.'/tail.php');
+	exit;
+}
 
 $view_chk="true";
 
@@ -45,11 +61,8 @@ if($com['BZNO']) {
 if($com['ext_1']=="API 입력") {
 	//updateKODATA($com['BZNO']);
  }
-if($com['BZC_CD']) $kssc=sql_fetch("SELECT * from kssc where k_code='{$com['BZC_CD']}'");
+if($com['BZC_CD']) $kssc=sql_fetch("SELECT * from kssc_11 where k_code='{$com['BZC_CD']}'");
 if(!is_array($kssc)) $kssc = array();
-if($com['KSIC9_BZC_CD']) $kssc_9=sql_fetch("SELECT * from kssc_9 where k_code='{$com['KSIC9_BZC_CD']}'");
-elseif($com['BZC_CD']) $kssc_9=sql_fetch("SELECT * from kssc_9 where k_code='{$com['BZC_CD']}'");
-if(!is_array($kssc_9)) $kssc_9 = array();
 
 // 비상장 주식가치 최초 조회 크레딧/언락 상태
 $unlisted_credit_cost = (defined('_unlisted_value_credit_cost') && (int)_unlisted_value_credit_cost > 0) ? (int)_unlisted_value_credit_cost : 20;
@@ -216,20 +229,10 @@ if($com['HPAGE_URL']) {
 					<dd><?=$com['PD_NM']?></dd>
 				</dl>
 
-				<dl>
-					<dt>표준산업분류(9차)</dt>
-					<dd>
-						<?php if($com['KSIC9_BZC_CD']){?>
-							(<?=$com['KSIC9_BZC_CD']?>) <?=isset($kssc_9['k_code_name']) ? $kssc_9['k_code_name'] : ''?>
-							<?php }else{?>
-							(<?=$com['BZC_CD']?>) <?=isset($kssc_9['k_code_name']) ? $kssc_9['k_code_name'] : ''?>
-							<?php }?>
-					</dd>
-				</dl>
-				<dl>
-					<dt>표준산업분류</dt>
-						<dd><?php if($com['BZC_CD']){?>(<?=$com['BZC_CD']?>) <?=isset($kssc['k_code_name']) ? $kssc['k_code_name'] : ''?><?php }?></dd>
-				</dl>
+					<dl>
+						<dt>표준산업분류(11차)</dt>
+							<dd><?php if($com['BZC_CD']){?>(<?=$com['BZC_CD']?>) <?=isset($kssc['k_code_name']) ? $kssc['k_code_name'] : ''?><?php }?></dd>
+					</dl>
 
 				<dl>
 					<dt>직전연도 매출액 (천원)</dt>
@@ -542,10 +545,10 @@ function AutoHypen(companyNum){
 											okText: "닫기",
 											okVariant: "outline",
 											secondaryText: "크레딧 충전하러 가기",
-											secondaryHref: "/ko/plan.php"
+											secondaryHref: "/plans"
 										});
 									} else {
-										jAlert(msg,"알림",function(){ location.href='/ko/plan.php'; });
+										jAlert(msg,"알림",function(){ location.href='/plans'; });
 									}
 							}else{
 								jAlert(msg,"알림");
@@ -600,10 +603,10 @@ function AutoHypen(companyNum){
 										okText: "닫기",
 										okVariant: "outline",
 										secondaryText: "크레딧 충전하러 가기",
-										secondaryHref: "/ko/plan.php"
+										secondaryHref: "/plans"
 									});
 								} else {
-									jAlert(preMsg,"알림",function(){ location.href='/ko/plan.php'; });
+									jAlert(preMsg,"알림",function(){ location.href='/plans'; });
 								}
 						}else{
 							jAlert(preMsg,"알림");

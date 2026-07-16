@@ -12,7 +12,7 @@ $board['bo_9']="1"; // 2뎁스
 //https://macomaex.com/ko/matching_view.php?cd=0000074175
 
 //로그인 체크
-login_chk();
+login_chk('matching_detail');
 
 include_once(G5_THEME_PATH.'/head.php');
 
@@ -23,8 +23,7 @@ if($cd){
 	ALERT("정상적으로 이용하세요.","/");
 }
 
-if($com['BZC_CD']) $kssc=sql_fetch("SELECT * from kssc where k_code='{$com['BZC_CD']}'");
-if($com['KSIC9_BZC_CD']) $kssc_9=sql_fetch("SELECT * from kssc_9 where k_code='{$com['KSIC9_BZC_CD']}'");
+if($com['BZC_CD']) $kssc=sql_fetch("SELECT * from kssc_11 where k_code='{$com['BZC_CD']}'");
 
 //사업자번호
 function addh_bzno($bz){
@@ -101,7 +100,6 @@ if($view_chk=="false"){
 	$com['HPAGE_URL']=str_pad(mb_substr($com['HPAGE_URL'],0, 6), mb_strlen($com['HPAGE_URL']), "*");
 	//산업분류
 	$kssc['k_code_name']=str_pad(mb_substr($kssc['k_code_name'],0, 3), mb_strlen($kssc['k_code_name']), "*");
-	$kssc_9['k_code_name']=str_pad(mb_substr($kssc_9['k_code_name'],0, 3), mb_strlen($kssc_9['k_code_name']), "*");
 	//종업원수
 	$com['LABORER_SUM']=str_pad(mb_substr($com['LABORER_SUM'],0, 0), mb_strlen($com['LABORER_SUM']), "*");
 	//주소
@@ -146,7 +144,7 @@ if($view_chk=="false"){
                 </li>
 			<?}else{?>
                 <li class="viewOption_bookmark">
-                    <input type="checkbox" name="" onClick="javascript:jAlert('로그인 후 이용하세요.','알림',function(){location.href='/bbs/login.php'}); return false;"  id="viewOption_bookmark">
+                    <input type="checkbox" name="" onClick="return openLoginGuardForMatchingView();"  id="viewOption_bookmark">
                     <label for="viewOption_bookmark"></label>
                 </li>
                 <!-- check 시 별 색상이 바뀜 -->
@@ -154,7 +152,7 @@ if($view_chk=="false"){
                     <a href="javascript:copyUrl()"></a>
                 </li>
                 <li class="viewOption_submit">
-                    <a href="javascript:jAlert('로그인 후 이용하세요.','알림',function(){location.href='/bbs/login.php'}); "><span>매칭 요청</span> <span class="icon"><img src="/img/icon/icon_arr_point.png" alt=""></span></a>
+                    <a href="javascript:openLoginGuardForMatchingView();"><span>매칭 요청</span> <span class="icon"><img src="/img/icon/icon_arr_point.png" alt=""></span></a>
                 </li>
 			<?}?>
             </ul>
@@ -229,13 +227,7 @@ if($view_chk=="false"){
 					</div>
                 </li>
                 <li>
-                    <div class="title">표준산업분류(9차)</div>
-                    <div class="text">
-					<?if($com['KSIC9_BZC_CD']){?>(<?=$com['KSIC9_BZC_CD']?>) <?=$kssc_9['k_code_name']?><?}?>
-					</div>
-                </li>
-                <li>
-                    <div class="title">표준산업분류</div>
+                    <div class="title">표준산업분류(11차)</div>
                     <div class="text"><?if($com['BZC_CD']){?>(<?=$com['BZC_CD']?>) <?=$kssc['k_code_name']?><?}?></div>
                 </li>
                 <li>
@@ -252,20 +244,6 @@ if($view_chk=="false"){
             </ul>
         </div>
     </div>
-
-	<?
-		if($view_chk=="true" && $major_service['mb_9']){
-			$major=explode(":|:",$major_service['mb_9']);
-	?>
-    <div class="searchCompanyList">
-        <h4 class="barTitle">주요제품 & 서비스 </h4>
-        <ul class="viewCompany_lists">
-			<?foreach($major as $value){?>
-            <li><?=$value?></li>
-			<?}?>
-        </ul>
-    </div>
-	<?}?>
 
     <div class="common_info">
         <dl class="common_info_lists">
@@ -328,6 +306,22 @@ include_once(G5_THEME_PATH.'/tail.php');
 </div>
 
 <script>
+	function openLoginGuardForMatchingView(loginUrl, descriptionText) {
+		var targetUrl = loginUrl || "/bbs/login.php?url=" + encodeURIComponent(location.pathname + location.search);
+		if (window.MacomaLoginGuard && typeof window.MacomaLoginGuard.show === "function") {
+			window.MacomaLoginGuard.show({
+				descriptionText: descriptionText || "서비스를 이용하시려면 로그인이 필요합니다.",
+				loginUrl: targetUrl,
+				signupUrl: (window.MacomaLoginGuard && typeof window.MacomaLoginGuard.buildSignupUrl === "function")
+					? window.MacomaLoginGuard.buildSignupUrl(location.pathname + location.search)
+					: "/signup"
+			});
+			return false;
+		}
+		location.href = targetUrl;
+		return false;
+	}
+
 	//북마크 처리
 	$("#viewOption_bookmark").click(function(){
 		$this=$(this);
@@ -402,9 +396,7 @@ function Encrypt( str , key ){
 							location.href="/ko/plan.php";
 						});
 					}else if(jqXHR[0]=="501" || openMsg.indexOf("로그인 후 이용하세요.") === 0){
-						jAlert("로그인 후 이용하세요.","알림",function(){
-							location.href="/bbs/login.php?url="+encodeURIComponent(location.pathname + location.search);
-						});
+						openLoginGuardForMatchingView("/bbs/login.php?url=" + encodeURIComponent(location.pathname + location.search), "관심기업 등록은 로그인 후 이용하실 수 있습니다.");
 					}else{
 						jAlert(openMsg,"알림",function(){ });
 					}
@@ -464,9 +456,7 @@ function Encrypt( str , key ){
 							location.href="/ko/plan.php";
 						});
 					}else if(parts[0] == "501" || msg.indexOf("로그인 후 이용하세요.") === 0){
-						jAlert("로그인 후 이용하세요.","알림",function(){
-							location.href="/bbs/login.php?url="+encodeURIComponent(location.pathname + location.search);
-						});
+						openLoginGuardForMatchingView("/bbs/login.php?url=" + encodeURIComponent(location.pathname + location.search), "매칭 요청은 로그인 후 이용하실 수 있습니다.");
 					}else{
 						jAlert(msg,"알림",function(){});
 					}
