@@ -173,7 +173,6 @@ function company_detail_trade_request_classify_failure($errorCode) {
 		'member_not_logged_in' => 'auth',
 		'requester_bzno_empty' => 'validation',
 		'requester_company_unresolved' => 'resource',
-		'requester_company_persist_failed' => 'resource',
 		'manager_info_missing' => 'validation',
 		'manager_phone_invalid' => 'validation',
 		'member_contact_missing' => 'validation',
@@ -777,6 +776,18 @@ function company_detail_handle_trade_request_insert($member, $request) {
 	}
 	$resolvedCompanyName = trim((string)($resolvedCompany['company']['company'] ?? ''));
 	$resolvedCompanyKedcd = trim((string)($resolvedCompany['company']['kedcd'] ?? ''));
+	// 요청은 계속 처리하되 company에 없는 기업코드는 회원 프로필에 연결하지 않는다.
+	if ($resolvedCompanyKedcd !== '') {
+		$linkableRequesterCompany = sql_fetch(
+			"SELECT KEDCD FROM company
+			 WHERE KEDCD='" . sql_escape_string($resolvedCompanyKedcd) . "'
+			   AND BZNO='" . sql_escape_string($requesterBzno) . "'
+			 LIMIT 1"
+		);
+		if (empty($linkableRequesterCompany['KEDCD'])) {
+			$resolvedCompanyKedcd = '';
+		}
+	}
 
 	$managerNameCurrent = trim((string)($member['mb_6'] ?? ''));
 	$managerPhoneCurrent = trade_request_normalize_phone($member['mb_hp'] ?? '');
@@ -1062,29 +1073,6 @@ function company_detail_handle_trade_request_insert($member, $request) {
 			'credit_amount' => $creditAmount,
 			'stage' => 'credit_mark_used',
 		));
-	}
-
-	// 거래요청 insert + 크레딧 차감이 모두 성공한 이후에만 기업정보를 DB에 확정 저장한다.
-	$resolvedCompanyPersist = trade_request_resolve_company_data_by_bzno($requesterBzno, array('persist' => true));
-	if (empty($resolvedCompanyPersist['success'])) {
-		company_detail_trade_request_log('requester_company_persist_failed', array(
-			'tr_no' => $insertId,
-			'bzno' => $requesterBzno,
-			'message' => $resolvedCompanyPersist['message'] ?? '',
-		));
-		sql_query("ROLLBACK");
-		company_detail_trade_request_fail_response($resolvedCompanyPersist['message'] ?? '기업 정보 저장 중 오류가 발생했습니다.', 'requester_company_persist_failed', array(
-			'request_id' => $requestId,
-			'tr_no' => $insertId,
-			'member_id' => $member['mb_id'] ?? '',
-			'bzno' => $requesterBzno,
-			'stage' => 'company_persist',
-		));
-	} else {
-		$persistedKedcd = trim((string)($resolvedCompanyPersist['company']['kedcd'] ?? ''));
-		if ($persistedKedcd !== '') {
-			$resolvedCompanyKedcd = $persistedKedcd;
-		}
 	}
 
 	$needMemberUpdate = false;

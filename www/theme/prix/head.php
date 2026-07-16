@@ -1116,7 +1116,7 @@ function requestMainCompCheck(comnum, $form, opts) {
 	}
 
 	// cominfo 보정 후 최종 진입 URL은 company_list_ai.php(bizno)로 통일
-	$.post("<?php echo G5_URL; ?>/get_set.php", { type: "main_comp_chk", comnum: comnum }, function(res) {
+	$.post("<?php echo G5_URL; ?>/get_set.php", { type: "main_comp_chk", comnum: comnum, sync_company: "main_recommendation" }, function(res) {
 		clearTimeout(mainCompCheckPendingTimer);
 		try {
 			var raw = res + "";

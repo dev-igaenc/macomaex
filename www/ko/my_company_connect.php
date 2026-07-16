@@ -44,16 +44,10 @@ if (!empty($current_company['KEDCD'])) {
 }
 
 $persist = ($action === 'connect');
-if ($persist) {
-	sql_query('START TRANSACTION');
-}
 
 try {
-	$resolved = trade_request_resolve_company_data_by_bzno($bizno, array('persist' => $persist));
+	$resolved = trade_request_resolve_company_data_by_bzno($bizno, array('persist' => false));
 } catch (Throwable $e) {
-	if ($persist) {
-		sql_query('ROLLBACK');
-	}
 	error_log('[my_company_connect] ' . json_encode(array(
 		'action' => $action,
 		'bizno' => $bizno,
@@ -67,9 +61,6 @@ try {
 	));
 }
 if (empty($resolved['success']) || empty($resolved['company'])) {
-	if ($persist) {
-		sql_query('ROLLBACK');
-	}
 	my_company_connect_response(422, array(
 		'success' => false,
 		'message' => trim((string)($resolved['message'] ?? '기업 정보를 확인하지 못했습니다.')),
@@ -90,8 +81,25 @@ if (!$persist) {
 $kedcd = trim((string)($company['kedcd'] ?? ''));
 $formatted_bizno = function_exists('licenseNum') ? licenseNum($bizno) : $bizno;
 if ($kedcd === '') {
-	sql_query('ROLLBACK');
 	my_company_connect_response(422, array('success' => false, 'message' => '기업코드를 확인하지 못했습니다.'));
+}
+
+// API 조회 결과만으로 고아 KEDCD를 연결하지 않고 실제 company 행을 다시 확인한다.
+$linkable_company = sql_fetch(
+	"SELECT KEDCD FROM company
+	 WHERE KEDCD='" . sql_escape_string($kedcd) . "'
+	   AND BZNO='" . sql_escape_string($bizno) . "'
+	 LIMIT 1"
+);
+if (empty($linkable_company['KEDCD'])) {
+	my_company_connect_response(409, array(
+		'success' => false,
+		'message' => '아직 동기화되지 않은 기업입니다. 메인 기업 추천에서 사업자번호를 먼저 조회해 주세요.',
+	));
+}
+
+if (!sql_query('START TRANSACTION', false)) {
+	my_company_connect_response(500, array('success' => false, 'message' => '회사 연결 처리를 시작하지 못했습니다.'));
 }
 
 $member_id_sql = sql_escape_string((string)$member['mb_id']);

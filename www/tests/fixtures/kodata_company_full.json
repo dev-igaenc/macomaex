@@ -1,0 +1,72 @@
+{
+  "CONTENTS": {
+    "ENPintr0000": {
+      "kedcd": "0001234567",
+      "enp_nm": "테스트산업 주식회사",
+      "enp_nm_trd": "테스트산업",
+      "enp_nm_eng": "TEST INDUSTRY CO., LTD.",
+      "cono_pid": "1101111234567",
+      "enp_typ": "1",
+      "enp_sze": "2",
+      "enp_fcd": "01",
+      "enp_scd": "01",
+      "enp_scd_chg_dt": "20250101",
+      "enp_form_fr": "주식회사",
+      "bzc_cd": "C26422",
+      "loc_zip": "06236",
+      "loc_addra": "서울특별시 강남구",
+      "loc_addrb": "테헤란로 123",
+      "tel_no": "0212345678",
+      "fax_no": "0212345679",
+      "hpage_url": "https://example.test",
+      "email": "info@example.test",
+      "estb_dt": "20100101",
+      "grp_nm": "테스트그룹",
+      "mpd": "산업용 전자부품",
+      "std_dt": "20251231",
+      "ipo_cd": "0",
+      "laborer_sum": "42",
+      "bzno": "1234567890"
+    },
+    "ENPfsdt0001": {
+      "fs_acct_dt": "20251231",
+      "fs_val3": "1,000,000",
+      "fs_val7": "200000",
+      "fs_val8": "600000",
+      "fs_val9": "1,500,000",
+      "fs_val11": "120000",
+      "fs_val16": "90000",
+      "fs1_acct_dt": "20241231",
+      "fs1_val3": "900000",
+      "fs1_val7": "200000",
+      "fs1_val8": "520000",
+      "fs1_val9": "1300000",
+      "fs1_val11": "100000",
+      "fs1_val16": "75000",
+      "fs2_acct_dt": "20231231",
+      "fs2_val3": "800000",
+      "fs2_val7": "200000",
+      "fs2_val8": "450000",
+      "fs2_val9": "1100000",
+      "fs2_val11": "85000",
+      "fs2_val16": "61000"
+    },
+    "ENPsthr0001": {
+      "cnt": "2",
+      "list": [
+        {
+          "std_dt": "20251231",
+          "own_stk_cn": "60,000",
+          "cstk_cn": "60000",
+          "pstk_cn": "0"
+        },
+        {
+          "std_dt": "20251231",
+          "own_stk_cn": "40,000",
+          "cstk_cn": "30000",
+          "pstk_cn": "10000"
+        }
+      ]
+    }
+  }
+}
