@@ -236,11 +236,25 @@ switch ($type) {
 			}
 
 			$resolved_company = macomaex_kodata_resolve_company($comnum, array(
-				'persist_company' => false,
 				'context' => 'get_set_main_comp_chk',
 			));
 			if (!empty($resolved_company['success'])) {
 				$resolved_json = (string)($resolved_company['json'] ?? '');
+				$resolved_source = (string)($resolved_company['source'] ?? '');
+				// 공용 main_comp_chk 중 현재 추천 검색에서 명시한 요청만 자동 동기화한다.
+				$sync_company_context = trim((string)($_POST['sync_company'] ?? ''));
+				// 장애 시 추천 조회는 유지하고 DB 동기화만 환경변수로 즉시 끌 수 있다.
+				$sync_company_enabled = strtolower(trim((string)macomaex_env('KODATA_MAIN_SYNC_ENABLED', '1')));
+				if ($sync_company_context === 'main_recommendation' && !in_array($sync_company_enabled, array('0', 'false', 'no', 'off'), true)) {
+					$sync_validation = macomaex_kodata_validate_sync_payload($comnum, $resolved_json, $resolved_source);
+					if (!empty($sync_validation['eligible'])) {
+						$sync_result = macomaex_kodata_sync_payload($comnum, $resolved_json, $resolved_source);
+						if (empty($sync_result['success'])) {
+							echo "500|" . (string)($sync_result['error_code'] ?? 'COMPANY_SYNC_FAILED') . "|" . (string)($sync_result['message'] ?? '기업 정보를 저장하지 못했습니다.');
+							exit;
+						}
+					}
+				}
 				if ($resolved_json === '' && !empty($resolved_company['company'])) {
 					$resolved_json = macomaex_kodata_company_to_json($resolved_company['company']);
 				}
@@ -341,15 +355,34 @@ switch ($type) {
 			header('X-Join-G5-Path: ' . G5_PATH);
 		}
 		$resolved_company = macomaex_kodata_resolve_company($comnum, array(
-			'persist_company' => true,
 			'context' => 'join_comp_chk',
 		));
 		if (!empty($resolved_company['success']) && !empty($resolved_company['company']['KEDCD'])) {
+			$resolved_kedcd = trim((string)$resolved_company['company']['KEDCD']);
+			// 조회 화면은 company를 만들지 않으므로 이미 동기화된 기업만 회원과 연결한다.
+			$existing_company = sql_fetch(
+				"select KEDCD, ENP_NM, ENP_NM_TRD from company
+				 where KEDCD='" . sql_escape_string($resolved_kedcd) . "'
+				   and BZNO='" . sql_escape_string($comnum) . "'
+				 limit 1"
+			);
+			if (empty($existing_company['KEDCD'])) {
+				macomaex_join_comp_chk_log_write(array(
+					'stage' => 'company_not_synced',
+					'normalized_comnum' => $comnum,
+					'kedcd' => $resolved_kedcd,
+				));
+				echo "501|COMPANY_NOT_SYNCED|메인 기업 추천에서 사업자번호를 먼저 조회해 주세요.";
+				exit;
+			}
 			$resolved_company_name = trim((string)($resolved_company['company']['ENP_NM_TRD'] ?? ''));
 			if ($resolved_company_name === '') {
-				$resolved_company_name = trim((string)($resolved_company['company']['ENP_NM'] ?? ''));
+				$resolved_company_name = trim((string)($existing_company['ENP_NM_TRD'] ?? ''));
 			}
-			echo "1000|" . $resolved_company_name . "|" . $resolved_company['company']['KEDCD'];
+			if ($resolved_company_name === '') {
+				$resolved_company_name = trim((string)($existing_company['ENP_NM'] ?? ''));
+			}
+			echo "1000|" . $resolved_company_name . "|" . $existing_company['KEDCD'];
 			exit;
 		}
 		macomaex_join_comp_chk_log_write(array(
@@ -360,473 +393,6 @@ switch ($type) {
 		));
 		echo "501";
 		exit;
-
-		macomaex_join_comp_chk_log_write(array(
-			'stage' => 'request_enter',
-			'type' => $type,
-			'raw_comnum' => isset($_REQUEST['comnum']) ? (string)$_REQUEST['comnum'] : '',
-			'normalized_comnum' => $comnum,
-			'r_mb_id' => $r_mb_id,
-			'request_uri' => isset($_SERVER['REQUEST_URI']) ? (string)$_SERVER['REQUEST_URI'] : '',
-			'remote_ip' => isset($_SERVER['REMOTE_ADDR']) ? (string)$_SERVER['REMOTE_ADDR'] : '',
-		));
-		if($comnum) {
-			if($r_mb_id) $mem_chk=sql_fetch("select count(*) as cnt from g5_member where mb_leave_date='' and mb_4='$comnum' and mb_id!='{$r_mb_id}'");
-			else $mem_chk=sql_fetch("select count(*) as cnt from g5_member where mb_leave_date='' and mb_4='$comnum'");
-			if($mem_chk['cnt']>0) {
-				macomaex_join_comp_chk_log_write(array(
-					'stage' => 'member_duplicate_allowed',
-					'normalized_comnum' => $comnum,
-					'count' => (int)$mem_chk['cnt'],
-				));
-			}
-			$comnum=str_replace("-","",$comnum);
-					$chk=sql_fetch("select * from company where BZNO='$comnum'");
-
-					if (!empty($chk['KEDCD'])) { 
-						if(!$chk['ENP_NM_TRD']) $chk['ENP_NM_TRD']=$chk['ENP_NM'];
-						macomaex_join_comp_chk_log_write(array(
-							'stage' => 'company_hit',
-							'comnum' => $comnum,
-							'kedcd' => $chk['KEDCD'],
-						));
-						echo "1000|".$chk['ENP_NM_TRD']."|".$chk['KEDCD'];
-						exit;
-					}else{
-						//등록된 정보가 없으면 API로 가져와서 등록함
-						//API 로그기록에 정보가 남아있는지 체크 있으면 해당 기록에서 그냥 가져오기
-							$log_chk=sql_fetch("select * from company_api_log where c_bizno='{$comnum}' and DATE(c_datetime)='".date("Y-m-d")."' order by c_datetime desc limit 1");
-								if (empty($log_chk['c_content'])) {
-									$latest_log = sql_fetch("select * from company_api_log where c_bizno='{$comnum}' and c_content!='' order by c_datetime desc limit 1");
-									if (!empty($latest_log['c_content'])) {
-										$log_chk = $latest_log;
-										macomaex_join_comp_chk_log_write(array(
-											'stage' => 'api_log_latest_hit',
-											'comnum' => $comnum,
-										));
-									}
-								}
-								if (empty($log_chk['c_content'])) {
-									macomaex_join_comp_chk_log_write(array(
-										'stage' => 'api_call_start',
-										'comnum' => $comnum,
-									));
-									$TOKEN_URL = macomaex_kodata_build_url($comnum);
-								$agent = 'Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.0)';
-								$cookie_nm = './cookie.txt';
-
-								$ch = curl_init();
-								curl_setopt($ch, CURLOPT_URL, $TOKEN_URL);
-								curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, FALSE);
-								curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
-								curl_setopt($ch, CURLOPT_HEADER, 0);
-								curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);
-								curl_setopt($ch, CURLOPT_COOKIEJAR, $cookie_nm);
-								curl_setopt($ch, CURLOPT_COOKIEFILE, $cookie_nm);
-								curl_setopt($ch, CURLOPT_USERAGENT, $agent);
-									curl_setopt($ch, CURLOPT_TIMEOUT, 30);
-								curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-								$html_ori = curl_exec($ch);
-								$curl_error = curl_error($ch);
-								$curl_errno = curl_errno($ch);
-								curl_close($ch);
-
-									if ($html_ori === false) {
-										macomaex_join_comp_chk_log_write(array(
-											'stage' => 'api_call_failed',
-											'comnum' => $comnum,
-											'curl_errno' => $curl_errno,
-											'curl_error' => $curl_error,
-										));
-										macomaex_kodata_log('curl_failed', array(
-										'context' => 'join_comp_chk',
-										'comnum' => $comnum,
-										'curl_errno' => $curl_errno,
-										'curl_error' => $curl_error,
-									));
-									echo "501";
-									exit;
-								}
-
-								$parsed = macomaex_parse_kodata_xml($html_ori, array(
-									'context' => 'join_comp_chk',
-									'comnum' => $comnum,
-								));
-									if (empty($parsed['success'])) {
-										macomaex_join_comp_chk_log_write(array(
-											'stage' => 'api_parse_failed',
-											'comnum' => $comnum,
-											'error_code' => isset($parsed['error_code']) ? $parsed['error_code'] : '',
-											'error_message' => isset($parsed['error_message']) ? $parsed['error_message'] : '',
-										));
-										echo "501";
-										exit;
-									}
-
-								$xml = $parsed['xml'];
-									if ((string)$xml->HEADER->errcd !== "00") {
-										macomaex_join_comp_chk_log_write(array(
-											'stage' => 'api_business_error',
-											'comnum' => $comnum,
-											'errcd' => (string)$xml->HEADER->errcd,
-										));
-										echo "501";
-										exit;
-									}
-
-								$com_data = array("1000", $parsed['json']);
-								if($com_data[0]==1000){
-									$com_info=json_decode($com_data[1]);
-								$KEDCD=$com_info->CONTENTS->ENPintr0000->kedcd;
-								$enp_nm=$com_info->CONTENTS->ENPintr0000->enp_nm;
-								$enp_nm_trd=$com_info->CONTENTS->ENPintr0000->enp_nm_trd;//회사명
-								$enp_nm_eng=$com_info->CONTENTS->ENPintr0000->enp_nm_eng;
-								$cono_pid=$com_info->CONTENTS->ENPintr0000->cono_pid; //법인번호
-								$reper_name=$com_info->CONTENTS->ENPintr0000->reper_name; //대표자명
-								$enp_typ=$com_info->CONTENTS->ENPintr0000->enp_typ;//기업유형
-								$enp_sze=$com_info->CONTENTS->ENPintr0000->enp_sze;
-								$ipo_cd=$com_info->CONTENTS->ENPintr0000->ipo_cd;
-								$enp_scd=$com_info->CONTENTS->ENPintr0000->enp_scd;
-								$enp_scd_chg_dt=$com_info->CONTENTS->ENPintr0000->enp_scd_chg_dt;
-								$enp_form_fr=$com_info->CONTENTS->ENPintr0000->enp_form_fr;
-								$bzc_cd=$com_info->CONTENTS->ENPintr0000->bzc_cd;
-								$bzc_nm=$com_info->CONTENTS->ENPintr0000->bzc_nm;//업종명
-								$loc_zip=$com_info->CONTENTS->ENPintr0000->loc_zip;
-								$loc_addra=$com_info->CONTENTS->ENPintr0000->loc_addra;//주소
-								$loc_addrb=$com_info->CONTENTS->ENPintr0000->loc_addrb;
-								$tel_no=$com_info->CONTENTS->ENPintr0000->tel_no;
-								$fax_no=$com_info->CONTENTS->ENPintr0000->fax_no;
-								$hpage_url=$com_info->CONTENTS->ENPintr0000->hpage_url;
-								$email=$com_info->CONTENTS->ENPintr0000->email;
-								$estb_dt=$com_info->CONTENTS->ENPintr0000->estb_dt;
-								$grp_nm=$com_info->CONTENTS->ENPintr0000->grp_nm;
-								$mpd=$com_info->CONTENTS->ENPintr0000->mpd;//주생산품
-								$std_dt=$com_info->CONTENTS->ENPintr0000->std_dt;
-								$enp_fcd=$com_info->CONTENTS->ENPintr0000->enp_fcd;//기업형태
-								
-								for($tmp=0;$tmp<=20;$tmp++){
-									${"fs_val".$tmp}=$com_info->CONTENTS->ENPfsdt0001->{"fs_val".$tmp};
-								}
-
-								$fs1_acct_dt=$com_info->CONTENTS->ENPfsdt0001->fs1_acct_dt;
-								for($tmp=0;$tmp<=20;$tmp++){
-									${"fs1_val".$tmp}=$com_info->CONTENTS->ENPfsdt0001->{"fs1_val".$tmp};
-								}
-
-								$fs2_acct_dt=$com_info->CONTENTS->ENPfsdt0001->fs2_acct_dt;
-								for($tmp=0;$tmp<=20;$tmp++){
-									${"fs2_val".$tmp}=$com_info->CONTENTS->ENPfsdt0001->{"fs2_val".$tmp};
-								}
-
-								//주식정보
-								$list=$com_info->CONTENTS->ENPsthr0001->list;
-								$scnt=$com_info->CONTENTS->ENPsthr0001->cnt;
-
-										if($scnt) {
-											$ISS_STK_CN=0;
-											$CSTK_CN=0;
-											$PSTK_CN=0;
-											$slist=$com_info->CONTENTS->ENPsthr0001->list;
-											for($tmp=0;$tmp<=$scnt;$tmp++){
-												$own_stk_cn=$slist[$tmp]->own_stk_cn; //소유주식
-												$cstk_cn=$slist[$tmp]->cstk_cn; //보통주
-												$pstk_cn=$slist[$tmp]->pstk_cn; //우선주
-												
-												$ISS_STK_CN=$ISS_STK_CN+$own_stk_cn; //발행주식수 총계
-												$CSTK_CN=$CSTK_CN+$cstk_cn; //보통주식 총계
-												$PSTK_CN=$PSTK_CN+$pstk_cn; //우선주식 총계
-											}
-											$STD_DT=$slist[0]->std_dt;
-										}
-
-								//API 로그에 기록
-									$api_log_sql = "insert company_api_log set c_bizno='{$comnum}', c_kedcd='{$KEDCD}', c_content='{$com_data[1]}', c_datetime=now(), c_ip='{$_SERVER["REMOTE_ADDR"]}'";
-									macomaex_sql_exec_with_log($api_log_sql, 'join_comp_chk.company_api_log', array('comnum' => $comnum, 'kedcd' => $KEDCD));
-									macomaex_join_comp_chk_log_write(array(
-										'stage' => 'api_call_success',
-										'comnum' => $comnum,
-										'kedcd' => $KEDCD,
-									));
-									echo "1000|".$enp_nm_trd."|".$KEDCD;
-									exit;
-								}else{
-									macomaex_join_comp_chk_log_write(array(
-										'stage' => 'api_payload_invalid',
-										'comnum' => $comnum,
-									));
-									echo "501";
-									exit;
-								}
-							}else{
-									macomaex_join_comp_chk_log_write(array(
-										'stage' => 'api_log_today_hit',
-										'comnum' => $comnum,
-									));
-									//API기록에서 정보가져옴
-								$com_info=json_decode($log_chk['c_content']);
-								//print_r($com_info); exit;
-								$KEDCD=$com_info->CONTENTS->ENPintr0000->kedcd;
-								$enp_nm=$com_info->CONTENTS->ENPintr0000->enp_nm;
-								$enp_nm_trd=$com_info->CONTENTS->ENPintr0000->enp_nm_trd;//회사명
-								$enp_nm_eng=$com_info->CONTENTS->ENPintr0000->enp_nm_eng;
-								$cono_pid=$com_info->CONTENTS->ENPintr0000->cono_pid; //법인번호
-								$reper_name=$com_info->CONTENTS->ENPintr0000->reper_name; //대표자명
-								$enp_typ=$com_info->CONTENTS->ENPintr0000->enp_typ;//기업유형
-								$enp_sze=$com_info->CONTENTS->ENPintr0000->enp_sze;
-								$ipo_cd=$com_info->CONTENTS->ENPintr0000->ipo_cd;
-								$enp_scd=$com_info->CONTENTS->ENPintr0000->enp_scd;
-								$enp_scd_chg_dt=$com_info->CONTENTS->ENPintr0000->enp_scd_chg_dt;
-								$enp_form_fr=$com_info->CONTENTS->ENPintr0000->enp_form_fr;
-								$bzc_cd=$com_info->CONTENTS->ENPintr0000->bzc_cd;
-								$bzc_nm=$com_info->CONTENTS->ENPintr0000->bzc_nm;//업종명
-								$loc_zip=$com_info->CONTENTS->ENPintr0000->loc_zip;
-								$loc_addra=$com_info->CONTENTS->ENPintr0000->loc_addra;//주소
-								$loc_addrb=$com_info->CONTENTS->ENPintr0000->loc_addrb;
-								$tel_no=$com_info->CONTENTS->ENPintr0000->tel_no;
-								$fax_no=$com_info->CONTENTS->ENPintr0000->fax_no;
-								$hpage_url=$com_info->CONTENTS->ENPintr0000->hpage_url;
-								$email=$com_info->CONTENTS->ENPintr0000->email;
-								$estb_dt=$com_info->CONTENTS->ENPintr0000->estb_dt;
-								$grp_nm=$com_info->CONTENTS->ENPintr0000->grp_nm;
-								$mpd=$com_info->CONTENTS->ENPintr0000->mpd;//주생산품
-								$std_dt=$com_info->CONTENTS->ENPintr0000->std_dt;
-								$enp_fcd=$com_info->CONTENTS->ENPintr0000->enp_fcd;//기업형태
-
-								//ENPsthr0001 주주현황상세
-								//ENPcust0001, ENPsupp0001 주요 구매, 판매처 10개
-								//ENPfsdt0001 주요재무제표
-								/*
-								fs_acct_dt 최근결산년_결산일
-								fs_val1 최근결산년_유동자산
-								fs1_acct_dt 최근결산직전년_결산일
-								fs2_acct_dt  최근결산직직전년_결산일
-								*/
-
-								$fs_acct_dt=$com_info->CONTENTS->ENPfsdt0001->fs_acct_dt;
-								for($tmp=0;$tmp<=20;$tmp++){
-									${"fs_val".$tmp}=$com_info->CONTENTS->ENPfsdt0001->{"fs_val".$tmp};
-								}
-
-								$fs1_acct_dt=$com_info->CONTENTS->ENPfsdt0001->fs1_acct_dt;
-								for($tmp=0;$tmp<=20;$tmp++){
-									${"fs1_val".$tmp}=$com_info->CONTENTS->ENPfsdt0001->{"fs1_val".$tmp};
-								}
-
-								$fs2_acct_dt=$com_info->CONTENTS->ENPfsdt0001->fs2_acct_dt;
-								for($tmp=0;$tmp<=20;$tmp++){
-									${"fs2_val".$tmp}=$com_info->CONTENTS->ENPfsdt0001->{"fs2_val".$tmp};
-								}
-
-								//주식정보
-								$scnt=$com_info->CONTENTS->ENPsthr0001->cnt;
-								if(is_object($scnt)) unset($scnt);
-
-								if($scnt>1) {
-									$ISS_STK_CN=0;
-									$CSTK_CN=0;
-									$PSTK_CN=0;
-									$slist=$com_info->CONTENTS->ENPsthr0001->list;
-									for($tmp=0;$tmp<$scnt;$tmp++){
-										$own_stk_cn=$slist[$tmp]->own_stk_cn; //소유주식
-										$cstk_cn=$slist[$tmp]->cstk_cn; //보통주
-										$pstk_cn=$slist[$tmp]->pstk_cn; //우선주
-										
-										$ISS_STK_CN=$ISS_STK_CN+$own_stk_cn; //발행주식수 총계
-										$CSTK_CN=$CSTK_CN+$cstk_cn; //보통주식 총계
-										$PSTK_CN=$PSTK_CN+$pstk_cn; //우선주식 총계
-									}
-									$STD_DT=$slist[0]->std_dt;
-								}
-								if($scnt==1) {
-									$slist=$com_info->CONTENTS->ENPsthr0001->list;
-									$ISS_STK_CN=$slist->own_stk_cn; //소유주식
-									$CSTK_CN=$slist->cstk_cn; //보통주
-									$PSTK_CN=$slist->pstk_cn; //우선주
-									$STD_DT=$slist->std_dt;
-								}
-								
-
-								if(!$enp_nm_trd) $enp_nm_trd=$enp_nm;
-									macomaex_join_comp_chk_log_write(array(
-										'stage' => 'api_log_success',
-										'comnum' => $comnum,
-										'kedcd' => $KEDCD,
-									));
-									echo "1000|".$enp_nm_trd."|".$KEDCD;
-									exit;
-								}
-
-						if(is_object($enp_scd_chg_dt)) unset($enp_scd_chg_dt);
-						if(is_object($grp_nm)) unset($grp_nm);
-						if(is_object($enp_nm_trd)) unset($enp_nm_trd);
-						if(is_object($enp_nm)) unset($enp_nm);
-						if(is_object($enp_nm_eng)) unset($enp_nm_eng);
-						if(is_object($cono_pid)) unset($cono_pid);
-						if(is_object($reper_name)) unset($reper_name);
-						if(is_object($enp_typ)) unset($enp_typ);
-						if(is_object($enp_sze)) unset($enp_sze);
-						if(is_object($enp_fcd)) unset($enp_fcd);
-						if(is_object($enp_scd)) unset($enp_scd);
-						if(is_object($enp_form_fr)) unset($enp_form_fr);
-						if(is_object($estb_dt)) unset($estb_dt);
-						if(is_object($ipo_cd)) unset($ipo_cd);
-						if(is_object($std_dt)) unset($std_dt);
-						if(is_object($loc_addra)) unset($loc_addra);
-						if(is_object($fs_acct_dt)) unset($fs_acct_dt);
-
-						if(is_object($hpage_url)) unset($hpage_url);
-						if(is_object($email))  unset($email);
-						if(is_object($tel_no))  unset($tel_no);
-						if(is_object($fax_no))  unset($fax_no);
-						if(is_object($fs_val9))  unset($fs_val9);
-
-						if(is_object($STD_DT))  unset($STD_DT);
-						if(is_object($ISS_STK_CN))  unset($ISS_STK_CN);
-						if(is_object($CSTK_CN))  unset($CSTK_CN);
-						if(is_object($PSTK_CN))  unset($PSTK_CN);
-
-						if(!$bzno) $bzno=$comnum;
-						//echo $bzno;
-
-						//기업개요 정보 등록
-						if($KEDCD){
-						$sql="insert company set ";
-						$sql.="KEDCD='{$KEDCD}', ";
-						$sql.="ENP_NM='".addslashes($enp_nm)."', ";
-						$sql.="ENP_NM_TRD='".addslashes($enp_nm_trd)."', ";
-						$sql.="ENP_NM_ENG='".addslashes($enp_nm_eng)."', ";
-						$sql.="ENP_TYP='{$enp_typ}', ";
-						$sql.="ENP_SZE='{$enp_sze}', ";
-						$sql.="GRDT_PLN_DT='{$row_data[6]}', ";
-						$sql.="ENP_FCD='{$enp_fcd}', ";
-						$sql.="ESTB_FCD='{$row_data[8]}', ";
-						$sql.="ENP_SCD='{$enp_scd}', ";
-						$sql.="ENP_SCD_CHG_DT='{$enp_scd_chg_dt}', ";
-						$sql.="PUBI_FCD='{$row_data[11]}', ";
-						$sql.="VENP_YN='{$row_data[12]}', ";
-						$sql.="ENP_FORM_FR='{$enp_form_fr}', ";
-						$sql.="BZC_CD='{$bzc_cd}', ";
-						$sql.="FS_BZC_CD='{$row_data[15]}', ";
-						$sql.="GRP_CD='{$row_data[16]}', ";
-						$sql.="GRP_NM='".addslashes($grp_nm)."', ";
-						$sql.="CONO_PID='{$cono_pid}', ";
-						$sql.="ESTB_DT='{$estb_dt}', ";
-						$sql.="IPO_CD='{$ipo_cd}', ";
-						$sql.="TRDBZ_RPT_NO='{$row_data[21]}', ";
-						$sql.="LIST_DT='{$row_data[22]}', ";
-						$sql.="DLIST_DT='{$row_data[23]}', ";
-						$sql.="MTX_BNK_CD='{$row_data[24]}', ";
-						$sql.="MTX_BNK_NM='".addslashes($row_data[25])."', ";
-						$sql.="OVD_TX_BNK_CD='{$row_data[26]}', ";
-						$sql.="OVD_TX_BNK_NM='".addslashes($row_data[27])."', ";
-						$sql.="ACCT_EDDT='{$row_data[28]}', ";
-						$sql.="HPAGE_URL='{$hpage_url}', ";
-						$sql.="EMAIL='{$email}', ";
-						$sql.="STD_DT='{$std_dt}', ";
-						$sql.="BZNO='{$bzno}', ";
-						$sql.="LOC_ZIP='{$loc_zip}', ";
-						$sql.="LOC_ADDRA='".addslashes($loc_addra)."', ";
-						$sql.="LOC_ADDRB='".addslashes($loc_addrb)."', ";
-						$sql.="TEL_NO='{$tel_no}', ";
-						$sql.="FAX_NO='{$fax_no}', ";
-						$sql.="LABORER_SUM='{$row_data[38]}', ";
-						$sql.="PD_NM='".addslashes($mpd)."', ";
-						$sql.="REL_KEDCD='{$row_data[41]}', ";
-						$sql.="REL_ESTB_DT='{$row_data[42]}', ";
-						$sql.="LOC_RDNM_ZIP='{$row_data[43]}', ";
-						$sql.="LOC_RDNM_ADDRA='".addslashes($row_data[44])."', ";
-						$sql.="LOC_RDNM_ADDRB='".addslashes($row_data[45])."', ";
-						$sql.="LOC_RDNM_ADDRB_CONF_YN='{$row_data[46]}', ";
-						$sql.="LOC_ADDRB_CONF_YN='{$row_data[47]}', ";
-						$sql.="SALES='{$fs_val9}', ";
-						$sql.="ext_1='API 입력' ";
-
-						macomaex_sql_exec_with_log($sql, 'join_comp_chk.company', array('comnum' => $comnum, 'kedcd' => $KEDCD));
-						}
-
-						if(is_object($fs_val9))  unset($fs_val9);
-						if(is_object($fs_val3))  unset($fs_val3);
-						if(is_object($fs_val7))  unset($fs_val7);
-						if(is_object($fs_val8))  unset($fs_val8);
-						if(is_object($fs_val9))  unset($fs_val9);
-						if(is_object($fs_val11))  unset($fs_val11);
-						if(is_object($fs_val16))  unset($fs_val16);
-						//주요재무정보 등록
-						if($fs_acct_dt){
-						$sql="insert company_financial set ";
-						$sql.="KEDCD='{$KEDCD}', ";
-						$sql.="ACCT_DT='{$fs_acct_dt}', "; //결산기준연월일
-						$sql.="SUMASSET='{$fs_val3}', ";//총자산
-						$sql.="PAYMENTFUND='{$fs_val7}', "; //납입자본금
-						$sql.="FUNDTOTAL='{$fs_val8}', ";//자본총계
-						$sql.="SALES='{$fs_val9}', ";//매출액
-						$sql.="PROFIT='{$fs_val11}', ";//영업이익
-						$sql.="TERMNETPROFIT='{$fs_val16}' ";//당기순이익
-						
-						macomaex_sql_exec_with_log($sql, 'join_comp_chk.company_financial.fs', array('comnum' => $comnum, 'kedcd' => $KEDCD, 'acct_dt' => $fs_acct_dt));
-						}
-
-						if(is_object($fs1_acct_dt))  unset($fs1_acct_dt);
-						if(is_object($fs1_val3))  unset($fs1_val3);
-						if(is_object($fs1_val7))  unset($fs1_val7);
-						if(is_object($fs1_val8))  unset($fs1_val8);
-						if(is_object($fs1_val9))  unset($fs1_val9);
-						if(is_object($fs1_val11))  unset($fs1_val11);
-						if(is_object($fs1_val16))  unset($fs1_val16);
-						if($fs1_acct_dt){
-						$sql="insert company_financial set ";
-						$sql.="KEDCD='{$KEDCD}', ";
-						$sql.="ACCT_DT='{$fs1_acct_dt}', "; //결산기준연월일
-						$sql.="SUMASSET='{$fs1_val3}', ";//총자산
-						$sql.="PAYMENTFUND='{$fs1_val7}', "; //납입자본금
-						$sql.="FUNDTOTAL='{$fs1_val8}', ";//자본총계
-						$sql.="SALES='{$fs1_val9}', ";//매출액
-						$sql.="PROFIT='{$fs1_val11}', ";//영업이익
-						$sql.="TERMNETPROFIT='{$fs1_val16}' ";//당기순이익
-						macomaex_sql_exec_with_log($sql, 'join_comp_chk.company_financial.fs1', array('comnum' => $comnum, 'kedcd' => $KEDCD, 'acct_dt' => $fs1_acct_dt));
-						}
-
-						if(is_object($fs2_acct_dt))  unset($fs2_acct_dt);
-						if(is_object($fs2_val3))  unset($fs2_val3);
-						if(is_object($fs2_val7))  unset($fs2_val7);
-						if(is_object($fs2_val8))  unset($fs2_val8);
-						if(is_object($fs2_val9))  unset($fs2_val9);
-						if(is_object($fs2_val11))  unset($fs2_val11);
-						if(is_object($fs2_val16))  unset($fs2_val16);
-						if($fs2_acct_dt){
-						$sql="insert company_financial set ";
-						$sql.="KEDCD='{$KEDCD}', ";
-						$sql.="ACCT_DT='{$fs2_acct_dt}', "; //결산기준연월일
-						$sql.="SUMASSET='{$fs2_val3}', ";//총자산
-						$sql.="PAYMENTFUND='{$fs2_val7}', "; //납입자본금
-						$sql.="FUNDTOTAL='{$fs2_val8}', ";//자본총계
-						$sql.="SALES='{$fs2_val9}', ";//매출액
-						$sql.="PROFIT='{$fs2_val11}', ";//영업이익
-						$sql.="TERMNETPROFIT='{$fs2_val16}' ";//당기순이익
-						macomaex_sql_exec_with_log($sql, 'join_comp_chk.company_financial.fs2', array('comnum' => $comnum, 'kedcd' => $KEDCD, 'acct_dt' => $fs2_acct_dt));
-						}
-
-						//주식정보
-						if($STD_DT){
-						$sql="insert company_stock set ";
-						$sql.="KEDCD='{$KEDCD}', ";
-						$sql.="STD_DT='{$STD_DT}', "; //정보기준일자
-						$sql.="ISS_STK_CN='{$ISS_STK_CN}', ";//발행주식총계
-						$sql.="CSTK_CN='{$CSTK_CN}', "; //보통주식총계
-						$sql.="PSTK_CN='{$PSTK_CN}', ";//우선주식총계
-						$sql.="ext_1='API 입력' ";//추가필드
-						macomaex_sql_exec_with_log($sql, 'join_comp_chk.company_stock', array('comnum' => $comnum, 'kedcd' => $KEDCD, 'std_dt' => $STD_DT));
-						}
-
-
-					}
-		}else{
-			macomaex_join_comp_chk_log_write(array(
-				'stage' => 'invalid_request_empty_comnum',
-				'raw_comnum' => isset($_REQUEST['comnum']) ? (string)$_REQUEST['comnum'] : '',
-			));
-			echo "500|올바른 방법으로 이용해주세요.";
-		}
 	break;
 
 	case "view_chk"://거래처 뷰체크

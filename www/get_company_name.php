@@ -153,7 +153,6 @@ if (in_array($demo_enabled, array('1', 'true', 'yes', 'on'), true)
 }
 
 $resolved_company = macomaex_kodata_resolve_company($comnum, array(
-    'persist_company' => false,
     'context' => 'get_company_name',
 ));
 $cominfo_json = !empty($resolved_company['json']) ? $resolved_company['json'] : '';

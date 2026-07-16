@@ -698,7 +698,6 @@ if (!$has_comnum) {
     $cominfo = '';
 
     $resolved_company = macomaex_kodata_resolve_company($comnum, array(
-        'persist_company' => false,
         'context' => 'matching_list',
     ));
     if (!empty($resolved_company['success']) && !empty($resolved_company['json'])) {

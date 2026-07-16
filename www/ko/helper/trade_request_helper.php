@@ -142,16 +142,15 @@ function trade_request_bzno_resolve_log($priority, $source, $status, $bzno, $con
 // 거래 요청용 기업정보를 최근 캐시, KODATA, 전체 캐시, company 테이블 순서로 조회한다.
 function trade_request_resolve_company_data_by_bzno($bzno, $options = array()) {
 	$bzno = trade_request_normalize_bzno($bzno);
-	$persist = !empty($options['persist']);
+	// 거래 요청에서는 API/cache 조회만 수행하고 company 저장은 메인 동기화에 맡긴다.
 	$resolved = macomaex_kodata_resolve_company($bzno, array(
-		'persist_company' => $persist,
 		'context' => 'trade_request_modal',
 		'connect_timeout' => 3,
 		'timeout' => 10,
 	));
 	if (empty($resolved['success'])) {
 		trade_request_bzno_resolve_log(0, 'all_sources', 'fail', $bzno, array(
-			'persist' => $persist,
+			'persist' => false,
 			'reason' => $resolved['error_code'] ?? 'all_fallbacks_exhausted',
 		));
 		return array(
@@ -162,7 +161,7 @@ function trade_request_resolve_company_data_by_bzno($bzno, $options = array()) {
 
 	$source = trim((string)($resolved['source'] ?? ''));
 	$payload = array();
-	if ($persist || $source === 'company') {
+	if ($source === 'company') {
 		$payload = trade_request_member_company_data($bzno);
 	} else if (!empty($resolved['json'])) {
 		$payload = trade_request_company_payload_from_kodata_json($resolved['json'], $bzno);
@@ -172,7 +171,7 @@ function trade_request_resolve_company_data_by_bzno($bzno, $options = array()) {
 		return array('success' => false, 'message' => '기업 정보 응답을 화면에 표시하지 못했습니다.');
 	}
 
-	trade_request_bzno_resolve_log(0, $source, 'success', $bzno, array('persist' => $persist));
+	trade_request_bzno_resolve_log(0, $source, 'success', $bzno, array('persist' => false));
 	return array(
 		'success' => true,
 		'company' => $payload,

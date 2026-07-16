@@ -393,7 +393,7 @@ function AutoHypen(companyNum){
 				$("#mb_company").val(jqXHR[2]);
 			}else if(jqXHR[0] == 501){
 				$("#com_chk").val("false");
-				jAlert("해당 사업자 번호로는 등록할 수 없습니다.","알림",function(){
+				jAlert(jqXHR[2] || "해당 사업자 번호로는 등록할 수 없습니다.","알림",function(){
 					$("#mb_4").focus();
 				});
 			}else{

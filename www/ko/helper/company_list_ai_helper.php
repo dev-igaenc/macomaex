@@ -1246,7 +1246,6 @@ if (!function_exists('company_list_ai_resolve_base_payload_by_bizno')) {
         }
 
         $common_resolved = macomaex_kodata_resolve_company($bizno, array(
-            'persist_company' => false,
             'allow_live' => $allow_kodata,
             'context' => 'company_list_ai',
         ));
