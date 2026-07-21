@@ -306,8 +306,6 @@ $stable_list = get_processed_companies('stability_score_5', 3, $unlocked_bzno_ma
                     </button>
                 </form>
             </div>
-        </div>
-        <div class="mVisual_right">
             <div class="mVisual_quick">
                 <a href="/account/trades#received" class="mVisual_quick_item mVisual_quick_item--request">
                     <div class="mVisual_quick_icon">
@@ -327,7 +325,7 @@ $stable_list = get_processed_companies('stability_score_5', 3, $unlocked_bzno_ma
                     </div>
                     <div class="mVisual_quick_body">
                         <strong>받은 요청</strong>
-                        <span>확인하기</span>
+                        <span>수락 · 거절</span>
                     </div>
                     <svg class="mVisual_quick_arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
                 </a>
@@ -352,46 +350,35 @@ $stable_list = get_processed_companies('stability_score_5', 3, $unlocked_bzno_ma
                     <svg class="mVisual_quick_arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
                 </button>
             </div>
-
-            <div class="mVisual_preview">
-                <div class="mVisual_preview_cards" id="previewBanner">
-                    <div class="mVisual_preview_slide active">
-                        <div class="mVisual_preview_card mSlideIntro">
-                            <span class="mSlideIntro_eyebrow">우리 회사</span>
-                            <h3 class="mSlideIntro_title">사업자번호 하나로<br><b>거래처 찾기 끝</b></h3>
-                            <span class="mSlideIntro_line"></span>
+        </div>
+        <div class="mVisual_right">
+            <div class="mVisual_interview" id="heroInterview">
+                <div class="mHeroSlides">
+                    <div class="mHeroSlide mHeroSlide--video active">
+                        <video class="mVisual_video_thumb" id="mHeroVideo" src="<?php echo G5_THEME_URL; ?>/video/hero-guide.mp4" poster="<?php echo G5_THEME_URL; ?>/img/main/hero-video-thumb.png" muted loop playsinline autoplay preload="metadata" aria-label="매커멕스 사용방법 영상"></video>
+                        <button type="button" class="mVisual_video_play" id="mHeroVideoToggle" aria-label="사용방법 영상 크게 보기" data-video-src="<?php echo G5_THEME_URL; ?>/video/hero-guide.mp4">
+                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"></path></svg>
+                            <span class="mVisual_video_play_tip">크게 보기</span>
+                        </button>
+                        <div class="mVisual_video_overlay">
+                            <h3 class="mVisual_video_title">매커멕스 100% 활용법</h3>
+                            <p class="mVisual_video_cap">3분이면 끝! 거래처 찾기부터 AI 추천 활용법까지</p>
                         </div>
-                    </div>
-
-                    <div class="mVisual_preview_slide">
-                        <div class="mVisual_preview_card mSlideScore">
-                            <span class="mSlideScore_label">AI 거래 적합도</span>
-                            <div class="mSlideScore_value">68<span>점</span></div>
-                            <div class="mSlideScore_bar"><i style="width:90%"></i></div>
-                            <p class="mSlideScore_cap">6가지 지표를 종합한 매칭 점수</p>
-                        </div>
-                    </div>
-
-                    <div class="mVisual_preview_slide">
-                        <div class="mVisual_preview_card mSlideReasons">
-                            <span class="mSlideReasons_label">AI가 분석한 추천 이유</span>
-                            <ul class="mSlideReasons_list">
-                                <li><i>✓</i><span>공급망 근접도 <b>상위 10%</b></span></li>
-                                <li><i>✓</i><span>최근 3년 연평균 매출 <b>18% 성장</b></span></li>
-                                <li><i>✓</i><span>동일 권역 위치로 <b>물류 효율 ↑</b></span></li>
-                                <li><i>✓</i><span>거래 규모·단가 <b>적합도 우수</b></span></li>
-                            </ul>
-                        </div>
-                    </div>
-
-                    <div class="mVisual_preview_indicator">
-                        <button class="mVisual_preview_dot active" data-slide="0"></button>
-                        <button class="mVisual_preview_dot" data-slide="1"></button>
-                        <button class="mVisual_preview_dot" data-slide="2"></button>
                     </div>
                 </div>
             </div>
         </div>
+    </div>
+</div>
+
+<div class="mVideoModal" id="mVideoModal" aria-hidden="true">
+    <div class="mVideoModal_backdrop" data-video-close></div>
+    <div class="mVideoModal_dialog" role="dialog" aria-modal="true" aria-label="매커멕스 사용방법 영상">
+        <button type="button" class="mVideoModal_close" data-video-close aria-label="닫기">&times;</button>
+        <div class="mVideoModal_frame">
+            <video id="mVideoPlayer" controls playsinline preload="metadata"></video>
+        </div>
+        <p class="mVideoModal_note">매커멕스 사용방법 안내 영상입니다.</p>
     </div>
 </div>
 
