@@ -1451,7 +1451,7 @@ video.mVisual_video_thumb { aspect-ratio: 16 / 9; }
 /* 서비스 카테고리 그리드 + 오른쪽 배너 */
 #mCategories {
     background: #FAFBFD;
-    padding: 64px 0 20px;
+    padding: 64px 0 56px;
     overflow-x: hidden;
 }
 #mCategories .inner {
