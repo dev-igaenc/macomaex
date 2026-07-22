@@ -39,38 +39,94 @@
     }
 })();
 
-// 프리뷰 배너 2초 자동 전환 + 높이 동기화
+// 히어로 인라인 영상 재생 상태 동기화
 (function(){
-    var wrap = document.getElementById('previewBanner');
+    var wrap = document.getElementById('heroInterview');
     if (!wrap) return;
-    var slides = wrap.querySelectorAll('.mVisual_preview_slide');
-    var dots = wrap.querySelectorAll('.mVisual_preview_dot');
-    if (!slides.length || !dots.length) return;
-    var current = 0;
+    var slides = wrap.querySelectorAll('.mHeroSlide');
+    if (!slides.length) return;
+    var heroVideo = document.getElementById('mHeroVideo');
+    if (!heroVideo) return;
 
-    function syncHeight() {
-        var base = slides[0];
-        if (!base) return;
-        var baseH = base.offsetHeight;
-        for (var i = 1; i < slides.length; i++) {
-            slides[i].style.height = baseH + 'px';
+    function syncHeroVideo() {
+        var activeSlide = heroVideo.closest('.mHeroSlide');
+        var visible = activeSlide && activeSlide.classList.contains('active');
+        if (visible) {
+            var p = heroVideo.play();
+            if (p && p.catch) p.catch(function(){});
+        } else {
+            try {
+                heroVideo.pause();
+                heroVideo.currentTime = 0;
+            } catch (e) {}
         }
     }
 
-    function show(idx) {
-        slides[current].classList.remove('active');
-        dots[current].classList.remove('active');
-        current = idx % slides.length;
-        slides[current].classList.add('active');
-        dots[current].classList.add('active');
+    syncHeroVideo();
+})();
+
+// 사용방법 영상 모달 재생
+(function () {
+    var TEMP_VIDEO_SRC = '';
+    var modal = document.getElementById('mVideoModal');
+    var player = document.getElementById('mVideoPlayer');
+    if (!modal || !player) return;
+
+    var playBtns = document.querySelectorAll('.mVisual_video_play');
+    var heroVideo = document.getElementById('mHeroVideo');
+
+    function openVideo(src) {
+        var resumeAt = 0;
+        if (heroVideo) {
+            try { heroVideo.pause(); } catch (e) {}
+            if (heroVideo.getAttribute('src') === src) {
+                resumeAt = heroVideo.currentTime || 0;
+            }
+        }
+        if (player.getAttribute('src') !== src) {
+            player.setAttribute('src', src);
+        }
+        if (resumeAt > 0.3) {
+            var seek = function () {
+                try { player.currentTime = resumeAt; } catch (e) {}
+            };
+            if (player.readyState >= 1) seek();
+            else player.addEventListener('loadedmetadata', seek, { once: true });
+        }
+        modal.classList.add('open');
+        modal.setAttribute('aria-hidden', 'false');
+        document.documentElement.style.overflow = 'hidden';
+        var p = player.play();
+        if (p && p.catch) p.catch(function () {});
     }
 
-    syncHeight();
-    window.addEventListener('resize', syncHeight);
-    dots.forEach(function(dot, i) {
-        dot.addEventListener('click', function() { show(i); });
+    function closeVideo() {
+        try { player.pause(); } catch (e) {}
+        modal.classList.remove('open');
+        modal.setAttribute('aria-hidden', 'true');
+        document.documentElement.style.overflow = '';
+        if (heroVideo) {
+            var hp = heroVideo.play();
+            if (hp && hp.catch) hp.catch(function () {});
+        }
+    }
+
+    playBtns.forEach(function (btn) {
+        btn.addEventListener('click', function (e) {
+            e.preventDefault();
+            openVideo(btn.getAttribute('data-video-src') || TEMP_VIDEO_SRC);
+        });
     });
-    setInterval(function() { show(current + 1); }, 2000);
+
+    modal.querySelectorAll('[data-video-close]').forEach(function (el) {
+        el.addEventListener('click', closeVideo);
+    });
+
+    document.addEventListener('keydown', function (e) {
+        if ((e.key === 'Escape' || e.keyCode === 27) && modal.classList.contains('open')) {
+            closeVideo();
+        }
+    });
 })();
 
 // 모바일 전용: 카테고리 2줄 스와이프 캐러셀 (대분류 18개)
@@ -115,76 +171,6 @@
             catSwiper = null;
         }
     });
-})();
-
-// 비주얼 배너 캐러셀: 3장 겹침, 3초 자동 로테이션, 1/3> 페이지네이션
-(function() {
-    var wrap = document.querySelector('.mVisual_banner_wrap');
-    if (!wrap) return;
-    var container = wrap.querySelector('.mVisual_banner_swiper');
-    var paginationEl = wrap.querySelector('.mVisual_banner_pagination');
-    var nextBtn = wrap.querySelector('.mVisual_banner_next');
-    var slides = container ? container.querySelectorAll('.swiper-slide') : [];
-    if (!slides.length) return;
-    var total = slides.length;
-    var current = 0;
-    var timer;
-
-    function applyClasses() {
-        var nextIdx = (current + 1) % total;
-        var prevIdx = (current - 1 + total) % total;
-        slides.forEach(function(s, i) {
-            s.classList.remove('slide-active', 'slide-next', 'slide-prev');
-            if (i === current) s.classList.add('slide-active');
-            else if (i === nextIdx) s.classList.add('slide-next');
-            else if (i === prevIdx) s.classList.add('slide-prev');
-        });
-        if (paginationEl) {
-            var cur = paginationEl.querySelector('.mVisual_banner_page_current');
-            var tot = paginationEl.querySelector('.mVisual_banner_page_total');
-            if (cur) cur.textContent = current + 1;
-            if (tot) tot.textContent = total;
-        }
-    }
-
-    function goNext() {
-        current = (current + 1) % total;
-        applyClasses();
-    }
-
-    function startAutoplay() {
-        clearInterval(timer);
-        timer = setInterval(goNext, 3000);
-    }
-
-    function equalizeBannerHeight() {
-        var maxH = 0;
-        slides.forEach(function(s) {
-            s.style.position = 'relative';
-            s.style.height = 'auto';
-        });
-        slides.forEach(function(s) {
-            var h = s.offsetHeight;
-            if (h > maxH) maxH = h;
-        });
-        if (container) container.style.height = maxH + 'px';
-        slides.forEach(function(s) {
-            s.style.position = '';
-            s.style.height = '';
-        });
-    }
-
-    applyClasses();
-    equalizeBannerHeight();
-    startAutoplay();
-
-    window.addEventListener('resize', equalizeBannerHeight);
-    if (nextBtn) {
-        nextBtn.addEventListener('click', function() {
-            goNext();
-            startAutoplay();
-        });
-    }
 })();
 
     // 매칭 요청 템플릿(유통사/제조사)
