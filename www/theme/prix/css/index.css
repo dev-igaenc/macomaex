@@ -892,8 +892,7 @@ video.mVisual_video_thumb { aspect-ratio: 16 / 9; }
         font-size: 18px;
     }
     .mHeroSlide--video .mVisual_video_play {
-        width: 64px;
-        height: 64px;
+        display: none;
     }
     .mVisual_video_play svg {
         width: 20px;

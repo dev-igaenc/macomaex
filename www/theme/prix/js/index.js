@@ -74,6 +74,7 @@
 
     var playBtns = document.querySelectorAll('.mVisual_video_play');
     var heroVideo = document.getElementById('mHeroVideo');
+    var heroSlide = document.querySelector('.mHeroSlide--video');
 
     function openVideo(src) {
         var resumeAt = 0;
@@ -117,6 +118,15 @@
             openVideo(btn.getAttribute('data-video-src') || TEMP_VIDEO_SRC);
         });
     });
+
+    if (heroSlide) {
+        heroSlide.addEventListener('click', function (e) {
+            if (window.innerWidth > 720) return;
+            if (e.target.closest('.mVisual_video_play')) return;
+            e.preventDefault();
+            openVideo((playBtns[0] && playBtns[0].getAttribute('data-video-src')) || TEMP_VIDEO_SRC);
+        });
+    }
 
     modal.querySelectorAll('[data-video-close]').forEach(function (el) {
         el.addEventListener('click', closeVideo);
