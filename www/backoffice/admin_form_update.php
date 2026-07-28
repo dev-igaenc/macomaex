@@ -60,7 +60,7 @@ $check_keys = array(
 'mb_level'
 );
 
-for($i=1;$i<=8;$i++){
+for($i=2;$i<=8;$i++){
     $check_keys[] = 'mb_'.$i; 
 }
 $pub_menu = isset($_POST['pubMenu']) && is_array($_POST['pubMenu']) ? $_POST['pubMenu'] : array();
@@ -96,7 +96,6 @@ $sql_common .= "                 mb_open = '{$posts['mb_open']}',";
 $sql_common .= "                 mb_profile = '{$posts['mb_profile']}',";
 $sql_common .= "                 mb_level = '{$posts['mb_level']}',";
 $sql_common .= "                 mb_auth = '{$auth_menu}',";
-$sql_common .= "                 mb_1 = '{$posts['mb_1']}',";
 $sql_common .= "                 mb_2 = '{$posts['mb_2']}',";
 $sql_common .= "                 mb_3 = '{$posts['mb_3']}',";
 $sql_common .= "                 mb_4 = '{$posts['mb_4']}',";
