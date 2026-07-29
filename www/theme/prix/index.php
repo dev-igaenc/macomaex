@@ -299,7 +299,7 @@ $stable_list = get_processed_companies('stability_score_5', 3, $unlocked_bzno_ma
             <div class="mVisual_searchWrap bxShadow">
                 <form action="/ko/matching_list.php" method="POST" id="match_index">
                     <input type="hidden" name="cominfo" id="cominfo_index">
-                    <input type="text" name="comnum" id="comnum_index" placeholder="사업자등록번호를 입력해보세요" class="comnum_chk" maxlength="12" autocomplete="off">
+                    <input type="text" name="comnum" id="comnum_index" placeholder="" class="comnum_chk" maxlength="12" autocomplete="off">
                     <button type="submit" id="main_submit_index" class="search_btn" aria-label="AI 추천받기">
                         <span class="sparkle"><svg viewBox="0 0 24 24"><use href="#icon-magic-wand"></use></svg></span>
                         <span>AI 추천받기</span>
@@ -355,6 +355,7 @@ $stable_list = get_processed_companies('stability_score_5', 3, $unlocked_bzno_ma
             <div class="mVisual_interview" id="heroInterview">
                 <div class="mHeroSlides">
                     <div class="mHeroSlide mHeroSlide--video active">
+                        <canvas class="mVisual_video_ambient" id="mHeroVideoAmbient" aria-hidden="true"></canvas>
                         <video class="mVisual_video_thumb" id="mHeroVideo" src="<?php echo G5_THEME_URL; ?>/video/hero-guide.mp4" poster="<?php echo G5_THEME_URL; ?>/img/main/hero-video-thumb.png" muted loop playsinline autoplay preload="metadata" aria-label="매커멕스 사용방법 영상"></video>
                         <button type="button" class="mVisual_video_play" id="mHeroVideoToggle" aria-label="사용방법 영상 크게 보기" data-video-src="<?php echo G5_THEME_URL; ?>/video/hero-guide.mp4">
                             <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"></path></svg>

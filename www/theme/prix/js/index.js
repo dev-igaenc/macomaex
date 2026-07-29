@@ -65,6 +65,114 @@
     syncHeroVideo();
 })();
 
+// 사업자등록번호 입력창 타이핑 효과
+(function () {
+    var input = document.getElementById('comnum_index');
+    if (!input) return;
+
+    var text = '사업자등록번호를 입력해보세요';
+    var index = 0;
+    var isTyping = true;
+    var timerId = null;
+
+    function queueNextTick(delay) {
+        timerId = window.setTimeout(tick, delay);
+    }
+
+    function tick() {
+        if (input === document.activeElement) return;
+
+        if (isTyping) {
+            index++;
+            if (index > text.length) {
+                isTyping = false;
+                queueNextTick(2000);
+                return;
+            }
+        } else {
+            index--;
+            if (index < 0) {
+                isTyping = true;
+                index = 0;
+                queueNextTick(500);
+                return;
+            }
+        }
+
+        input.placeholder = text.substring(0, index) + '|';
+        queueNextTick(isTyping ? 100 : 50);
+    }
+
+    queueNextTick(500);
+
+    input.addEventListener('focus', function () {
+        if (timerId) {
+            window.clearTimeout(timerId);
+            timerId = null;
+        }
+        input.placeholder = '';
+    });
+
+    input.addEventListener('blur', function () {
+        if (input.value) return;
+        index = 0;
+        isTyping = true;
+        if (timerId) {
+            window.clearTimeout(timerId);
+        }
+        tick();
+    });
+})();
+
+// 히어로 영상 앰비언트 배경
+(function(){
+    var video = document.getElementById('mHeroVideo');
+    var canvas = document.getElementById('mHeroVideoAmbient');
+    if (!video || !canvas || !canvas.getContext) return;
+
+    var ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    canvas.width = 32;
+    canvas.height = 18;
+
+    var STRIP_RATIO = 0.10;
+    var FADE_ALPHA = 0.45;
+    var isFirstFrame = true;
+
+    function drawAmbientFrame() {
+        if (window.innerWidth < 1025) return;
+        if (video.readyState < 2) return;
+
+        var videoWidth = video.videoWidth;
+        var videoHeight = video.videoHeight;
+        if (!videoWidth || !videoHeight) return;
+
+        var stripHeight = Math.max(1, Math.round(videoHeight * STRIP_RATIO));
+        var halfHeight = canvas.height / 2;
+
+        ctx.globalAlpha = isFirstFrame ? 1 : FADE_ALPHA;
+        ctx.drawImage(video, 0, 0, videoWidth, stripHeight, 0, 0, canvas.width, halfHeight);
+        ctx.drawImage(video, 0, videoHeight - stripHeight, videoWidth, stripHeight, 0, halfHeight, canvas.width, halfHeight);
+        ctx.globalAlpha = 1;
+        isFirstFrame = false;
+    }
+
+    video.addEventListener('loadeddata', function () {
+        isFirstFrame = true;
+        drawAmbientFrame();
+    });
+
+    if (window.requestAnimationFrame) {
+        (function loop() {
+            drawAmbientFrame();
+            requestAnimationFrame(loop);
+        })();
+    } else {
+        setInterval(drawAmbientFrame, 40);
+    }
+})();
+
 // 사용방법 영상 모달 재생
 (function () {
     var TEMP_VIDEO_SRC = '';
