@@ -294,8 +294,8 @@ $stable_list = get_processed_companies('stability_score_5', 3, $unlocked_bzno_ma
 <div id="mVisual">
     <div class="mVisual_main">
         <div class="mVisual_left">
-            <span class="mVisual_topbanner">실거래 데이터 기반으로, 거래 확률 UP</span>
-            <h1 class="mVisual_heading">연결되는 거래에는<br>성공 공식이 있다</h1>
+            <h1 class="mVisual_heading">AI가 우리 회사와<br><span class="mVisual_heading_point">거래 가능성이 높은 기업</span>을<br>추천합니다.</h1>
+            <span class="mVisual_topbanner">사업자등록번호를 입력하면 <span class="mVisual_topbanner_point">AI가 실거래 데이터를 분석해</span><br class="mVisual_subBr">추천 이유와 함께 결과를 제공합니다.</span>
             <div class="mVisual_searchWrap bxShadow">
                 <form action="/ko/matching_list.php" method="POST" id="match_index">
                     <input type="hidden" name="cominfo" id="cominfo_index">

@@ -132,7 +132,7 @@ body, button, input, select, textarea { font-family: "Pretendard Variable", "SUI
 .mVisual_main {
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: 16px;
     min-width: 0;
     align-items: center;
     justify-content: center;
@@ -156,19 +156,19 @@ body, button, input, select, textarea { font-family: "Pretendard Variable", "SUI
 /* 데스크탑: 좌우 2열 */
 @media (min-width: 1025px) {
     #mVisual {
-        padding: 56px 0 0 !important;
+        padding: 56px 0 12px !important;
     }
     #mVisual .mVisual_main {
         flex-direction: row;
-        align-items: stretch;
+        align-items: center;
         justify-content: space-between;
-        gap: 48px;
+        gap: 40px;
         text-align: left;
         padding: 0 32px;
     }
     .mVisual_left {
         flex: 1;
-        max-width: 620px;
+        max-width: 556px;
         align-items: flex-start;
         margin: 0;
         text-align: left;
@@ -190,9 +190,6 @@ body, button, input, select, textarea { font-family: "Pretendard Variable", "SUI
         display: flex;
         flex-direction: column;
         justify-content: center;
-    }
-    .mVisual_left {
-        max-width: 580px;
     }
 }
 br.quick-br { display: none; }
@@ -274,20 +271,19 @@ br.quick-br { display: none; }
 .mVisual_quick_item--chat    .mVisual_quick_arrow { stroke: #5b21b6; }
 .mVisual_quick_item:hover .mVisual_quick_arrow { opacity: 1; }
 .mVisual_heading {
-    font-family: 'Noto Serif KR', serif;
-    font-size: 44px;
-    font-weight: 600;
+    font-family: "Pretendard Variable", "SUIT Variable", "SUIT", sans-serif;
+    font-size: 30px;
+    font-weight: 700;
     color: #222;
-    line-height: 1.28;
+    line-height: 1.4;
     margin-top: 0;
-    margin-bottom: 24px;
+    margin-bottom: 12px;
     text-align: center;
     letter-spacing: -0.02em;
+    word-break: keep-all;
 }
 .mVisual_topbanner {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
+    display: block;
     font-size: 14px;
     font-weight: 500;
     color: #666;
@@ -295,9 +291,14 @@ br.quick-br { display: none; }
     padding: 0;
     border-radius: 0;
     margin-top: 0;
-    margin-bottom: 0;
+    margin-bottom: 24px;
+    line-height: 1.6;
     letter-spacing: 0.02em;
+    word-break: keep-all;
 }
+.mVisual_heading_point { color: #6d28d9; }
+.mVisual_topbanner_point { color: #6d28d9; font-weight: 600; }
+.mVisual_subBr { display: none; }
 .mVisual_searchWrap {
     position: relative;
     margin-bottom: 0;
@@ -414,17 +415,18 @@ br.quick-br { display: none; }
     50% { filter: drop-shadow(0 0 6px rgba(255,255,255,0.95)); }
 }
 @media (max-width: 1024px) {
-    .mVisual_heading { font-size: 36px; margin-bottom: 18px; }
+    .mVisual_heading { font-size: 31px; margin-bottom: 10px; }
     .mVisual_searchWrap { max-width: 100%; }
     .mVisual_preview { max-width: 100%; }
     .mVisual_preview_cards { max-width: 100%; }
-    .mVisual_topbanner { margin-top: 8px; }
+    .mVisual_topbanner { margin-bottom: 18px; }
 }
 @media (max-width: 640px) {
     #mVisual { padding-top: 36px !important; }
-    .mVisual_heading { font-size: 28px; margin-bottom: 14px; }
+    .mVisual_heading { font-size: 24px; margin-bottom: 8px; }
     .mVisual_topbanner { font-size: 14px; margin-bottom: 14px; }
     #mVisual .mVisual_main { padding: 0 16px; }
+    .mVisual_subBr { display: none; }
     .mVisual_searchWrap { width: 100%; max-width: 100%; }
     .mVisual_quick {
         grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -451,6 +453,9 @@ br.quick-br { display: none; }
     .mVisual_searchWrap .search_btn { height: 40px; padding: 0 12px; right: 5px; font-size: 13px; gap: 4px; }
     .mVisual_searchWrap .search_btn .sparkle { width: 15px; height: 15px; }
     .mVisual_searchWrap .search_btn svg { width: 15px; height: 15px; }
+}
+@media (min-width: 641px) {
+    .mVisual_subBr { display: block; }
 }
 /* 히어로 우측 2슬라이드 배너 */
 .mVisual_interview {
