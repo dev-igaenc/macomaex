@@ -52,7 +52,6 @@ $mb_profile     = isset($_POST['mb_profile'])       ? trim($_POST['mb_profile'])
 $mb_recommend   = isset($_POST['mb_recommend'])     ? trim($_POST['mb_recommend'])   : "";
 $mb_mailling    = isset($_POST['mb_mailling'])      ? trim($_POST['mb_mailling'])    : "";
 $mb_sms         = isset($_POST['mb_sms'])           ? trim($_POST['mb_sms'])         : "";
-$mb_1           = isset($_POST['mb_1'])             ? trim($_POST['mb_1'])           : "";
 $mb_2           = isset($_POST['mb_2'])             ? trim($_POST['mb_2'])           : "";
 $mb_3           = isset($_POST['mb_3'])             ? trim($_POST['mb_3'])           : "";
 $mb_4           = isset($_POST['mb_4'])             ? trim($_POST['mb_4'])           : "";
@@ -233,7 +232,6 @@ if ($w == '') {
                      mb_sms = '{$mb_sms}',
                      mb_open = '{$mb_open}',
                      mb_open_date = '".G5_TIME_YMD."',
-                     mb_1 = '{$mb_1}',
                      mb_2 = '{$mb_2}',
                      mb_3 = '{$mb_3}',
                      mb_4 = '{$mb_4}',
@@ -350,7 +348,6 @@ if ($w == '') {
                     mb_addr_jibeon = '{$mb_addr_jibeon}',
                     mb_signature = '{$mb_signature}',
                     mb_profile = '{$mb_profile}',
-                    mb_1 = '{$mb_1}',
                     mb_2 = '{$mb_2}',
                     mb_3 = '{$mb_3}',
                     mb_4 = '{$mb_4}',

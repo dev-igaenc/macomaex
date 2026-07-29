@@ -52,7 +52,6 @@ $mb_profile     = isset($_POST['mb_profile'])       ? trim($_POST['mb_profile'])
 $mb_recommend   = isset($_POST['mb_recommend'])     ? trim($_POST['mb_recommend'])   : "";
 $mb_mailling    = isset($_POST['mb_mailling'])      ? trim($_POST['mb_mailling'])    : "";
 $mb_sms         = isset($_POST['mb_sms'])           ? trim($_POST['mb_sms'])         : "";
-$mb_1           = isset($_POST['mb_1'])             ? trim($_POST['mb_1'])           : "";
 $mb_2           = isset($_POST['mb_2'])             ? trim($_POST['mb_2'])           : "";
 $mb_3           = isset($_POST['mb_3'])             ? trim($_POST['mb_3'])           : "";
 $mb_4           = isset($_POST['mb_4'])             ? trim($_POST['mb_4'])           : "";
@@ -239,7 +238,6 @@ if ($w == '') {
                      mb_open_date = '".G5_TIME_YMD."',
 					 mb_open_cnt='{$open_cnt}',
 					 mb_company = '{$mb_company}',
-                     mb_1 = '{$mb_1}',
                      mb_2 = '{$mb_2}',
                      mb_3 = '{$mb_3}',
                      mb_4 = '{$mb_4}',
@@ -368,7 +366,6 @@ if($mb_addr_jibeon) $sql .= "                    mb_addr_jibeon = '{$mb_addr_jib
 if($mb_signature) $sql .= "                    mb_signature = '{$mb_signature}',";
 if($mb_profile) $sql .= "                    mb_profile = '{$mb_profile}',";
 $sql .= "                    mb_company = '{$mb_company}',";
-if($mb_1) $sql .= "                    mb_1 = '{$mb_1}',";
 if($mb_2) $sql .= "                    mb_2 = '{$mb_2}',";
 $sql .= "                    mb_3 = '{$mb_3}',";
 $sql .= "                    mb_4 = '{$mb_4}',";

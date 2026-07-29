@@ -63,7 +63,7 @@ $check_keys = array(
 'mb_level'
 );
 
-for($i=1;$i<=8;$i++){
+for($i=2;$i<=8;$i++){
     $check_keys[] = 'mb_'.$i; 
 }
 
@@ -127,7 +127,6 @@ $sql_common = "  mb_name = '{$posts['mb_name']}',
                  mb_profile = '{$posts['mb_profile']}',
                  mb_level = '{$posts['mb_level']}',
 				 mb_company = '{$posts['mb_company']}',
-                 mb_1 = '{$posts['mb_1']}',
                  mb_2 = '{$posts['mb_2']}',
                  mb_3 = '{$posts['mb_3']}',
                  mb_4 = '{$posts['mb_4']}',
