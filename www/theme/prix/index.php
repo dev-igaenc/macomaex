@@ -387,9 +387,24 @@ $stable_list = get_processed_companies('stability_score_5', 3, $unlocked_bzno_ma
     <div class="inner">
         <div class="mCategories_row">
             <div class="mCategories_primary">
-                <div class="mCategories_grid">
-                    <?php foreach ($main_categories as $main_category): ?>
+                <div class="mCategories_grid" id="mCategoriesGrid">
+                    <?php foreach ($main_categories as $main_category_index => $main_category): ?>
                     <?php echo render_main_category_item($main_category); ?>
+                    <?php if ((int)$main_category_index === 8): ?>
+                    <button type="button" class="mCategories_toggle" id="catToggleBtn" aria-expanded="false" aria-controls="mCategoriesGrid">
+                        <div class="cat_inner">
+                            <div class="cat_icon">
+                                <svg viewBox="0 0 48 48" aria-hidden="true">
+                                    <rect fill="none" stroke="#6B7684" stroke-width="1.8" x="13.5" y="13.5" width="8" height="8" rx="2"></rect>
+                                    <rect fill="none" stroke="#6B7684" stroke-width="1.8" x="26.5" y="13.5" width="8" height="8" rx="2"></rect>
+                                    <rect fill="none" stroke="#6B7684" stroke-width="1.8" x="13.5" y="26.5" width="8" height="8" rx="2"></rect>
+                                    <rect fill="none" stroke="#6B7684" stroke-width="1.8" x="26.5" y="26.5" width="8" height="8" rx="2"></rect>
+                                </svg>
+                            </div>
+                            <span class="cat_label">전체보기</span>
+                        </div>
+                    </button>
+                    <?php endif; ?>
                     <?php endforeach; ?>
                 </div>
                 <div class="mCategories_carousel_wrap">

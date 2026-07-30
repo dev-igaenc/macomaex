@@ -14,7 +14,7 @@
             if (!symbol) return;
 
             var viewBox = symbol.getAttribute('viewBox');
-            if (viewBox && !svg.getAttribute('viewBox')) {
+            if (viewBox) {
                 svg.setAttribute('viewBox', viewBox);
             }
 
@@ -245,6 +245,35 @@
             closeVideo();
         }
     });
+})();
+
+// 카테고리 그리드 전체보기 토글 (데스크탑/태블릿 — 모바일은 캐러셀이 전체를 담당)
+(function() {
+    var grid = document.getElementById('mCategoriesGrid');
+    var btn = document.getElementById('catToggleBtn');
+    if (!grid || !btn) return;
+
+    var label = btn.querySelector('.cat_label');
+
+    function sync() {
+        var open = grid.classList.contains('expanded');
+        if (label) label.textContent = open ? '접기' : '전체보기';
+        btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    }
+
+    btn.addEventListener('click', function() {
+        grid.classList.toggle('expanded');
+        sync();
+        btn.classList.remove('is-pulse');
+        void btn.offsetWidth;
+        btn.classList.add('is-pulse');
+    });
+
+    btn.addEventListener('animationend', function(e) {
+        if (e.animationName === 'catMoreSpin') btn.classList.remove('is-pulse');
+    });
+
+    sync();
 })();
 
 // 모바일 전용: 카테고리 2줄 스와이프 캐러셀 (대분류 18개)

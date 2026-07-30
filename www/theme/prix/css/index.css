@@ -1480,7 +1480,7 @@ video.mVisual_video_thumb { aspect-ratio: 16 / 9; }
 /* 서비스 카테고리 그리드 + 오른쪽 배너 */
 #mCategories {
     background: #FAFBFD;
-    padding: 64px 0 56px;
+    padding: 32px 0 48px;
     overflow-x: hidden;
 }
 #mCategories .inner {
@@ -1492,7 +1492,7 @@ video.mVisual_video_thumb { aspect-ratio: 16 / 9; }
 }
 @media (max-width: 768px) {
     #mCategories .inner { padding: 0 16px; max-width: 100%; }
-    #mCategories { padding-top: 40px; }
+    #mCategories { padding-top: 20px; }
 }
 .mCategories_row {
     display: grid;
@@ -1510,7 +1510,7 @@ video.mVisual_video_thumb { aspect-ratio: 16 / 9; }
 #mCategories .mCategories_title { display: none; }
 .mCategories_grid {
     display: grid;
-    grid-template-columns: repeat(9, 1fr);
+    grid-template-columns: repeat(10, 1fr);
     gap: 6px;
     max-width: 100%;
     box-sizing: border-box;
@@ -1519,23 +1519,99 @@ video.mVisual_video_thumb { aspect-ratio: 16 / 9; }
     padding: 20px 12px;
     box-shadow: 0 1px 3px rgba(0,0,0,0.06);
 }
-.mCategories_grid .mCategories_item:nth-child(n+11) {
-    display: flex;
-}
 @keyframes categoryExpandIn {
     0% { opacity: 0; transform: translateY(-10px); }
     100% { opacity: 1; transform: translateY(0); }
 }
+.mCategories_grid:not(.expanded) .mCategories_item:nth-child(n+11) { display: none; }
+.mCategories_grid.expanded .mCategories_item:nth-child(n+11) {
+    display: flex;
+    animation: categoryExpandInShift 0.34s ease both;
+}
+.mCategories_grid.expanded .mCategories_item:nth-child(n+14):nth-child(-n+16) { animation-delay: 0.05s; }
+.mCategories_grid.expanded .mCategories_item:nth-child(n+17) { animation-delay: 0.1s; }
+@keyframes categoryExpandInShift {
+    0% { opacity: 0; transform: translate(calc(50% + 3px), -10px); }
+    100% { opacity: 1; transform: translate(calc(50% + 3px), 0); }
+}
+.mCategories_toggle {
+    background: transparent;
+    border: none;
+    outline: none;
+    border-radius: 12px;
+    padding: 14px 4px;
+    text-align: center;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    font: inherit;
+    color: inherit;
+    -webkit-tap-highlight-color: transparent;
+}
+.mCategories_toggle:focus { outline: none; }
+.mCategories_toggle .cat_inner { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.mCategories_toggle .cat_icon {
+    width: 60px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: transform 0.24s ease;
+}
+.mCategories_toggle .cat_icon svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+    overflow: visible;
+    transform: scale(0.86);
+    transition: transform 0.16s ease;
+}
+.mCategories_toggle .cat_icon svg rect { transition: transform 0.26s cubic-bezier(0.2, 0.7, 0.3, 1); }
+.mCategories_toggle:hover .cat_icon svg rect:nth-of-type(1) { transform: translate(-1.4px, -1.4px); }
+.mCategories_toggle:hover .cat_icon svg rect:nth-of-type(2) { transform: translate(1.4px, -1.4px); }
+.mCategories_toggle:hover .cat_icon svg rect:nth-of-type(3) { transform: translate(-1.4px, 1.4px); }
+.mCategories_toggle:hover .cat_icon svg rect:nth-of-type(4) { transform: translate(1.4px, 1.4px); }
+.mCategories_toggle:active .cat_icon svg { transform: scale(0.76); }
+.mCategories_toggle.is-pulse .cat_icon svg { animation: catMoreSpin 0.42s cubic-bezier(0.2, 0.7, 0.3, 1); }
+@keyframes catMoreSpin {
+    0% { transform: scale(0.86) rotate(0deg); }
+    55% { transform: scale(0.72) rotate(52deg); }
+    100% { transform: scale(0.86) rotate(90deg); }
+}
+.mCategories_toggle .cat_label {
+    display: block;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: #4B5563;
+    line-height: 1.3;
+    word-break: keep-all;
+    max-width: 100%;
+    min-height: 2.6em;
+}
 /* 중간 너비: 아이콘·라벨 축소, 배너 줄이기 */
 @media (max-width: 1200px) and (min-width: 1025px) {
     .mCategories_grid { gap: 4px; padding: 18px 10px; }
-    .mCategories_item { padding: 10px 2px; }
-    .mCategories_item .cat_icon { width: 48px; height: 48px; }
-    .mCategories_item .cat_label { font-size: 10.5px; }
+    .mCategories_item,
+    .mCategories_toggle { padding: 10px 2px; }
+    .mCategories_item .cat_icon,
+    .mCategories_toggle .cat_icon { width: 60px; height: 60px; }
+    .mCategories_item .cat_label,
+    .mCategories_toggle .cat_label { font-size: 10.5px; }
+    @keyframes categoryExpandInShift {
+        0% { opacity: 0; transform: translate(calc(50% + 2px), -10px); }
+        100% { opacity: 1; transform: translate(calc(50% + 2px), 0); }
+    }
 }
 @media (max-width: 1024px) {
     .mCategories_grid { grid-template-columns: repeat(4, 1fr); gap: 10px; row-gap: 20px; position: relative; }
     .mCategories_grid.expanded { grid-template-columns: repeat(4, 1fr); }
+    .mCategories_grid:not(.expanded) .mCategories_item:nth-child(n+8) { display: none; }
+    .mCategories_grid.expanded .mCategories_item:nth-child(n+8) { display: flex; animation: categoryExpandIn 0.34s ease both; }
+    .mCategories_grid.expanded .mCategories_toggle { order: 1; }
 }
 @media (max-width: 640px) {
     .mCategories_grid { grid-template-columns: repeat(4, 1fr); gap: 8px; row-gap: 18px; position: relative; padding: 16px 8px; }
@@ -1583,7 +1659,7 @@ video.mVisual_video_thumb { aspect-ratio: 16 / 9; }
     border: none;
     outline: none;
     border-radius: 12px;
-    padding: 16px 8px;
+    padding: 14px 4px;
     text-align: center;
     cursor: pointer;
     position: relative;
@@ -1600,8 +1676,8 @@ video.mVisual_video_thumb { aspect-ratio: 16 / 9; }
 a.mCategories_item { text-decoration: none; color: inherit; display: flex; flex-direction: column; align-items: center; }
 .mCategories_item .cat_inner { display: flex; flex-direction: column; align-items: center; gap: 8px; }
 .mCategories_item .cat_icon {
-    width: clamp(48px, 6vw, 72px);
-    height: clamp(48px, 6vw, 72px);
+    width: 60px;
+    height: 60px;
     margin: 0;
     display: flex;
     align-items: center;
@@ -1611,6 +1687,60 @@ a.mCategories_item { text-decoration: none; color: inherit; display: flex; flex-
 .mCategories_item .cat_icon svg { width: 100%; height: 100%; display: block; overflow: visible; transform-style: preserve-3d; transform-origin: center center; transition: transform 0.3s ease; }
 /* 호버 시 SVG 내부 개별 요소에 시차 애니메이션 */
 .mCategories_item .cat_icon svg > * { transform-origin: center center; transition: transform 0.3s ease, opacity 0.3s ease; }
+
+/* ── 전체 대분류 아이콘: SVG 내부 요소별 파형/지연 변형 (호버·탭) ── */
+/* 카테고리 리뉴얼(18개)로 title이 변경되어 기존 title 한정 선택자가 무효화됨 → 전체 .mCategories_item 적용 */
+/* 원형 요소: 원 안에서 파형처럼 리드미컬하게 변형 */
+.mCategories_item:hover .cat_icon svg circle,
+.mCategories_item:active .cat_icon svg circle {
+    animation: iconCircleWave 0.62s ease-in-out both;
+}
+.mCategories_item:hover .cat_icon svg circle:nth-of-type(2),
+.mCategories_item:active .cat_icon svg circle:nth-of-type(2) {
+    animation-delay: 0.05s;
+}
+
+/* path 요소: 각 path가 약간씩 딜레이를 두고 다른 변형 */
+.mCategories_item:hover .cat_icon svg path,
+.mCategories_item:active .cat_icon svg path {
+    animation: iconPathMorphA 0.6s cubic-bezier(0.2, 0.65, 0.2, 1) both;
+}
+.mCategories_item:hover .cat_icon svg path:nth-of-type(2n),
+.mCategories_item:active .cat_icon svg path:nth-of-type(2n) {
+    animation-name: iconPathMorphB;
+    animation-delay: 0.04s;
+}
+.mCategories_item:hover .cat_icon svg path:nth-of-type(3n),
+.mCategories_item:active .cat_icon svg path:nth-of-type(3n) {
+    animation-name: iconPathMorphC;
+    animation-delay: 0.08s;
+}
+.mCategories_item:hover .cat_icon svg path:nth-of-type(4n),
+.mCategories_item:active .cat_icon svg path:nth-of-type(4n) {
+    animation-delay: 0.12s;
+}
+
+/* rect·ellipse 요소: 면 단위로 살짝 출렁이게
+   — 단일 왕복이라 path 계열보다 굼떠 보여서 duration·delay를 더 짧게, 이징도 빠르게 */
+.mCategories_item:hover .cat_icon svg rect,
+.mCategories_item:hover .cat_icon svg ellipse,
+.mCategories_item:active .cat_icon svg rect,
+.mCategories_item:active .cat_icon svg ellipse {
+    animation: iconRectWaveA 0.42s cubic-bezier(0.3, 0.85, 0.35, 1) both;
+}
+.mCategories_item:hover .cat_icon svg rect:nth-of-type(2n),
+.mCategories_item:hover .cat_icon svg ellipse:nth-of-type(2n),
+.mCategories_item:active .cat_icon svg rect:nth-of-type(2n),
+.mCategories_item:active .cat_icon svg ellipse:nth-of-type(2n) {
+    animation-name: iconRectWaveB;
+    animation-delay: 0.03s;
+}
+.mCategories_item:hover .cat_icon svg rect:nth-of-type(3n),
+.mCategories_item:hover .cat_icon svg ellipse:nth-of-type(3n),
+.mCategories_item:active .cat_icon svg rect:nth-of-type(3n),
+.mCategories_item:active .cat_icon svg ellipse:nth-of-type(3n) {
+    animation-delay: 0.06s;
+}
 
 @keyframes iconCircleWave {
     0%, 100% { transform: scale(1, 1) translateY(0); opacity: 1; }
@@ -1641,62 +1771,118 @@ a.mCategories_item { text-decoration: none; color: inherit; display: flex; flex-
     0%, 100% { transform: translateX(0) scale(1); opacity: 1; }
     50% { transform: translateX(2px) scale(1.02); opacity: 0.9; }
 }
-.mCategories_item:hover .cat_icon svg,
-.mCategories_item:active .cat_icon svg {
-    animation: categoryIconPop 0.6s cubic-bezier(0.2, 0.65, 0.2, 1) both;
+/* 전기전자 - 전기 스파크 효과 */
+.mCategories_item[title="전기전자"]:hover .cat_icon svg,
+.mCategories_item[title="전기전자"]:active .cat_icon svg {
+    animation: iconElectronics 0.6s ease-in-out;
 }
-.mCategories_item:hover .cat_icon svg use,
-.mCategories_item:active .cat_icon svg use {
-    animation: categoryIconUsePulse 0.6s ease-in-out both;
-    transform-origin: center center;
+/* 반도체 - 미세한 진동 */
+.mCategories_item[title="반도체"]:hover .cat_icon svg,
+.mCategories_item[title="반도체"]:active .cat_icon svg {
+    animation: iconSemiconductor 0.6s ease-in-out;
 }
-.mCategories_item:hover .cat_icon svg circle,
-.mCategories_item:active .cat_icon svg circle,
-.mCategories_item:hover .cat_icon svg ellipse,
-.mCategories_item:active .cat_icon svg ellipse {
-    animation: iconCircleWave 0.9s ease-in-out both;
+/* IT·소프트웨어 - 디지털 효과 */
+.mCategories_item[title="IT·소프트웨어"]:hover .cat_icon svg,
+.mCategories_item[title="IT·소프트웨어"]:active .cat_icon svg {
+    animation: iconIT 0.6s ease-in-out;
 }
-.mCategories_item:hover .cat_icon svg path,
-.mCategories_item:active .cat_icon svg path,
-.mCategories_item:hover .cat_icon svg polygon,
-.mCategories_item:active .cat_icon svg polygon,
-.mCategories_item:hover .cat_icon svg polyline,
-.mCategories_item:active .cat_icon svg polyline,
-.mCategories_item:hover .cat_icon svg line,
-.mCategories_item:active .cat_icon svg line {
-    animation: iconPathMorphA 0.85s cubic-bezier(0.2, 0.65, 0.2, 1) both;
+/* 통신 - 신호 전송 효과 */
+.mCategories_item[title="통신"]:hover .cat_icon svg,
+.mCategories_item[title="통신"]:active .cat_icon svg {
+    animation: iconTelecom 0.6s ease-in-out;
 }
-.mCategories_item:hover .cat_icon svg path:nth-of-type(2n),
-.mCategories_item:active .cat_icon svg path:nth-of-type(2n),
-.mCategories_item:hover .cat_icon svg polygon:nth-of-type(2n),
-.mCategories_item:active .cat_icon svg polygon:nth-of-type(2n) {
-    animation-name: iconPathMorphB;
-    animation-delay: 0.06s;
+/* 건설 - 견고한 확대 */
+.mCategories_item[title="건설"]:hover .cat_icon svg,
+.mCategories_item[title="건설"]:active .cat_icon svg {
+    animation: iconConstruction 0.6s ease-in-out;
 }
-.mCategories_item:hover .cat_icon svg path:nth-of-type(3n),
-.mCategories_item:active .cat_icon svg path:nth-of-type(3n),
-.mCategories_item:hover .cat_icon svg polygon:nth-of-type(3n),
-.mCategories_item:active .cat_icon svg polygon:nth-of-type(3n) {
-    animation-name: iconPathMorphC;
-    animation-delay: 0.12s;
+/* 토목 - 안정적인 상승 */
+.mCategories_item[title="토목"]:hover .cat_icon svg,
+.mCategories_item[title="토목"]:active .cat_icon svg {
+    animation: iconCivil 0.6s ease-in-out;
 }
-.mCategories_item:hover .cat_icon svg rect,
-.mCategories_item:active .cat_icon svg rect {
-    animation: iconRectWaveA 0.85s ease-in-out both;
+/* 에너지·환경 - 에너지 파동 */
+.mCategories_item[title="에너지·환경"]:hover .cat_icon svg,
+.mCategories_item[title="에너지·환경"]:active .cat_icon svg {
+    animation: iconEnergy 0.6s ease-in-out;
 }
-.mCategories_item:hover .cat_label,
-.mCategories_item:active .cat_label {
-    color: #3B5BDB;
+/* 유통 - 흐르는 효과 */
+.mCategories_item[title="유통"]:hover .cat_icon svg,
+.mCategories_item[title="유통"]:active .cat_icon svg {
+    animation: iconDistribution 0.6s ease-in-out;
 }
-@keyframes categoryIconPop {
-    0% { transform: translateY(0) scale(1); filter: none; }
-    42% { transform: translateY(-4px) scale(1.08); filter: drop-shadow(0 8px 10px rgba(59,91,219,0.18)); }
-    72% { transform: translateY(1px) scale(0.98); filter: drop-shadow(0 3px 6px rgba(59,91,219,0.12)); }
-    100% { transform: translateY(0) scale(1); filter: none; }
+/* 인력 - 사람 움직임 */
+.mCategories_item[title="인력"]:hover .cat_icon svg,
+.mCategories_item[title="인력"]:active .cat_icon svg {
+    animation: iconLabor 0.6s ease-in-out;
 }
-@keyframes categoryIconUsePulse {
-    0%, 100% { opacity: 1; }
-    45% { opacity: 0.88; }
+/* 연구·기술 - 혁신적인 회전 */
+.mCategories_item[title="연구·기술"]:hover .cat_icon svg,
+.mCategories_item[title="연구·기술"]:active .cat_icon svg {
+    animation: iconResearch 0.6s ease-in-out;
+}
+/* (기존 전체-SVG 대상 keyframes 제거 – 개별 요소 keyframes으로 대체) */
+@keyframes iconElectronics {
+    0% { transform: scale(1); opacity: 1; }
+    25% { transform: scale(1.1); opacity: 0.8; }
+    50% { transform: scale(1.15); opacity: 1; }
+    75% { transform: scale(1.1); opacity: 0.8; }
+    100% { transform: scale(1); opacity: 1; }
+}
+@keyframes iconSemiconductor {
+    0% { transform: translateY(0) scale(1); }
+    50% { transform: translateY(-3px) scale(1.08); }
+    100% { transform: translateY(0) scale(1); }
+}
+@keyframes iconIT {
+    0% { transform: rotateZ(0deg) scale(1); }
+    50% { transform: rotateZ(180deg) scale(1.12); }
+    100% { transform: rotateZ(360deg) scale(1); }
+}
+@keyframes iconTelecom {
+    0% { transform: translateY(0) scale(1); }
+    25% { transform: translateY(-5px) scale(1.1); }
+    50% { transform: translateY(-8px) scale(1.15); }
+    75% { transform: translateY(-5px) scale(1.1); }
+    100% { transform: translateY(0) scale(1); }
+}
+@keyframes iconConstruction {
+    0% { transform: scale(1) rotateX(0deg); }
+    50% { transform: scale(1.2) rotateX(10deg); }
+    100% { transform: scale(1) rotateX(0deg); }
+}
+@keyframes iconCivil {
+    0% { transform: translateY(0) scale(1); }
+    50% { transform: translateY(-10px) scale(1.12); }
+    100% { transform: translateY(0) scale(1); }
+}
+@keyframes iconEnergy {
+    0% { transform: scale(1) rotateZ(0deg); }
+    25% { transform: scale(1.1) rotateZ(90deg); }
+    50% { transform: scale(1.15) rotateZ(180deg); }
+    75% { transform: scale(1.1) rotateZ(270deg); }
+    100% { transform: scale(1) rotateZ(360deg); }
+}
+@keyframes iconDistribution {
+    0% { transform: translateX(0) scale(1); }
+    50% { transform: translateX(8px) scale(1.1); }
+    100% { transform: translateX(0) scale(1); }
+}
+@keyframes iconLabor {
+    0% { transform: translateY(0) rotateY(0deg) scale(1); }
+    50% { transform: translateY(-6px) rotateY(15deg) scale(1.1); }
+    100% { transform: translateY(0) rotateY(0deg) scale(1); }
+}
+@keyframes iconResearch {
+    0% { transform: rotateY(0deg) rotateX(0deg) scale(1); }
+    50% { transform: rotateY(180deg) rotateX(15deg) scale(1.15); }
+    100% { transform: rotateY(360deg) rotateX(0deg) scale(1); }
+}
+/* (개별 요소 애니메이션은 위 카테고리별 규칙으로 대체됨) */
+@keyframes pathHover6 {
+    0% { transform: translateZ(0px) rotateX(0deg) rotateY(0deg) scale(1); opacity: 1; }
+    50% { transform: translateZ(5px) rotateX(-5deg) rotateY(10deg) scale(1.05); opacity: 0.95; }
+    100% { transform: translateZ(0px) rotateX(0deg) rotateY(0deg) scale(1); opacity: 1; }
 }
 .mCategories_item .cat_label {
     display: block;
