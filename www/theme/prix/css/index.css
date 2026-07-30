@@ -1666,10 +1666,19 @@ video.mVisual_video_thumb { aspect-ratio: 16 / 9; }
     }
     .mCategories_swiper { overflow: hidden; padding-bottom: 4px; }
     .mCategories_swiper .swiper-wrapper { display: flex; flex-wrap: wrap; }
-    .mCategories_swiper .swiper-slide { height: auto; box-sizing: border-box; display: flex; align-items: stretch; }
-    .mCategories_swiper .swiper-slide .mCategories_item { width: 100%; margin: 0; flex: 1; min-height: 0; padding: 12px 6px; }
+    .mCategories_swiper .swiper-slide { height: auto; box-sizing: border-box; display: flex; align-items: stretch; overflow: visible; }
+    .mCategories_swiper .swiper-slide .mCategories_item { width: 100%; margin: 0; flex: 1; min-height: 0; padding: 12px 6px; overflow: visible; }
+    .mCategories_swiper .swiper-slide .mCategories_item .cat_inner { width: 100%; }
     .mCategories_swiper .swiper-slide .mCategories_item .cat_icon { width: 56px; height: 56px; }
-    .mCategories_swiper .swiper-slide .mCategories_item .cat_label { font-size: 11px; font-weight: 500; color: #222; }
+    .mCategories_swiper .swiper-slide .mCategories_item .cat_label {
+        font-size: 11px;
+        font-weight: 500;
+        color: #222;
+        line-height: 1.35;
+        min-height: 4.05em;
+        overflow-wrap: anywhere;
+        white-space: normal;
+    }
     /* 하단 캐러셀 인디케이터 (진한 바 + 연한 바) */
     .mCategories_carousel_pagination { position: relative; margin-top: 16px; height: 4px; }
     .mCategories_carousel_pagination.swiper-pagination-progressbar { background: #e0e0e0; border-radius: 2px; overflow: hidden; }
