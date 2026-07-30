@@ -185,23 +185,17 @@
     var heroSlide = document.querySelector('.mHeroSlide--video');
 
     function openVideo(src) {
-        var resumeAt = 0;
         if (heroVideo) {
             try { heroVideo.pause(); } catch (e) {}
-            if (heroVideo.getAttribute('src') === src) {
-                resumeAt = heroVideo.currentTime || 0;
-            }
         }
         if (player.getAttribute('src') !== src) {
             player.setAttribute('src', src);
         }
-        if (resumeAt > 0.3) {
-            var seek = function () {
-                try { player.currentTime = resumeAt; } catch (e) {}
-            };
-            if (player.readyState >= 1) seek();
-            else player.addEventListener('loadedmetadata', seek, { once: true });
-        }
+        var resetToStart = function () {
+            try { player.currentTime = 0; } catch (e) {}
+        };
+        if (player.readyState >= 1) resetToStart();
+        else player.addEventListener('loadedmetadata', resetToStart, { once: true });
         modal.classList.add('open');
         modal.setAttribute('aria-hidden', 'false');
         document.documentElement.style.overflow = 'hidden';
