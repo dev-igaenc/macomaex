@@ -99,7 +99,7 @@ body, button, input, select, textarea { font-family: "Pretendard Variable", "SUI
 #mVisual {
     position: relative;
     background: #FAFBFD;
-    padding: 120px 0 16px !important;
+    padding: 60px 0 16px !important;
     height: auto !important;
     max-height: none !important;
     min-height: 0 !important;
@@ -125,8 +125,8 @@ body, button, input, select, textarea { font-family: "Pretendard Variable", "SUI
     max-width: 1200px;
     margin: 0 auto;
     padding: 0 24px;
-    padding-top: 44px;
-    padding-bottom: 32px;
+    padding-top: 22px;
+    padding-bottom: 16px;
     position: relative;
     z-index: 1;
     box-sizing: border-box;
@@ -158,7 +158,7 @@ body, button, input, select, textarea { font-family: "Pretendard Variable", "SUI
 /* 데스크탑: 좌우 2열 */
 @media (min-width: 1025px) {
     #mVisual {
-        padding: 56px 0 12px !important;
+        padding: 28px 0 12px !important;
     }
     #mVisual .mVisual_main {
         flex-direction: row;
@@ -167,8 +167,8 @@ body, button, input, select, textarea { font-family: "Pretendard Variable", "SUI
         gap: 40px;
         text-align: left;
         padding: 0 32px;
-        padding-top: 56px;
-        padding-bottom: 32px;
+        padding-top: 28px;
+        padding-bottom: 16px;
     }
     .mVisual_left {
         flex: 1;
@@ -445,8 +445,8 @@ br.quick-br { display: none; }
     .mVisual_topbanner { margin-bottom: 18px; }
 }
 @media (max-width: 640px) {
-    #mVisual { padding-top: 36px !important; }
-    #mVisual .mVisual_main { padding: 28px 16px 24px; }
+    #mVisual { padding-top: 18px !important; }
+    #mVisual .mVisual_main { padding: 14px 16px 12px; }
     .mVisual_heading { font-size: 24px; margin-bottom: 8px; }
     .mVisual_topbanner { font-size: 14px; margin-bottom: 14px; }
     .mVisual_subBr { display: none; }
