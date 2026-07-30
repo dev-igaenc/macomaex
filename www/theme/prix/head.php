@@ -174,7 +174,7 @@ window.__AUTH_SESSION_GUARD_CONFIG__ = {
 		</div>
 	</div></div>
 
-    <div id="sideMenuArea">
+    <div id="sideMenuArea" inert aria-hidden="true">
         <div id="sideMenu">
             <div class="sideMenu_top">
                 <div class="logo"><img src="/img/logo.svg" onerror="this.onerror=null;this.src='/img/logo.png';" alt="<?php echo $config['cf_title']; ?>" style="height:24px;width:auto;display:block;"></div>
@@ -239,7 +239,7 @@ window.__AUTH_SESSION_GUARD_CONFIG__ = {
 
                 <li class="side-divider"></li>
 
-                <li class="side-toggle" data-group="support">
+                <li class="side-toggle" data-group="support" tabindex="0" role="button" aria-expanded="false">
                     <span class="side-toggle-left">
                         <span class="snav-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v4M12 16h.01"></path></svg></span>
                         이용자 지원
@@ -252,7 +252,7 @@ window.__AUTH_SESSION_GUARD_CONFIG__ = {
 
                 <li class="side-divider"></li>
 
-                <li class="side-toggle" data-group="mypage">
+                <li class="side-toggle" data-group="mypage" tabindex="0" role="button" aria-expanded="false">
                     <span class="side-toggle-left">
                         <span class="snav-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg></span>
                         마이페이지
@@ -289,25 +289,47 @@ window.__AUTH_SESSION_GUARD_CONFIG__ = {
                 document.documentElement.classList.remove('hide');
                 document.querySelectorAll('.mMenu').forEach(function(el) { el.classList.remove('open'); });
                 var area = document.getElementById('sideMenuArea');
-                if (area) area.classList.remove('open');
+                if (area) {
+                    area.classList.remove('open');
+                    area.setAttribute('inert', '');
+                    area.setAttribute('aria-hidden', 'true');
+                }
+                var legacyMenuArea = document.getElementById('menuArea');
+                if (legacyMenuArea && !legacyMenuArea.classList.contains('open')) {
+                    legacyMenuArea.setAttribute('inert', '');
+                    legacyMenuArea.setAttribute('aria-hidden', 'true');
+                }
             });
         }
 
         document.querySelectorAll('#sideMenuArea .side-toggle').forEach(function(toggle) {
-            toggle.addEventListener('click', function() {
+            function syncToggle(nextOpen) {
                 var group = toggle.getAttribute('data-group');
-                var isOpen = toggle.classList.contains('open');
                 var subs = document.querySelectorAll('#sideMenuArea .sub[data-gi="' + group + '"]');
-                toggle.classList.toggle('open', !isOpen);
+                toggle.classList.toggle('open', nextOpen);
+                toggle.setAttribute('aria-expanded', nextOpen ? 'true' : 'false');
                 subs.forEach(function(item) {
-                    item.style.display = isOpen ? 'none' : 'block';
+                    item.style.display = nextOpen ? 'block' : 'none';
                 });
+            }
+
+            toggle.addEventListener('click', function() {
+                var isOpen = toggle.classList.contains('open');
+                syncToggle(!isOpen);
+            });
+
+            toggle.addEventListener('keydown', function(e) {
+                var key = e.key || e.keyCode;
+                if (key !== 'Enter' && key !== ' ' && key !== 'Spacebar' && key !== 13 && key !== 32) return;
+                e.preventDefault();
+                var isOpen = toggle.classList.contains('open');
+                syncToggle(!isOpen);
             });
         });
     })();
     </script>
 
-	<div id="menuArea" class="menuLayer">
+	<div id="menuArea" class="menuLayer" inert aria-hidden="true">
 		<div id="menu" class="gnb">
             <ul class="all_user all_layout">
                 <?php if (!$is_member) {  ?>

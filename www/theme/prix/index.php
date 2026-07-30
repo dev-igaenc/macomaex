@@ -455,7 +455,7 @@ $stable_list = get_processed_companies('stability_score_5', 3, $unlocked_bzno_ma
                     $growthTop = (int)round($com['growth_score_5']);
                     $detailUrl = '/companies/detail?id=' . urlencode(simple_crypt($com['KEDCD']));
                 ?>
-                <div class="mCompanyCard detail_view" kedcd="<?= $com['KEDCD'] ?>" data-kedcd="<?= $com['KEDCD'] ?>" data-detail-url="<?= htmlspecialchars($detailUrl, ENT_QUOTES) ?>">
+                <div class="mCompanyCard detail_view" kedcd="<?= $com['KEDCD'] ?>" data-kedcd="<?= $com['KEDCD'] ?>" data-detail-url="<?= htmlspecialchars($detailUrl, ENT_QUOTES) ?>" tabindex="0" role="link" aria-label="<?= htmlspecialchars($com['display_name']) ?> 기업 상세 보기">
                     <div class="mCompanyCard_content">
                         <div class="hk-badges">
                             <span class="hk-badge hk-badge--growth">성장TOP<?= $growthTop ?>%</span>
@@ -532,7 +532,7 @@ $stable_list = get_processed_companies('stability_score_5', 3, $unlocked_bzno_ma
                     $stableTop = (int)round($com['stability_score_5']);
                     $detailUrl = '/companies/detail?id=' . urlencode(simple_crypt($com['KEDCD']));
                 ?>
-                <div class="mCompanyCard detail_view" kedcd="<?= $com['KEDCD'] ?>" data-kedcd="<?= $com['KEDCD'] ?>" data-detail-url="<?= htmlspecialchars($detailUrl, ENT_QUOTES) ?>">
+                <div class="mCompanyCard detail_view" kedcd="<?= $com['KEDCD'] ?>" data-kedcd="<?= $com['KEDCD'] ?>" data-detail-url="<?= htmlspecialchars($detailUrl, ENT_QUOTES) ?>" tabindex="0" role="link" aria-label="<?= htmlspecialchars($com['display_name']) ?> 기업 상세 보기">
                     <div class="mCompanyCard_content">
                         <div class="hk-badges">
                             <span class="hk-badge hk-badge--stable">재무안정TOP<?= $stableTop ?>%</span>

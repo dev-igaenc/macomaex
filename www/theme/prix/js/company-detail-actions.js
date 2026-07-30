@@ -339,6 +339,15 @@
                     loadingDetail = false;
                 });
             });
+
+        $("body")
+            .off("keydown.companyDetailActions", opts.detailTrigger)
+            .on("keydown.companyDetailActions", opts.detailTrigger, function (event) {
+                var key = event.key || event.keyCode;
+                if (key !== "Enter" && key !== " " && key !== "Spacebar" && key !== 13 && key !== 32) return;
+                event.preventDefault();
+                $(this).trigger("click");
+            });
     }
 
     window.CompanyDetailActions = {

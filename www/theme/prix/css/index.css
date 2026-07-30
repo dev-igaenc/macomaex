@@ -52,7 +52,7 @@ body, button, input, select, textarea { font-family: "Pretendard Variable", "SUI
     color: #222;
     background: #fafafa;
 }
-.list-header_search:focus { outline: none; border-color: #452EFF; background: #fff; }
+.list-header_search:focus { outline: none; border-color: #3b82f6; background: #fff; }
 .list-header_actions { display: flex; align-items: center; gap: 8px; }
 .list-header_actions a {
     font-size: 14px;
@@ -232,17 +232,30 @@ br.quick-br { display: none; }
     border: 1.5px solid #ddd6fe;
     color: #5b21b6;
 }
-.mVisual_quick_item--request:hover,
-.mVisual_quick_item--chat:hover { box-shadow: 0 0 0 2px rgba(147,197,253,.4); }
+.mVisual_quick_item--request:hover { box-shadow: 0 0 0 2px rgba(147,197,253,.5), 0 8px 22px rgba(37,99,235,0.14); }
+.mVisual_quick_item--chat:hover { box-shadow: 0 0 0 2px rgba(196,181,253,.55), 0 8px 22px rgba(124,58,237,0.14); }
+.mVisual_quick_item:focus-visible {
+    outline: none;
+    border-color: transparent;
+    box-shadow: 0 0 0 2px rgba(147,197,253,.5), 0 8px 22px rgba(37,99,235,0.14);
+}
 /* 카테고리와 동일한 SVG 파형 애니메이션 */
-.mVisual_quick_item:hover .mVisual_quick_icon svg { overflow: visible; transform-style: preserve-3d; }
-.mVisual_quick_item:hover .mVisual_quick_icon svg path { animation: iconPathMorphA 0.85s cubic-bezier(0.2, 0.65, 0.2, 1) both; }
-.mVisual_quick_item:hover .mVisual_quick_icon svg path:nth-of-type(2n) { animation-name: iconPathMorphB; animation-delay: 0.06s; }
-.mVisual_quick_item:hover .mVisual_quick_icon svg path:nth-of-type(3n) { animation-name: iconPathMorphC; animation-delay: 0.12s; }
-.mVisual_quick_item:hover .mVisual_quick_icon svg circle { animation: iconCircleWave 0.9s ease-in-out both; }
-.mVisual_quick_item:hover .mVisual_quick_icon svg rect { animation: iconRectWaveA 0.8s ease-in-out both; }
-.mVisual_quick_item:hover .mVisual_quick_icon svg polyline { animation: iconPathMorphA 0.85s cubic-bezier(0.2, 0.65, 0.2, 1) both; }
-.mVisual_quick_item:hover .mVisual_quick_icon svg line { animation: iconPathMorphB 0.85s cubic-bezier(0.2, 0.65, 0.2, 1) both; animation-delay: 0.05s; }
+.mVisual_quick_item:hover .mVisual_quick_icon svg,
+.mVisual_quick_item:focus-visible .mVisual_quick_icon svg { overflow: visible; transform-style: preserve-3d; }
+.mVisual_quick_item:hover .mVisual_quick_icon svg path,
+.mVisual_quick_item:focus-visible .mVisual_quick_icon svg path { animation: iconPathMorphA 0.85s cubic-bezier(0.2, 0.65, 0.2, 1) both; }
+.mVisual_quick_item:hover .mVisual_quick_icon svg path:nth-of-type(2n),
+.mVisual_quick_item:focus-visible .mVisual_quick_icon svg path:nth-of-type(2n) { animation-name: iconPathMorphB; animation-delay: 0.06s; }
+.mVisual_quick_item:hover .mVisual_quick_icon svg path:nth-of-type(3n),
+.mVisual_quick_item:focus-visible .mVisual_quick_icon svg path:nth-of-type(3n) { animation-name: iconPathMorphC; animation-delay: 0.12s; }
+.mVisual_quick_item:hover .mVisual_quick_icon svg circle,
+.mVisual_quick_item:focus-visible .mVisual_quick_icon svg circle { animation: iconCircleWave 0.9s ease-in-out both; }
+.mVisual_quick_item:hover .mVisual_quick_icon svg rect,
+.mVisual_quick_item:focus-visible .mVisual_quick_icon svg rect { animation: iconRectWaveA 0.8s ease-in-out both; }
+.mVisual_quick_item:hover .mVisual_quick_icon svg polyline,
+.mVisual_quick_item:focus-visible .mVisual_quick_icon svg polyline { animation: iconPathMorphA 0.85s cubic-bezier(0.2, 0.65, 0.2, 1) both; }
+.mVisual_quick_item:hover .mVisual_quick_icon svg line,
+.mVisual_quick_item:focus-visible .mVisual_quick_icon svg line { animation: iconPathMorphB 0.85s cubic-bezier(0.2, 0.65, 0.2, 1) both; animation-delay: 0.05s; }
 .mVisual_quick_icon {
     width: 44px; height: 44px;
     display: flex; align-items: center; justify-content: center;
@@ -274,7 +287,8 @@ br.quick-br { display: none; }
 }
 .mVisual_quick_item--request .mVisual_quick_arrow { stroke: #1e40af; }
 .mVisual_quick_item--chat    .mVisual_quick_arrow { stroke: #5b21b6; }
-.mVisual_quick_item:hover .mVisual_quick_arrow { opacity: 1; }
+.mVisual_quick_item:hover .mVisual_quick_arrow,
+.mVisual_quick_item:focus-visible .mVisual_quick_arrow { opacity: 1; }
 .mVisual_heading {
     font-family: "Pretendard Variable", "SUIT Variable", "SUIT", sans-serif;
     font-size: 30px;
@@ -330,7 +344,7 @@ br.quick-br { display: none; }
     50% { background-position: 0 0, 100% 50%; }
 }
 .mVisual_searchWrap:focus-within {
-    box-shadow: 0 4px 16px rgba(129, 140, 248, 0.10);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.18), 0 4px 16px rgba(96, 165, 250, 0.14);
 }
 .mVisual_searchWrap:focus-within::before {
     content: none;
@@ -353,6 +367,13 @@ br.quick-br { display: none; }
     -webkit-box-shadow: 0 0 0px 1000px #fff inset;
     -webkit-text-fill-color: #222;
     transition: background-color 5000s ease-in-out 0s;
+}
+#container.full :is(a[href], button, [role="button"], input, select, textarea):focus-visible {
+    outline: 2px solid #3b82f6;
+    outline-offset: 3px;
+}
+.mVisual_searchWrap input:focus-visible {
+    outline: none;
 }
 .mVisual_searchWrap form { position: relative; display: block; }
 .mVisual_searchWrap .search_btn {
