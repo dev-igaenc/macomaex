@@ -398,23 +398,20 @@ br.quick-br { display: none; }
     font-weight: 600;
     color: #fff;
     white-space: nowrap;
-    transition: none;
+    transition: box-shadow 0.3s ease, transform 0.3s ease;
 }
 @keyframes searchBtnAurora {
     0%, 100% { background-position: 0% 50%; }
     50%       { background-position: 100% 50%; }
 }
-.mVisual_searchWrap .search_btn:hover {
+#mVisual .mVisual_searchWrap .search_btn:hover {
     background: linear-gradient(135deg, #a78bfa, #818cf8, #60a5fa, #f472b6, #c084fc);
+    background-size: 300% 300%;
+    animation: searchBtnAurora 4s ease infinite;
     box-shadow: 0 6px 22px rgba(167, 139, 250, 0.6);
     transform: translateY(-50%) scale(1.02);
 }
-.mVisual_searchWrap .search_btn:focus-visible,
-.mVisual_searchWrap .search_btn:active {
-    background: linear-gradient(135deg, #a78bfa, #818cf8, #60a5fa, #f472b6, #c084fc);
-    box-shadow: 0 6px 22px rgba(167, 139, 250, 0.6);
-    transform: translateY(-50%);
-}
+.mVisual_searchWrap .search_btn:focus-visible { outline: none; }
 .mVisual_searchWrap .search_btn .sparkle {
     width: 18px;
     height: 18px;
