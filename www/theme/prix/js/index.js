@@ -14,7 +14,7 @@
             if (!symbol) return;
 
             var viewBox = symbol.getAttribute('viewBox');
-            if (viewBox && !svg.getAttribute('viewBox')) {
+            if (viewBox) {
                 svg.setAttribute('viewBox', viewBox);
             }
 
@@ -65,6 +65,114 @@
     syncHeroVideo();
 })();
 
+// 사업자등록번호 입력창 타이핑 효과
+(function () {
+    var input = document.getElementById('comnum_index');
+    if (!input) return;
+
+    var text = '사업자등록번호를 입력해보세요';
+    var index = 0;
+    var isTyping = true;
+    var timerId = null;
+
+    function queueNextTick(delay) {
+        timerId = window.setTimeout(tick, delay);
+    }
+
+    function tick() {
+        if (input === document.activeElement) return;
+
+        if (isTyping) {
+            index++;
+            if (index > text.length) {
+                isTyping = false;
+                queueNextTick(2000);
+                return;
+            }
+        } else {
+            index--;
+            if (index < 0) {
+                isTyping = true;
+                index = 0;
+                queueNextTick(500);
+                return;
+            }
+        }
+
+        input.placeholder = text.substring(0, index) + '|';
+        queueNextTick(isTyping ? 100 : 50);
+    }
+
+    queueNextTick(500);
+
+    input.addEventListener('focus', function () {
+        if (timerId) {
+            window.clearTimeout(timerId);
+            timerId = null;
+        }
+        input.placeholder = '';
+    });
+
+    input.addEventListener('blur', function () {
+        if (input.value) return;
+        index = 0;
+        isTyping = true;
+        if (timerId) {
+            window.clearTimeout(timerId);
+        }
+        tick();
+    });
+})();
+
+// 히어로 영상 앰비언트 배경
+(function(){
+    var video = document.getElementById('mHeroVideo');
+    var canvas = document.getElementById('mHeroVideoAmbient');
+    if (!video || !canvas || !canvas.getContext) return;
+
+    var ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    canvas.width = 32;
+    canvas.height = 18;
+
+    var STRIP_RATIO = 0.10;
+    var FADE_ALPHA = 0.45;
+    var isFirstFrame = true;
+
+    function drawAmbientFrame() {
+        if (window.innerWidth < 1025) return;
+        if (video.readyState < 2) return;
+
+        var videoWidth = video.videoWidth;
+        var videoHeight = video.videoHeight;
+        if (!videoWidth || !videoHeight) return;
+
+        var stripHeight = Math.max(1, Math.round(videoHeight * STRIP_RATIO));
+        var halfHeight = canvas.height / 2;
+
+        ctx.globalAlpha = isFirstFrame ? 1 : FADE_ALPHA;
+        ctx.drawImage(video, 0, 0, videoWidth, stripHeight, 0, 0, canvas.width, halfHeight);
+        ctx.drawImage(video, 0, videoHeight - stripHeight, videoWidth, stripHeight, 0, halfHeight, canvas.width, halfHeight);
+        ctx.globalAlpha = 1;
+        isFirstFrame = false;
+    }
+
+    video.addEventListener('loadeddata', function () {
+        isFirstFrame = true;
+        drawAmbientFrame();
+    });
+
+    if (window.requestAnimationFrame) {
+        (function loop() {
+            drawAmbientFrame();
+            requestAnimationFrame(loop);
+        })();
+    } else {
+        setInterval(drawAmbientFrame, 40);
+    }
+})();
+
 // 사용방법 영상 모달 재생
 (function () {
     var TEMP_VIDEO_SRC = '';
@@ -77,23 +185,17 @@
     var heroSlide = document.querySelector('.mHeroSlide--video');
 
     function openVideo(src) {
-        var resumeAt = 0;
         if (heroVideo) {
             try { heroVideo.pause(); } catch (e) {}
-            if (heroVideo.getAttribute('src') === src) {
-                resumeAt = heroVideo.currentTime || 0;
-            }
         }
         if (player.getAttribute('src') !== src) {
             player.setAttribute('src', src);
         }
-        if (resumeAt > 0.3) {
-            var seek = function () {
-                try { player.currentTime = resumeAt; } catch (e) {}
-            };
-            if (player.readyState >= 1) seek();
-            else player.addEventListener('loadedmetadata', seek, { once: true });
-        }
+        var resetToStart = function () {
+            try { player.currentTime = 0; } catch (e) {}
+        };
+        if (player.readyState >= 1) resetToStart();
+        else player.addEventListener('loadedmetadata', resetToStart, { once: true });
         modal.classList.add('open');
         modal.setAttribute('aria-hidden', 'false');
         document.documentElement.style.overflow = 'hidden';
@@ -137,6 +239,35 @@
             closeVideo();
         }
     });
+})();
+
+// 카테고리 그리드 전체보기 토글 (데스크탑/태블릿 — 모바일은 캐러셀이 전체를 담당)
+(function() {
+    var grid = document.getElementById('mCategoriesGrid');
+    var btn = document.getElementById('catToggleBtn');
+    if (!grid || !btn) return;
+
+    var label = btn.querySelector('.cat_label');
+
+    function sync() {
+        var open = grid.classList.contains('expanded');
+        if (label) label.textContent = open ? '접기' : '전체보기';
+        btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    }
+
+    btn.addEventListener('click', function() {
+        grid.classList.toggle('expanded');
+        sync();
+        btn.classList.remove('is-pulse');
+        void btn.offsetWidth;
+        btn.classList.add('is-pulse');
+    });
+
+    btn.addEventListener('animationend', function(e) {
+        if (e.animationName === 'catMoreSpin') btn.classList.remove('is-pulse');
+    });
+
+    sync();
 })();
 
 // 모바일 전용: 카테고리 2줄 스와이프 캐러셀 (대분류 18개)

@@ -294,12 +294,12 @@ $stable_list = get_processed_companies('stability_score_5', 3, $unlocked_bzno_ma
 <div id="mVisual">
     <div class="mVisual_main">
         <div class="mVisual_left">
-            <span class="mVisual_topbanner">실거래 데이터 기반으로, 거래 확률 UP</span>
-            <h1 class="mVisual_heading">연결되는 거래에는<br>성공 공식이 있다</h1>
+            <h1 class="mVisual_heading">AI가 우리 회사와<br><span class="mVisual_heading_point">거래 가능성이 높은 기업</span>을<br>추천합니다.</h1>
+            <span class="mVisual_topbanner">사업자등록번호를 입력하면 <span class="mVisual_topbanner_point">AI가 실거래 데이터를 분석해</span><br class="mVisual_subBr">추천 이유와 함께 결과를 제공합니다.</span>
             <div class="mVisual_searchWrap bxShadow">
                 <form action="/ko/matching_list.php" method="POST" id="match_index">
                     <input type="hidden" name="cominfo" id="cominfo_index">
-                    <input type="text" name="comnum" id="comnum_index" placeholder="사업자등록번호를 입력해보세요" class="comnum_chk" maxlength="12" autocomplete="off">
+                    <input type="text" name="comnum" id="comnum_index" placeholder="" class="comnum_chk" maxlength="12" autocomplete="off">
                     <button type="submit" id="main_submit_index" class="search_btn" aria-label="AI 추천받기">
                         <span class="sparkle"><svg viewBox="0 0 24 24"><use href="#icon-magic-wand"></use></svg></span>
                         <span>AI 추천받기</span>
@@ -355,6 +355,7 @@ $stable_list = get_processed_companies('stability_score_5', 3, $unlocked_bzno_ma
             <div class="mVisual_interview" id="heroInterview">
                 <div class="mHeroSlides">
                     <div class="mHeroSlide mHeroSlide--video active">
+                        <canvas class="mVisual_video_ambient" id="mHeroVideoAmbient" aria-hidden="true"></canvas>
                         <video class="mVisual_video_thumb" id="mHeroVideo" src="<?php echo G5_THEME_URL; ?>/video/hero-guide.mp4" poster="<?php echo G5_THEME_URL; ?>/img/main/hero-video-thumb.png" muted loop playsinline autoplay preload="metadata" aria-label="매커멕스 사용방법 영상"></video>
                         <button type="button" class="mVisual_video_play" id="mHeroVideoToggle" aria-label="사용방법 영상 크게 보기" data-video-src="<?php echo G5_THEME_URL; ?>/video/hero-guide.mp4">
                             <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"></path></svg>
@@ -386,9 +387,24 @@ $stable_list = get_processed_companies('stability_score_5', 3, $unlocked_bzno_ma
     <div class="inner">
         <div class="mCategories_row">
             <div class="mCategories_primary">
-                <div class="mCategories_grid">
-                    <?php foreach ($main_categories as $main_category): ?>
+                <div class="mCategories_grid" id="mCategoriesGrid">
+                    <?php foreach ($main_categories as $main_category_index => $main_category): ?>
                     <?php echo render_main_category_item($main_category); ?>
+                    <?php if ((int)$main_category_index === 8): ?>
+                    <button type="button" class="mCategories_toggle" id="catToggleBtn" aria-expanded="false" aria-controls="mCategoriesGrid">
+                        <div class="cat_inner">
+                            <div class="cat_icon">
+                                <svg viewBox="0 0 48 48" aria-hidden="true">
+                                    <rect fill="none" stroke="#6B7684" stroke-width="1.8" x="13.5" y="13.5" width="8" height="8" rx="2"></rect>
+                                    <rect fill="none" stroke="#6B7684" stroke-width="1.8" x="26.5" y="13.5" width="8" height="8" rx="2"></rect>
+                                    <rect fill="none" stroke="#6B7684" stroke-width="1.8" x="13.5" y="26.5" width="8" height="8" rx="2"></rect>
+                                    <rect fill="none" stroke="#6B7684" stroke-width="1.8" x="26.5" y="26.5" width="8" height="8" rx="2"></rect>
+                                </svg>
+                            </div>
+                            <span class="cat_label">전체보기</span>
+                        </div>
+                    </button>
+                    <?php endif; ?>
                     <?php endforeach; ?>
                 </div>
                 <div class="mCategories_carousel_wrap">
@@ -439,7 +455,7 @@ $stable_list = get_processed_companies('stability_score_5', 3, $unlocked_bzno_ma
                     $growthTop = (int)round($com['growth_score_5']);
                     $detailUrl = '/companies/detail?id=' . urlencode(simple_crypt($com['KEDCD']));
                 ?>
-                <div class="mCompanyCard detail_view" kedcd="<?= $com['KEDCD'] ?>" data-kedcd="<?= $com['KEDCD'] ?>" data-detail-url="<?= htmlspecialchars($detailUrl, ENT_QUOTES) ?>">
+                <div class="mCompanyCard detail_view" kedcd="<?= $com['KEDCD'] ?>" data-kedcd="<?= $com['KEDCD'] ?>" data-detail-url="<?= htmlspecialchars($detailUrl, ENT_QUOTES) ?>" tabindex="0" role="link" aria-label="<?= htmlspecialchars($com['display_name']) ?> 기업 상세 보기">
                     <div class="mCompanyCard_content">
                         <div class="hk-badges">
                             <span class="hk-badge hk-badge--growth">성장TOP<?= $growthTop ?>%</span>
@@ -516,7 +532,7 @@ $stable_list = get_processed_companies('stability_score_5', 3, $unlocked_bzno_ma
                     $stableTop = (int)round($com['stability_score_5']);
                     $detailUrl = '/companies/detail?id=' . urlencode(simple_crypt($com['KEDCD']));
                 ?>
-                <div class="mCompanyCard detail_view" kedcd="<?= $com['KEDCD'] ?>" data-kedcd="<?= $com['KEDCD'] ?>" data-detail-url="<?= htmlspecialchars($detailUrl, ENT_QUOTES) ?>">
+                <div class="mCompanyCard detail_view" kedcd="<?= $com['KEDCD'] ?>" data-kedcd="<?= $com['KEDCD'] ?>" data-detail-url="<?= htmlspecialchars($detailUrl, ENT_QUOTES) ?>" tabindex="0" role="link" aria-label="<?= htmlspecialchars($com['display_name']) ?> 기업 상세 보기">
                     <div class="mCompanyCard_content">
                         <div class="hk-badges">
                             <span class="hk-badge hk-badge--stable">재무안정TOP<?= $stableTop ?>%</span>
