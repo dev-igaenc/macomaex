@@ -1909,7 +1909,8 @@ a.mCategories_item { text-decoration: none; color: inherit; display: flex; flex-
 }
 .mHookSection:nth-child(even) { background: #F3F5FA; }
 .mHookSection:nth-child(odd) { background: #FAFBFD; }
-#hkGrowth { background: #F3F5FA; }
+#hkGrowth { background: #fff; padding-bottom: 32px; }
+#hkStable { background: #fff; padding-top: 32px; padding-bottom: 40px; }
 .mHookSection .section-inner {
     max-width: 1200px;
     margin: 0 auto;
