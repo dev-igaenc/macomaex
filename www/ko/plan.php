@@ -209,7 +209,7 @@ if (!function_exists('plan_display_title_en')) {
             <div class="ic"><?= plan_icon_svg('gift') ?></div>
             <div class="txt">
                 <div class="name">지금 충전하면 크레딧 2배!</div>
-                <div class="desc">더블 크레딧 Event · 7월 31일 까지 (신규 가입 시 <?= number_format($signup_bonus) ?> 크레딧 제공)</div>
+                <div class="desc">더블 크레딧 Event · 8월 31일 까지 (신규 가입 시 <?= number_format($signup_bonus) ?> 크레딧 제공)</div>
             </div>
         </div>
 
