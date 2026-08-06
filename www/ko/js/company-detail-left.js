@@ -39,7 +39,10 @@ function renderDetailLeftCard(co, scoreHtml) {
 
     function _homepageLinkHtml(homepage) {
         var value = String(homepage || '').trim();
-        if (!value) return _esc(_displayOrPending(value));
+        var normalizedValue = value.replace(/\s+/g, '').toLowerCase();
+        if (!normalizedValue || normalizedValue === 'null' || normalizedValue === '정보준비중') {
+            return _esc(_displayOrPending(value));
+        }
 
         var href = value;
         if (!/^https?:\/\//i.test(href)) {
