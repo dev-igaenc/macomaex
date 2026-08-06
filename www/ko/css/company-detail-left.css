@@ -150,6 +150,17 @@
     word-break: keep-all;
 }
 
+.info-grid .info-homepage-link {
+    color: inherit;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    overflow-wrap: anywhere;
+}
+
+.info-grid .info-homepage-link:hover {
+    color: var(--detail-accent, #2563eb);
+}
+
 .info-grid dd.info-masked {
     color: #bbb;
     letter-spacing: 0.05em;
