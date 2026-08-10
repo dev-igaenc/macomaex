@@ -377,7 +377,7 @@ $stable_list = get_processed_companies('stability_score_5', 3, $unlocked_bzno_ma
     <div class="mVideoModal_dialog" role="dialog" aria-modal="true" aria-label="매커멕스 사용방법 영상">
         <button type="button" class="mVideoModal_close" data-video-close aria-label="닫기">&times;</button>
         <div class="mVideoModal_frame">
-            <video id="mVideoPlayer" controls playsinline preload="metadata"></video>
+            <video id="mVideoPlayer" controls playsinline preload="none"></video>
         </div>
         <p class="mVideoModal_note">매커멕스 사용방법 안내 영상입니다.</p>
     </div>

@@ -175,27 +175,40 @@
 
 // 사용방법 영상 모달 재생
 (function () {
-    var TEMP_VIDEO_SRC = '';
+    var heroToggle = document.getElementById('mHeroVideoToggle');
+    var TEMP_VIDEO_SRC = heroToggle ? (heroToggle.getAttribute('data-video-src') || '') : '';
     var modal = document.getElementById('mVideoModal');
     var player = document.getElementById('mVideoPlayer');
     if (!modal || !player) return;
 
-    var playBtns = document.querySelectorAll('.mVisual_video_play');
+    var playBtns = document.querySelectorAll('.mVisual_interview_play, .mVisual_video_play, .mReviews_play');
     var heroVideo = document.getElementById('mHeroVideo');
     var heroSlide = document.querySelector('.mHeroSlide--video');
 
     function openVideo(src) {
+        var resumeAt = 0;
         if (heroVideo) {
             try { heroVideo.pause(); } catch (e) {}
+            if (heroVideo.getAttribute('src') === src) {
+                resumeAt = heroVideo.currentTime || 0;
+            }
         }
         if (player.getAttribute('src') !== src) {
             player.setAttribute('src', src);
         }
-        var resetToStart = function () {
-            try { player.currentTime = 0; } catch (e) {}
-        };
-        if (player.readyState >= 1) resetToStart();
-        else player.addEventListener('loadedmetadata', resetToStart, { once: true });
+        if (resumeAt > 0.3) {
+            var seek = function () {
+                try { player.currentTime = resumeAt; } catch (e) {}
+            };
+            if (player.readyState >= 1) seek();
+            else player.addEventListener('loadedmetadata', seek, { once: true });
+        } else {
+            var resetToStart = function () {
+                try { player.currentTime = 0; } catch (e) {}
+            };
+            if (player.readyState >= 1) resetToStart();
+            else player.addEventListener('loadedmetadata', resetToStart, { once: true });
+        }
         modal.classList.add('open');
         modal.setAttribute('aria-hidden', 'false');
         document.documentElement.style.overflow = 'hidden';
@@ -208,7 +221,7 @@
         modal.classList.remove('open');
         modal.setAttribute('aria-hidden', 'true');
         document.documentElement.style.overflow = '';
-        if (heroVideo) {
+        if (heroVideo && heroSlide && heroSlide.classList.contains('active')) {
             var hp = heroVideo.play();
             if (hp && hp.catch) hp.catch(function () {});
         }
