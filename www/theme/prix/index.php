@@ -581,6 +581,66 @@ $stable_list = get_processed_companies('stability_score_5', 3, $unlocked_bzno_ma
     </div>
 </div>
 
+<div id="mReviews">
+    <div class="section-inner">
+        <div class="mReviews_wrap">
+            <div class="mReviews_intro">
+                <div class="mReviews_intro_label">고객 성공 스토리</div>
+                <h2 class="mReviews_intro_title">매커멕스로<br><b>원하는 거래처를 찾은</b><br>기업들의 생생한 후기</h2>
+            </div>
+            <div class="mReviews_track">
+                <div class="mReviews_cards" id="mReviewsCards">
+                    <div class="mReviews_card">
+                        <div class="mReviews_card_top">
+                            <span class="mReviews_card_logo"><i style="background:#1d4ed8">드</i>드림렌탈</span>
+                            <span class="mReviews_badge mReviews_badge--cat">사무·문구용품 도매</span>
+                            <span class="mReviews_badge mReviews_badge--region">서울</span>
+                        </div>
+                        <div class="mReviews_card_photo mReviews_card_photo--thumb"><img class="mReviews_card_thumb" src="<?php echo $prix_theme_asset_url('img/main/mReviews_thumb_dreamrental.jpg', G5_CSS_VER); ?>" alt="드림렌탈 김재일 대표 인터뷰"><button type="button" class="mReviews_play" aria-label="드림렌탈 인터뷰 영상 재생" data-video-src="<?php echo $prix_theme_asset_url('video/interview_dreamrental.mp4', G5_CSS_VER); ?>"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"></path></svg></button></div>
+                        <p class="mReviews_card_quote">무작위 영업 대신, 거래 가능성 높은 기업부터 공략합니다.</p>
+                        <div class="mReviews_card_rep">김재일 대표</div>
+                        <div class="mReviews_card_actions">
+                            <a href="javascript:void(0)" class="mReviews_card_link" data-req-company="드림렌탈">거래요청하기</a>
+                            <a href="/ko/partners/appleink/index.html?utm_source=macomaex&utm_medium=home&utm_campaign=partner_appleink&utm_content=review_card" class="mReviews_card_link mReviews_card_link--ghost" data-partner-cta="appleink">프린터 렌탈료 진단<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h12M12 6l6 6-6 6"></path></svg></a>
+                        </div>
+                    </div>
+                    <div class="mReviews_card">
+                        <div class="mReviews_card_top">
+                            <span class="mReviews_card_logo"><i style="background:#2563eb">루</i>(주)루건축사사무소</span>
+                            <span class="mReviews_badge mReviews_badge--cat">건축설계</span>
+                            <span class="mReviews_badge mReviews_badge--region">서울</span>
+                        </div>
+                        <div class="mReviews_card_photo mReviews_card_photo--thumb"><img class="mReviews_card_thumb" src="<?php echo $prix_theme_asset_url('img/main/mReviews_thumb_lougunchuk.jpg', G5_CSS_VER); ?>" alt="루건축사사무소 오호진 대표 인터뷰"><button type="button" class="mReviews_play" aria-label="루건축사사무소 인터뷰 영상 재생" data-video-src="<?php echo $prix_theme_asset_url('video/interview_lougunchuk.mp4', G5_CSS_VER); ?>"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"></path></svg></button></div>
+                        <p class="mReviews_card_quote">‘왜 이 기업인가’까지 알려주니, 협력사 검토가 수월해졌습니다.</p>
+                        <div class="mReviews_card_rep">오호진 대표</div>
+                        <div class="mReviews_card_actions">
+                            <a href="javascript:void(0)" class="mReviews_card_link" data-req-company="(주)루건축사사무소">거래요청하기</a>
+                            <span class="mReviews_card_link mReviews_card_link--ghost mReviews_card_link--soon" aria-disabled="true">진행될 예정</span>
+                        </div>
+                    </div>
+                    <!-- 아직 후기가 확정되지 않은 자리 — 실명·인용 대신, 예전 히어로 배너 모집
+                         슬라이드의 문구와 '다음 주인공은?' 썸네일을 카드 크기로 옮겨 왔다 -->
+                    <div class="mReviews_card mReviews_card--open">
+                        <div class="mReviews_card_top">
+                            <span class="mReviews_badge mReviews_badge--cat">주인공 모집중</span>
+                            <span class="mReviews_badge mReviews_badge--region">제작비 무료</span>
+                        </div>
+                        <div class="mReviews_card_photo mReviews_card_photo--open">
+                            <div class="mReviews_open_cap"><strong>다음 주인공은?</strong></div>
+                        </div>
+                        <p class="mReviews_card_quote">매커멕스에서 만난 진짜 거래 경험을 들려주세요.</p>
+                        <div class="mReviews_card_rep">메인 홈에 사례 노출</div>
+                        <div class="mReviews_card_actions">
+                            <p class="mReviews_open_note"><b>다음 주인공이 되어보세요.</b><br><a href="mailto:admin@igaenc.com?subject=[매커멕스] 실거래 스토리 인터뷰 참여 문의">admin@igaenc.com</a> 으로 문의해 주세요.</p>
+                        </div>
+                    </div>
+                </div>
+                <button type="button" class="mReviews_nav" id="mReviewsNav" aria-label="다음 인터뷰"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg></button>
+            </div>
+        </div>
+    </div>
+</div>
+
     <div id="company-view-lay" class="layer-base layer-main company-view">
         <div class="layer-in new"></div>
     </div>  
