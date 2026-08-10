@@ -121,7 +121,7 @@ function my_matching_trade_purpose_labels($json) {
 function my_matching_company_detail_url($kedcd) {
 	$kedcd = trim((string)$kedcd);
 	if (!preg_match('/^\d{10}$/', $kedcd)) return '';
-	return 'company_detail.php?cd=' . urlencode(simple_crypt($kedcd, 'e')) . '&nocta=1';
+	return '/companies/detail?id=' . urlencode(simple_crypt($kedcd, 'e')) . '&nocta=1';
 }
 
 // 프론트 렌더링에 필요한 상세 페이지 데이터 구조를 한 번에 정리해 JS로 내려준다.
