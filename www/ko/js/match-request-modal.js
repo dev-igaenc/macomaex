@@ -573,7 +573,12 @@ if (MATCH_REQUEST_CONTEXT.autoOpenOnLoad) {
 
     if (window.history && typeof window.history.replaceState === 'function') {
         var cleanedUrl = new URL(window.location.href);
-        cleanedUrl.searchParams.delete('trade_request_login');
+        var consumeQueryParams = Array.isArray(MATCH_REQUEST_CONTEXT.consumeQueryParams)
+            ? MATCH_REQUEST_CONTEXT.consumeQueryParams
+            : ['trade_request_login'];
+        consumeQueryParams.forEach(function (key) {
+            if (key) cleanedUrl.searchParams.delete(String(key));
+        });
         window.history.replaceState({}, document.title, cleanedUrl.pathname + cleanedUrl.search + cleanedUrl.hash);
     }
 }

@@ -5,9 +5,73 @@ if (!defined('_GNUBOARD_')) exit;
 include_once(G5_THEME_PATH . '/head.php');
 ?>
 <?php
+include_once(G5_PATH . '/ko/helper/trade_request_helper.php');
+include_once(G5_PATH . '/ko/helper/company_detail_helper.php');
+
 $index_css_ver = file_exists(G5_THEME_PATH . '/css/index.css') ? filemtime(G5_THEME_PATH . '/css/index.css') : G5_CSS_VER;
 $index_js_ver = file_exists(G5_THEME_PATH . '/js/index.js') ? filemtime(G5_THEME_PATH . '/js/index.js') : G5_JS_VER;
+$favorite_css_ver = file_exists(G5_PATH . '/ko/css/favorite.css') ? filemtime(G5_PATH . '/ko/css/favorite.css') : G5_CSS_VER;
+$match_request_modal_css_ver = file_exists(G5_PATH . '/ko/css/match-request-modal.css') ? filemtime(G5_PATH . '/ko/css/match-request-modal.css') : G5_CSS_VER;
+$favorite_js_ver = file_exists(G5_PATH . '/ko/js/favorite.js') ? filemtime(G5_PATH . '/ko/js/favorite.js') : G5_JS_VER;
+$match_request_modal_js_ver = file_exists(G5_PATH . '/ko/js/match-request-modal.js') ? filemtime(G5_PATH . '/ko/js/match-request-modal.js') : G5_JS_VER;
 $stream_chat_vendor_js_ver = file_exists(G5_PATH . '/ko/js/vendor/stream-chat.browser.full-bundle.min.js') ? filemtime(G5_PATH . '/ko/js/vendor/stream-chat.browser.full-bundle.min.js') : G5_JS_VER;
+
+// 메인 인터뷰 카드에서 바로 거래요청을 열 대상 기업
+$homepage_review_request_kedcds = array('0008267622', '0008339287');
+$homepage_review_request_targets = array();
+$homepage_target_sql = "
+    SELECT
+        c.KEDCD,
+        c.ENP_NM,
+        c.BZNO,
+        c.BZC_CD,
+        c.ESTB_DT,
+        c.LABORER_SUM,
+        c.ENP_TYP,
+        c.PD_NM,
+        c.HPAGE_URL,
+        k.k_code_name AS industry_name
+    FROM company c
+    LEFT JOIN kssc_11 k
+      ON k.k_code = c.BZC_CD
+    WHERE c.KEDCD IN ('" . implode("','", array_map('sql_escape_string', $homepage_review_request_kedcds)) . "')
+";
+$homepage_target_result = sql_query($homepage_target_sql, false);
+if ($homepage_target_result) {
+    while ($homepage_target_row = sql_fetch_array($homepage_target_result)) {
+        $homepage_review_request_targets[$homepage_target_row['KEDCD']] = trade_request_company_payload(
+            $homepage_target_row,
+            $homepage_target_row['industry_name'] ?? ''
+        );
+    }
+}
+
+$homepage_default_trade_request_message = trade_request_default_message();
+$homepage_requester_company_data = !empty($member['mb_id'])
+    ? trade_request_member_company_data($member['mb_4'] ?? '')
+    : array();
+$homepage_requester_profile_state = !empty($member['mb_id'])
+    ? company_detail_trade_request_profile_state($member)
+    : array();
+$homepage_trade_request_target_kedcd = isset($_GET['trade_request_target'])
+    ? preg_replace('/\D/', '', (string)$_GET['trade_request_target'])
+    : '';
+$homepage_trade_request_return_params = array(
+    'trade_request_login' => '1',
+);
+if ($homepage_trade_request_target_kedcd !== '') {
+    $homepage_trade_request_return_params['trade_request_target'] = $homepage_trade_request_target_kedcd;
+}
+$homepage_trade_request_return_url = '/?' . http_build_query($homepage_trade_request_return_params) . '#mReviews';
+$homepage_trade_request_login_url = '/bbs/login.php?url=' . urlencode($homepage_trade_request_return_url);
+$homepage_should_open_trade_request_modal = !empty($member['mb_id'])
+    && isset($_GET['trade_request_login'])
+    && $_GET['trade_request_login'] === '1'
+    && isset($homepage_review_request_targets[$homepage_trade_request_target_kedcd]);
+// 로그인 복귀 시 직전에 누른 카드 대상만 다시 주입
+$homepage_initial_trade_request_target = $homepage_should_open_trade_request_modal
+    ? ($homepage_review_request_targets[$homepage_trade_request_target_kedcd] ?? null)
+    : null;
 ?>
 <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" rel="stylesheet" />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;500;600&display=swap">
@@ -15,6 +79,8 @@ $stream_chat_vendor_js_ver = file_exists(G5_PATH . '/ko/js/vendor/stream-chat.br
 <link rel="stylesheet" href="<?php echo $prix_root_asset_url('ko/css/section-header.css', G5_CSS_VER); ?>">
 <link rel="stylesheet" href="<?php echo $prix_root_asset_url('ko/css/auth-toggle.css', G5_CSS_VER); ?>">
 <link rel="stylesheet" href="<?php echo $prix_root_asset_url('ko/css/ai-loading.css', G5_CSS_VER); ?>">
+<link rel="stylesheet" href="<?php echo $prix_root_asset_url('ko/css/favorite.css', $favorite_css_ver); ?>">
+<link rel="stylesheet" href="<?php echo $prix_root_asset_url('ko/css/match-request-modal.css', $match_request_modal_css_ver); ?>">
 <link rel="stylesheet" href="<?php echo $prix_root_asset_url('ko/css/trade_chat_modal.css', G5_CSS_VER); ?>">
 <link rel="stylesheet" href="<?php echo $prix_theme_asset_url('css/index.css', $index_css_ver); ?>">
 <?php
@@ -600,7 +666,8 @@ $stable_list = get_processed_companies('stability_score_5', 3, $unlocked_bzno_ma
                         <p class="mReviews_card_quote">무작위 영업 대신, 거래 가능성 높은 기업부터 공략합니다.</p>
                         <div class="mReviews_card_rep">김재일 대표</div>
                         <div class="mReviews_card_actions">
-                            <a href="javascript:void(0)" class="mReviews_card_link" data-req-company="드림렌탈">거래요청하기</a>
+                            <!-- 카드별 대상 기업 KEDCD를 모달로 넘긴다 -->
+                            <a href="javascript:void(0)" class="mReviews_card_link" data-req-company="드림렌탈" data-req-target="<?php echo htmlspecialchars(json_encode($homepage_review_request_targets['0008267622'] ?? array('kedcd' => '0008267622', 'company' => '드림렌탈'), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), ENT_QUOTES, 'UTF-8'); ?>">거래요청하기</a>
                             <a href="/ko/partners/appleink/index.html?utm_source=macomaex&utm_medium=home&utm_campaign=partner_appleink&utm_content=review_card" class="mReviews_card_link mReviews_card_link--ghost" data-partner-cta="appleink">프린터 렌탈료 진단<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h12M12 6l6 6-6 6"></path></svg></a>
                         </div>
                     </div>
@@ -614,7 +681,7 @@ $stable_list = get_processed_companies('stability_score_5', 3, $unlocked_bzno_ma
                         <p class="mReviews_card_quote">‘왜 이 기업인가’까지 알려주니, 협력사 검토가 수월해졌습니다.</p>
                         <div class="mReviews_card_rep">오호진 대표</div>
                         <div class="mReviews_card_actions">
-                            <a href="javascript:void(0)" class="mReviews_card_link" data-req-company="(주)루건축사사무소">거래요청하기</a>
+                            <a href="javascript:void(0)" class="mReviews_card_link" data-req-company="(주)루건축사사무소" data-req-target="<?php echo htmlspecialchars(json_encode($homepage_review_request_targets['0008339287'] ?? array('kedcd' => '0008339287', 'company' => '(주)루건축사사무소'), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), ENT_QUOTES, 'UTF-8'); ?>">거래요청하기</a>
                             <span class="mReviews_card_link mReviews_card_link--ghost mReviews_card_link--soon" aria-disabled="true">진행될 예정</span>
                         </div>
                     </div>
@@ -648,10 +715,29 @@ $stable_list = get_processed_companies('stability_score_5', 3, $unlocked_bzno_ma
     <?php
     $company_detail_popup_variant = 'advanced';
     include_once(G5_THEME_PATH . '/partials/company-detail-matching-popup.php');
+    // 홈에서도 상세와 같은 거래요청 모달을 그대로 사용
+    include_once(G5_PATH . '/ko/modal/match_request_modal.php');
     include_once(G5_PATH . '/ko/modal/trade_chat_modal.php');
     ?>
 
 <script>
+// 홈 진입용 공통 거래요청 컨텍스트
+window.MATCH_REQUEST_CONTEXT = {
+    endpoint: "/ko/company_detail.php",
+    verifyEndpoint: "/ko/trade_request_verify_bzno.php",
+    sourcePage: "homepage",
+    isLoggedIn: <?php echo !empty($member['mb_id']) ? 'true' : 'false'; ?>,
+    loginCheckUrl: <?php echo json_encode($homepage_trade_request_login_url, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>,
+    tradeRequestLoginUrl: <?php echo json_encode($homepage_trade_request_login_url, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>,
+    tradeRequestReturnUrl: <?php echo json_encode($homepage_trade_request_return_url, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>,
+    autoOpenOnLoad: <?php echo $homepage_should_open_trade_request_modal ? 'true' : 'false'; ?>,
+    consumeQueryParams: ["trade_request_login", "trade_request_target"],
+    defaultRequestMessage: <?php echo json_encode($homepage_default_trade_request_message, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>,
+    requesterCompany: <?php echo json_encode($homepage_requester_company_data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>,
+    requesterProfile: <?php echo json_encode($homepage_requester_profile_state, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>,
+    target: <?php echo json_encode($homepage_initial_trade_request_target, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>
+};
+
 window.__INDEX_LOGIN_GUARD_CONTEXT = {
     isLoggedIn: <?php echo !empty($member['mb_id']) ? 'true' : 'false'; ?>,
     returnUrl: "/account/trades#received",
@@ -666,6 +752,8 @@ window.__TRADE_CHAT_MODAL_CONTEXT = {
 </script>
 <script src="<?php echo G5_URL; ?>/ko/js/vendor/stream-chat.browser.full-bundle.min.js?ver=<?php echo $stream_chat_vendor_js_ver; ?>"></script>
 <script src="<?php echo $prix_theme_asset_url('js/index.js', $index_js_ver); ?>"></script>
+<script src="<?php echo $prix_root_asset_url('ko/js/favorite.js', $favorite_js_ver); ?>"></script>
+<script src="<?php echo $prix_root_asset_url('ko/js/match-request-modal.js', $match_request_modal_js_ver); ?>"></script>
 <script src="<?php echo $prix_root_asset_url('ko/js/trade_chat_modal.js', G5_JS_VER); ?>"></script>
 
 	</div>

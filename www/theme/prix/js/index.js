@@ -462,6 +462,110 @@
         });
     }
 
+    // 메인 인터뷰 카드 클릭을 공통 거래요청 모달로 연결
+    (function initHomepageReviewRequestModal() {
+        var reviewLinks = document.querySelectorAll('.mReviews_card_link[data-req-company]');
+        var context = window.MATCH_REQUEST_CONTEXT || {};
+
+        function parseTarget(link) {
+            var raw = link.getAttribute('data-req-target') || '';
+            if (!raw) return null;
+            try {
+                return JSON.parse(raw);
+            } catch (e) {
+                return null;
+            }
+        }
+
+        function buildLoginUrl(target) {
+            var loginReturnUrl = new URL(window.location.href);
+            loginReturnUrl.searchParams.set('trade_request_login', '1');
+            if (target && target.kedcd) {
+                loginReturnUrl.searchParams.set('trade_request_target', target.kedcd);
+            }
+            loginReturnUrl.hash = 'mReviews';
+            return '/bbs/login.php?url=' + encodeURIComponent(loginReturnUrl.pathname + loginReturnUrl.search + loginReturnUrl.hash);
+        }
+
+        function buildReturnUrl(target) {
+            var loginReturnUrl = new URL(window.location.href);
+            loginReturnUrl.searchParams.set('trade_request_login', '1');
+            if (target && target.kedcd) {
+                loginReturnUrl.searchParams.set('trade_request_target', target.kedcd);
+            }
+            loginReturnUrl.hash = 'mReviews';
+            return loginReturnUrl.pathname + loginReturnUrl.search + loginReturnUrl.hash;
+        }
+
+        // 홈 카드 클릭 로그도 상세 페이지와 같은 엔드포인트에 적재
+        function recordTradeRequestClickHit(target) {
+            if (!target || !target.kedcd || !window.fetch) return;
+
+            var payload = new URLSearchParams();
+            payload.set('action', 'trade_request_click_hit');
+            payload.set('target_kedcd', target.kedcd);
+            payload.set('target_company_name', target.company || '');
+            payload.set('target_bzno', target.bzno || '');
+
+            fetch((context && context.endpoint) || '/ko/company_detail.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: payload.toString(),
+                keepalive: true
+            }).catch(function () {});
+        }
+
+        if (!reviewLinks.length) return;
+
+        reviewLinks.forEach(function (link) {
+            link.addEventListener('click', function (event) {
+                var target = parseTarget(link) || {
+                    kedcd: '',
+                    company: link.getAttribute('data-req-company') || ''
+                };
+                var loginGuard = window.MacomaLoginGuard;
+                var returnUrl = buildReturnUrl(target);
+                var loginUrl = buildLoginUrl(target);
+                var isLoggedIn = !!(window.MATCH_REQUEST_CONTEXT && window.MATCH_REQUEST_CONTEXT.isLoggedIn);
+
+                event.preventDefault();
+                event.stopPropagation();
+
+                if (!isLoggedIn) {
+                    if (!loginGuard || typeof loginGuard.show !== 'function') {
+                        window.location.href = loginUrl;
+                        return;
+                    }
+
+                    loginGuard.show({
+                        titleId: 'homepageReviewRequestLoginTitle',
+                        descriptionText: '거래 요청은 로그인 후 이용하실 수 있습니다.',
+                        returnUrl: returnUrl,
+                        loginUrl: loginUrl,
+                        signupUrl: typeof loginGuard.buildSignupUrl === 'function'
+                            ? loginGuard.buildSignupUrl(returnUrl)
+                            : '/signup?url=' + encodeURIComponent(returnUrl)
+                    });
+                    return;
+                }
+
+                if (window.setMatchRequesterCompany) {
+                    window.setMatchRequesterCompany(context.requesterCompany || null);
+                }
+                if (window.setMatchRequestTarget) {
+                    window.setMatchRequestTarget(target);
+                }
+                recordTradeRequestClickHit(target);
+                if (typeof window.openModal === 'function') {
+                    window.openModal('modalRequest');
+                }
+            });
+        });
+    })();
+
     (function initHomepageRequestLoginGuard() {
         var guardContext = window.__INDEX_LOGIN_GUARD_CONTEXT || {};
         var requestLink = document.querySelector('.mVisual_quick_item--request');
