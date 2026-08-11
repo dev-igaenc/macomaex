@@ -566,6 +566,58 @@
         });
     })();
 
+    (function initHomepagePartnerCta() {
+        var partnerLinks = document.querySelectorAll('.mReviews_card_link[data-partner-cta]');
+
+        if (!partnerLinks.length) return;
+
+        partnerLinks.forEach(function (link) {
+            link.addEventListener('click', function () {
+                try {
+                    sessionStorage.setItem('hkReturnSection', 'mReviews');
+                } catch (e) {}
+
+                if (typeof window.gtag === 'function') {
+                    window.gtag('event', 'partner_cta_click', {
+                        partner: link.getAttribute('data-partner-cta') || '',
+                        position: 'review_card'
+                    });
+                }
+            });
+        });
+    })();
+
+    (function restoreHomepageReturnSection() {
+        function restoreSection() {
+            var sectionId = '';
+
+            try {
+                sectionId = sessionStorage.getItem('hkReturnSection') || '';
+            } catch (e) {}
+
+            if (!sectionId) return;
+
+            try {
+                sessionStorage.removeItem('hkReturnSection');
+            } catch (e) {}
+
+            var section = document.getElementById(sectionId);
+            if (!section) return;
+
+            window.setTimeout(function () {
+                section.scrollIntoView({ behavior: 'auto', block: 'start' });
+            }, 80);
+        }
+
+        try {
+            if ('scrollRestoration' in history) {
+                history.scrollRestoration = 'auto';
+            }
+        } catch (e) {}
+
+        window.addEventListener('pageshow', restoreSection);
+    })();
+
     (function initHomepageRequestLoginGuard() {
         var guardContext = window.__INDEX_LOGIN_GUARD_CONTEXT || {};
         var requestLink = document.querySelector('.mVisual_quick_item--request');
