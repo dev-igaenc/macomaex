@@ -498,12 +498,11 @@ window.__AUTH_SESSION_GUARD_CONFIG__ = {
                     <span><b id="modal_pd_count">0</b>개 선택됨</span>
                     <div id="modal_pd_preview"><span class="modal_pd_empty">품목을 선택하면 여기에 표시됩니다</span></div>
                 </div>
-                <button type="button" class="modal_pd_btn_confirm" id="modal_pd_btn_confirm" disabled>
+                <button type="button" class="modal_pd_btn_confirm" id="modal_pd_btn_confirm">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M12 5l7 7-7 7"></path></svg>
                     AI 거래처 추천받기
                 </button>
             </div>
-            <button type="button" class="modal_pd_skip" id="modal_verify_btn_ai">건너뛰고 전체 추천받기</button>
         </div>
     </div>
 </div>
@@ -805,7 +804,7 @@ function closeAiGuideModal() {
 		var confirmBtn = document.getElementById("modal_pd_btn_confirm");
 		if (countEl) countEl.textContent = "0";
 		if (previewEl) previewEl.innerHTML = '<span class="modal_pd_empty">품목을 선택하면 여기에 표시됩니다</span>';
-		if (confirmBtn) confirmBtn.disabled = true;
+		if (confirmBtn) confirmBtn.disabled = false;
 	}
 
 	function showRecommendationToast(message) {
@@ -1003,7 +1002,7 @@ function closeAiGuideModal() {
 				previewEl.innerHTML = showItems;
 			}
 		}
-		if (confirmBtn) confirmBtn.disabled = selected.length === 0;
+		if (confirmBtn) confirmBtn.disabled = false;
 	}
 
 	function renderPartnerKeywordChips(items, preserveSelection) {
@@ -1012,7 +1011,7 @@ function closeAiGuideModal() {
 		window.currentPartnerBzcItems = Array.isArray(items) ? items : [];
 		if (!preserveSelection) resetPartnerKeywordSelection();
 		if (!window.currentPartnerBzcItems.length) {
-			grid.innerHTML = '<span class="modal_pd_empty">추천 키워드가 없습니다. 건너뛰고 전체 추천받기를 이용해 주세요.</span>';
+			grid.innerHTML = '<span class="modal_pd_empty">추천 키워드가 없습니다. AI 거래처 추천받기를 누르면 전체 추천을 받을 수 있습니다.</span>';
 			return;
 		}
 		grid.innerHTML = window.currentPartnerBzcItems.map(function(item, idx) {
@@ -1066,13 +1065,13 @@ function closeAiGuideModal() {
 				renderPartnerKeywordChips(data.items || []);
 				return;
 			}
-			if (grid) grid.innerHTML = '<span class="modal_pd_empty">추천 키워드를 불러오지 못했습니다. 전체 추천을 이용해 주세요.</span>';
+			if (grid) grid.innerHTML = '<span class="modal_pd_empty">추천 키워드를 불러오지 못했습니다. AI 거래처 추천받기를 누르면 전체 추천을 받을 수 있습니다.</span>';
 		}).fail(function() {
 			if (requestSeq !== window.currentPartnerKeywordRequestSeq) return;
 			if (grid) {
 				grid.classList.remove("is_loading");
 				grid.removeAttribute("aria-busy");
-				grid.innerHTML = '<span class="modal_pd_empty">추천 키워드 조회 중 오류가 발생했습니다. 전체 추천을 이용해 주세요.</span>';
+				grid.innerHTML = '<span class="modal_pd_empty">추천 키워드 조회 중 오류가 발생했습니다. AI 거래처 추천받기를 누르면 전체 추천을 받을 수 있습니다.</span>';
 			}
 		});
 	}
@@ -1093,6 +1092,12 @@ function closeAiGuideModal() {
 			"&trade_type=" + encodeURIComponent(String(tradeType)) +
 			"&recommendation_action=skip&trace_id=" + encodeURIComponent(String(window.currentRecommendTraceId || ""));
 		return true;
+	}
+
+	function reloadPartnerKeywordsAfterValidationFailure() {
+		// 선택 토큰 검증에 실패하면 기존 선택을 버리고 서버에서 새 키워드 목록을 받아 다시 선택하게 한다.
+		loadPartnerKeywordChips(window.currentSearchTradeType === 2 ? 2 : 1);
+		showRecommendationToast("추천 품목을 다시 불러왔어요. 원하시는 품목을 선택해 주세요.");
 	}
 
 function requestMainCompCheck(comnum, $form, opts) {
@@ -1453,6 +1458,53 @@ function requestMainCompCheck(comnum, $form, opts) {
 		// 같은 상대 업종코드의 키워드를 여러 개 선택하면 선택 수를 가중치로 합산해 목록 페이지로 전달한다.
 		if (this.disabled) return;
 		var selected = window.currentSelectedPartnerBzcItems || [];
+		// 품목을 고르지 않으면 기존 전체 추천(skip) 흐름으로 진입한다.
+		if (!selected.length) {
+			startFullAiRecommend(this);
+			return;
+		}
+
+		// 선택 토큰은 목록 이동 전에 서버에서 한 번 더 검증한다.
+		// 검증 실패 시에는 전체 추천으로 전환하지 않고 새 키워드 목록에서 다시 고르게 한다.
+		if (!this.__partnerSelectionValidated) {
+			var validationCodes = [];
+			var hasInvalidSelection = false;
+			for (var validationIndex = 0; validationIndex < selected.length; validationIndex++) {
+				var validationCode = String(selected[validationIndex].partner_cd || "");
+				var validationBzc = String(selected[validationIndex].partner_bzc || "");
+				if (!validationCode || !validationBzc) {
+					hasInvalidSelection = true;
+					break;
+				}
+				validationCodes.push(validationCode);
+			}
+			if (hasInvalidSelection || !validationCodes.length) {
+				reloadPartnerKeywordsAfterValidationFailure();
+				return;
+			}
+
+			var validationButton = this;
+			validationButton.disabled = true;
+			$.ajax({
+				url: "<?php echo G5_URL; ?>/ko/bzc_trade_rec_keyword_search.php",
+				method: "POST",
+				dataType: "json",
+				data: { action: "validate", partner_cd: validationCodes }
+			}).done(function(data) {
+				validationButton.disabled = false;
+				if (data && data.ok) {
+					validationButton.__partnerSelectionValidated = true;
+					$(validationButton).trigger("click");
+					return;
+				}
+				reloadPartnerKeywordsAfterValidationFailure();
+			}).fail(function() {
+				validationButton.disabled = false;
+				reloadPartnerKeywordsAfterValidationFailure();
+			});
+			return;
+		}
+		this.__partnerSelectionValidated = false;
 		var partnerCodes = [];
 		var partnerWeights = [];
 		var selectedKeywords = [];
@@ -1515,9 +1567,8 @@ function requestMainCompCheck(comnum, $form, opts) {
 		}
 	});
 
-// 모달 내부 버튼 이벤트
-$(document).on("click", "#modal_verify_btn_ai", function() {
-	var btn = this;
+// 품목 미선택 시 단일 CTA에서 호출하는 기존 전체 추천 진입 로직
+function startFullAiRecommend(btn) {
 	var overlay = document.getElementById("modal_verify_overlay");
 	var $input = window.currentSearchInput;
 	var $form = window.currentSearchForm;
@@ -1547,17 +1598,10 @@ $(document).on("click", "#modal_verify_btn_ai", function() {
 				originalHtml: originalHtml,
 				mode: "recommend"
 			});
-			} else {
+		} else {
 				openGuide("사업자번호 재확인", "입력하신 사업자번호 형식이 올바르지 않습니다.", "사업자번호를 다시 확인해 주세요.");
 			}
-		});
-
-// 모달 CTA 버튼에 포커스된 상태에서 Enter 입력 시 클릭과 동일 동작
-$(document).on("keydown", "#modal_verify_btn_ai", function(e) {
-	if (e.key !== "Enter" && e.key !== "NumpadEnter") return;
-	e.preventDefault();
-	$(this).trigger("click");
-});
+}
 
 // 모달 닫기 이벤트들
 $(document).on("click", "#modal_verify_overlay", function(e) {
