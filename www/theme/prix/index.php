@@ -662,7 +662,7 @@ $stable_list = get_processed_companies('stability_score_5', 3, $unlocked_bzno_ma
                             <span class="mReviews_badge mReviews_badge--cat">사무·문구용품 도매</span>
                             <span class="mReviews_badge mReviews_badge--region">서울</span>
                         </div>
-                        <div class="mReviews_card_photo mReviews_card_photo--thumb"><img class="mReviews_card_thumb" src="<?php echo $prix_theme_asset_url('img/main/mReviews_thumb_dreamrental.jpg', G5_CSS_VER); ?>" alt="드림렌탈 김재일 대표 인터뷰"><button type="button" class="mReviews_play" aria-label="드림렌탈 인터뷰 영상 재생" data-video-src="<?php echo $prix_theme_asset_url('video/interview_dreamrental.mp4', G5_CSS_VER); ?>"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"></path></svg></button></div>
+                        <div class="mReviews_card_photo mReviews_card_photo--thumb"><img class="mReviews_card_thumb" src="<?php echo $prix_theme_asset_url('img/main/mReviews_thumb_dreamrental.jpg', G5_CSS_VER); ?>" alt="드림렌탈 김재일 대표 인터뷰"><button type="button" class="mReviews_play" aria-label="드림렌탈 인터뷰 영상 재생" data-video-src="<?php echo $prix_theme_asset_url('video/interview_dreamrental.mp4', G5_JS_VER); ?>"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"></path></svg></button></div>
                         <p class="mReviews_card_quote">무작위 영업 대신, 거래 가능성 높은 기업부터 공략합니다.</p>
                         <div class="mReviews_card_rep">김재일 대표</div>
                         <div class="mReviews_card_actions">
@@ -677,7 +677,7 @@ $stable_list = get_processed_companies('stability_score_5', 3, $unlocked_bzno_ma
                             <span class="mReviews_badge mReviews_badge--cat">건축설계</span>
                             <span class="mReviews_badge mReviews_badge--region">서울</span>
                         </div>
-                        <div class="mReviews_card_photo mReviews_card_photo--thumb"><img class="mReviews_card_thumb" src="<?php echo $prix_theme_asset_url('img/main/mReviews_thumb_lougunchuk.jpg', G5_CSS_VER); ?>" alt="루건축사사무소 오호진 대표 인터뷰"><button type="button" class="mReviews_play" aria-label="루건축사사무소 인터뷰 영상 재생" data-video-src="<?php echo $prix_theme_asset_url('video/interview_lougunchuk.mp4', G5_CSS_VER); ?>"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"></path></svg></button></div>
+                        <div class="mReviews_card_photo mReviews_card_photo--thumb"><img class="mReviews_card_thumb" src="<?php echo $prix_theme_asset_url('img/main/mReviews_thumb_lougunchuk.jpg', G5_CSS_VER); ?>" alt="루건축사사무소 오호진 대표 인터뷰"><button type="button" class="mReviews_play" aria-label="루건축사사무소 인터뷰 영상 재생" data-video-src="<?php echo $prix_theme_asset_url('video/interview_lougunchuk.mp4', G5_JS_VER); ?>"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"></path></svg></button></div>
                         <p class="mReviews_card_quote">‘왜 이 기업인가’까지 알려주니, 협력사 검토가 수월해졌습니다.</p>
                         <div class="mReviews_card_rep">오호진 대표</div>
                         <div class="mReviews_card_actions">
