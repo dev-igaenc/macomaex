@@ -175,27 +175,40 @@
 
 // 사용방법 영상 모달 재생
 (function () {
-    var TEMP_VIDEO_SRC = '';
+    var heroToggle = document.getElementById('mHeroVideoToggle');
+    var TEMP_VIDEO_SRC = heroToggle ? (heroToggle.getAttribute('data-video-src') || '') : '';
     var modal = document.getElementById('mVideoModal');
     var player = document.getElementById('mVideoPlayer');
     if (!modal || !player) return;
 
-    var playBtns = document.querySelectorAll('.mVisual_video_play');
+    var playBtns = document.querySelectorAll('.mVisual_interview_play, .mVisual_video_play, .mReviews_play');
     var heroVideo = document.getElementById('mHeroVideo');
     var heroSlide = document.querySelector('.mHeroSlide--video');
 
     function openVideo(src) {
+        var resumeAt = 0;
         if (heroVideo) {
             try { heroVideo.pause(); } catch (e) {}
+            if (heroVideo.getAttribute('src') === src) {
+                resumeAt = heroVideo.currentTime || 0;
+            }
         }
         if (player.getAttribute('src') !== src) {
             player.setAttribute('src', src);
         }
-        var resetToStart = function () {
-            try { player.currentTime = 0; } catch (e) {}
-        };
-        if (player.readyState >= 1) resetToStart();
-        else player.addEventListener('loadedmetadata', resetToStart, { once: true });
+        if (resumeAt > 0.3) {
+            var seek = function () {
+                try { player.currentTime = resumeAt; } catch (e) {}
+            };
+            if (player.readyState >= 1) seek();
+            else player.addEventListener('loadedmetadata', seek, { once: true });
+        } else {
+            var resetToStart = function () {
+                try { player.currentTime = 0; } catch (e) {}
+            };
+            if (player.readyState >= 1) resetToStart();
+            else player.addEventListener('loadedmetadata', resetToStart, { once: true });
+        }
         modal.classList.add('open');
         modal.setAttribute('aria-hidden', 'false');
         document.documentElement.style.overflow = 'hidden';
@@ -208,7 +221,7 @@
         modal.classList.remove('open');
         modal.setAttribute('aria-hidden', 'true');
         document.documentElement.style.overflow = '';
-        if (heroVideo) {
+        if (heroVideo && heroSlide && heroSlide.classList.contains('active')) {
             var hp = heroVideo.play();
             if (hp && hp.catch) hp.catch(function () {});
         }
@@ -448,6 +461,162 @@
             }
         });
     }
+
+    // 메인 인터뷰 카드 클릭을 공통 거래요청 모달로 연결
+    (function initHomepageReviewRequestModal() {
+        var reviewLinks = document.querySelectorAll('.mReviews_card_link[data-req-company]');
+        var context = window.MATCH_REQUEST_CONTEXT || {};
+
+        function parseTarget(link) {
+            var raw = link.getAttribute('data-req-target') || '';
+            if (!raw) return null;
+            try {
+                return JSON.parse(raw);
+            } catch (e) {
+                return null;
+            }
+        }
+
+        function buildLoginUrl(target) {
+            var loginReturnUrl = new URL(window.location.href);
+            loginReturnUrl.searchParams.set('trade_request_login', '1');
+            if (target && target.kedcd) {
+                loginReturnUrl.searchParams.set('trade_request_target', target.kedcd);
+            }
+            loginReturnUrl.hash = 'mReviews';
+            return '/bbs/login.php?url=' + encodeURIComponent(loginReturnUrl.pathname + loginReturnUrl.search + loginReturnUrl.hash);
+        }
+
+        function buildReturnUrl(target) {
+            var loginReturnUrl = new URL(window.location.href);
+            loginReturnUrl.searchParams.set('trade_request_login', '1');
+            if (target && target.kedcd) {
+                loginReturnUrl.searchParams.set('trade_request_target', target.kedcd);
+            }
+            loginReturnUrl.hash = 'mReviews';
+            return loginReturnUrl.pathname + loginReturnUrl.search + loginReturnUrl.hash;
+        }
+
+        // 홈 카드 클릭 로그도 상세 페이지와 같은 엔드포인트에 적재
+        function recordTradeRequestClickHit(target) {
+            if (!target || !target.kedcd || !window.fetch) return;
+
+            var payload = new URLSearchParams();
+            payload.set('action', 'trade_request_click_hit');
+            payload.set('target_kedcd', target.kedcd);
+            payload.set('target_company_name', target.company || '');
+            payload.set('target_bzno', target.bzno || '');
+
+            fetch((context && context.endpoint) || '/ko/company_detail.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: payload.toString(),
+                keepalive: true
+            }).catch(function () {});
+        }
+
+        if (!reviewLinks.length) return;
+
+        reviewLinks.forEach(function (link) {
+            link.addEventListener('click', function (event) {
+                var target = parseTarget(link) || {
+                    kedcd: '',
+                    company: link.getAttribute('data-req-company') || ''
+                };
+                var loginGuard = window.MacomaLoginGuard;
+                var returnUrl = buildReturnUrl(target);
+                var loginUrl = buildLoginUrl(target);
+                var isLoggedIn = !!(window.MATCH_REQUEST_CONTEXT && window.MATCH_REQUEST_CONTEXT.isLoggedIn);
+
+                event.preventDefault();
+                event.stopPropagation();
+
+                if (!isLoggedIn) {
+                    if (!loginGuard || typeof loginGuard.show !== 'function') {
+                        window.location.href = loginUrl;
+                        return;
+                    }
+
+                    loginGuard.show({
+                        titleId: 'homepageReviewRequestLoginTitle',
+                        descriptionText: '거래 요청은 로그인 후 이용하실 수 있습니다.',
+                        returnUrl: returnUrl,
+                        loginUrl: loginUrl,
+                        signupUrl: typeof loginGuard.buildSignupUrl === 'function'
+                            ? loginGuard.buildSignupUrl(returnUrl)
+                            : '/signup?url=' + encodeURIComponent(returnUrl)
+                    });
+                    return;
+                }
+
+                if (window.setMatchRequesterCompany) {
+                    window.setMatchRequesterCompany(context.requesterCompany || null);
+                }
+                if (window.setMatchRequestTarget) {
+                    window.setMatchRequestTarget(target);
+                }
+                recordTradeRequestClickHit(target);
+                if (typeof window.openModal === 'function') {
+                    window.openModal('modalRequest');
+                }
+            });
+        });
+    })();
+
+    (function initHomepagePartnerCta() {
+        var partnerLinks = document.querySelectorAll('.mReviews_card_link[data-partner-cta]');
+
+        if (!partnerLinks.length) return;
+
+        partnerLinks.forEach(function (link) {
+            link.addEventListener('click', function () {
+                try {
+                    sessionStorage.setItem('hkReturnSection', 'mReviews');
+                } catch (e) {}
+
+                if (typeof window.gtag === 'function') {
+                    window.gtag('event', 'partner_cta_click', {
+                        partner: link.getAttribute('data-partner-cta') || '',
+                        position: 'review_card'
+                    });
+                }
+            });
+        });
+    })();
+
+    (function restoreHomepageReturnSection() {
+        function restoreSection() {
+            var sectionId = '';
+
+            try {
+                sectionId = sessionStorage.getItem('hkReturnSection') || '';
+            } catch (e) {}
+
+            if (!sectionId) return;
+
+            try {
+                sessionStorage.removeItem('hkReturnSection');
+            } catch (e) {}
+
+            var section = document.getElementById(sectionId);
+            if (!section) return;
+
+            window.setTimeout(function () {
+                section.scrollIntoView({ behavior: 'auto', block: 'start' });
+            }, 80);
+        }
+
+        try {
+            if ('scrollRestoration' in history) {
+                history.scrollRestoration = 'auto';
+            }
+        } catch (e) {}
+
+        window.addEventListener('pageshow', restoreSection);
+    })();
 
     (function initHomepageRequestLoginGuard() {
         var guardContext = window.__INDEX_LOGIN_GUARD_CONTEXT || {};
