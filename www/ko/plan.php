@@ -260,9 +260,8 @@ if (!function_exists('plan_display_title_en')) {
                     $featured = true;
                 }
                 $request_count = (int)floor($credit_cnt / 10);
-                $analysis_count = (isset($value['open_cnt']) && (int)$value['open_cnt'] > 0)
-                    ? (int)$value['open_cnt']
-                    : (isset($ui['analysis_count']) ? (int)$ui['analysis_count'] : ($credit_cnt * 2));
+                // AI 기업 분석은 크레딧 1개당 1회로, 충전 크레딧과 동일하게 표시한다.
+                $analysis_count = $credit_cnt;
                 $bonus_rate = isset($value['sale']) ? (int)$value['sale'] : 0;
                 $bonus_label = $bonus_rate > 0 ? '+' . number_format($bonus_rate) . '% 보너스' : '-';
                 $base_price = 0.0;
