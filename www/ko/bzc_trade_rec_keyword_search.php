@@ -136,6 +136,38 @@ $source_bzc_resolved = (int)($_POST['source_bzc_resolved'] ?? $_GET['source_bzc_
 $source_bzc_resolve_source = trim((string)($_POST['source_bzc_resolve_source'] ?? $_GET['source_bzc_resolve_source'] ?? ''));
 $fallback_reason = trim((string)($_POST['fallback_reason'] ?? $_GET['fallback_reason'] ?? ''));
 
+// 추천 목록으로 이동하기 전에 선택한 암호화 업종코드를 일괄 검증한다.
+// 유효하지 않은 선택 조건이 전체 추천으로 묵시 전환되지 않도록 모달에서 다시 선택하게 한다.
+if ($action === 'validate') {
+    $raw_partner_codes = $_POST['partner_cd'] ?? array();
+    if (!is_array($raw_partner_codes)) $raw_partner_codes = array($raw_partner_codes);
+
+    $submitted_count = 0;
+    $valid_count = 0;
+    foreach ($raw_partner_codes as $raw_partner_code) {
+        $partner_cd = trim((string)$raw_partner_code);
+        if ($partner_cd === '') continue;
+        $submitted_count++;
+        $partner_bzc = strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', (string)simple_crypt($partner_cd, 'd')), 0, 10));
+        if ($partner_bzc !== '') $valid_count++;
+    }
+
+    if ($submitted_count === 0 || $valid_count !== $submitted_count) {
+        bzc_trade_rec_search_response(422, array(
+            'ok' => false,
+            'error' => 'invalid_selection',
+            'submitted_count' => $submitted_count,
+            'valid_count' => $valid_count,
+        ));
+    }
+
+    bzc_trade_rec_search_response(200, array(
+        'ok' => true,
+        'submitted_count' => $submitted_count,
+        'valid_count' => $valid_count,
+    ));
+}
+
 if (!in_array($trade_type, array(1, 2), true)) {
     bzc_trade_rec_search_response(422, array('ok' => false, 'error' => 'trade_type_required', 'items' => array()));
 }

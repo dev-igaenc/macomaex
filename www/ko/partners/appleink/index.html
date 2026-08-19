@@ -1,0 +1,2743 @@
+<!doctype html>
+<html lang="ko">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>복합기 요금 진단 · 애플잉크 by 드림렌탈</title>
+    <style>
+        :root {
+            --ink: #0B1024;
+            --ink-2: #1a2140;
+            --line: #e4e7f0;
+            --bg: #f6f7fb;
+            --brand: #1B3BFF;
+            --brand-soft: #eef1ff;
+            --good: #0d9d6b;
+            --warn: #c2410c;
+            --muted: #6b7280;
+        }
+
+        * {
+            box-sizing: border-box
+        }
+
+        body {
+            margin: 0;
+            background: var(--bg);
+            color: var(--ink);
+            font-family: "Pretendard", "Malgun Gothic", system-ui, sans-serif;
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased
+        }
+
+        /* 좌우 여백은 DESIGN_SYSTEM 3-1 의 --page-gutter 단계를 따른다 (32 → 24 → 16).
+     좁은 단일 컬럼 페이지이므로 3-5 규칙대로 480px 이하에서도 16px 을 유지한다. */
+        .wrap {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 0 32px
+        }
+
+        section {
+            padding: 56px 0
+        }
+
+        /* ── 히어로 ── */
+        .hero {
+            background: var(--ink);
+            color: #fff;
+            padding: 64px 0 72px
+        }
+
+        /* 최소값 28px 로는 390px 화면에서 둘째 줄이 넘쳐 3줄이 된다.
+     24px 까지 내리고, 부득이 접힐 때도 낱말 중간에서 끊기지 않게 한다. */
+        .hero h1 {
+            font-size: clamp(24px, 4.4vw, 44px);
+            line-height: 1.3;
+            margin: 0 0 18px;
+            font-weight: 800;
+            letter-spacing: -.02em;
+            word-break: keep-all
+        }
+
+        .hero h1 em {
+            font-style: normal;
+            color: #7d95ff
+        }
+
+        /* 부제는 데스크톱에서 한 줄로 읽히게 폭을 잡는다(측정 694px).
+     화면이 좁아지면 max-width 가 아니라 뷰포트가 먼저 걸려 자연스럽게 접힌다. */
+        .hero p {
+            font-size: 17px;
+            color: #b9c0d8;
+            margin: 0;
+            max-width: 720px
+        }
+
+        /* 핵심 혜택 3가지 — 신규 도입 안내박스에만 있으면 그 모드를 고른 사람만 본다.
+     히어로에 상시 노출해 어떤 모드를 고르든 가장 먼저 보이게 한다. */
+        .hero .benefits {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 22px
+        }
+
+        .hero .benefits span {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            background: rgba(255, 255, 255, .08);
+            border: 1px solid rgba(125, 149, 255, .4);
+            border-radius: 99px;
+            padding: 9px 18px;
+            font-size: 14px;
+            font-weight: 800;
+            color: #fff
+        }
+
+        .hero .benefits span i {
+            color: #7d95ff;
+            font-style: normal;
+            font-weight: 900
+        }
+
+        /* ── 계산기 ── */
+        .calc {
+            background: #fff;
+            border: 1px solid var(--line);
+            border-radius: 16px;
+            padding: 28px;
+            margin-top: -40px;
+            position: relative;
+            z-index: 2;
+            box-shadow: 0 12px 40px rgba(11, 16, 36, .10)
+        }
+
+        .calc h2 {
+            margin: 0 0 4px;
+            font-size: 20px;
+            font-weight: 800
+        }
+
+        .calc .sub {
+            margin: 0 0 24px;
+            color: var(--muted);
+            font-size: 14px
+        }
+
+        .field {
+            margin-bottom: 22px
+        }
+
+        .field label {
+            display: block;
+            font-weight: 700;
+            font-size: 14px;
+            margin-bottom: 8px
+        }
+
+        .field .hint {
+            font-weight: 400;
+            color: var(--muted);
+            font-size: 13px;
+            margin-left: 6px
+        }
+
+        input[type=range] {
+            width: 100%;
+            accent-color: var(--brand)
+        }
+
+        .val {
+            font-size: 26px;
+            font-weight: 800;
+            color: var(--brand);
+            font-variant-numeric: tabular-nums
+        }
+
+        .val small {
+            font-size: 14px;
+            color: var(--muted);
+            font-weight: 600
+        }
+
+        .presets {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 10px
+        }
+
+        .presets button {
+            border: 1px solid var(--line);
+            background: #fff;
+            border-radius: 99px;
+            padding: 7px 13px;
+            font-size: 13px;
+            cursor: pointer;
+            color: var(--ink-2);
+            font-family: inherit
+        }
+
+        .presets button:hover {
+            border-color: var(--brand);
+            color: var(--brand);
+            background: var(--brand-soft)
+        }
+
+        .presets button.on {
+            border-color: var(--brand);
+            background: var(--brand);
+            color: #fff
+        }
+
+        .presets button.alt {
+            color: var(--muted)
+        }
+
+        /* 금액 직접 입력 */
+        .costbox {
+            background: var(--brand-soft);
+            border: 1px solid #d5dcff;
+            border-radius: 12px;
+            padding: 20px
+        }
+
+        .moneyin {
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+            background: #fff;
+            border: 2px solid var(--brand);
+            border-radius: 10px;
+            padding: 10px 16px
+        }
+
+        .moneyin input {
+            border: 0;
+            outline: 0;
+            width: 100%;
+            font-size: 30px;
+            font-weight: 800;
+            color: var(--ink);
+            font-family: inherit;
+            font-variant-numeric: tabular-nums;
+            background: transparent;
+            -moz-appearance: textfield
+        }
+
+        .moneyin input::-webkit-outer-spin-button,
+        .moneyin input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0
+        }
+
+        .moneyin input::placeholder {
+            color: #c3cade;
+            font-weight: 700
+        }
+
+        .moneyin .unit {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--muted);
+            white-space: nowrap
+        }
+
+        .minihelp {
+            margin: 10px 0 0;
+            font-size: 12.5px;
+            color: var(--muted)
+        }
+
+        /* 사용 상황 3갈래 */
+        .modes {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-bottom: 16px
+        }
+
+        .modes button {
+            text-align: left;
+            cursor: pointer;
+            background: #fff;
+            border: 1.5px solid #d5dcff;
+            border-radius: 10px;
+            padding: 13px 14px;
+            font-family: inherit;
+            transition: .15s
+        }
+
+        .modes button:hover {
+            border-color: var(--brand)
+        }
+
+        .modes button b {
+            display: block;
+            font-size: 14px;
+            font-weight: 800;
+            color: var(--ink);
+            margin-bottom: 3px
+        }
+
+        .modes button span {
+            font-size: 12px;
+            color: var(--muted)
+        }
+
+        .modes button.on {
+            background: var(--brand);
+            border-color: var(--brand)
+        }
+
+        .modes button.on b {
+            color: #fff
+        }
+
+        .modes button.on b::after {
+            content: ' ✓'
+        }
+
+        .modes button.on span {
+            color: #c6d0ff
+        }
+
+        /* 상황별 안내 박스 */
+        .infobox {
+            background: #fff;
+            border: 1px solid #d5dcff;
+            border-radius: 10px;
+            padding: 18px 20px
+        }
+
+        .infobox b {
+            display: block;
+            font-size: 15px;
+            font-weight: 800;
+            margin-bottom: 8px
+        }
+
+        .infobox p {
+            margin: 0;
+            font-size: 13px;
+            color: var(--ink-2);
+            line-height: 1.65
+        }
+
+        .infobox p b {
+            display: inline;
+            font-size: 13px
+        }
+
+        .infobox.new ul {
+            list-style: none;
+            padding: 0;
+            margin: 0 0 12px
+        }
+
+        .infobox.new li {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            font-size: 13.5px;
+            font-weight: 700;
+            color: var(--good);
+            padding: 8px 0;
+            border-bottom: 1px dashed var(--line)
+        }
+
+        .infobox.new li span {
+            color: var(--muted);
+            font-weight: 600
+        }
+
+        /* 출력량 선택 카드 — 클릭하면 아래 슬라이더가 채워진다는 걸 눈으로 알게 한다 */
+        .usage {
+            background: #fff;
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            padding: 20px
+        }
+
+        .choices {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin-top: 4px
+        }
+
+        .choices button {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            text-align: left;
+            cursor: pointer;
+            background: #fff;
+            border: 1.5px solid var(--line);
+            border-radius: 12px;
+            padding: 15px 14px;
+            font-family: inherit;
+            transition: .15s
+        }
+
+        .choices button:hover {
+            border-color: var(--brand);
+            background: var(--brand-soft)
+        }
+
+        .choices button b {
+            font-size: 14.5px;
+            font-weight: 800;
+            color: var(--ink)
+        }
+
+        .choices button .desc {
+            font-size: 12px;
+            color: var(--muted);
+            line-height: 1.45;
+            min-height: 34px
+        }
+
+        .choices button .qty {
+            font-size: 12.5px;
+            font-weight: 800;
+            color: var(--brand);
+            background: var(--brand-soft);
+            border-radius: 6px;
+            padding: 5px 8px;
+            text-align: center
+        }
+
+        .choices button.on {
+            border-color: var(--brand);
+            border-width: 2px;
+            background: var(--brand-soft);
+            box-shadow: 0 4px 14px rgba(27, 59, 255, .14)
+        }
+
+        .choices button.on b::after {
+            content: ' ✓';
+            color: var(--brand)
+        }
+
+        .choices button.on .qty {
+            background: var(--brand);
+            color: #fff
+        }
+
+        /* 자동 입력 안내 */
+        .fillnote {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            margin: 16px 0 4px;
+            font-size: 13px;
+            color: var(--muted);
+            font-weight: 600
+        }
+
+        .fillnote .arrow {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: #eef0f6;
+            color: var(--muted);
+            font-weight: 800;
+            flex: none
+        }
+
+        .fillnote.done {
+            color: var(--brand)
+        }
+
+        .fillnote.done .arrow {
+            background: var(--brand);
+            color: #fff
+        }
+
+        .sliders {
+            padding: 16px;
+            border-radius: 10px;
+            transition: background .4s, box-shadow .4s
+        }
+
+        .sliders.flash {
+            background: var(--brand-soft);
+            box-shadow: inset 0 0 0 1.5px #c3ceff
+        }
+
+        /* 입력 전 안내 */
+        .empty {
+            background: #fff;
+            border: 1px dashed #c3cade;
+            border-radius: 14px;
+            padding: 48px 24px;
+            text-align: center
+        }
+
+        .empty h3 {
+            margin: 0 0 8px;
+            font-size: 18px;
+            font-weight: 800;
+            color: var(--ink-2)
+        }
+
+        .empty p {
+            margin: 0;
+            color: var(--muted);
+            font-size: 14px
+        }
+
+        /* 체크박스가 본문 텍스트처럼 보여 그냥 지나치기 쉬웠다. 누를 수 있는 칩으로 세운다. */
+        .toggles {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap
+        }
+
+        .toggles label {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            font-weight: 700;
+            font-size: 14px;
+            cursor: pointer;
+            border: 1px solid var(--line);
+            background: #fff;
+            border-radius: 99px;
+            padding: 10px 18px;
+            color: var(--ink-2);
+            transition: border-color .15s, background .15s, color .15s
+        }
+
+        .toggles label:hover {
+            border-color: var(--brand);
+            color: var(--brand);
+            background: var(--brand-soft)
+        }
+
+        .toggles label:has(:checked) {
+            border-color: var(--brand);
+            background: var(--brand-soft);
+            color: var(--brand)
+        }
+
+        .toggles input[type=checkbox] {
+            width: 17px;
+            height: 17px;
+            accent-color: var(--brand);
+            cursor: pointer;
+            margin: 0
+        }
+
+        .grid2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 26px
+        }
+
+        /* ── 결과 ── */
+        .headline {
+            font-size: clamp(22px, 3vw, 30px);
+            font-weight: 800;
+            margin: 0 0 8px;
+            letter-spacing: -.02em
+        }
+
+        .lede {
+            color: var(--muted);
+            margin: 0 0 28px
+        }
+
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px
+        }
+
+        .card {
+            background: #fff;
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            padding: 22px;
+            display: flex;
+            flex-direction: column;
+            cursor: pointer;
+            position: relative;
+            transition: border-color .15s, box-shadow .15s, transform .15s
+        }
+
+        .card:hover {
+            border-color: var(--brand);
+            box-shadow: 0 8px 26px rgba(11, 16, 36, .10);
+            transform: translateY(-2px)
+        }
+
+        .card.pick {
+            border: 2px solid var(--brand);
+            box-shadow: 0 6px 24px rgba(27, 59, 255, .12)
+        }
+
+        .card.pick::after {
+            content: '아래 비교 기준';
+            position: absolute;
+            top: -10px;
+            right: 16px;
+            background: var(--brand);
+            color: #fff;
+            font-size: 11px;
+            font-weight: 800;
+            padding: 4px 9px;
+            border-radius: 99px;
+            white-space: nowrap
+        }
+
+        .pickhint {
+            font-size: 13px;
+            color: var(--muted);
+            margin: 0 0 12px;
+            font-weight: 600
+        }
+
+        .pickhint b {
+            color: var(--brand)
+        }
+
+        .card .tag {
+            font-size: 12px;
+            font-weight: 800;
+            color: var(--brand);
+            background: var(--brand-soft);
+            align-self: flex-start;
+            padding: 4px 10px;
+            border-radius: 6px;
+            margin-bottom: 14px
+        }
+
+        .card h3 {
+            margin: 0 0 2px;
+            font-size: 17px;
+            font-weight: 800
+        }
+
+        .card .maker {
+            color: var(--muted);
+            font-size: 13px;
+            margin-bottom: 16px
+        }
+
+        .price {
+            font-size: 28px;
+            font-weight: 800;
+            font-variant-numeric: tabular-nums;
+            letter-spacing: -.02em
+        }
+
+        .price small {
+            font-size: 13px;
+            color: var(--muted);
+            font-weight: 600
+        }
+
+        .spec {
+            list-style: none;
+            padding: 0;
+            margin: 16px 0 0;
+            font-size: 13.5px;
+            color: var(--ink-2);
+            border-top: 1px dashed var(--line);
+            padding-top: 14px
+        }
+
+        .spec li {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 3px 0
+        }
+
+        .spec li span:first-child {
+            color: var(--muted);
+            flex-shrink: 0
+        }
+
+        /* 초과 출력비처럼 값이 길어 줄바꿈될 때도 우측 정렬을 유지한다 */
+        .spec li b {
+            text-align: right
+        }
+
+        /* 이 요금제가 왜 나은지 — 카드 안에서 직접 설득 */
+        .why-better {
+            list-style: none;
+            padding: 12px 11px;
+            margin: 14px 0 0;
+            background: var(--brand-soft);
+            border-radius: 9px
+        }
+
+        /* 카드 3단 기준 한 항목이 한 줄에 들어가야 목록으로 읽힌다.
+     본문 폭이 좁으므로 글자 크기·들여쓰기를 줄이고, 한국어가 낱말 중간에서
+     끊기지 않도록 keep-all을 준다. */
+        .why-better li {
+            position: relative;
+            padding-left: 15px;
+            font-size: 12.2px;
+            line-height: 1.5;
+            color: var(--ink-2);
+            margin-bottom: 5px;
+            word-break: keep-all
+        }
+
+        .why-better li:last-child {
+            margin-bottom: 0
+        }
+
+        .why-better li::before {
+            content: '+';
+            position: absolute;
+            left: 0;
+            top: 0;
+            color: var(--brand);
+            font-weight: 800
+        }
+
+        .why-better b {
+            color: var(--brand);
+            font-weight: 800
+        }
+
+        .save {
+            margin-top: 14px;
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--good)
+        }
+
+        /* 차이가 나는 경우 — 경고가 아니라 "무엇을 얻는지"의 결론이므로 주의색(주황)을 쓰지 않는다.
+     바로 위 why-better 목록과 같은 계열로 묶어 한 덩어리로 읽히게 한다. */
+        .save.up {
+            color: var(--ink-2);
+            font-weight: 700
+        }
+
+        .save.up b {
+            color: var(--brand);
+            font-weight: 800
+        }
+
+        /* 월 환산액 — 하루 단가만 남기면 감추는 것으로 읽히므로 같이 적되 한 단 낮춘다 */
+        .save.up em {
+            display: block;
+            font-style: normal;
+            font-size: 12.5px;
+            font-weight: 600;
+            color: var(--muted);
+            margin-top: 3px
+        }
+
+        /* ── 48개월 비교 ── */
+        .compare {
+            background: #fff;
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            padding: 26px;
+            margin-top: 20px
+        }
+
+        .bar {
+            margin: 14px 0
+        }
+
+        .bar .lab {
+            display: flex;
+            justify-content: space-between;
+            font-size: 14px;
+            font-weight: 700;
+            margin-bottom: 6px
+        }
+
+        .bar .track {
+            height: 34px;
+            background: #eef0f6;
+            border-radius: 8px;
+            overflow: hidden;
+            display: flex
+        }
+
+        .bar .fill {
+            height: 100%;
+            display: flex;
+            align-items: center;
+            padding-left: 12px;
+            color: #fff;
+            font-size: 12.5px;
+            font-weight: 700;
+            white-space: nowrap
+        }
+
+        .f-rent {
+            background: var(--ink-2)
+        }
+
+        .f-over {
+            background: #8a94b8
+        }
+
+        .f-cur {
+            background: #b9bfd2
+        }
+
+        /* ── 이월/숨은비용 ── */
+        .two {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-top: 20px
+        }
+
+        .panel {
+            background: #fff;
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            padding: 24px
+        }
+
+        .panel h3 {
+            margin: 0 0 6px;
+            font-size: 16px;
+            font-weight: 800
+        }
+
+        .panel .big {
+            font-size: 30px;
+            font-weight: 800;
+            color: var(--good);
+            font-variant-numeric: tabular-nums;
+            margin: 10px 0 4px
+        }
+
+        .panel p {
+            margin: 0;
+            font-size: 13.5px;
+            color: var(--muted)
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+            margin-top: 12px
+        }
+
+        th,
+        td {
+            text-align: left;
+            padding: 9px 4px;
+            border-bottom: 1px solid var(--line)
+        }
+
+        th {
+            font-size: 12.5px;
+            color: var(--muted);
+            font-weight: 700
+        }
+
+        td.ok {
+            color: var(--good);
+            font-weight: 700
+        }
+
+        td.no {
+            color: var(--muted)
+        }
+
+        /* ── 왜 애플잉크인가 ── */
+        .why {
+            background: var(--ink);
+            color: #fff;
+            padding: 64px 0 68px
+        }
+
+        .why h2 {
+            font-size: clamp(24px, 3.4vw, 34px);
+            font-weight: 800;
+            margin: 0 0 12px;
+            letter-spacing: -.025em;
+            line-height: 1.35
+        }
+
+        .why h2 span {
+            color: #7d95ff
+        }
+
+        .why .lede {
+            color: #a2abc9;
+            font-size: 15.5px;
+            margin: 0
+        }
+
+        .why .lede b {
+            color: #fff
+        }
+
+        /* 숫자 스탯 */
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 0;
+            margin-bottom: 38px;
+            border-top: 1px solid rgba(255, 255, 255, .14);
+            border-bottom: 1px solid rgba(255, 255, 255, .14)
+        }
+
+        .stats div {
+            padding: 20px 4px;
+            text-align: center;
+            border-right: 1px solid rgba(255, 255, 255, .09)
+        }
+
+        .stats div:last-child {
+            border-right: 0
+        }
+
+        .stats b {
+            display: block;
+            font-size: 38px;
+            font-weight: 800;
+            letter-spacing: -.03em;
+            line-height: 1;
+            font-variant-numeric: tabular-nums
+        }
+
+        .stats i {
+            font-style: normal;
+            font-size: 16px;
+            font-weight: 700;
+            color: #7d95ff;
+            margin-left: 2px
+        }
+
+        .stats span {
+            display: block;
+            margin-top: 8px;
+            font-size: 12.5px;
+            color: #8f9ab9;
+            font-weight: 600
+        }
+
+        /* 핵심 3가지 */
+        .why3 {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            margin: 32px 0 18px
+        }
+
+        .why3 div {
+            background: rgba(255, 255, 255, .055);
+            border: 1px solid rgba(255, 255, 255, .12);
+            border-radius: 14px;
+            padding: 24px 22px
+        }
+
+        .why3 .n {
+            display: inline-block;
+            font-size: 12px;
+            font-weight: 800;
+            color: var(--ink);
+            background: #7d95ff;
+            border-radius: 5px;
+            padding: 3px 7px;
+            margin-bottom: 12px
+        }
+
+        .why3 strong {
+            display: block;
+            font-size: 18px;
+            font-weight: 800;
+            margin-bottom: 8px;
+            letter-spacing: -.015em
+        }
+
+        .why3 p {
+            margin: 0;
+            font-size: 13.5px;
+            color: #a9b1cd;
+            line-height: 1.62
+        }
+
+        /* 계약 조건 4가지 대비 */
+        .subhead {
+            font-size: 19px;
+            font-weight: 800;
+            margin: 38px 0 14px;
+            letter-spacing: -.015em
+        }
+
+        .vs4 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px
+        }
+
+        .vs4>div {
+            background: rgba(255, 255, 255, .055);
+            border: 1px solid rgba(255, 255, 255, .12);
+            border-radius: 14px;
+            padding: 20px 22px
+        }
+
+        .vs4 .q {
+            display: block;
+            font-size: 15px;
+            font-weight: 800;
+            color: #fff;
+            margin-bottom: 14px
+        }
+
+        .vs4 .row {
+            display: flex;
+            gap: 12px;
+            padding: 9px 0;
+            border-top: 1px solid rgba(255, 255, 255, .09)
+        }
+
+        .vs4 .row i {
+            font-style: normal;
+            font-size: 11.5px;
+            font-weight: 800;
+            border-radius: 5px;
+            padding: 3px 8px;
+            height: fit-content;
+            white-space: nowrap;
+            flex: none;
+            min-width: 64px;
+            text-align: center
+        }
+
+        .vs4 .row i.bad {
+            background: rgba(255, 255, 255, .1);
+            color: #8f9ab9
+        }
+
+        .vs4 .row i.good {
+            background: #4ade9b;
+            color: var(--ink)
+        }
+
+        .vs4 .row p {
+            margin: 0;
+            font-size: 13px;
+            line-height: 1.6;
+            color: #a9b1cd
+        }
+
+        .vs4 .row i.good~p {
+            color: #e6e9f5
+        }
+
+        .vs4 .row b {
+            color: #fff;
+            font-weight: 800
+        }
+
+        /* ── CTA ── */
+        .cta {
+            background: #fff;
+            border: 1px solid var(--line);
+            border-radius: 16px;
+            padding: 34px;
+            text-align: center
+        }
+
+        .cta h2 {
+            margin: 0 0 8px;
+            font-size: 24px;
+            font-weight: 800;
+            letter-spacing: -.02em
+        }
+
+        .cta p {
+            color: var(--muted);
+            margin: 0 0 18px
+        }
+
+        /* 계산 결과를 그대로 받아 적는 줄 — 버튼 바로 위에서 개인화를 담당한다 */
+        .cta strong {
+            display: block;
+            font-size: 15px;
+            font-weight: 800;
+            color: var(--ink);
+            margin: 0 0 18px
+        }
+
+        /* 전화 버튼은 <a href="tel:"> 이라 밑줄이 기본으로 붙는다 — 버튼과 같은 모양으로 맞춘다 */
+        .btn {
+            display: inline-block;
+            background: var(--brand);
+            color: #fff;
+            border: 0;
+            border-radius: 10px;
+            padding: 15px 30px;
+            font-size: 16px;
+            font-weight: 800;
+            cursor: pointer;
+            font-family: inherit;
+            text-decoration: none;
+            line-height: 1.2;
+            vertical-align: middle;
+            transition: .15s
+        }
+
+        .btn.ghost {
+            background: #fff;
+            color: var(--ink-2);
+            border: 1px solid var(--line);
+            margin-left: 8px
+        }
+
+        /* 위 선택지 카드(.choices)와 같은 결로 반응하게 한다 — 페이지에서 가장 중요한 버튼인데
+     아무 반응이 없으면 눌러도 되는지 확신이 서지 않는다.
+     버튼 위치는 움직이지 않는다 — 색과 그림자만으로 반응을 알린다. */
+        .btn:hover {
+            background: #0f2ad6;
+            box-shadow: 0 8px 20px rgba(27, 59, 255, .24)
+        }
+
+        .btn.ghost:hover {
+            background: var(--brand-soft);
+            color: var(--brand);
+            border-color: var(--brand);
+            box-shadow: none
+        }
+
+        /* 누르는 순간엔 색을 한 단계 더 눌러 준다 */
+        .btn:active {
+            background: #0a1fa8;
+            box-shadow: 0 2px 8px rgba(27, 59, 255, .18)
+        }
+
+        .btn.ghost:active {
+            background: #dfe5ff;
+            border-color: var(--brand);
+            color: var(--brand)
+        }
+
+        /* 손가락 입력에는 hover 가 남아 눌린 채로 보인다 — 마우스 있는 환경에서만 띄운다 */
+        @media (hover:none) {
+            .btn:hover {
+                box-shadow: none;
+                background: var(--brand)
+            }
+
+            .btn.ghost:hover {
+                background: #fff;
+                color: var(--ink-2);
+                border-color: var(--line)
+            }
+        }
+
+        /* CTA 버튼 묶음 — inline-block 나열은 줄바꿈될 때 margin 이 남아 정렬이 밀리고
+     줄 사이 간격이 0이 된다. 플렉스로 폭·정렬·간격을 한 곳에서 통제한다. */
+        .cta_acts {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            flex-wrap: wrap
+        }
+
+        .cta_acts .btn {
+            flex: 0 1 240px;
+            margin: 0;
+            text-align: center
+        }
+
+        .cta_acts .btn[hidden] {
+            display: none
+        }
+
+        .note {
+            font-size: 12.5px;
+            color: var(--muted);
+            margin-top: 16px
+        }
+
+        footer {
+            padding: 30px 0 60px;
+            color: var(--muted);
+            font-size: 12.5px
+        }
+
+        @media(max-width:1024px) {
+            .wrap {
+                padding: 0 24px
+            }
+        }
+
+        @media(max-width:820px) {
+
+            .cards,
+            .two,
+            .grid2,
+            .why3,
+            .vs4,
+            .choices,
+            .modes {
+                grid-template-columns: 1fr
+            }
+
+            .stats {
+                grid-template-columns: 1fr 1fr
+            }
+
+            .stats div:nth-child(2) {
+                border-right: 0
+            }
+        }
+
+        /* 모바일 — 여백을 16px 로 좁히고, 데스크톱 기준으로 잡힌 블록 안쪽 여백도 함께 줄인다.
+     바깥이 좁아졌는데 안쪽이 그대로면 내용 폭이 과하게 눌린다. */
+        @media(max-width:768px) {
+            .wrap {
+                padding: 0 16px
+            }
+
+            section {
+                padding: 40px 0
+            }
+
+            .hero {
+                padding: 44px 0 52px
+            }
+
+            .calc {
+                padding: 20px;
+                margin-top: -28px;
+                border-radius: 14px
+            }
+
+            .card,
+            .panel {
+                padding: 18px
+            }
+
+            .compare {
+                padding: 18px
+            }
+
+            .cta {
+                padding: 26px 20px
+            }
+
+            .stats {
+                margin-bottom: 28px
+            }
+        }
+
+        /* 두 버튼이 나란히 서기 어려운 폭(240×2 + gap + 좌우 여백)부터는 세로로 세운다 */
+        @media(max-width:560px) {
+            .cta_acts {
+                flex-direction: column
+            }
+
+            .cta_acts .btn {
+                flex: 1 1 auto;
+                width: 100%
+            }
+        }
+
+        /* ── 차액에 포함된 것 (애플잉크가 더 비쌀 때) ── */
+        .incl {
+            margin-top: 14px;
+            border-top: 1px dashed var(--line);
+            padding-top: 14px
+        }
+
+        .incl .lab {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--ink-2);
+            margin: 0 0 9px
+        }
+
+        .incl .lab b {
+            color: var(--brand)
+        }
+
+        .incl ul {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 7px
+        }
+
+        .incl li {
+            font-size: 12.5px;
+            font-weight: 700;
+            color: var(--good);
+            background: #eafaf3;
+            border: 1px solid #bfe9d7;
+            border-radius: 99px;
+            padding: 5px 11px
+        }
+
+        .incl li::before {
+            content: '✓ ';
+            font-weight: 800
+        }
+
+        /* 보증금·설치·새제품 3가지는 나머지 항목보다 눈에 먼저 들어와야 한다 —
+     같은 초록 칩으로 섞이면 리스트 안에서 묻힌다 */
+        .incl li.hl {
+            color: var(--brand);
+            background: var(--brand-soft);
+            border-color: #c3ceff
+        }
+
+        /* ── 상단 바: 어디서 왔는지 + 돌아갈 길 ── */
+        /* 매커멕스 헤더 규격을 그대로 따른다 (DESIGN_SYSTEM.md 8. 헤더 & 내비게이션).
+     회원사 페이지가 본 사이트와 다른 톤이면 제휴가 아니라 외부 광고로 읽힌다. */
+        .topbar {
+            background: #fff;
+            border-bottom: 1px solid #e8e8e8;
+            padding: 16px 0
+        }
+
+        .topbar .wrap {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 24px
+        }
+
+        .topbar .who {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: var(--muted)
+        }
+
+        .topbar .who b {
+            color: var(--ink);
+            font-weight: 800;
+            letter-spacing: -.01em
+        }
+
+        .topbar .chip {
+            font-size: 11.5px;
+            font-weight: 700;
+            color: var(--brand);
+            background: var(--brand-soft);
+            border: 1px solid #d5dcff;
+            border-radius: 99px;
+            padding: 3px 9px;
+            white-space: nowrap
+        }
+
+        /* 헤더 텍스트 링크 — 14px / 8px 14px / radius 8px.
+     배경을 처음부터 깔아 누를 수 있는 것임을 먼저 알리고,
+     hover → active 로 갈수록 색을 진하게 (#f3f4f6 → #ede9ff → #ddd6fe) */
+        .topbar .back {
+            font-size: 14px;
+            font-weight: 500;
+            color: #555;
+            text-decoration: none;
+            white-space: nowrap;
+            padding: 8px 14px;
+            border-radius: 8px;
+            background: #f3f4f6;
+            transition: color .15s, background .15s
+        }
+
+        .topbar .back:hover {
+            color: #452EFF;
+            background: #ede9ff
+        }
+
+        .topbar .back:active {
+            color: #3824d9;
+            background: #ddd6fe
+        }
+
+        /* 출력량 슬라이더 — 흑백/컬러를 색으로 구분한다.
+     둘 다 파란 숫자였을 때 어느 쪽을 조정 중인지 한눈에 안 보였다. */
+        .sl {
+            background: #fff;
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            padding: 14px 16px 10px
+        }
+
+        .sl label {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            font-size: 13.5px;
+            font-weight: 600;
+            color: var(--ink-2)
+        }
+
+        .sl label b {
+            font-weight: 800;
+            color: var(--ink)
+        }
+
+        .sl .dot {
+            width: 13px;
+            height: 13px;
+            border-radius: 50%;
+            flex: 0 0 auto;
+            border: 1px solid rgba(0, 0, 0, .12)
+        }
+
+        .sl--bw {
+            border-color: #d7dbe4
+        }
+
+        .sl--bw .dot {
+            background: linear-gradient(135deg, #111827 50%, #9ca3af 50%)
+        }
+
+        .sl--bw .val {
+            color: #111827
+        }
+
+        .sl--bw input[type=range] {
+            accent-color: #374151
+        }
+
+        .sl--cl {
+            border-color: #f0d0ee
+        }
+
+        .sl--cl .dot {
+            background: conic-gradient(#22d3ee, #e879f9, #facc15, #22d3ee)
+        }
+
+        .sl--cl .val {
+            color: #c026d3
+        }
+
+        .sl--cl input[type=range] {
+            accent-color: #c026d3
+        }
+
+        /* 신규 도입 — 약정 총액 대신 "시작 비용 0원"만 */
+        .zero {
+            display: flex;
+            align-items: center;
+            gap: 18px;
+            flex-wrap: wrap;
+            margin-top: 14px
+        }
+
+        .zero>b {
+            font-size: 44px;
+            font-weight: 800;
+            color: var(--good);
+            line-height: 1;
+            letter-spacing: -.02em
+        }
+
+        .zero ul {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 7px
+        }
+
+        .zero li {
+            font-size: 12.5px;
+            font-weight: 700;
+            color: var(--good);
+            background: #eafaf3;
+            border: 1px solid #bfe9d7;
+            border-radius: 99px;
+            padding: 5px 11px
+        }
+
+        .zero li::before {
+            content: '✓ ';
+            font-weight: 800
+        }
+
+        /* 가격표 바로 아래에 조용히 — 읽으려는 사람에게만 보이면 된다 */
+        .vatnote {
+            margin: 10px 0 0;
+            font-size: 12px;
+            color: #9aa2b4;
+            text-align: right
+        }
+
+        /* ── 카카오 문의 모달 ──
+     새 카카오 탭이 열리는 순간 포커스를 뺏겨 이 페이지의 어떤 안내도 못 본다.
+     그래서 이동 전에 여기서 안내를 끝내고, 실제 이동은 모달 안 버튼으로 한다. */
+        .kmodal {
+            position: fixed;
+            inset: 0;
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px
+        }
+
+        .kmodal[hidden] {
+            display: none
+        }
+
+        .kmodal .dim {
+            position: absolute;
+            inset: 0;
+            background: rgba(11, 16, 36, .55)
+        }
+
+        .kmodal .box {
+            position: relative;
+            background: #fff;
+            border-radius: 16px;
+            padding: 26px 24px 24px;
+            max-width: 440px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(11, 16, 36, .3)
+        }
+
+        .kmodal h3 {
+            margin: 0 32px 6px 0;
+            font-size: 18px;
+            font-weight: 800;
+            color: var(--ink);
+            letter-spacing: -.01em
+        }
+
+        .kmodal h3 .ok {
+            color: var(--good)
+        }
+
+        .kmodal .guide {
+            margin: 0 0 14px;
+            font-size: 13.5px;
+            color: var(--ink-2);
+            line-height: 1.6;
+            word-break: keep-all
+        }
+
+        /* 복사된 내용을 눈으로 보여 준다 — 뭐가 복사됐는지 알아야 붙여넣을 마음이 생긴다 */
+        .kmodal pre {
+            margin: 0 0 16px;
+            padding: 13px 15px;
+            background: var(--bg);
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            font-family: inherit;
+            font-size: 12.5px;
+            line-height: 1.7;
+            color: var(--ink-2);
+            white-space: pre-wrap;
+            word-break: break-all;
+            max-height: 180px;
+            overflow-y: auto
+        }
+
+        .kmodal .btn {
+            display: block;
+            width: 100%;
+            text-align: center;
+            margin: 0;
+            box-sizing: border-box
+        }
+
+        .kmodal .close {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            width: 34px;
+            height: 34px;
+            border: 0;
+            border-radius: 8px;
+            background: transparent;
+            color: #9aa2b4;
+            font-size: 22px;
+            line-height: 1;
+            cursor: pointer;
+            font-family: inherit;
+            transition: .15s
+        }
+
+        .kmodal .close:hover {
+            background: var(--bg);
+            color: var(--ink)
+        }
+
+        /* 좁은 화면에서는 바텀시트로 — 엄지가 닿는 자리에 버튼이 온다 */
+        @media(max-width:560px) {
+            .kmodal {
+                align-items: flex-end;
+                padding: 0
+            }
+
+            .kmodal .box {
+                max-width: none;
+                border-radius: 16px 16px 0 0;
+                padding-bottom: calc(24px + env(safe-area-inset-bottom))
+            }
+        }
+
+        /* ── 리드 폼 모달 ── */
+    </style>
+</head>
+
+<body>
+
+    <div class="topbar">
+        <div class="wrap">
+            <a class="back" href="/" data-track="back_to_macomaex">← 돌아가기</a>
+            <div class="who"><span class="chip">MACOMAEX 회원사 제휴</span><b>애플잉크</b> by 드림렌탈</div>
+        </div>
+    </div>
+
+    <header class="hero">
+        <div class="wrap">
+            <h1><em>진짜 금액</em>과 <em>A/S 대응력</em>,<br>둘 다 봐야 손해보지 않습니다.</h1>
+            <p>지금 내는 복합기 비용, 적정한지 확인해 보세요.</p>
+            <div class="benefits">
+                <span><i>✓</i> 보증금 없음</span>
+                <span><i>✓</i> 당일 설치</span>
+                <span><i>✓</i> 100% 새제품 제공</span>
+            </div>
+        </div>
+    </header>
+
+    <div class="wrap">
+        <div class="calc">
+            <h2>내 복합기 요금 진단</h2>
+            <p class="sub">입력값은 저장되지 않으며, 결과는 즉시 계산됩니다. (모든 금액 VAT 별도)</p>
+
+            <div class="field costbox">
+                <label>지금 복합기를 어떻게 쓰고 계십니까?</label>
+                <div class="modes">
+                    <button data-mode="known" class="on">
+                        <b>쓰고 있고, 금액을 압니다</b>
+                        <span>지금 요금과 비교해 드립니다</span>
+                    </button>
+                    <button data-mode="unknown">
+                        <b>쓰고 있지만 금액은 모릅니다</b>
+                        <span>출력량만으로 추천해 드립니다</span>
+                    </button>
+                    <button data-mode="new">
+                        <b>복합기를 처음 도입합니다</b>
+                        <span>신규 설치 기준으로 안내합니다</span>
+                    </button>
+                </div>
+
+                <!-- ① 금액을 아는 경우 -->
+                <div id="knownBox">
+                    <div class="moneyin">
+                        <input type="number" id="cur" placeholder="예: 85000" min="0" step="1000" inputmode="numeric">
+                        <span class="unit">원 / 월</span>
+                    </div>
+                    <div class="presets">
+                        <button data-cur="50000">5만원대</button>
+                        <button data-cur="80000">8만원대</button>
+                        <button data-cur="100000">10만원대</button>
+                        <button data-cur="150000">15만원 이상</button>
+                    </div>
+                    <p class="minihelp">렌탈료 + 초과 출력비 합계입니다. 청구서 기준으로 대략 넣으셔도 됩니다.</p>
+                </div>
+
+                <!-- ② 금액을 모르는 경우 -->
+                <div id="unknownBox" class="infobox" style="display:none">
+                    <b>금액을 몰라도 추천은 바로 확인하실 수 있습니다.</b>
+                    <p>아래에서 출력량만 고르시면 그 조건에 맞는 요금제를 계산해 드립니다.
+                        나중에 청구서를 확인하시면 <b>계약서의 월 렌탈료 + 최근 초과 출력비</b>를 더한 금액이
+                        지금 내시는 실제 비용입니다. 그 금액을 넣으시면 절감액까지 계산됩니다.</p>
+                </div>
+
+                <!-- ③ 신규 도입 -->
+                <div id="newBox" class="infobox new" style="display:none">
+                    <b>처음 도입하신다면, 나가는 초기 비용은 0원입니다.</b>
+                    <ul>
+                        <li><span>보증금</span> 0원 — 목돈 없이 설치</li>
+                        <li><span>설치 · 초기비용</span> 0원 — 배송·설치·설정 포함</li>
+                        <li><span>설치 기기</span> 100% 새 제품 — 중고·리퍼 없음</li>
+                        <li><span>설치 일정</span> 전국 당일 설치 가능</li>
+                    </ul>
+                    <p>처음이라 얼마나 쓸지 모르시는 게 당연합니다. 아래에서 회사 규모만 고르시면
+                        그에 맞는 요금제를 잡아 드리고, 쓰다가 안 맞으면 조정하실 수 있습니다.</p>
+                </div>
+            </div>
+
+            <div class="field usage">
+                <label>한 달에 얼마나 출력하십니까?
+                    <span class="hint">정확히 몰라도 됩니다 · 비슷한 곳을 고르면 평균값으로 채워 드립니다</span></label>
+
+                <div class="choices">
+                    <button data-bw="1000" data-color="200">
+                        <b>사무직 5인 내외</b>
+                        <span class="desc">문서 위주의 소규모 사무실</span>
+                        <span class="qty">흑백 1,000매 · 컬러 200매</span>
+                    </button>
+                    <button data-bw="2000" data-color="500">
+                        <b>10인 내외</b>
+                        <span class="desc">가장 일반적인 중소기업 사무실</span>
+                        <span class="qty">흑백 2,000매 · 컬러 500매</span>
+                    </button>
+                    <button data-bw="5000" data-color="700">
+                        <b>20인 이상 · 출력 많음</b>
+                        <span class="desc">제안서 · 카탈로그를 자주 뽑는 곳</span>
+                        <span class="qty">흑백 5,000매 · 컬러 700매</span>
+                    </button>
+                    <button data-bw="10000" data-color="0">
+                        <b>도면 · 대량 흑백</b>
+                        <span class="desc">설계 · 제조 · 물류 등 흑백 위주</span>
+                        <span class="qty">흑백 10,000매 · 컬러 없음</span>
+                    </button>
+                </div>
+
+                <div class="fillnote" id="fillNote">
+                    <span class="arrow">↓</span>
+                    <span id="fillMsg">고르시면 아래 수치가 자동으로 채워집니다. 정확한 매수를 아신다면 직접 조정하셔도 됩니다.</span>
+                </div>
+
+                <div class="grid2 sliders" id="sliders">
+                    <div class="sl sl--bw">
+                        <label><i class="dot"></i>월 <b>흑백</b> 출력량</label>
+                        <div class="val" id="bwVal">2,000<small> 매</small></div>
+                        <input type="range" id="bw" min="0" max="12000" step="100" value="2000">
+                    </div>
+                    <div class="sl sl--cl">
+                        <label><i class="dot"></i>월 <b>컬러</b> 출력량</label>
+                        <div class="val" id="clVal">500<small> 매</small></div>
+                        <input type="range" id="cl" min="0" max="1500" step="50" value="500">
+                    </div>
+                </div>
+            </div>
+
+            <div class="field toggles">
+                <label><input type="checkbox" id="a3"> A3 출력이 필요합니다</label>
+                <label><input type="checkbox" id="fax" checked> 팩스를 사용합니다</label>
+            </div>
+        </div>
+    </div>
+
+    <section>
+        <div class="wrap">
+            <h2 class="headline" id="resultHead"></h2>
+            <p class="lede" id="resultLede"></p>
+            <p class="pickhint" id="pickHint">👆 <b>카드를 클릭</b>하시면 아래 총비용 비교가 그 요금제 기준으로 바뀝니다.</p>
+            <div class="cards" id="cards"></div>
+            <p class="vatnote">표시된 금액은 모두 VAT 별도입니다.</p>
+
+            <div class="compare" id="compareBox">
+                <h3 style="margin:0 0 4px;font-size:17px;font-weight:800">약정 전체 기간 총비용 비교</h3>
+                <p style="margin:0;color:var(--muted);font-size:13.5px" id="cmpSub"></p>
+                <div id="bars"></div>
+                <p id="cmpFoot" style="margin:12px 0 0;font-size:13px;color:var(--ink-2);line-height:1.6"></p>
+            </div>
+
+            <div class="two">
+                <div class="panel">
+                    <h3 id="carryTitle">안 쓴 출력량, 다음 달로 이월해 드립니다</h3>
+                    <div class="big" id="carry">—</div>
+                    <p id="carryNote">타사는 남은 기본매수가 매달 소멸합니다. 애플잉크는 다음 달로 이월되어,
+                        안 쓴 만큼이 그대로 남습니다.</p>
+                </div>
+                <div class="panel">
+                    <h3>월 요금 말고 따로 나가는 돈</h3>
+                    <table>
+                        <tr>
+                            <th>항목</th>
+                            <th>다른 렌탈사</th>
+                            <th>애플잉크</th>
+                        </tr>
+                        <tr>
+                            <td>계약할 때 보증금</td>
+                            <td class="no">기기값의 10~30%</td>
+                            <td class="ok">0원</td>
+                        </tr>
+                        <tr>
+                            <td>설치비 · 배송비</td>
+                            <td class="no">따로 청구</td>
+                            <td class="ok">0원</td>
+                        </tr>
+                        <tr>
+                            <td>토너 · 드럼 교체</td>
+                            <td class="no">쓸 때마다 결제</td>
+                            <td class="ok">무상</td>
+                        </tr>
+                        <tr>
+                            <td>정기 점검</td>
+                            <td class="no">부를 때마다 비용</td>
+                            <td class="ok">무상</td>
+                        </tr>
+                        <tr>
+                            <td>들어오는 기계</td>
+                            <td class="no">중고 · 리퍼 섞임</td>
+                            <td class="ok">100% 새 제품</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="why">
+        <div class="wrap">
+
+            <!-- 숫자로 먼저 시선을 잡는다 -->
+            <div class="stats">
+                <div><b>28<i>년</i></b><span>업력</span></div>
+                <div><b>8<i>개</i></b><span>브랜드 중 선택</span></div>
+                <div><b>0<i>원</i></b><span>보증금 · 초기비용</span></div>
+                <div><b>100<i>%</i></b><span>새 제품 설치</span></div>
+            </div>
+
+            <h2>싼 곳은 많습니다. <span>고장났을 때 바로 오는 곳은 드뭅니다.</span></h2>
+            <p class="lede">복합기가 고장나면 그날 업무가 밀립니다.
+                월 5천 원 아끼려다 반나절을 못 쓰면, 손해가 훨씬 큽니다.<br>
+                애플잉크는 <b>24시간 내 방문 A/S</b>를 원칙으로 하고,
+                <b>수도권 중심 지역은 당일 방문</b>합니다. 28년째 지켜 온 방식입니다.
+            </p>
+
+            <!-- 핵심 3가지: 업무가 멈추지 않는다 -->
+            <div class="why3">
+                <div>
+                    <span class="n">01</span>
+                    <strong>24시간 내 방문 A/S</strong>
+                    <p>접수 후 24시간 안에 방문하는 것이 원칙입니다. 수도권 중심 지역은 당일 방문이 가능합니다.</p>
+                </div>
+                <div>
+                    <span class="n">02</span>
+                    <strong>기다릴 필요 없이 원격으로</strong>
+                    <p>웬만한 문제는 전화 한 통으로 끝납니다. 원격으로 접속해 그 자리에서 고쳐 드립니다.</p>
+                </div>
+                <div>
+                    <span class="n">03</span>
+                    <strong>설치하고 끝이 아닙니다</strong>
+                    <p>토너·드럼 같은 소모품과 정기 점검이 전부 무상입니다. 쓰는 동안 추가로 나가는 돈이 없습니다.</p>
+                </div>
+            </div>
+
+            <!-- 계약 조건 4가지: 업계 관행과 나란히 놓아야 차이가 보인다 -->
+            <h3 class="subhead">계약서에서 갈리는 네 가지</h3>
+            <div class="vs4">
+                <div>
+                    <span class="q">"이번 달 300매 남았는데요?"</span>
+                    <div class="row"><i class="bad">일반 렌탈</i>
+                        <p>월말에 소멸. 안 썼어도 돈은 이미 냈습니다.</p>
+                    </div>
+                    <div class="row"><i class="good">애플잉크</i>
+                        <p><b>다음 달로 이월</b>됩니다. 성수기·비수기 편차가 큰 곳일수록 차이가 큽니다.</p>
+                    </div>
+                </div>
+                <div>
+                    <span class="q">"계약할 때 얼마 필요한가요?"</span>
+                    <div class="row"><i class="bad">일반 렌탈</i>
+                        <p>기기가의 10~30%를 보증금으로 묶어 둡니다.</p>
+                    </div>
+                    <div class="row"><i class="good">애플잉크</i>
+                        <p><b>0원</b>. 보증금·설치비 없이 시작해, 그 돈을 사업에 쓰실 수 있습니다.</p>
+                    </div>
+                </div>
+                <div>
+                    <span class="q">"들어오는 기계, 새것 맞나요?"</span>
+                    <div class="row"><i class="bad">일반 렌탈</i>
+                        <p>반납된 중고·리퍼를 재투입하는 경우가 많습니다.</p>
+                    </div>
+                    <div class="row"><i class="good">애플잉크</i>
+                        <p><b>100% 새 제품</b>. 사용 이력이 없으니 고장도, 출력 품질 저하도 늦게 옵니다.</p>
+                    </div>
+                </div>
+                <div>
+                    <span class="q">"왜 하필 이 기계를 권하시죠?"</span>
+                    <div class="row"><i class="bad">일반 렌탈</i>
+                        <p>한 브랜드만 다루면, 그 브랜드를 권할 수밖에 없습니다.</p>
+                    </div>
+                    <div class="row"><i class="good">애플잉크</i>
+                        <p>삼성 · 신도리코 · 캐논 · 엡손 · 교세라 · HP · 후지필름 · 오키 <b>8개 브랜드의 복합기를 비교해</b> 업무 환경에 가장 적합한 장비를 제안합니다.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+    <section>
+        <div class="wrap">
+            <div class="cta">
+                <h2>이 조건 그대로 상담해 드립니다</h2>
+                <p id="ctaEcho">계산하신 출력량과 조건을 말씀해 주시면, 담당자가 같은 기준으로 확인해 드립니다.</p>
+                <strong>보증금 · 설치비 없이 시작하실 수 있습니다.</strong>
+                <div class="cta_acts">
+                    <a class="btn" id="ctaCall" href="tel:16440191" data-track="call">전화 상담 1644-0191</a>
+                    <a class="btn ghost" id="ctaSite" href="#" hidden>카카오 문의하기</a>
+                </div>
+            </div>
+        </div>
+        <div class="wrap">
+        </div>
+    </section>
+
+    <!-- 카카오 문의 모달 — ctaSite 클릭 시 이동 대신 이 모달이 뜬다.
+     JS가 제목·안내·요약 미리보기를 채운 뒤 보여 준다. -->
+    <div class="kmodal" id="kModal" hidden role="dialog" aria-modal="true" aria-labelledby="kModalTitle">
+        <div class="dim" data-close></div>
+        <div class="box">
+            <button class="close" type="button" data-close aria-label="닫기">&times;</button>
+            <h3 id="kModalTitle"><span class="ok">✓</span> 진단 요약이 복사되었습니다</h3>
+            <p class="guide" id="kModalGuide"></p>
+            <pre id="kModalPreview"></pre>
+            <a class="btn" id="kModalOpen" href="#" target="_blank" rel="noopener">카카오 채팅 열기</a>
+        </div>
+    </div>
+
+    <script src="plans.js"></script>
+    <script>
+        const $ = function (id) { return document.getElementById(id); };
+        const won = function (n) { return Math.round(n).toLocaleString('ko-KR'); };
+
+        /* ── 측정 ──
+           퍼널 3단: page_view(자동) → calc_complete(결과를 실제로 봤다) → call_click(전화)
+           gtag가 없으면 조용히 넘어간다. GA4 태그는 매커멕스와 같은 속성에 붙여야
+           review_card 클릭 → 진단 → 전화가 한 줄로 이어진다. */
+        const track = function (name, params) {
+            const p = params || {};
+            const u = new URLSearchParams(location.search);
+            ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content'].forEach(function (k) {
+                if (u.has(k)) p[k] = u.get(k);
+            });
+            p.partner = 'appleink';
+            if (typeof window.gtag === 'function') window.gtag('event', name, p);
+            window.dataLayer = window.dataLayer || [];
+            window.dataLayer.push(Object.assign({ event: name }, p));
+        };
+
+        /* ── 가격 비교표 노출 임계값 ──
+           애플잉크가 더 비쌀 때, 어디까지 막대를 보여줄지 정하는 기준.
+           막대 길이는 옆에 붙인 설명보다 먼저 읽히므로, 차이가 크면 비교표 자체를 접고
+           가격이 아닌 차별점으로 논지를 옮긴다.
+           - GAP_RATIO_MAX : 현재 지출 대비 초과 비율 상한
+           - GAP_PERDAY_MIN: 하루 환산 차액 하한
+           둘 다 넘을 때만 접는다(AND). 비율만으로 자르면, 원래 적게 쓰시던 분이
+           하루 200~300원 더 내는 경우까지 비교표가 사라진다 — 그 구간은 "하루 얼마"
+           설명이 가장 잘 통하는 자리라 오히려 보여 드려야 한다.
+           실데이터 보고 이 두 값만 조정하면 된다. */
+        const GAP_RATIO_MAX = 0.15;
+        const GAP_PERDAY_MIN = 300;
+
+        /* ── 대량 출력 상담 전환 기준 ──
+           표준 요금표는 이 매수까지만 검증됐다. 넘는 만큼 계산해서 보여주면
+           실제 견적과 어긋날 수 있으니, 계산 대신 전용 상담으로 안내한다. */
+        const LARGE_BW_THRESHOLD = 10000;
+        const LARGE_COLOR_THRESHOLD = 1000;
+
+        /* 차이가 "비교로 말할 수 있는 범위"를 벗어났는지 한 곳에서 판정한다.
+           헤드라인과 비교표가 따로 계산하면, 아래에서는 비교를 접어 놓고
+           위에서는 금액 차이를 크게 말하는 모순이 생긴다.
+           월 기준으로 계산해도 약정 총액 기준과 비율·하루단가가 같으므로 한 함수로 충분하다. */
+        function gapTooFar(cur, monthly) {
+            if (!cur || cur <= 0) return false;
+            const gap = monthly - cur;
+            if (gap <= 0) return false;
+            return gap / cur > GAP_RATIO_MAX && gap / 30 > GAP_PERDAY_MIN;
+        }
+
+        /* 사용 상황: known(금액 앎) · unknown(쓰지만 모름) · new(신규 도입) */
+        let mode = 'known';
+
+        /* 추천 카드 3장과 현재 선택 — 아래 총비용 비교가 이 선택을 따라간다 */
+        let picked = [], selIdx = 0, lastQ = null, calcTracked = false;
+
+        /* 입력값 읽기 — 현재 비용은 known 모드에서 직접 넣은 값만 사용한다 */
+        function readInput() {
+            return {
+                mode: mode,
+                cur: mode === 'known' ? Math.max(0, +$('cur').value || 0) : 0,
+                bw: +$('bw').value,
+                color: +$('cl').value,
+                needA3: $('a3').checked,
+                needFax: $('fax').checked
+            };
+        }
+
+        /* 요금제 하나에 대한 월 실비 계산
+           combined(GX7092): 기본매수가 흑백+컬러 통합이라 합산 매수로만 초과를 따진다 */
+        function evaluate(p, q) {
+            const bwOver = p.combined
+                ? Math.max(0, q.bw + q.color - p.bwBase) * p.bwOver
+                : Math.max(0, q.bw - p.bwBase) * p.bwOver;
+            const clOver = (p.combined || p.colorBase === null) ? 0
+                : Math.max(0, q.color - p.colorBase) * p.colorOver;
+            const fax = q.needFax ? p.fax : 0;
+            const monthly = p.rent + bwOver + clOver + fax;
+
+            /* 이월 가치: 안 쓴 기본매수를 추가단가로 환산 */
+            const carry = p.combined
+                ? Math.max(0, p.bwBase - q.bw - q.color) * p.bwOver
+                : Math.max(0, p.bwBase - q.bw) * p.bwOver
+                + (p.colorBase === null ? 0 : Math.max(0, p.colorBase - q.color) * p.colorOver);
+
+            return {
+                plan: p, monthly: monthly, overage: bwOver + clOver, fax: fax,
+                carry: carry,
+                covered: p.combined
+                    ? p.bwBase >= q.bw + q.color
+                    : p.bwBase >= q.bw && (p.colorBase === null || p.colorBase >= q.color),
+                perPage: q.bw + q.color > 0 ? monthly / (q.bw + q.color) : 0
+            };
+        }
+
+        /* 후보 필터링 + 계산 */
+        function candidates(q) {
+            return PLANS
+                .filter(function (p) {
+                    if (q.needA3 && p.paper !== 'A3') return false;      // A3 필요 시 A4 제외
+                    if (q.color > 0 && p.colorBase === null) return false; // 컬러 필요 시 흑백기 제외
+                    return true;
+                })
+                .map(function (p) { return evaluate(p, q); })
+                /* 월 실비가 같으면 초과요금이 적은 쪽 → 이월 가치가 큰 쪽을 앞세운다.
+                   등록 순서로 두면 같은 값에 초과요금 낀 요금제가 "가장 저렴한 선택"을 차지한다 */
+                .sort(function (a, b) {
+                    return a.monthly - b.monthly
+                        || a.overage - b.overage
+                        || b.carry - a.carry;
+                });
+        }
+
+        /* 카드 1장 렌더 — 현재 비용을 모르면 비교 문구를 넣지 않는다 */
+        function cardHTML(r, tag, pick, q) {
+            const p = r.plan;
+            const diff = q.cur - r.monthly;
+            let saveLine;
+            if (q.mode === 'new') {
+                saveLine = '<div class="save">보증금 · 설치비 0원 · 이 금액 외 초기 투자 없음</div>';
+            } else if (!q.cur) {
+                saveLine = '<div class="save" style="color:var(--muted);font-weight:600">'
+                    + '현재 내시는 금액을 입력하면 절감액을 계산해 드립니다</div>';
+            } else if (diff > 0) {
+                saveLine = '<div class="save">월 ' + won(diff) + '원 절감 · 약정 ' + p.months + '개월 총 '
+                    + won(diff * p.months) + '원</div>';
+            } else {
+                /* 더 비싼 경우 — 얻는 것은 위 목록(why-better)에 있고, 여기서는 결론만 맺는다.
+                   기준안 카드는 비교 대상이 없어 목록이 비므로, 애플잉크 공통 혜택으로 채워
+                   다른 카드와 같은 형태(목록 + 결론 한 줄)로 읽히게 한다. */
+                /* 차액은 하루 단위로 끊는다 — 이 페이지가 헤드라인·비교표에서 이미 쓰는 단위라
+                   카드만 월 단위로 남으면 같은 금액이 두 배율로 읽힌다.
+                   다만 월 금액을 감추면 숨기는 것으로 보이므로 괄호로 같이 적는다. */
+                saveLine = diff === 0
+                    ? '<div class="save up">지금과 <b>같은 금액</b>으로 위 조건을 받습니다</div>'
+                    : '<div class="save up">하루 <b>' + won(-diff / 30) + '원</b> 차이로 위 조건이 붙습니다'
+                    + '<em>월 ' + won(-diff) + '원 차이</em></div>';
+            }
+
+            /* 기준안 카드는 whyBetter() 비교 대상이 없어 목록이 비어 있다.
+               드림렌탈 제공 자료로 확인된 공통 혜택만 넣는다. */
+            let whyHTML = r.why || '';
+            if (!whyHTML && q.mode !== 'new' && q.cur && diff <= 0) {
+                whyHTML = '<ul class="why-better">'
+                    + '<li><b>보증금 · 설치비 0원</b></li>'
+                    + '<li><b>당일 설치</b> · <b>100% 새제품</b></li>'
+                    + '<li><b>24시간 내 방문 A/S</b> · 수도권 당일</li>'
+                    + '<li><b>토너 · 드럼 무상</b> · 정기 점검</li>'
+                    + '<li>안 쓴 매수 <b>다음 달 이월</b></li>'
+                    + '</ul>';
+            }
+
+            return '<div class="card' + (pick ? ' pick' : '') + '">'
+                + '<span class="tag">' + tag + '</span>'
+                + '<h3>' + p.model + '</h3>'
+                + '<div class="maker">' + p.maker + ' · ' + p.group + ' · ' + p.months + '개월 약정</div>'
+                + '<div class="price">' + won(r.monthly) + '<small> 원 / 월</small></div>'
+                + '<ul class="spec">'
+                + '<li><span>기본 렌탈료</span><b>' + won(p.rent) + '원</b></li>'
+                + '<li><span>기본매수</span><b>' + (p.combined
+                    ? '흑백+컬러 ' + won(p.bwBase) + '매'
+                    : '흑백 ' + won(p.bwBase) + '매'
+                    + (p.colorBase ? ' · 컬러 ' + won(p.colorBase) + '매' : '')) + '</b></li>'
+                /* 초과가 0원이어도 "없음"으로만 적으면 초과 단가 자체가 없는 요금제로 읽힌다 —
+                   입력한 출력량이 기본매수 이내라서 0원일 뿐임을 단가와 함께 밝힌다 */
+                + '<li><span>초과 출력비</span><b>' + (r.overage
+                    ? won(r.overage) + '원'
+                    : '0원 · 기본매수 이내 (초과 시 ' + (p.combined || p.colorBase === null
+                        ? '장당 ' + p.bwOver + '원'
+                        : '흑백 ' + p.bwOver + '원 · 컬러 ' + p.colorOver + '원') + ')') + '</b></li>'
+                + '<li><span>팩스</span><b>' + (r.fax ? won(r.fax) + '원' : '포함') + '</b></li>'
+                + '<li><span>장당 실단가</span><b>' + r.perPage.toFixed(1) + '원</b></li>'
+                + '<li><span>보증금</span><b>0원</b></li>'
+                + '</ul>' + whyHTML + saveLine + '</div>';
+        }
+
+        /* 기준안(최저가) 대비 이 요금제가 실제로 무엇이 나은지를 문장으로 만든다.
+           "스펙이 좋다"가 아니라 "무엇이 몇 매 늘고 무엇이 얼마 줄어드는지"를 말한다. */
+        function whyBetter(r, base, q) {
+            const p = r.plan, bp = base.plan;
+            const pts = [];
+
+            /* 한쪽이 통합 기본매수(GX7092)면 흑백·컬러를 따로 견줄 수 없다 — 합계로만 말한다 */
+            if (p.combined || bp.combined) {
+                const totGap = (p.bwBase + (p.colorBase || 0)) - (bp.bwBase + (bp.colorBase || 0));
+                if (totGap > 0) pts.push('기본매수 합계가 <b>' + won(totGap) + '매</b> 많습니다');
+            } else {
+                const bwGap = p.bwBase - bp.bwBase;
+                if (bwGap > 0) pts.push('흑백 기본매수가 <b>' + won(bwGap) + '매</b> 많습니다');
+
+                const clGap = (p.colorBase || 0) - (bp.colorBase || 0);
+                if (clGap > 0) pts.push('컬러 기본매수가 <b>' + won(clGap) + '매</b> 많습니다');
+            }
+
+            const overGap = base.overage - r.overage;
+            if (overGap > 0) pts.push('초과 출력비가 <b>' + won(overGap) + '원</b> 줄어듭니다');
+
+            if (r.covered && !base.covered)
+                pts.push('<b>초과 요금이 붙지 않습니다</b>');
+
+            if (p.paper === 'A3' && bp.paper !== 'A3') pts.push('<b>A3 출력</b>이 가능해집니다');
+            if (p.tech === '컬러레이저' && bp.tech === '잉크젯')
+                pts.push('레이저라 <b>빠르고 번지지 않습니다</b>');
+            if (p.colorOver && bp.colorOver && p.colorOver < bp.colorOver)
+                pts.push('컬러 단가가 <b>' + bp.colorOver + '원 → ' + p.colorOver + '원</b>입니다');
+
+            if (r.carry > base.carry && r.carry > 0)
+                pts.push('매달 <b>' + won(r.carry) + '원어치</b> 이월됩니다');
+
+            if (!pts.length) return '';
+            return '<ul class="why-better"><li>' + pts.slice(0, 3).join('</li><li>') + '</li></ul>';
+        }
+
+        /* 막대 그래프 */
+        function barHTML(label, rent, over, total, max, cls) {
+            const w = function (v) { return (v / max * 100).toFixed(1) + '%'; };
+            return '<div class="bar"><div class="lab"><span>' + label + '</span>'
+                + '<span>' + won(total) + '원</span></div><div class="track">'
+                + '<div class="fill ' + cls + '" style="width:' + w(rent) + '">'
+                + (rent / max > .18 ? '렌탈료 ' + won(rent) + '원' : '') + '</div>'
+                + (over > 0 ? '<div class="fill f-over" style="width:' + w(over) + '">'
+                    + (over / max > .18 ? '출력비 ' + won(over) + '원' : '') + '</div>' : '')
+                + '</div></div>';
+        }
+
+        function render() {
+            const q = readInput();
+            $('bwVal').innerHTML = won(q.bw) + '<small> 매</small>';
+            $('clVal').innerHTML = won(q.color) + '<small> 매</small>';
+
+            /* 대량 출력 구간 — 표준 요금표로 계산해서 보여주면 실제 견적과 어긋날 수 있다.
+               계산 대신 전용 상담으로 안내한다. 다른 분기보다 먼저 걸러야 known/unknown/new
+               어느 모드를 골랐든 똑같이 상담 안내로 이어진다.
+               문구는 "이 출력량은 상담이 필요합니다"처럼 고객 사정으로 읽히면 안 된다 —
+               표에 없는 이유는 더 낮춰 드릴 수 있어서이지, 고객이 넘겨야 할 문턱이 아니다. */
+            if (q.bw >= LARGE_BW_THRESHOLD || q.color >= LARGE_COLOR_THRESHOLD) {
+                $('resultHead').innerHTML = '출력량이 많을수록 <span style="color:var(--brand)">할인 폭이 커집니다</span>';
+                $('resultLede').textContent = '월 흑백 ' + won(LARGE_BW_THRESHOLD) + '매 · 컬러 ' + won(LARGE_COLOR_THRESHOLD)
+                    + '매 이상은 저희가 표에 미리 정해 둔 가격보다 더 낮춰 드릴 수 있는 구간이라 표준 요금표에는 없습니다. '
+                    + '출력량만 말씀해 주시면 그만큼 할인된 전용 단가로 바로 안내해 드립니다.';
+                $('cards').innerHTML = '<div class="empty" style="grid-column:1/-1">'
+                    + '<h3>표준 요금표보다 더 할인해 드리는 구간입니다</h3>'
+                    + '<p>월 흑백 ' + won(LARGE_BW_THRESHOLD) + '매 · 컬러 ' + won(LARGE_COLOR_THRESHOLD) + '매 이상은<br>'
+                    + '정해진 요금표 대신, 출력량에 맞춰 더 낮춘 전용 단가로 안내해 드립니다.<br><br>'
+                    + '<a class="btn" id="largeVolCall" href="tel:16440191">전화 상담 1644-0191</a></p></div>';
+                /* 하단 카카오 문의하기 옆 전화 버튼과 동일한 동작(데스크톱 번호 복사·트래킹)을 태운다.
+                   매번 innerHTML로 새로 그려지는 버튼이라 render() 호출마다 다시 붙여야 한다. */
+                bindCallBtn($('largeVolCall'), 'large_volume_result');
+                $('bars').innerHTML = '';
+                $('compareBox').style.display = 'none';
+                $('pickHint').style.display = 'none';
+                picked = [];
+                $('carryTitle').textContent = '더 큰 폭 할인이 적용되는 구간입니다';
+                $('carry').textContent = '—';
+                $('carryNote').textContent = '출력량을 전화로 말씀해 주시면 대량 할인가를 바로 안내해 드립니다.';
+                return;
+            }
+
+            /* 현재 비용은 우리가 알 수 없는 값이다.
+               금액을 안다고 해놓고 아직 안 넣었을 때만 결과를 보류한다. */
+            if (q.mode === 'known' && !q.cur) {
+                $('resultHead').textContent = '현재 내시는 금액을 입력해 주세요';
+                $('resultLede').textContent = '같은 출력량이라도 지금 어떤 계약을 쓰고 계신지에 따라 결과가 완전히 달라집니다.';
+                $('cards').innerHTML = '<div class="empty" style="grid-column:1/-1">'
+                    + '<h3>입력하신 금액을 기준으로 비교해 드립니다</h3>'
+                    + '<p>위 칸에 현재 월 복합기 비용을 넣으시면 애플잉크 ' + PLANS.length + '개 요금제와 즉시 비교됩니다.<br>'
+                    + '금액을 모르셔도 출력량만으로 추천은 확인하실 수 있습니다.</p></div>';
+                $('compareBox').style.display = 'none';
+                $('pickHint').style.display = 'none';
+                picked = [];
+                $('carryTitle').textContent = '안 쓴 출력량, 다음 달로 이월해 드립니다';
+                $('carry').textContent = '—';
+                $('carryNote').textContent = '출력량을 입력하시면 매달 남는 기본매수가 얼마어치인지 계산해 드립니다.';
+                return;
+            }
+
+            const list = candidates(q);
+            if (!list.length) {
+                $('resultHead').textContent = '조건에 맞는 요금제가 없습니다.';
+                $('resultLede').textContent = '출력량이나 조건을 조정해 주세요.';
+                $('cards').innerHTML = ''; $('bars').innerHTML = '';
+                return;
+            }
+
+            const cheapest = list[0];
+            const safe = list.find(function (r) { return r.covered; }) || cheapest;
+            /* 업그레이드안 — 최저가 대비 실제로 나아지는 것이 있어야 카드가 된다.
+               예산 안에 다른 후보가 있으면 그중 기본매수가 가장 큰 것("같은 예산"),
+               없으면 가장 저렴한 실질 업그레이드("조금 더 쓰면").
+               스펙이 같고 값만 비싼 요금제가 여기로 올라오면 태그가 거짓말이 된다. */
+            const budget = list.filter(function (r) { return r.monthly <= q.cur; });
+            let upgrade, upgradeTag;
+            if (budget.length > 1) {
+                upgrade = budget.slice().sort(function (a, b) {
+                    return (b.plan.bwBase + (b.plan.colorBase || 0) * 3)
+                        - (a.plan.bwBase + (a.plan.colorBase || 0) * 3);
+                })[0];
+                upgradeTag = '같은 예산으로 이만큼 달라집니다';
+            } else {
+                upgrade = list.find(function (r) {
+                    return r.plan !== cheapest.plan && whyBetter(r, cheapest, q);
+                }) || cheapest;
+                upgradeTag = '조금 더 쓰면 이렇게 달라집니다';
+            }
+
+            /* 헤드라인 */
+            const diff = q.cur - cheapest.monthly;
+            if (q.mode === 'new') {
+                $('resultHead').innerHTML = '초기 비용 <span style="color:var(--brand)">0원</span>, 월 '
+                    + won(cheapest.monthly) + '원으로 시작하실 수 있습니다.';
+                $('resultLede').textContent = '보증금 없이 새 제품으로 설치됩니다. '
+                    + '아래 금액은 렌탈료에 예상 출력비와 팩스비까지 더한 실제 청구 기준입니다.';
+            } else if (!q.cur) {
+                $('resultHead').innerHTML = '이 출력량이면 <span style="color:var(--brand)">월 '
+                    + won(cheapest.monthly) + '원</span>부터 가능합니다.';
+                $('resultLede').textContent = '초과 출력비와 팩스비까지 포함한 실제 청구 금액 기준입니다. '
+                    + '지금 내시는 금액을 넣으시면 얼마나 차이 나는지도 계산해 드립니다.';
+            } else if (diff > 0) {
+                $('resultHead').innerHTML = '지금 조건이라면 월 <span style="color:var(--brand)">'
+                    + won(diff) + '원</span>을 줄일 수 있습니다.';
+                $('resultLede').textContent = '현재 월 ' + won(q.cur) + '원 → 애플잉크 최저 '
+                    + won(cheapest.monthly) + '원. 약정 ' + cheapest.plan.months + '개월 기준 총 '
+                    + won(diff * cheapest.plan.months) + '원 차이입니다.';
+            } else if (diff === 0) {
+                /* 금액이 정확히 같은 경우. 차액을 말할 게 없으니 이 페이지의 논지를 그대로 쓴다 —
+                   "가격은 어디나 비슷하고, 고장났을 때가 다르다".
+                   (여기서 차액 계산을 태우면 -diff 가 음의 0이 되어 "하루 -0원"으로 찍힌다) */
+                $('resultHead').innerHTML = '같은 금액인데, <span style="color:var(--brand)">받으시는 것이 다릅니다.</span>';
+                $('resultLede').innerHTML = '현재 월 ' + won(q.cur) + '원, 애플잉크도 월 '
+                    + won(cheapest.monthly) + '원. 금액은 같습니다.<br>같은 돈에 <b>24시간 내 방문 A/S</b>, '
+                    + '<b>원격 수리</b>, <b>토너·드럼 무상 교체</b>, <b>정기 점검</b>, '
+                    + '<b>안 쓴 출력량 이월</b>, <b>보증금 0원</b>이 전부 붙습니다.<br>'
+                    + '더 내실 것이 없다면, 고장났을 때 무엇이 다른지가 유일한 판단 기준입니다.';
+            } else {
+                /* 가격으로 못 이기는 경우.
+                   차액을 하루 단위로 쪼개 작게 만들고, 그 돈으로 무엇을 받는지 바로 붙인다. */
+                const gap = -diff;
+                const perDay = Math.round(gap / 30);
+                if (gapTooFar(q.cur, cheapest.monthly)) {
+                    /* 아래 비교표를 접는 구간이다. 여기서 금액 차이를 앞세우면
+                       "조건을 맞추면 금액이 달라집니다"라는 아래 화면과 정면으로 어긋난다. */
+                    $('resultHead').innerHTML = '이 조건, <span style="color:var(--brand)">더 좋게 받으실 수 있습니다.</span>';
+                    $('resultLede').innerHTML = '어느 조합을 고르셔도 <b>24시간 내 방문 A/S</b>, <b>원격 수리</b>, '
+                        + '<b>토너·드럼 무상 교체</b>, <b>정기 점검</b>, <b>안 쓴 출력량 이월</b>, '
+                        + '<b>보증금 0원</b>을 그대로 받으십니다.<br>'
+                        + '전화 한 통이면 담당자가 가장 유리한 안을 찾아 드립니다.';
+                } else {
+                    $('resultHead').innerHTML = '하루 <span style="color:var(--brand)">' + won(perDay)
+                        + '원</span> 차이로, 긴급대응과 사후관리가 달라집니다.';
+                    $('resultLede').innerHTML = '현재와의 차이는 월 ' + won(gap) + '원, 하루로 나누면 '
+                        + won(perDay) + '원입니다.<br>이 금액에 <b>24시간 내 방문 A/S</b>, <b>원격 수리</b>, '
+                        + '<b>토너·드럼 무상 교체</b>, <b>정기 점검</b>, <b>안 쓴 출력량 이월</b>이 모두 포함됩니다.<br>'
+                        + '접수부터 출동 · 수리 · 이후 점검까지 이어지는 관리가 이 금액 안에 들어 있습니다.';
+                }
+            }
+
+            /* 카드 3장 — 여기서 고른 것이 아래 비교의 기준이 된다.
+               최저가 뱃지는 초과 출력비 포함 여부를 함께 말한다 — 숨기면
+               "초과요금 걱정 없는 선택"과 나란히 섰을 때 무엇이 다른지 안 보인다 */
+            picked = [{
+                r: cheapest, tag: cheapest.covered
+                    ? '가장 저렴한 선택 · 기본매수 이내'
+                    : '가장 저렴한 선택 · 초과 출력비 포함'
+            }];
+
+            if (safe.plan !== cheapest.plan) {
+                safe.why = whyBetter(safe, cheapest, q);
+                picked.push({ r: safe, tag: '초과요금 걱정 없는 선택' });
+            }
+            if (upgrade.plan !== cheapest.plan && upgrade.plan !== safe.plan) {
+                upgrade.why = whyBetter(upgrade, cheapest, q);
+                picked.push({ r: upgrade, tag: upgradeTag });
+            }
+            /* 남은 자리는 아직 안 뽑힌 것 중 저렴한 순서로 채운다 —
+               인덱스로 건너뛰면 진짜 차선책(list[1])이 빠지거나 같은 카드가 중복된다.
+               최저가와 스펙이 같고 값만 비싼 요금제(다른 브랜드 동일 구간)는 내지 않는다 —
+               보여줄 이유(whyBetter)가 한 줄도 없는 카드는 비교가 아니라 소음이다. */
+            for (let i = 0; picked.length < 3 && i < list.length; i++) {
+                const extra = list[i];
+                if (picked.some(function (c) { return c.r.plan === extra.plan; })) continue;
+                const why = whyBetter(extra, cheapest, q);
+                if (!why) continue;
+                extra.why = why;
+                picked.push({ r: extra, tag: '이런 선택도 있습니다' });
+            }
+
+            lastQ = q;
+            selIdx = 0;
+            $('pickHint').style.display = picked.length > 1 ? '' : 'none';
+            paintCards();
+            renderDetail(picked[0].r, q);
+
+            /* 결과를 처음 본 순간 1회만 — 슬라이더를 움직일 때마다 세지 않는다 */
+            if (!calcTracked) {
+                calcTracked = true;
+                track('calc_complete', {
+                    input_mode: q.mode,
+                    current_cost: q.cur,
+                    pages_bw: q.bw,
+                    pages_color: q.color,
+                    best_plan: cheapest.plan.maker + ' ' + cheapest.plan.model,
+                    best_monthly: Math.round(cheapest.monthly)
+                });
+            }
+        }
+
+        /* 카드 그리기 — 선택된 카드에 파란 테두리가 간다 */
+        function paintCards() {
+            $('cards').innerHTML = picked.map(function (it, i) {
+                return cardHTML(it.r, it.tag, i === selIdx, lastQ);
+            }).join('');
+            Array.prototype.forEach.call($('cards').children, function (el, i) {
+                el.dataset.idx = i;
+            });
+        }
+
+        /* 카드 하나를 기준으로 아래 전체(총비용·이월·CTA)를 다시 그린다 */
+        function renderDetail(sel, q) {
+            const m = sel.plan.months;
+            const curTotal = q.cur * m, newTotal = sel.monthly * m;
+            const rentPart = sel.plan.rent * m + sel.fax * m;
+            const cheapest = sel;   /* 아래 로직은 선택된 요금제를 기준으로 동작한다 */
+
+            if (q.mode === 'new') {
+                /* 신규 도입: 비교 대상이 없으므로 약정 총액은 기준점 없는 큰 숫자일 뿐이다.
+                   처음 들이는 사람에게 필요한 답은 "얼마가 나가나"가 아니라 "시작할 때 뭐가 드나"다. */
+                $('compareBox').style.display = '';
+                $('compareBox').querySelector('h3').textContent = '시작할 때 드는 돈';
+                $('cmpSub').textContent = cheapest.plan.model + ' 기준 · ' + m + '개월 약정';
+                $('bars').innerHTML =
+                    '<div class="zero"><b>0원</b>'
+                    + '<ul><li>보증금 없음</li><li>설치비 없음</li><li>초기 투자 없음</li></ul></div>'
+                    + '<p style="margin:12px 0 0;font-size:13px;color:var(--ink-2);line-height:1.6">'
+                    + '월 ' + won(cheapest.monthly) + '원부터 바로 시작하실 수 있습니다. '
+                    + '기계값을 미리 치르지 않으니 목돈이 묶이지 않습니다.</p>';
+            } else if (!q.cur) {
+                $('compareBox').style.display = 'none';
+            } else {
+                $('compareBox').style.display = '';
+                const max = Math.max(curTotal, newTotal);
+                const cheaper = newTotal <= curTotal;
+                const gapTotal = newTotal - curTotal;
+                const perDay = cheaper ? 0 : Math.round(gapTotal / (m * 30));
+
+                /* 차이가 너무 벌어지면 막대를 아예 그리지 않는다.
+                   막대 길이는 옆에 붙인 설명보다 먼저 읽히므로, 여기서 가격표를 보여 주면
+                   "하루 얼마" 프레이밍이 그래프에 그대로 진다.
+                   이런 케이스는 대개 지금 쓰시는 기기가 저사양이라 매칭된 요금제와 급이 다른 것이어서,
+                   금액만 나란히 두는 비교 자체가 성립하지 않는다.
+                   단, 비율이 커도 하루 차액이 사소하면 그대로 보여 준다(GAP_PERDAY_MIN). */
+                const tooFar = gapTooFar(q.cur, sel.monthly);
+
+                if (tooFar) {
+                    $('compareBox').querySelector('h3').textContent = '조건을 맞추면 금액이 달라집니다';
+                    $('cmpSub').textContent =
+                        '표준 요금표를 그대로 대는 대신, 사양 · 기본매수 · 약정을 조합해 따로 설계합니다.';
+                    $('bars').innerHTML =
+                        '<div class="incl" style="border-top:0;padding-top:4px">'
+                        + '<p class="lab">애플잉크가 대신 책임지는 것</p>'
+                        + '<ul><li class="hl">보증금 0원</li><li class="hl">당일 설치</li><li class="hl">100% 새제품</li>'
+                        + '<li>24시간 내 방문 A/S</li><li>원격 수리</li><li>토너 · 드럼 무상 교체</li>'
+                        + '<li>정기 점검</li><li>안 쓴 출력량 이월</li>'
+                        + '<li>8개 브랜드 중 선택</li></ul></div>';
+                    $('cmpFoot').innerHTML = '입력하신 출력량과 조건은 그대로 상담에 넘어갑니다. '
+                        + '28년치 사례를 바탕으로 이 조건에서 가장 유리한 조합을 잡아 드립니다.<br>'
+                        + '쓰다가 출력량이 달라지면 요금제도 함께 조정하실 수 있습니다.';
+                } else {
+
+                    /* 더 비싸게 나와도 감추지 않는다. 다만 제목이 혼자 손실을 선언하지 않게 한다.
+                       — 이 페이지의 논지는 "싸다"가 아니라 "고장났을 때 다르다"이므로,
+                         차액은 그대로 두고 그 차액에 무엇이 들어 있는지를 막대 옆에 바로 붙인다. */
+                    $('compareBox').querySelector('h3').textContent =
+                        gapTotal === 0 ? '약정 기간 전체로 금액이 같습니다'
+                            : cheaper ? '약정 기간 전체로 얼마나 아끼는지'
+                                : '약정 기간 전체로 보면 이 정도 차이입니다';
+                    $('cmpSub').textContent = cheapest.plan.model + ' 기준 · ' + m + '개월 약정';
+
+                    let barsHTML =
+                        barHTML('지금 내시는 금액', curTotal, 0, curTotal, max, 'f-cur')
+                        + barHTML('애플잉크 ' + cheapest.plan.model,
+                            rentPart, cheapest.overage * m, newTotal, max, 'f-rent');
+
+                    if (gapTotal === 0) {
+                        /* 총액이 정확히 같다 — 차액을 말하면 "0원 차이"가 되어 아무 의미가 없다 */
+                        $('cmpFoot').innerHTML = '약정 ' + m + '개월 총액이 <b>같습니다</b>. '
+                            + '같은 금액에 24시간 내 방문 A/S · 원격 수리 · 토너 · 드럼 무상 교체 · 정기 점검 · '
+                            + '이월 · 보증금 0원이 포함됩니다.';
+                    } else if (cheaper) {
+                        $('cmpFoot').innerHTML = '월 단위로는 작아 보여도 약정 전체로는 '
+                            + '<b style="color:var(--good)">' + won(curTotal - newTotal) + '원</b> 차이입니다.';
+                    } else {
+                        barsHTML += '<div class="incl">'
+                            + '<p class="lab">이 차액 <b>하루 ' + won(perDay) + '원</b>에 들어 있는 것</p>'
+                            + '<ul><li class="hl">보증금 0원</li><li class="hl">당일 설치</li><li class="hl">100% 새제품</li>'
+                            + '<li>24시간 내 방문 A/S</li><li>원격 수리</li><li>토너 · 드럼 무상 교체</li>'
+                            + '<li>정기 점검</li><li>안 쓴 출력량 이월</li></ul></div>';
+                        /* 차액을 "고장 하루"에만 걸면 근거가 한 번뿐이다.
+                           약정 기간 내내 반복되는 무상 항목들을 함께 세어야 차액과 견줄 수 있다. */
+                        $('cmpFoot').innerHTML = '<b>' + m + '개월 동안 ' + won(gapTotal) + '원</b> 차이입니다. '
+                            + '그 기간에 토너 · 드럼 교체, 정기 점검, 출동 A/S가 <b>횟수 제한 없이 무상</b>으로 들어가고, '
+                            + '안 쓴 출력량은 매달 이월됩니다.<br>'
+                            + '여기에 고장으로 하루 멈출 때 밀리는 업무까지 더하면, 차액보다 큰 쪽은 이쪽입니다.';
+                    }
+
+                    $('bars').innerHTML = barsHTML;
+                }
+            }
+
+            /* 섹션 내 CTA — 방금 계산한 결과를 그대로 받아 적는다 */
+            $('cmpFoot').style.display = q.mode === 'new' ? 'none' : '';
+            $('ctaEcho').textContent =
+                q.mode === 'new' ? cheapest.plan.model + ' 신규 설치 · 초기 비용 0원으로 안내해 드립니다.'
+                    : q.cur ? cheapest.plan.model + ' · 월 ' + won(cheapest.monthly) + '원 조건 그대로 상담해 드립니다.'
+                        : cheapest.plan.model + ' · 월 ' + won(cheapest.monthly) + '원부터 시작하실 수 있습니다.';
+
+            /* 이월 가치 — 이월과 초과는 동시에 날 수 있다(흑백은 남고 컬러는 넘치는 식).
+               한쪽만 말하면 나머지 절반을 숨기는 셈이라 네 경우를 나눠 쓴다.
+               "더 큰 요금제를 고르시라"는 안내는 그런 요금제가 실제로 있을 때만 한다 —
+               이미 기본매수가 가장 큰 요금제를 쓰고 있으면 가리킬 곳이 없다. */
+            if (sel.carry > 0 && sel.overage === 0) {
+                $('carryTitle').textContent = '안 쓴 출력량, 다음 달로 이월해 드립니다';
+                $('carry').textContent = '연 ' + won(sel.carry * 12) + '원 상당';
+                $('carryNote').textContent = '입력하신 출력량 기준으로 매달 남는 기본매수가 '
+                    + won(sel.carry) + '원어치입니다. 타사는 소멸, 애플잉크는 이월됩니다.';
+
+            } else if (sel.carry > 0 && sel.overage > 0) {
+                /* 한쪽은 남고 한쪽은 넘친다 — 이월만 보여 주면 초과분을 숨기게 된다 */
+                $('carryTitle').textContent = '남는 쪽은 이월, 넘치는 쪽은 초과입니다';
+                $('carry').textContent = '이월 ' + won(sel.carry) + '원 · 초과 ' + won(sel.overage) + '원';
+                $('carryNote').textContent = '한쪽 기본매수는 남고 다른 쪽은 넘습니다. 남는 만큼은 다음 달로 '
+                    + '이월되지만, 넘치는 만큼은 매달 초과 출력비로 나갑니다. '
+                    + '아래 대안을 보시면 이 둘의 균형이 달라집니다.';
+
+            } else if (sel.overage === 0) {
+                /* 남지도 넘치지도 않는다 */
+                $('carryTitle').textContent = '기본매수가 출력량과 맞습니다';
+                $('carry').textContent = '초과 출력비 0원';
+                $('carryNote').textContent = '입력하신 출력량이 기본매수 안에 딱 들어옵니다. '
+                    + '출력이 줄어드는 달에는 남는 만큼이 다음 달로 이월됩니다.';
+
+            } else {
+                /* 초과만 난다 — 초과를 없애 주는 요금제가 실제로 있는지 먼저 확인한다 */
+                const alt = candidates(q).filter(function (r) {
+                    return r.covered && r.plan !== sel.plan;
+                })[0];   /* candidates()는 월 실비 오름차순이므로 첫 항목이 가장 저렴한 대안 */
+
+                $('carryTitle').textContent = '출력량이 기본매수를 넘습니다';
+                $('carry').textContent = '초과 출력비 월 ' + won(sel.overage) + '원';
+
+                if (!alt) {
+                    /* 표준 요금표로 못 담는 대량 구간 — "요금제가 없다"는 한계 고백이 아니라
+                       전용 조건을 제안받는 구간이라는 영업 포인트로 말한다 */
+                    $('carryTitle').textContent = '이 출력량은 전용 조건 상담 구간입니다';
+                    $('carryNote').textContent = '표준 요금표로는 넘치는 만큼이 초과 출력비로 계산되는 출력량입니다. '
+                        + '출력량이 많은 사업장일수록 표준 요금표보다 유리한 조건을 제안드릴 수 있으니, '
+                        + '상담에서 출력량만 말씀해 주시면 초과 부담을 줄인 전용 견적으로 바로 안내해 드립니다.';
+                } else if (alt.monthly <= sel.monthly) {
+                    $('carryNote').textContent = '초과 없이 쓰면서 오히려 더 저렴한 요금제가 있습니다 — '
+                        + alt.plan.model + ' 월 ' + won(alt.monthly) + '원. 지금 선택보다 월 '
+                        + won(sel.monthly - alt.monthly) + '원 낮습니다.';
+                } else {
+                    $('carryNote').textContent = '초과 없이 쓰려면 ' + alt.plan.model + ' 월 '
+                        + won(alt.monthly) + '원으로, 지금 선택과 월 ' + won(alt.monthly - sel.monthly)
+                        + '원 차이입니다. 대신 초과 출력비 ' + won(sel.overage)
+                        + '원이 사라지고, 남는 기본매수는 이월됩니다.';
+                }
+            }
+        }
+
+        /* 카드 상호작용 — 클릭한 카드로만 아래가 바뀐다.
+           마우스를 올리는 것만으로 총비용 비교가 흔들리면, 읽는 중에 내용이 바뀌어
+           무엇을 보고 있었는지 놓치게 된다. 안내 문구("카드를 클릭하시면")와도 어긋나고,
+           터치 기기에는 hover 자체가 없어 동작이 갈린다. */
+        $('cards').addEventListener('click', function (e) {
+            const card = e.target.closest('.card');
+            if (!card || card.dataset.idx === undefined) return;
+            selIdx = +card.dataset.idx;
+            paintCards();
+            renderDetail(picked[selIdx].r, lastQ);
+            $('compareBox').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        });
+
+        /* 이벤트 */
+        ['cur', 'bw', 'cl', 'a3', 'fax'].forEach(function (id) {
+            $(id).addEventListener('input', render);
+            $(id).addEventListener('change', render);
+        });
+        /* 출력량 선택 카드 → 슬라이더 자동 입력
+           클릭이 아래 값을 바꾼다는 사실을 색 변화로 눈에 보이게 한다 */
+        let flashTimer = null;
+        document.querySelectorAll('.choices button').forEach(function (b) {
+            b.addEventListener('click', function () {
+                $('bw').value = b.dataset.bw;
+                $('cl').value = b.dataset.color;
+                document.querySelectorAll('.choices button')
+                    .forEach(function (x) { x.classList.toggle('on', x === b); });
+
+                $('fillNote').classList.add('done');
+                $('fillMsg').innerHTML = '<b>' + b.querySelector('b').textContent
+                    + '</b> 평균값으로 채웠습니다. 실제 매수를 아신다면 아래에서 조정하세요.';
+
+                const s = $('sliders');
+                s.classList.add('flash');
+                clearTimeout(flashTimer);
+                flashTimer = setTimeout(function () { s.classList.remove('flash'); }, 900);
+
+                render();
+            });
+        });
+
+        /* 슬라이더를 직접 만지면 선택 카드는 해제 (값이 더는 그 평균이 아니므로) */
+        ['bw', 'cl'].forEach(function (id) {
+            $(id).addEventListener('input', function () {
+                document.querySelectorAll('.choices button.on').forEach(function (x) {
+                    x.classList.remove('on');
+                });
+                $('fillNote').classList.remove('done');
+                $('fillMsg').textContent = '직접 입력한 값으로 계산 중입니다. 위에서 다시 고르셔도 됩니다.';
+            });
+        });
+
+        /* 사용 상황 3갈래 — 고르는 즉시 결과가 나온다 (한 번 더 누르게 하지 않는다) */
+        document.querySelectorAll('.modes button').forEach(function (b) {
+            b.addEventListener('click', function () {
+                mode = b.dataset.mode;
+                document.querySelectorAll('.modes button')
+                    .forEach(function (x) { x.classList.toggle('on', x === b); });
+                $('knownBox').style.display = mode === 'known' ? '' : 'none';
+                $('unknownBox').style.display = mode === 'unknown' ? '' : 'none';
+                $('newBox').style.display = mode === 'new' ? '' : 'none';
+                render();
+            });
+        });
+
+        /* 현재 비용 프리셋 — 어디까지나 입력 보조일 뿐, 기본값으로 박아두지 않는다 */
+        document.querySelectorAll('.presets button[data-cur]').forEach(function (b) {
+            b.addEventListener('click', function () {
+                document.querySelectorAll('.presets button[data-cur]')
+                    .forEach(function (x) { x.classList.toggle('on', x === b); });
+                $('cur').value = b.dataset.cur;
+                render();
+            });
+        });
+
+        /* 금액을 직접 고쳐 넣으면 프리셋 선택 해제 */
+        $('cur').addEventListener('input', function () {
+            if ($('cur').value) {
+                document.querySelectorAll('.presets button[data-cur]')
+                    .forEach(function (x) { x.classList.remove('on'); });
+            }
+        });
+        /* 애플잉크 카카오 채널 주소. 비워 두면 버튼을 숨긴다 —
+           주소가 정해지기 전에 노출하면 눌러도 아무 데도 가지 않는 죽은 버튼이 된다.
+           /chat 을 붙여 채널 홈을 거치지 않고 1:1 채팅창으로 바로 보낸다. */
+        const PARTNER_SITE = 'https://pf.kakao.com/_ICxbRs/chat';
+
+        /* 채팅창에 문구를 대신 넣어 줄 방법은 카카오 정책상 없다.
+           대신 진단 결과 요약을 클립보드에 담아 두어, 붙여넣기 한 번이면 되게 한다. */
+        function diagnosisSummary() {
+            const q = lastQ || readInput();
+            const lines = ['[복합기 요금 진단 결과]'];
+            lines.push('월 출력량: 흑백 ' + won(q.bw) + '매 · 컬러 ' + won(q.color) + '매');
+            lines.push('옵션: ' + (q.needA3 ? 'A3 출력 필요' : 'A4') + (q.needFax ? ' · 팩스 사용' : ''));
+            if (q.mode === 'new') lines.push('복합기 신규 도입 문의입니다.');
+            else if (q.cur) lines.push('현재 월 비용: 약 ' + won(q.cur) + '원');
+            if (picked.length && picked[selIdx]) {
+                const sel = picked[selIdx].r;
+                lines.push('관심 요금제: ' + sel.plan.maker + ' ' + sel.plan.model
+                    + ' · 월 ' + won(sel.monthly) + '원 (' + sel.plan.months + '개월 약정)');
+            }
+            lines.push('위 조건으로 견적 문의드립니다.');
+            return lines.join('\n');
+        }
+
+        (function () {
+            const el = $('ctaSite');
+            if (!PARTNER_SITE) { el.remove(); return; }
+            el.setAttribute('href', PARTNER_SITE);
+            el.removeAttribute('hidden');
+
+            /* 클릭 즉시 새 탭을 열면 포커스를 뺏겨 "복사되었습니다" 안내를 아무도 못 본다.
+               그래서 이동을 한 박자 멈추고 모달에서 안내를 끝낸 뒤,
+               실제 이동은 모달 안 버튼(두 번째 직접 클릭)으로 한다 — 팝업 차단에도 안 걸린다.
+          
+               복사는 동기(execCommand)로 한다 — 비동기 클립보드 API는 탭이
+               포커스를 잃는 순간 거부되어, 복사가 조용히 사라진다. */
+            const copySummary = function (text) {
+                const ta = document.createElement('textarea');
+                ta.value = text;
+                ta.setAttribute('readonly', '');
+                ta.style.position = 'fixed';
+                ta.style.opacity = '0';
+                document.body.appendChild(ta);
+                ta.select();
+                let ok = false;
+                try { ok = document.execCommand('copy'); } catch (e) { }
+                document.body.removeChild(ta);
+                return ok;
+            };
+
+            const modal = $('kModal');
+            const isMobile = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+            const device = isMobile ? 'mobile' : 'desktop';
+
+            const close = function () {
+                modal.setAttribute('hidden', '');
+                document.body.style.overflow = '';
+            };
+            modal.querySelectorAll('[data-close]').forEach(function (x) {
+                x.addEventListener('click', close);
+            });
+            document.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape' && !modal.hasAttribute('hidden')) close();
+            });
+
+            el.addEventListener('click', function (e) {
+                e.preventDefault();
+                track('kakao_modal_open', { position: 'bottom', device: device });
+
+                const summary = diagnosisSummary();
+                const copied = copySummary(summary);
+                $('kModalPreview').textContent = summary;
+
+                /* 복사 실패(비보안 컨텍스트 등)여도 요약이 눈앞에 있으니 직접 복사하면 된다 */
+                $('kModalTitle').innerHTML = copied
+                    ? '<span class="ok">✓</span> 진단 요약이 복사되었습니다'
+                    : '아래 요약을 복사해 주세요';
+                /* /chat 은 모바일에서만 채팅방으로 직행한다. PC 웹은 카카오가 1:1 채팅을
+                   지원하지 않아 채널 홈이 열리므로, 안내 문구도 기기에 맞춰 가른다. */
+                $('kModalGuide').textContent = copied
+                    ? (isMobile
+                        ? '채팅창에 붙여넣기만 하면 같은 조건으로 견적을 받을 수 있어요.'
+                        : 'PC에서는 채널 홈이 열립니다. 채팅하기를 누른 뒤 붙여넣어 주세요.')
+                    : (isMobile
+                        ? '아래 내용을 길게 눌러 복사한 뒤, 채팅창에 붙여넣어 주세요.'
+                        : '아래 내용을 드래그해 복사한 뒤, 채널에서 채팅하기를 눌러 붙여넣어 주세요.');
+
+                $('kModalOpen').setAttribute('href', PARTNER_SITE);
+                modal.removeAttribute('hidden');
+                document.body.style.overflow = 'hidden';
+                $('kModalOpen').focus();
+            });
+
+            /* 카카오 탭으로 넘어간 뒤에도 모달은 그대로 둔다 —
+               돌아왔을 때 붙여넣기 안내가 다시 보이는 게 닫혀 있는 것보다 낫다 */
+            $('kModalOpen').addEventListener('click', function () {
+                track('kakao_channel_click', { position: 'modal', device: device });
+            });
+        })();
+
+        /* 전화 CTA — 기기에 따라 하는 일이 다르다.
+           모바일: tel: 그대로 태워 바로 통화 연결.
+           데스크톱: tel: 을 누르면 아무 일도 안 일어나거나 엉뚱한 앱이 뜬다.
+                     그래서 이동을 막고 번호를 클립보드에 담아 준다(휴대폰으로 옮겨 걸 수 있게).
+           판정은 화면 폭이 아니라 포인터 종류로 한다 — 좁은 창의 PC를 모바일로 오인하지 않는다.
+           하단 고정 버튼뿐 아니라 render()가 매번 새로 그리는 대량 구간 안내의 전화 버튼도
+           같은 동작을 타야 하므로, 재사용 가능한 함수로 뺀다. position은 어느 버튼이
+           눌렸는지 구분하는 트래킹용 값이다. */
+        function bindCallBtn(btn, position) {
+            if (!btn) return;
+            const NUM = '1644-0191';
+            const canCall = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+
+            if (!canCall) {
+                btn.setAttribute('role', 'button');
+                btn.setAttribute('aria-label', '전화번호 ' + NUM + ' 복사하기');
+                btn.textContent = '전화 상담 ' + NUM;
+            }
+
+            btn.addEventListener('click', function (e) {
+                track('call_click', { position: position, number: NUM, device: canCall ? 'mobile' : 'desktop' });
+                if (canCall) return;   /* 모바일은 그대로 통화로 넘긴다 */
+
+                e.preventDefault();
+                const label = btn.textContent;
+                const flash = function (msg) {
+                    btn.textContent = msg;
+                    setTimeout(function () { btn.textContent = label; }, 2000);
+                };
+                /* 클립보드는 보안 컨텍스트(https·localhost)에서만 동작한다.
+                   실패해도 번호는 버튼과 안내 문구에 이미 적혀 있으므로 안내만 바꾼다. */
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(NUM)
+                        .then(function () { flash('번호가 복사되었습니다'); })
+                        .catch(function () { flash('전화로 문의해 주세요 · ' + NUM); });
+                } else {
+                    flash('전화로 문의해 주세요 · ' + NUM);
+                }
+            });
+        }
+        bindCallBtn($('ctaCall'), 'bottom');
+
+        const canBackToMacomaex = function () {
+            try {
+                if (!document.referrer) return false;
+                const ref = new URL(document.referrer);
+                return ref.origin === location.origin
+                    && ref.pathname.indexOf('/ko/partners/') !== 0
+                    && history.length > 1;
+            } catch (e) {
+                return false;
+            }
+        };
+
+        document.querySelectorAll('[data-track="back_to_macomaex"]').forEach(function (a) {
+            a.addEventListener('click', function (e) {
+                track('back_to_macomaex');
+
+                if (canBackToMacomaex()) {
+                    e.preventDefault();
+                    try { sessionStorage.removeItem('hkReturnSection'); } catch (err) {}
+                    try { history.scrollRestoration = 'auto'; } catch (err) {}
+                    history.back();
+                }
+            });
+        });
+
+        /* URL 파라미터로 초기값 주입 (결과 공유 링크용)
+           예: ?cur=85000&bw=2000&cl=500&a3=1&fax=1 */
+        (function () {
+            const u = new URLSearchParams(location.search);
+            if (u.has('cur')) $('cur').value = u.get('cur');
+            if (u.has('bw')) $('bw').value = u.get('bw');
+            if (u.has('cl')) $('cl').value = u.get('cl');
+            if (u.has('a3')) $('a3').checked = u.get('a3') === '1';
+            if (u.has('fax')) $('fax').checked = u.get('fax') === '1';
+            if (u.has('mode')) {
+                const target = document.querySelector('.modes button[data-mode="' + u.get('mode') + '"]');
+                if (target) target.click();
+            }
+        })();
+
+        render();
+    </script>
+</body>
+
+</html>

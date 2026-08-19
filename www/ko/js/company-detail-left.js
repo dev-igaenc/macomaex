@@ -37,6 +37,28 @@ function renderDetailLeftCard(co, scoreHtml) {
         return value ? value : '정보 준비중';
     }
 
+    function _homepageLinkHtml(homepage) {
+        var value = String(homepage || '').trim();
+        var normalizedValue = value.replace(/\s+/g, '').toLowerCase();
+        if (!normalizedValue || normalizedValue === 'null' || normalizedValue === '정보준비중') {
+            return _esc(_displayOrPending(value));
+        }
+
+        var href = value;
+        if (!/^https?:\/\//i.test(href)) {
+            href = 'https://' + href.replace(/^\/\//, '');
+        }
+
+        try {
+            var url = new URL(href);
+            if (url.protocol !== 'http:' && url.protocol !== 'https:') throw new Error('Unsupported protocol');
+        } catch (e) {
+            return _esc(value);
+        }
+
+        return '<a class="info-homepage-link" href="' + _esc(href) + '" target="_blank" rel="noopener noreferrer">' + _esc(value) + '</a>';
+    }
+
     // 상세 공개 여부에 따라 카드 내부의 민감 정보 표시 방식을 통일한다.
     var isUnlocked = !!(co.is_identity_visible || co.is_unlocked);
     var titleHtml = isUnlocked ? _esc(_displayOrPending(co.title_display || co.title)) : _maskName(co.title);
@@ -44,7 +66,7 @@ function renderDetailLeftCard(co, scoreHtml) {
         ? _esc(_displayOrPending(co.address_display || co.address))
         : '*********************';
     var homepageHtml = isUnlocked
-        ? _esc(_displayOrPending(co.homepage_display || co.homepage))
+        ? _homepageLinkHtml(co.homepage || co.homepage_display)
         : '*********************';
     var addressClass = isUnlocked ? '' : ' class="info-masked"';
     var homepageClass = isUnlocked ? '' : ' class="info-masked"';

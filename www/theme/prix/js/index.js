@@ -14,7 +14,7 @@
             if (!symbol) return;
 
             var viewBox = symbol.getAttribute('viewBox');
-            if (viewBox && !svg.getAttribute('viewBox')) {
+            if (viewBox) {
                 svg.setAttribute('viewBox', viewBox);
             }
 
@@ -39,38 +39,248 @@
     }
 })();
 
-// 프리뷰 배너 2초 자동 전환 + 높이 동기화
+// 히어로 인라인 영상 재생 상태 동기화
 (function(){
-    var wrap = document.getElementById('previewBanner');
+    var wrap = document.getElementById('heroInterview');
     if (!wrap) return;
-    var slides = wrap.querySelectorAll('.mVisual_preview_slide');
-    var dots = wrap.querySelectorAll('.mVisual_preview_dot');
-    if (!slides.length || !dots.length) return;
-    var current = 0;
+    var slides = wrap.querySelectorAll('.mHeroSlide');
+    if (!slides.length) return;
+    var heroVideo = document.getElementById('mHeroVideo');
+    if (!heroVideo) return;
 
-    function syncHeight() {
-        var base = slides[0];
-        if (!base) return;
-        var baseH = base.offsetHeight;
-        for (var i = 1; i < slides.length; i++) {
-            slides[i].style.height = baseH + 'px';
+    function syncHeroVideo() {
+        var activeSlide = heroVideo.closest('.mHeroSlide');
+        var visible = activeSlide && activeSlide.classList.contains('active');
+        if (visible) {
+            var p = heroVideo.play();
+            if (p && p.catch) p.catch(function(){});
+        } else {
+            try {
+                heroVideo.pause();
+                heroVideo.currentTime = 0;
+            } catch (e) {}
         }
     }
 
-    function show(idx) {
-        slides[current].classList.remove('active');
-        dots[current].classList.remove('active');
-        current = idx % slides.length;
-        slides[current].classList.add('active');
-        dots[current].classList.add('active');
+    syncHeroVideo();
+})();
+
+// 사업자등록번호 입력창 타이핑 효과
+(function () {
+    var input = document.getElementById('comnum_index');
+    if (!input) return;
+
+    var text = '사업자등록번호를 입력해보세요';
+    var index = 0;
+    var isTyping = true;
+    var timerId = null;
+
+    function queueNextTick(delay) {
+        timerId = window.setTimeout(tick, delay);
     }
 
-    syncHeight();
-    window.addEventListener('resize', syncHeight);
-    dots.forEach(function(dot, i) {
-        dot.addEventListener('click', function() { show(i); });
+    function tick() {
+        if (input === document.activeElement) return;
+
+        if (isTyping) {
+            index++;
+            if (index > text.length) {
+                isTyping = false;
+                queueNextTick(2000);
+                return;
+            }
+        } else {
+            index--;
+            if (index < 0) {
+                isTyping = true;
+                index = 0;
+                queueNextTick(500);
+                return;
+            }
+        }
+
+        input.placeholder = text.substring(0, index) + '|';
+        queueNextTick(isTyping ? 100 : 50);
+    }
+
+    queueNextTick(500);
+
+    input.addEventListener('focus', function () {
+        if (timerId) {
+            window.clearTimeout(timerId);
+            timerId = null;
+        }
+        input.placeholder = '';
     });
-    setInterval(function() { show(current + 1); }, 2000);
+
+    input.addEventListener('blur', function () {
+        if (input.value) return;
+        index = 0;
+        isTyping = true;
+        if (timerId) {
+            window.clearTimeout(timerId);
+        }
+        tick();
+    });
+})();
+
+// 히어로 영상 앰비언트 배경
+(function(){
+    var video = document.getElementById('mHeroVideo');
+    var canvas = document.getElementById('mHeroVideoAmbient');
+    if (!video || !canvas || !canvas.getContext) return;
+
+    var ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    canvas.width = 32;
+    canvas.height = 18;
+
+    var STRIP_RATIO = 0.10;
+    var FADE_ALPHA = 0.45;
+    var isFirstFrame = true;
+
+    function drawAmbientFrame() {
+        if (window.innerWidth < 1025) return;
+        if (video.readyState < 2) return;
+
+        var videoWidth = video.videoWidth;
+        var videoHeight = video.videoHeight;
+        if (!videoWidth || !videoHeight) return;
+
+        var stripHeight = Math.max(1, Math.round(videoHeight * STRIP_RATIO));
+        var halfHeight = canvas.height / 2;
+
+        ctx.globalAlpha = isFirstFrame ? 1 : FADE_ALPHA;
+        ctx.drawImage(video, 0, 0, videoWidth, stripHeight, 0, 0, canvas.width, halfHeight);
+        ctx.drawImage(video, 0, videoHeight - stripHeight, videoWidth, stripHeight, 0, halfHeight, canvas.width, halfHeight);
+        ctx.globalAlpha = 1;
+        isFirstFrame = false;
+    }
+
+    video.addEventListener('loadeddata', function () {
+        isFirstFrame = true;
+        drawAmbientFrame();
+    });
+
+    if (window.requestAnimationFrame) {
+        (function loop() {
+            drawAmbientFrame();
+            requestAnimationFrame(loop);
+        })();
+    } else {
+        setInterval(drawAmbientFrame, 40);
+    }
+})();
+
+// 사용방법 영상 모달 재생
+(function () {
+    var heroToggle = document.getElementById('mHeroVideoToggle');
+    var TEMP_VIDEO_SRC = heroToggle ? (heroToggle.getAttribute('data-video-src') || '') : '';
+    var modal = document.getElementById('mVideoModal');
+    var player = document.getElementById('mVideoPlayer');
+    if (!modal || !player) return;
+
+    var playBtns = document.querySelectorAll('.mVisual_interview_play, .mVisual_video_play, .mReviews_play');
+    var heroVideo = document.getElementById('mHeroVideo');
+    var heroSlide = document.querySelector('.mHeroSlide--video');
+
+    function openVideo(src) {
+        var resumeAt = 0;
+        if (heroVideo) {
+            try { heroVideo.pause(); } catch (e) {}
+            if (heroVideo.getAttribute('src') === src) {
+                resumeAt = heroVideo.currentTime || 0;
+            }
+        }
+        if (player.getAttribute('src') !== src) {
+            player.setAttribute('src', src);
+        }
+        if (resumeAt > 0.3) {
+            var seek = function () {
+                try { player.currentTime = resumeAt; } catch (e) {}
+            };
+            if (player.readyState >= 1) seek();
+            else player.addEventListener('loadedmetadata', seek, { once: true });
+        } else {
+            var resetToStart = function () {
+                try { player.currentTime = 0; } catch (e) {}
+            };
+            if (player.readyState >= 1) resetToStart();
+            else player.addEventListener('loadedmetadata', resetToStart, { once: true });
+        }
+        modal.classList.add('open');
+        modal.setAttribute('aria-hidden', 'false');
+        document.documentElement.style.overflow = 'hidden';
+        var p = player.play();
+        if (p && p.catch) p.catch(function () {});
+    }
+
+    function closeVideo() {
+        try { player.pause(); } catch (e) {}
+        modal.classList.remove('open');
+        modal.setAttribute('aria-hidden', 'true');
+        document.documentElement.style.overflow = '';
+        if (heroVideo && heroSlide && heroSlide.classList.contains('active')) {
+            var hp = heroVideo.play();
+            if (hp && hp.catch) hp.catch(function () {});
+        }
+    }
+
+    playBtns.forEach(function (btn) {
+        btn.addEventListener('click', function (e) {
+            e.preventDefault();
+            openVideo(btn.getAttribute('data-video-src') || TEMP_VIDEO_SRC);
+        });
+    });
+
+    if (heroSlide) {
+        heroSlide.addEventListener('click', function (e) {
+            if (window.innerWidth > 720) return;
+            if (e.target.closest('.mVisual_video_play')) return;
+            e.preventDefault();
+            openVideo((playBtns[0] && playBtns[0].getAttribute('data-video-src')) || TEMP_VIDEO_SRC);
+        });
+    }
+
+    modal.querySelectorAll('[data-video-close]').forEach(function (el) {
+        el.addEventListener('click', closeVideo);
+    });
+
+    document.addEventListener('keydown', function (e) {
+        if ((e.key === 'Escape' || e.keyCode === 27) && modal.classList.contains('open')) {
+            closeVideo();
+        }
+    });
+})();
+
+// 카테고리 그리드 전체보기 토글 (데스크탑/태블릿 — 모바일은 캐러셀이 전체를 담당)
+(function() {
+    var grid = document.getElementById('mCategoriesGrid');
+    var btn = document.getElementById('catToggleBtn');
+    if (!grid || !btn) return;
+
+    var label = btn.querySelector('.cat_label');
+
+    function sync() {
+        var open = grid.classList.contains('expanded');
+        if (label) label.textContent = open ? '접기' : '전체보기';
+        btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    }
+
+    btn.addEventListener('click', function() {
+        grid.classList.toggle('expanded');
+        sync();
+        btn.classList.remove('is-pulse');
+        void btn.offsetWidth;
+        btn.classList.add('is-pulse');
+    });
+
+    btn.addEventListener('animationend', function(e) {
+        if (e.animationName === 'catMoreSpin') btn.classList.remove('is-pulse');
+    });
+
+    sync();
 })();
 
 // 모바일 전용: 카테고리 2줄 스와이프 캐러셀 (대분류 18개)
@@ -115,76 +325,6 @@
             catSwiper = null;
         }
     });
-})();
-
-// 비주얼 배너 캐러셀: 3장 겹침, 3초 자동 로테이션, 1/3> 페이지네이션
-(function() {
-    var wrap = document.querySelector('.mVisual_banner_wrap');
-    if (!wrap) return;
-    var container = wrap.querySelector('.mVisual_banner_swiper');
-    var paginationEl = wrap.querySelector('.mVisual_banner_pagination');
-    var nextBtn = wrap.querySelector('.mVisual_banner_next');
-    var slides = container ? container.querySelectorAll('.swiper-slide') : [];
-    if (!slides.length) return;
-    var total = slides.length;
-    var current = 0;
-    var timer;
-
-    function applyClasses() {
-        var nextIdx = (current + 1) % total;
-        var prevIdx = (current - 1 + total) % total;
-        slides.forEach(function(s, i) {
-            s.classList.remove('slide-active', 'slide-next', 'slide-prev');
-            if (i === current) s.classList.add('slide-active');
-            else if (i === nextIdx) s.classList.add('slide-next');
-            else if (i === prevIdx) s.classList.add('slide-prev');
-        });
-        if (paginationEl) {
-            var cur = paginationEl.querySelector('.mVisual_banner_page_current');
-            var tot = paginationEl.querySelector('.mVisual_banner_page_total');
-            if (cur) cur.textContent = current + 1;
-            if (tot) tot.textContent = total;
-        }
-    }
-
-    function goNext() {
-        current = (current + 1) % total;
-        applyClasses();
-    }
-
-    function startAutoplay() {
-        clearInterval(timer);
-        timer = setInterval(goNext, 3000);
-    }
-
-    function equalizeBannerHeight() {
-        var maxH = 0;
-        slides.forEach(function(s) {
-            s.style.position = 'relative';
-            s.style.height = 'auto';
-        });
-        slides.forEach(function(s) {
-            var h = s.offsetHeight;
-            if (h > maxH) maxH = h;
-        });
-        if (container) container.style.height = maxH + 'px';
-        slides.forEach(function(s) {
-            s.style.position = '';
-            s.style.height = '';
-        });
-    }
-
-    applyClasses();
-    equalizeBannerHeight();
-    startAutoplay();
-
-    window.addEventListener('resize', equalizeBannerHeight);
-    if (nextBtn) {
-        nextBtn.addEventListener('click', function() {
-            goNext();
-            startAutoplay();
-        });
-    }
 })();
 
     // 매칭 요청 템플릿(유통사/제조사)
@@ -321,6 +461,162 @@
             }
         });
     }
+
+    // 메인 인터뷰 카드 클릭을 공통 거래요청 모달로 연결
+    (function initHomepageReviewRequestModal() {
+        var reviewLinks = document.querySelectorAll('.mReviews_card_link[data-req-company]');
+        var context = window.MATCH_REQUEST_CONTEXT || {};
+
+        function parseTarget(link) {
+            var raw = link.getAttribute('data-req-target') || '';
+            if (!raw) return null;
+            try {
+                return JSON.parse(raw);
+            } catch (e) {
+                return null;
+            }
+        }
+
+        function buildLoginUrl(target) {
+            var loginReturnUrl = new URL(window.location.href);
+            loginReturnUrl.searchParams.set('trade_request_login', '1');
+            if (target && target.kedcd) {
+                loginReturnUrl.searchParams.set('trade_request_target', target.kedcd);
+            }
+            loginReturnUrl.hash = 'mReviews';
+            return '/bbs/login.php?url=' + encodeURIComponent(loginReturnUrl.pathname + loginReturnUrl.search + loginReturnUrl.hash);
+        }
+
+        function buildReturnUrl(target) {
+            var loginReturnUrl = new URL(window.location.href);
+            loginReturnUrl.searchParams.set('trade_request_login', '1');
+            if (target && target.kedcd) {
+                loginReturnUrl.searchParams.set('trade_request_target', target.kedcd);
+            }
+            loginReturnUrl.hash = 'mReviews';
+            return loginReturnUrl.pathname + loginReturnUrl.search + loginReturnUrl.hash;
+        }
+
+        // 홈 카드 클릭 로그도 상세 페이지와 같은 엔드포인트에 적재
+        function recordTradeRequestClickHit(target) {
+            if (!target || !target.kedcd || !window.fetch) return;
+
+            var payload = new URLSearchParams();
+            payload.set('action', 'trade_request_click_hit');
+            payload.set('target_kedcd', target.kedcd);
+            payload.set('target_company_name', target.company || '');
+            payload.set('target_bzno', target.bzno || '');
+
+            fetch((context && context.endpoint) || '/ko/company_detail.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: payload.toString(),
+                keepalive: true
+            }).catch(function () {});
+        }
+
+        if (!reviewLinks.length) return;
+
+        reviewLinks.forEach(function (link) {
+            link.addEventListener('click', function (event) {
+                var target = parseTarget(link) || {
+                    kedcd: '',
+                    company: link.getAttribute('data-req-company') || ''
+                };
+                var loginGuard = window.MacomaLoginGuard;
+                var returnUrl = buildReturnUrl(target);
+                var loginUrl = buildLoginUrl(target);
+                var isLoggedIn = !!(window.MATCH_REQUEST_CONTEXT && window.MATCH_REQUEST_CONTEXT.isLoggedIn);
+
+                event.preventDefault();
+                event.stopPropagation();
+
+                if (!isLoggedIn) {
+                    if (!loginGuard || typeof loginGuard.show !== 'function') {
+                        window.location.href = loginUrl;
+                        return;
+                    }
+
+                    loginGuard.show({
+                        titleId: 'homepageReviewRequestLoginTitle',
+                        descriptionText: '거래 요청은 로그인 후 이용하실 수 있습니다.',
+                        returnUrl: returnUrl,
+                        loginUrl: loginUrl,
+                        signupUrl: typeof loginGuard.buildSignupUrl === 'function'
+                            ? loginGuard.buildSignupUrl(returnUrl)
+                            : '/signup?url=' + encodeURIComponent(returnUrl)
+                    });
+                    return;
+                }
+
+                if (window.setMatchRequesterCompany) {
+                    window.setMatchRequesterCompany(context.requesterCompany || null);
+                }
+                if (window.setMatchRequestTarget) {
+                    window.setMatchRequestTarget(target);
+                }
+                recordTradeRequestClickHit(target);
+                if (typeof window.openModal === 'function') {
+                    window.openModal('modalRequest');
+                }
+            });
+        });
+    })();
+
+    (function initHomepagePartnerCta() {
+        var partnerLinks = document.querySelectorAll('.mReviews_card_link[data-partner-cta]');
+
+        if (!partnerLinks.length) return;
+
+        partnerLinks.forEach(function (link) {
+            link.addEventListener('click', function () {
+                try {
+                    sessionStorage.setItem('hkReturnSection', 'mReviews');
+                } catch (e) {}
+
+                if (typeof window.gtag === 'function') {
+                    window.gtag('event', 'partner_cta_click', {
+                        partner: link.getAttribute('data-partner-cta') || '',
+                        position: 'review_card'
+                    });
+                }
+            });
+        });
+    })();
+
+    (function restoreHomepageReturnSection() {
+        function restoreSection() {
+            var sectionId = '';
+
+            try {
+                sectionId = sessionStorage.getItem('hkReturnSection') || '';
+            } catch (e) {}
+
+            if (!sectionId) return;
+
+            try {
+                sessionStorage.removeItem('hkReturnSection');
+            } catch (e) {}
+
+            var section = document.getElementById(sectionId);
+            if (!section) return;
+
+            window.setTimeout(function () {
+                section.scrollIntoView({ behavior: 'auto', block: 'start' });
+            }, 80);
+        }
+
+        try {
+            if ('scrollRestoration' in history) {
+                history.scrollRestoration = 'auto';
+            }
+        } catch (e) {}
+
+        window.addEventListener('pageshow', restoreSection);
+    })();
 
     (function initHomepageRequestLoginGuard() {
         var guardContext = window.__INDEX_LOGIN_GUARD_CONTEXT || {};

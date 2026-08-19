@@ -384,6 +384,109 @@ if( $config['cf_cert_use'] || (defined('G5_YOUNGCART_VER') && G5_YOUNGCART_VER) 
     @session_start();
 }
 
+if (!function_exists('macomaex_create_login_token')) {
+    function macomaex_create_login_token()
+    {
+        if (function_exists('random_bytes')) {
+            try {
+                return bin2hex(random_bytes(16));
+            } catch (Exception $e) {
+                // Fall through to legacy token generation.
+            }
+        }
+
+        return sha1(uniqid(mt_rand(), true));
+    }
+}
+
+if (!function_exists('macomaex_issue_member_login_token')) {
+    function macomaex_issue_member_login_token($mb_id)
+    {
+        global $g5;
+
+        $mb_id = trim((string) $mb_id);
+        if ($mb_id === '') {
+            return '';
+        }
+
+        $token = macomaex_create_login_token();
+        $mb_id_sql = sql_real_escape_string($mb_id);
+        $token_sql = sql_real_escape_string($token);
+
+        // mb_1은 현재 로그인 토큰 전용으로 사용함
+        sql_query(" update {$g5['member_table']} set mb_1 = '{$token_sql}' where mb_id = '{$mb_id_sql}' ");
+
+        return $token;
+    }
+}
+
+if (!function_exists('macomaex_clear_auto_login_cookies')) {
+    function macomaex_clear_auto_login_cookies()
+    {
+        // 자동로그인 복원에 쓰는 쿠키를 함께 비움
+        if (function_exists('set_cookie')) {
+            set_cookie('ck_mb_id', '', 0);
+            set_cookie('ck_auto', '', 0);
+            set_cookie('ck_login_token', '', 0);
+        }
+
+        unset(
+            $_COOKIE[md5('ck_mb_id')],
+            $_COOKIE[md5('ck_auto')],
+            $_COOKIE[md5('ck_login_token')]
+        );
+    }
+}
+
+if (!function_exists('macomaex_clear_login_session_state')) {
+    function macomaex_clear_login_session_state()
+    {
+        unset(
+            $_SESSION['ss_mb_id'],
+            $_SESSION['ss_mb_key'],
+            $_SESSION['ss_mb_login_token'],
+            $_SESSION['ss_last_activity']
+        );
+    }
+}
+
+if (!function_exists('macomaex_handle_duplicate_login_logout')) {
+    function macomaex_handle_duplicate_login_logout()
+    {
+        $request_uri = isset($_SERVER['REQUEST_URI']) ? (string) $_SERVER['REQUEST_URI'] : G5_URL;
+        $is_ajax_request = isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower((string) $_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
+
+        macomaex_clear_login_session_state();
+
+        macomaex_clear_auto_login_cookies();
+
+        session_unset();
+        session_destroy();
+
+        // AJAX 요청이면 프론트에서 이유를 읽을 수 있게 JSON으로 응답함
+        if ($is_ajax_request) {
+            if (!headers_sent()) {
+                http_response_code(401);
+                header('Content-Type: application/json; charset=utf-8');
+                header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+                header('Pragma: no-cache');
+            }
+
+            echo json_encode(array(
+                'success' => false,
+                'logged_in' => false,
+                'login_required' => true,
+                'auth_required' => true,
+                'reason' => 'duplicate_login',
+                'message' => '다른 기기에서 로그인되어 세션이 종료되었습니다.',
+            ), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            exit;
+        }
+
+        goto_url(G5_BBS_URL.'/login.php?url='.urlencode($request_uri));
+    }
+}
+
 // 세션 비활동 강제 만료: gc 수거 시점과 무관하게 마지막 활동시간을 기준으로 로그아웃 처리
 $session_idle_timeout = (int) ini_get('session.gc_maxlifetime');
 if ($session_idle_timeout < 1) {
@@ -401,13 +504,9 @@ if (isset($_SESSION['ss_mb_id']) && $_SESSION['ss_mb_id']) {
 
     if ($session_last_activity > 0 && (G5_SERVER_TIME - $session_last_activity) >= $session_idle_timeout) {
         $session_idle_expired = true;
-        unset($_SESSION['ss_mb_id'], $_SESSION['ss_mb_key'], $_SESSION['ss_last_activity']);
-        // 유휴 만료 시 자동로그인 쿠키를 제거하고 같은 요청 내 복원도 차단한다.
-        if (function_exists('set_cookie')) {
-            set_cookie('ck_mb_id', '', 0);
-            set_cookie('ck_auto', '', 0);
-        }
-        unset($_COOKIE[md5('ck_mb_id')], $_COOKIE[md5('ck_auto')]);
+        unset($_SESSION['ss_mb_id'], $_SESSION['ss_mb_key'], $_SESSION['ss_mb_login_token'], $_SESSION['ss_last_activity']);
+        // 유휴 만료 시 자동로그인 쿠키를 제거하고 같은 요청 내 복원도 차단
+        macomaex_clear_auto_login_cookies();
     } else if ($session_should_touch_last_activity) {
         $_SESSION['ss_last_activity'] = G5_SERVER_TIME;
     }
@@ -545,9 +644,25 @@ if (isset($_SESSION['ss_mb_id']) && $_SESSION['ss_mb_id']) { // 로그인중이�
 
     // 차단된 회원이면 ss_mb_id 초기화
     if($member['mb_intercept_date'] && $member['mb_intercept_date'] <= date("Ymd", G5_SERVER_TIME)) {
-        set_session('ss_mb_id', '');
+        macomaex_clear_login_session_state();
         $member = array();
     } else {
+        $session_login_token = trim((string) get_session('ss_mb_login_token'));
+        $member_login_token = trim((string) ($member['mb_1'] ?? ''));
+        $login_token_mismatch = false;
+
+        // 세션 토큰과 DB 토큰이 다르면 이미 다른 곳에서 로그인된 상태로 봄
+        if (($session_login_token === '') !== ($member_login_token === '')) {
+            $login_token_mismatch = true;
+        } else if ($session_login_token !== '' && $session_login_token !== $member_login_token) {
+            $login_token_mismatch = true;
+        }
+
+        // 현재 브라우저 세션이 밀렸으면 바로 정리함
+        if ($login_token_mismatch) {
+            macomaex_handle_duplicate_login_logout();
+        }
+
         // 오늘 처음 로그인 이라면
         if (substr($member['mb_today_login'], 0, 10) != G5_TIME_YMD) {
             // 첫 로그인 포인트 지급
@@ -578,7 +693,7 @@ if (isset($_SESSION['ss_mb_id']) && $_SESSION['ss_mb_id']) { // 로그인중이�
         $tmp_mb_id_sql = sql_real_escape_string($tmp_mb_id);
         // 최고관리자는 자동로그인 금지
         if (strtolower($tmp_mb_id) !== strtolower($config['cf_admin'])) {
-            $sql = " select mb_password, mb_intercept_date, mb_leave_date, mb_email_certify from {$g5['member_table']} where mb_id = '{$tmp_mb_id_sql}' ";
+            $sql = " select mb_password, mb_intercept_date, mb_leave_date, mb_email_certify, mb_1 from {$g5['member_table']} where mb_id = '{$tmp_mb_id_sql}' ";
             $row = sql_fetch($sql);
             if($row['mb_password']){
                 $key = get_auto_login_key($tmp_mb_id, $row['mb_password']);
@@ -590,12 +705,37 @@ if (isset($_SESSION['ss_mb_id']) && $_SESSION['ss_mb_id']) { // 로그인중이�
                     if ($row['mb_intercept_date'] == '' &&
                         $row['mb_leave_date'] == '' &&
                         (!$config['cf_use_email_certify'] || preg_match('/[1-9]/', $row['mb_email_certify'])) ) {
-                        // 세션에 회원아이디를 저장하여 로그인으로 간주
-                        set_session('ss_mb_id', $tmp_mb_id);
+                        // 자동로그인은 마지막 토큰을 가진 브라우저만 복원함
+                        $auto_login_token = trim((string) ($row['mb_1'] ?? ''));
+                        $cookie_login_token = trim((string) get_cookie('ck_login_token'));
 
-                        // 페이지를 재실행
-                        echo "<script type='text/javascript'> window.location.reload(); </script>";
-                        exit;
+                        // 브라우저 토큰이 다르면 예전 자동로그인 정보로 보고 버림
+                        if ($auto_login_token !== '') {
+                            if ($cookie_login_token === '' || $cookie_login_token !== $auto_login_token) {
+                                macomaex_clear_auto_login_cookies();
+                                $auto_login_token = '';
+                            }
+                        } else {
+                            // 토큰이 비어 있으면 현재 브라우저에 새 기준 토큰을 만듦
+                            $auto_login_token = macomaex_issue_member_login_token($tmp_mb_id);
+                            if ($auto_login_token !== '') {
+                                set_cookie('ck_login_token', $auto_login_token, 86400 * 31);
+                            }
+                        }
+
+                        // 자동로그인 복원은 기존 토큰을 그대로 세션에 연결함
+                        if ($auto_login_token !== '') {
+                            set_session('ss_mb_id', $tmp_mb_id);
+                            set_session('ss_mb_login_token', $auto_login_token);
+
+                            if ($cookie_login_token !== $auto_login_token) {
+                                set_cookie('ck_login_token', $auto_login_token, 86400 * 31);
+                            }
+
+                            // 페이지를 재실행
+                            echo "<script type='text/javascript'> window.location.reload(); </script>";
+                            exit;
+                        }
                     }
                 }
             }

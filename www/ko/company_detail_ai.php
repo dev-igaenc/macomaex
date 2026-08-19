@@ -325,6 +325,8 @@ if (strlen($kedcd) === 10) {
             badge_growth,
             badge_stability,
             badge_venture,
+            age_score_5,
+            emp_score_5,
             final_total_score_5
         FROM company_score_final_dedup
         WHERE KEDCD = '{$kedcd_sql}'
@@ -467,6 +469,8 @@ $company_seed = array(
     'grow' => (isset($score['growth_score_5']) && $score['growth_score_5'] !== '') ? (float)$score['growth_score_5'] : null,
     'profit' => (isset($score['profit_score_5']) && $score['profit_score_5'] !== '') ? (float)$score['profit_score_5'] : null,
     'stable' => (isset($score['stability_score_5']) && $score['stability_score_5'] !== '') ? (float)$score['stability_score_5'] : null,
+    'ageScore' => (isset($score['age_score_5']) && $score['age_score_5'] !== '') ? (float)$score['age_score_5'] : null,
+    'empScore' => (isset($score['emp_score_5']) && $score['emp_score_5'] !== '') ? (float)$score['emp_score_5'] : null,
     'badge_growth' => company_detail_ai_format_badge_percent($score['badge_growth'] ?? null),
     'badge_stability' => company_detail_ai_format_badge_percent($score['badge_stability'] ?? null),
     'badge_venture' => strtoupper(trim((string)($score['badge_venture'] ?? 'N'))),
@@ -487,18 +491,8 @@ $company_seed = array(
     'ai_analysis_html' => ''
 );
 
-// 비로그인 사용자는 우측 AI 추천점수 예측에 실데이터가 노출되지 않도록 더미 payload만 내려준다.
+// 비로그인 사용자는 우측 AI 분석/거래정보만 제한하고, 좌측 기업 기본 점수 카드는 일반 상세와 동일하게 유지한다.
 if (empty($member['mb_id'])) {
-    $company_seed['score'] = null;
-    $company_seed['grow'] = null;
-    $company_seed['profit'] = null;
-    $company_seed['stable'] = null;
-    $company_seed['badge_growth'] = '';
-    $company_seed['badge_stability'] = '';
-    $company_seed['badge_venture'] = 'N';
-    $company_seed['tags'] = array();
-    $company_seed['tag_total_count'] = 0;
-    $company_seed['product_line'] = '';
     if (!$is_identity_visible) {
         $company_seed['address'] = '';
         $company_seed['address_display'] = '정보 준비중';

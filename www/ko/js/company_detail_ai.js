@@ -225,20 +225,9 @@
                         if (pct === null) return null;
                         return +(pct / 20).toFixed(1);
                     };
-                    var _radarNorm = normalizeRadarLikeList(_card.radar || {});
-
                     var _scorePct = _toPct(_card.ai_match);
                     if (_scorePct === null) _scorePct = _toPct(_card.display_score);
                     if (_scorePct === null && Number.isFinite(Number(_card.score))) _scorePct = _toPct(Number(_card.score) * 100);
-
-                    var _growScore = _toFive(_radarNorm.growth_trend);
-                    if (_growScore === null) _growScore = _toFive(_radarNorm.trade_loyalty);
-
-                    var _profitScore = _toFive(_radarNorm.market_power);
-                    if (_profitScore === null) _profitScore = _toFive(_radarNorm.trade_diversity);
-                    if (_profitScore === null) _profitScore = _toFive(_radarNorm.product_fit);
-
-                    var _stableScore = _toFive(_radarNorm.financial_health);
 
                     COMPANIES[demoId] = Object.assign({}, _base, {
                         id: demoId,
@@ -247,11 +236,13 @@
                         sub: _card.industry_nm || _base.sub || _card.one_line || '',
                         tags: _mergedTags,
                         tag_total_count: _mergedTagTotalCount,
-                        score: _scorePct !== null ? +(_scorePct / 20).toFixed(2) : (Number.isFinite(Number(_base.score)) ? Number(_base.score) : null),
+                        score: Number.isFinite(Number(_base.score)) ? Number(_base.score) : null,
                         ai_match: _scorePct !== null ? Math.round(_scorePct) : (Number.isFinite(Number(_base.ai_match)) ? Math.round(Number(_base.ai_match)) : null),
-                        grow: _growScore !== null ? _growScore : (Number.isFinite(Number(_base.grow)) ? Number(_base.grow) : null),
-                        profit: _profitScore !== null ? _profitScore : (Number.isFinite(Number(_base.profit)) ? Number(_base.profit) : null),
-                        stable: _stableScore !== null ? _stableScore : (Number.isFinite(Number(_base.stable)) ? Number(_base.stable) : null),
+                        grow: Number.isFinite(Number(_base.grow)) ? Number(_base.grow) : null,
+                        profit: Number.isFinite(Number(_base.profit)) ? Number(_base.profit) : null,
+                        stable: Number.isFinite(Number(_base.stable)) ? Number(_base.stable) : null,
+                        ageScore: Number.isFinite(Number(_base.ageScore)) ? Number(_base.ageScore) : null,
+                        empScore: Number.isFinite(Number(_base.empScore)) ? Number(_base.empScore) : null,
                         badge_growth: (_base.badge_growth != null && String(_base.badge_growth).trim() !== '')
                             ? _base.badge_growth
                             : _badgeMeta.badge_growth,
@@ -643,13 +634,35 @@
                 return value ? value : '정보 준비중';
             }
 
+            function _homepageLinkHtml(homepage) {
+                var value = String(homepage || '').trim();
+                var normalizedValue = value.replace(/\s+/g, '').toLowerCase();
+                if (!normalizedValue || normalizedValue === 'null' || normalizedValue === '정보준비중') {
+                    return _esc(_displayOrPending(value));
+                }
+
+                var href = value;
+                if (!/^https?:\/\//i.test(href)) {
+                    href = 'https://' + href.replace(/^\/\//, '');
+                }
+
+                try {
+                    var url = new URL(href);
+                    if (url.protocol !== 'http:' && url.protocol !== 'https:') throw new Error('Unsupported protocol');
+                } catch (e) {
+                    return _esc(value);
+                }
+
+                return '<a class="info-homepage-link" href="' + _esc(href) + '" target="_blank" rel="noopener noreferrer">' + _esc(value) + '</a>';
+            }
+
             var isUnlocked = !!(co.is_identity_visible || co.is_unlocked);
             var titleHtml = isUnlocked ? _esc(_displayOrPending(co.title_display || co.title)) : _maskName(co.title);
             var addressHtml = isUnlocked
                 ? _esc(_displayOrPending(co.address_display || co.address))
                 : '*********************';
             var homepageHtml = isUnlocked
-                ? _esc(_displayOrPending(co.homepage_display || co.homepage))
+                ? _homepageLinkHtml(co.homepage || co.homepage_display)
                 : '*********************';
             var addressClass = isUnlocked ? '' : ' class="info-masked"';
             var homepageClass = isUnlocked ? '' : ' class="info-masked"';
@@ -753,17 +766,18 @@
             if (val > 100) val = 100;
             return +(val / 20).toFixed(1);
         }
-        var careerScoreL = Math.min(5, Math.max(1, parseInt(co.founded) ? (new Date().getFullYear() - parseInt(co.founded)) / 5 : 3)).toFixed(1);
-        var empNumL = parseInt(co.employees) || 50;
-        var employScoreL = Math.min(5, Math.max(1, Math.log2(empNumL / 5))).toFixed(1);
-        var cardForLeft = getCardSnapshotForDemo(demoId);
-        var leftRadarNorm = normalizeRadarLikeList((cardForLeft && cardForLeft.radar) || radar || {});
-        var growL = radarPctTo5(leftRadarNorm, ['growth_trend', 'trade_loyalty']);
-        if (growL === null) growL = Number(co.grow);
-        var profitL = radarPctTo5(leftRadarNorm, ['market_power', 'trade_diversity', 'product_fit']);
-        if (profitL === null) profitL = Number(co.profit);
-        var stableL = radarPctTo5(leftRadarNorm, ['financial_health']);
-        if (stableL === null) stableL = Number(co.stable);
+        var careerScoreL = Number(co.ageScore);
+        if (!Number.isFinite(careerScoreL)) {
+            careerScoreL = Math.min(5, Math.max(1, parseInt(co.founded, 10) ? (new Date().getFullYear() - parseInt(co.founded, 10)) / 5 : 3));
+        }
+        var employScoreL = Number(co.empScore);
+        if (!Number.isFinite(employScoreL)) {
+            var empNumL = parseInt(co.employees, 10) || 50;
+            employScoreL = Math.min(5, Math.max(1, Math.log2(empNumL / 5)));
+        }
+        var growL = Number(co.grow);
+        var profitL = Number(co.profit);
+        var stableL = Number(co.stable);
         var radarScoresL = [clampScore5(growL), clampScore5(profitL), clampScore5(stableL), clampScore5(careerScoreL), clampScore5(employScoreL)];
 
         var svgHL = '';
@@ -799,7 +813,10 @@
         RD_LABELS_L.forEach(function (lbl, i) {
             scoreItemsL += '<div class="radar-score-item"><span class="radar-score-label">' + lbl + '</span><span class="radar-score-val">' + radarScoresL[i].toFixed(1) + '</span></div>';
         });
-        var avgScoreL = (radarScoresL.reduce(function (a, b) { return a + b; }, 0) / radarScoresL.length);
+        var avgScoreL = Number(co.score);
+        if (!Number.isFinite(avgScoreL)) {
+            avgScoreL = (radarScoresL.reduce(function (a, b) { return a + b; }, 0) / radarScoresL.length);
+        }
         scoreItemsL += '<div class="radar-score-item radar-score-total"><span class="radar-score-label">\uC885\uD569</span><span class="radar-score-val radar-score-val--total">' + avgScoreL.toFixed(1) + '</span></div>';
         var radarCardHtml = '<div class="detail-radar-card" style="padding:0;margin:16px 0;background:none;border:none;">' +
             '<div class="radar-scores">' + scoreItemsL + '</div></div>';

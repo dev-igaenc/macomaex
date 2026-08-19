@@ -1480,26 +1480,6 @@ body.modal_verify_open {
     font-size: 12px;
 }
 
-.modal_pd_skip {
-    background: none;
-    border: none;
-    color: #94a3b8;
-    font-size: 13px;
-    cursor: pointer;
-    padding: 5px;
-    display: block;
-    margin: 2px auto 0;
-    text-decoration: underline;
-    font-family: inherit;
-    -webkit-appearance: none;
-    appearance: none;
-    touch-action: manipulation;
-}
-
-.modal_pd_skip:hover {
-    color: #64748b;
-}
-
 /* 모달 모바일 반응형 */
 @media (max-width: 640px) {
     .modal_verify_overlay {
@@ -1664,10 +1644,6 @@ body.modal_verify_open {
         padding: 8px 10px;
     }
 
-    .modal_pd_skip {
-        margin-top: 0;
-        padding: 5px;
-    }
 }
 
 .mVisual_promo_head {

@@ -5,9 +5,73 @@ if (!defined('_GNUBOARD_')) exit;
 include_once(G5_THEME_PATH . '/head.php');
 ?>
 <?php
+include_once(G5_PATH . '/ko/helper/trade_request_helper.php');
+include_once(G5_PATH . '/ko/helper/company_detail_helper.php');
+
 $index_css_ver = file_exists(G5_THEME_PATH . '/css/index.css') ? filemtime(G5_THEME_PATH . '/css/index.css') : G5_CSS_VER;
 $index_js_ver = file_exists(G5_THEME_PATH . '/js/index.js') ? filemtime(G5_THEME_PATH . '/js/index.js') : G5_JS_VER;
+$favorite_css_ver = file_exists(G5_PATH . '/ko/css/favorite.css') ? filemtime(G5_PATH . '/ko/css/favorite.css') : G5_CSS_VER;
+$match_request_modal_css_ver = file_exists(G5_PATH . '/ko/css/match-request-modal.css') ? filemtime(G5_PATH . '/ko/css/match-request-modal.css') : G5_CSS_VER;
+$favorite_js_ver = file_exists(G5_PATH . '/ko/js/favorite.js') ? filemtime(G5_PATH . '/ko/js/favorite.js') : G5_JS_VER;
+$match_request_modal_js_ver = file_exists(G5_PATH . '/ko/js/match-request-modal.js') ? filemtime(G5_PATH . '/ko/js/match-request-modal.js') : G5_JS_VER;
 $stream_chat_vendor_js_ver = file_exists(G5_PATH . '/ko/js/vendor/stream-chat.browser.full-bundle.min.js') ? filemtime(G5_PATH . '/ko/js/vendor/stream-chat.browser.full-bundle.min.js') : G5_JS_VER;
+
+// 메인 인터뷰 카드에서 바로 거래요청을 열 대상 기업
+$homepage_review_request_kedcds = array('0008267622', '0008339287');
+$homepage_review_request_targets = array();
+$homepage_target_sql = "
+    SELECT
+        c.KEDCD,
+        c.ENP_NM,
+        c.BZNO,
+        c.BZC_CD,
+        c.ESTB_DT,
+        c.LABORER_SUM,
+        c.ENP_TYP,
+        c.PD_NM,
+        c.HPAGE_URL,
+        k.k_code_name AS industry_name
+    FROM company c
+    LEFT JOIN kssc_11 k
+      ON k.k_code = c.BZC_CD
+    WHERE c.KEDCD IN ('" . implode("','", array_map('sql_escape_string', $homepage_review_request_kedcds)) . "')
+";
+$homepage_target_result = sql_query($homepage_target_sql, false);
+if ($homepage_target_result) {
+    while ($homepage_target_row = sql_fetch_array($homepage_target_result)) {
+        $homepage_review_request_targets[$homepage_target_row['KEDCD']] = trade_request_company_payload(
+            $homepage_target_row,
+            $homepage_target_row['industry_name'] ?? ''
+        );
+    }
+}
+
+$homepage_default_trade_request_message = trade_request_default_message();
+$homepage_requester_company_data = !empty($member['mb_id'])
+    ? trade_request_member_company_data($member['mb_4'] ?? '')
+    : array();
+$homepage_requester_profile_state = !empty($member['mb_id'])
+    ? company_detail_trade_request_profile_state($member)
+    : array();
+$homepage_trade_request_target_kedcd = isset($_GET['trade_request_target'])
+    ? preg_replace('/\D/', '', (string)$_GET['trade_request_target'])
+    : '';
+$homepage_trade_request_return_params = array(
+    'trade_request_login' => '1',
+);
+if ($homepage_trade_request_target_kedcd !== '') {
+    $homepage_trade_request_return_params['trade_request_target'] = $homepage_trade_request_target_kedcd;
+}
+$homepage_trade_request_return_url = '/?' . http_build_query($homepage_trade_request_return_params) . '#mReviews';
+$homepage_trade_request_login_url = '/bbs/login.php?url=' . urlencode($homepage_trade_request_return_url);
+$homepage_should_open_trade_request_modal = !empty($member['mb_id'])
+    && isset($_GET['trade_request_login'])
+    && $_GET['trade_request_login'] === '1'
+    && isset($homepage_review_request_targets[$homepage_trade_request_target_kedcd]);
+// 로그인 복귀 시 직전에 누른 카드 대상만 다시 주입
+$homepage_initial_trade_request_target = $homepage_should_open_trade_request_modal
+    ? ($homepage_review_request_targets[$homepage_trade_request_target_kedcd] ?? null)
+    : null;
 ?>
 <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" rel="stylesheet" />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;500;600&display=swap">
@@ -15,6 +79,8 @@ $stream_chat_vendor_js_ver = file_exists(G5_PATH . '/ko/js/vendor/stream-chat.br
 <link rel="stylesheet" href="<?php echo $prix_root_asset_url('ko/css/section-header.css', G5_CSS_VER); ?>">
 <link rel="stylesheet" href="<?php echo $prix_root_asset_url('ko/css/auth-toggle.css', G5_CSS_VER); ?>">
 <link rel="stylesheet" href="<?php echo $prix_root_asset_url('ko/css/ai-loading.css', G5_CSS_VER); ?>">
+<link rel="stylesheet" href="<?php echo $prix_root_asset_url('ko/css/favorite.css', $favorite_css_ver); ?>">
+<link rel="stylesheet" href="<?php echo $prix_root_asset_url('ko/css/match-request-modal.css', $match_request_modal_css_ver); ?>">
 <link rel="stylesheet" href="<?php echo $prix_root_asset_url('ko/css/trade_chat_modal.css', G5_CSS_VER); ?>">
 <link rel="stylesheet" href="<?php echo $prix_theme_asset_url('css/index.css', $index_css_ver); ?>">
 <?php
@@ -294,20 +360,18 @@ $stable_list = get_processed_companies('stability_score_5', 3, $unlocked_bzno_ma
 <div id="mVisual">
     <div class="mVisual_main">
         <div class="mVisual_left">
-            <span class="mVisual_topbanner">실거래 데이터 기반으로, 거래 확률 UP</span>
-            <h1 class="mVisual_heading">연결되는 거래에는<br>성공 공식이 있다</h1>
+            <h1 class="mVisual_heading">AI가 우리 회사와<br><span class="mVisual_heading_point">거래 가능성이 높은 기업</span>을<br>추천합니다.</h1>
+            <span class="mVisual_topbanner">사업자등록번호를 입력하면 <span class="mVisual_topbanner_point">AI가 실거래 데이터를 분석해</span><br class="mVisual_subBr">추천 이유와 함께 결과를 제공합니다.</span>
             <div class="mVisual_searchWrap bxShadow">
                 <form action="/ko/matching_list.php" method="POST" id="match_index">
                     <input type="hidden" name="cominfo" id="cominfo_index">
-                    <input type="text" name="comnum" id="comnum_index" placeholder="사업자등록번호를 입력해보세요" class="comnum_chk" maxlength="12" autocomplete="off">
+                    <input type="text" name="comnum" id="comnum_index" placeholder="" class="comnum_chk" maxlength="12" autocomplete="off">
                     <button type="submit" id="main_submit_index" class="search_btn" aria-label="AI 추천받기">
                         <span class="sparkle"><svg viewBox="0 0 24 24"><use href="#icon-magic-wand"></use></svg></span>
                         <span>AI 추천받기</span>
                     </button>
                 </form>
             </div>
-        </div>
-        <div class="mVisual_right">
             <div class="mVisual_quick">
                 <a href="/account/trades#received" class="mVisual_quick_item mVisual_quick_item--request">
                     <div class="mVisual_quick_icon">
@@ -327,7 +391,7 @@ $stable_list = get_processed_companies('stability_score_5', 3, $unlocked_bzno_ma
                     </div>
                     <div class="mVisual_quick_body">
                         <strong>받은 요청</strong>
-                        <span>확인하기</span>
+                        <span>수락 · 거절</span>
                     </div>
                     <svg class="mVisual_quick_arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
                 </a>
@@ -352,42 +416,21 @@ $stable_list = get_processed_companies('stability_score_5', 3, $unlocked_bzno_ma
                     <svg class="mVisual_quick_arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
                 </button>
             </div>
-
-            <div class="mVisual_preview">
-                <div class="mVisual_preview_cards" id="previewBanner">
-                    <div class="mVisual_preview_slide active">
-                        <div class="mVisual_preview_card mSlideIntro">
-                            <span class="mSlideIntro_eyebrow">우리 회사</span>
-                            <h3 class="mSlideIntro_title">사업자번호 하나로<br><b>거래처 찾기 끝</b></h3>
-                            <span class="mSlideIntro_line"></span>
+        </div>
+        <div class="mVisual_right">
+            <div class="mVisual_interview" id="heroInterview">
+                <div class="mHeroSlides">
+                    <div class="mHeroSlide mHeroSlide--video active">
+                        <canvas class="mVisual_video_ambient" id="mHeroVideoAmbient" aria-hidden="true"></canvas>
+                        <video class="mVisual_video_thumb" id="mHeroVideo" src="<?php echo G5_THEME_URL; ?>/video/hero-guide.mp4" poster="<?php echo G5_THEME_URL; ?>/img/main/hero-video-thumb.png" muted loop playsinline autoplay preload="metadata" aria-label="매커멕스 사용방법 영상"></video>
+                        <button type="button" class="mVisual_video_play" id="mHeroVideoToggle" aria-label="사용방법 영상 크게 보기" data-video-src="<?php echo G5_THEME_URL; ?>/video/hero-guide.mp4">
+                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"></path></svg>
+                            <span class="mVisual_video_play_tip">크게 보기</span>
+                        </button>
+                        <div class="mVisual_video_overlay">
+                            <h3 class="mVisual_video_title">매커멕스 100% 활용법</h3>
+                            <p class="mVisual_video_cap">3분이면 끝! 거래처 찾기부터 AI 추천 활용법까지</p>
                         </div>
-                    </div>
-
-                    <div class="mVisual_preview_slide">
-                        <div class="mVisual_preview_card mSlideScore">
-                            <span class="mSlideScore_label">AI 거래 적합도</span>
-                            <div class="mSlideScore_value">68<span>점</span></div>
-                            <div class="mSlideScore_bar"><i style="width:90%"></i></div>
-                            <p class="mSlideScore_cap">6가지 지표를 종합한 매칭 점수</p>
-                        </div>
-                    </div>
-
-                    <div class="mVisual_preview_slide">
-                        <div class="mVisual_preview_card mSlideReasons">
-                            <span class="mSlideReasons_label">AI가 분석한 추천 이유</span>
-                            <ul class="mSlideReasons_list">
-                                <li><i>✓</i><span>공급망 근접도 <b>상위 10%</b></span></li>
-                                <li><i>✓</i><span>최근 3년 연평균 매출 <b>18% 성장</b></span></li>
-                                <li><i>✓</i><span>동일 권역 위치로 <b>물류 효율 ↑</b></span></li>
-                                <li><i>✓</i><span>거래 규모·단가 <b>적합도 우수</b></span></li>
-                            </ul>
-                        </div>
-                    </div>
-
-                    <div class="mVisual_preview_indicator">
-                        <button class="mVisual_preview_dot active" data-slide="0"></button>
-                        <button class="mVisual_preview_dot" data-slide="1"></button>
-                        <button class="mVisual_preview_dot" data-slide="2"></button>
                     </div>
                 </div>
             </div>
@@ -395,13 +438,39 @@ $stable_list = get_processed_companies('stability_score_5', 3, $unlocked_bzno_ma
     </div>
 </div>
 
+<div class="mVideoModal" id="mVideoModal" aria-hidden="true">
+    <div class="mVideoModal_backdrop" data-video-close></div>
+    <div class="mVideoModal_dialog" role="dialog" aria-modal="true" aria-label="매커멕스 사용방법 영상">
+        <button type="button" class="mVideoModal_close" data-video-close aria-label="닫기">&times;</button>
+        <div class="mVideoModal_frame">
+            <video id="mVideoPlayer" controls playsinline preload="none"></video>
+        </div>
+        <p class="mVideoModal_note">매커멕스 사용방법 안내 영상입니다.</p>
+    </div>
+</div>
+
 <div id="mCategories" class="mSection">
     <div class="inner">
         <div class="mCategories_row">
             <div class="mCategories_primary">
-                <div class="mCategories_grid">
-                    <?php foreach ($main_categories as $main_category): ?>
+                <div class="mCategories_grid" id="mCategoriesGrid">
+                    <?php foreach ($main_categories as $main_category_index => $main_category): ?>
                     <?php echo render_main_category_item($main_category); ?>
+                    <?php if ((int)$main_category_index === 8): ?>
+                    <button type="button" class="mCategories_toggle" id="catToggleBtn" aria-expanded="false" aria-controls="mCategoriesGrid">
+                        <div class="cat_inner">
+                            <div class="cat_icon">
+                                <svg viewBox="0 0 48 48" aria-hidden="true">
+                                    <rect fill="none" stroke="#6B7684" stroke-width="1.8" x="13.5" y="13.5" width="8" height="8" rx="2"></rect>
+                                    <rect fill="none" stroke="#6B7684" stroke-width="1.8" x="26.5" y="13.5" width="8" height="8" rx="2"></rect>
+                                    <rect fill="none" stroke="#6B7684" stroke-width="1.8" x="13.5" y="26.5" width="8" height="8" rx="2"></rect>
+                                    <rect fill="none" stroke="#6B7684" stroke-width="1.8" x="26.5" y="26.5" width="8" height="8" rx="2"></rect>
+                                </svg>
+                            </div>
+                            <span class="cat_label">전체보기</span>
+                        </div>
+                    </button>
+                    <?php endif; ?>
                     <?php endforeach; ?>
                 </div>
                 <div class="mCategories_carousel_wrap">
@@ -452,7 +521,7 @@ $stable_list = get_processed_companies('stability_score_5', 3, $unlocked_bzno_ma
                     $growthTop = (int)round($com['growth_score_5']);
                     $detailUrl = '/companies/detail?id=' . urlencode(simple_crypt($com['KEDCD']));
                 ?>
-                <div class="mCompanyCard detail_view" kedcd="<?= $com['KEDCD'] ?>" data-kedcd="<?= $com['KEDCD'] ?>" data-detail-url="<?= htmlspecialchars($detailUrl, ENT_QUOTES) ?>">
+                <div class="mCompanyCard detail_view" kedcd="<?= $com['KEDCD'] ?>" data-kedcd="<?= $com['KEDCD'] ?>" data-detail-url="<?= htmlspecialchars($detailUrl, ENT_QUOTES) ?>" tabindex="0" role="link" aria-label="<?= htmlspecialchars($com['display_name']) ?> 기업 상세 보기">
                     <div class="mCompanyCard_content">
                         <div class="hk-badges">
                             <span class="hk-badge hk-badge--growth">성장TOP<?= $growthTop ?>%</span>
@@ -529,7 +598,7 @@ $stable_list = get_processed_companies('stability_score_5', 3, $unlocked_bzno_ma
                     $stableTop = (int)round($com['stability_score_5']);
                     $detailUrl = '/companies/detail?id=' . urlencode(simple_crypt($com['KEDCD']));
                 ?>
-                <div class="mCompanyCard detail_view" kedcd="<?= $com['KEDCD'] ?>" data-kedcd="<?= $com['KEDCD'] ?>" data-detail-url="<?= htmlspecialchars($detailUrl, ENT_QUOTES) ?>">
+                <div class="mCompanyCard detail_view" kedcd="<?= $com['KEDCD'] ?>" data-kedcd="<?= $com['KEDCD'] ?>" data-detail-url="<?= htmlspecialchars($detailUrl, ENT_QUOTES) ?>" tabindex="0" role="link" aria-label="<?= htmlspecialchars($com['display_name']) ?> 기업 상세 보기">
                     <div class="mCompanyCard_content">
                         <div class="hk-badges">
                             <span class="hk-badge hk-badge--stable">재무안정TOP<?= $stableTop ?>%</span>
@@ -578,6 +647,67 @@ $stable_list = get_processed_companies('stability_score_5', 3, $unlocked_bzno_ma
     </div>
 </div>
 
+<div id="mReviews">
+    <div class="section-inner">
+        <div class="mReviews_wrap">
+            <div class="mReviews_intro">
+                <div class="mReviews_intro_label">고객 성공 스토리</div>
+                <h2 class="mReviews_intro_title">매커멕스로<br><b>원하는 거래처를 찾은</b><br>기업들의 생생한 후기</h2>
+            </div>
+            <div class="mReviews_track">
+                <div class="mReviews_cards" id="mReviewsCards">
+                    <div class="mReviews_card">
+                        <div class="mReviews_card_top">
+                            <span class="mReviews_card_logo"><i style="background:#1d4ed8">드</i>드림렌탈</span>
+                            <span class="mReviews_badge mReviews_badge--cat">사무·문구용품 도매</span>
+                            <span class="mReviews_badge mReviews_badge--region">서울</span>
+                        </div>
+                        <div class="mReviews_card_photo mReviews_card_photo--thumb"><img class="mReviews_card_thumb" src="<?php echo $prix_theme_asset_url('img/main/mReviews_thumb_dreamrental.jpg', G5_CSS_VER); ?>" alt="드림렌탈 김재일 대표 인터뷰"><button type="button" class="mReviews_play" aria-label="드림렌탈 인터뷰 영상 재생" data-video-src="<?php echo $prix_theme_asset_url('video/interview_dreamrental.mp4', G5_JS_VER); ?>"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"></path></svg></button></div>
+                        <p class="mReviews_card_quote">무작위 영업 대신, 거래 가능성 높은 기업부터 공략합니다.</p>
+                        <div class="mReviews_card_rep">김재일 대표</div>
+                        <div class="mReviews_card_actions">
+                            <!-- 카드별 대상 기업 KEDCD를 모달로 넘긴다 -->
+                            <a href="javascript:void(0)" class="mReviews_card_link" data-req-company="드림렌탈" data-req-target="<?php echo htmlspecialchars(json_encode($homepage_review_request_targets['0008267622'] ?? array('kedcd' => '0008267622', 'company' => '드림렌탈'), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), ENT_QUOTES, 'UTF-8'); ?>">거래요청하기</a>
+                            <a href="/ko/partners/appleink/index.html?utm_source=macomaex&utm_medium=home&utm_campaign=partner_appleink&utm_content=review_card" class="mReviews_card_link mReviews_card_link--ghost" data-partner-cta="appleink">프린터 렌탈료 진단<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h12M12 6l6 6-6 6"></path></svg></a>
+                        </div>
+                    </div>
+                    <div class="mReviews_card">
+                        <div class="mReviews_card_top">
+                            <span class="mReviews_card_logo"><i style="background:#2563eb">루</i>(주)루건축사사무소</span>
+                            <span class="mReviews_badge mReviews_badge--cat">건축설계</span>
+                            <span class="mReviews_badge mReviews_badge--region">서울</span>
+                        </div>
+                        <div class="mReviews_card_photo mReviews_card_photo--thumb"><img class="mReviews_card_thumb" src="<?php echo $prix_theme_asset_url('img/main/mReviews_thumb_lougunchuk.jpg', G5_CSS_VER); ?>" alt="루건축사사무소 오호진 대표 인터뷰"><button type="button" class="mReviews_play" aria-label="루건축사사무소 인터뷰 영상 재생" data-video-src="<?php echo $prix_theme_asset_url('video/interview_lougunchuk.mp4', G5_JS_VER); ?>"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"></path></svg></button></div>
+                        <p class="mReviews_card_quote">‘왜 이 기업인가’까지 알려주니, 협력사 검토가 수월해졌습니다.</p>
+                        <div class="mReviews_card_rep">오호진 대표</div>
+                        <div class="mReviews_card_actions">
+                            <a href="javascript:void(0)" class="mReviews_card_link" data-req-company="(주)루건축사사무소" data-req-target="<?php echo htmlspecialchars(json_encode($homepage_review_request_targets['0008339287'] ?? array('kedcd' => '0008339287', 'company' => '(주)루건축사사무소'), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), ENT_QUOTES, 'UTF-8'); ?>">거래요청하기</a>
+                            <span class="mReviews_card_link mReviews_card_link--ghost mReviews_card_link--soon" aria-disabled="true">진행될 예정</span>
+                        </div>
+                    </div>
+                    <!-- 아직 후기가 확정되지 않은 자리 — 실명·인용 대신, 예전 히어로 배너 모집
+                         슬라이드의 문구와 '다음 주인공은?' 썸네일을 카드 크기로 옮겨 왔다 -->
+                    <div class="mReviews_card mReviews_card--open">
+                        <div class="mReviews_card_top">
+                            <span class="mReviews_badge mReviews_badge--cat">주인공 모집중</span>
+                            <span class="mReviews_badge mReviews_badge--region">제작비 무료</span>
+                        </div>
+                        <div class="mReviews_card_photo mReviews_card_photo--open">
+                            <div class="mReviews_open_cap"><strong>다음 주인공은?</strong></div>
+                        </div>
+                        <p class="mReviews_card_quote">매커멕스에서 만난 진짜 거래 경험을 들려주세요.</p>
+                        <div class="mReviews_card_rep">메인 홈에 사례 노출</div>
+                        <div class="mReviews_card_actions">
+                            <p class="mReviews_open_note"><b>다음 주인공이 되어보세요.</b><br><a href="mailto:admin@igaenc.com?subject=[매커멕스] 실거래 스토리 인터뷰 참여 문의">admin@igaenc.com</a> 으로 문의해 주세요.</p>
+                        </div>
+                    </div>
+                </div>
+                <button type="button" class="mReviews_nav" id="mReviewsNav" aria-label="다음 인터뷰"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg></button>
+            </div>
+        </div>
+    </div>
+</div>
+
     <div id="company-view-lay" class="layer-base layer-main company-view">
         <div class="layer-in new"></div>
     </div>  
@@ -585,10 +715,29 @@ $stable_list = get_processed_companies('stability_score_5', 3, $unlocked_bzno_ma
     <?php
     $company_detail_popup_variant = 'advanced';
     include_once(G5_THEME_PATH . '/partials/company-detail-matching-popup.php');
+    // 홈에서도 상세와 같은 거래요청 모달을 그대로 사용
+    include_once(G5_PATH . '/ko/modal/match_request_modal.php');
     include_once(G5_PATH . '/ko/modal/trade_chat_modal.php');
     ?>
 
 <script>
+// 홈 진입용 공통 거래요청 컨텍스트
+window.MATCH_REQUEST_CONTEXT = {
+    endpoint: "/ko/company_detail.php",
+    verifyEndpoint: "/ko/trade_request_verify_bzno.php",
+    sourcePage: "homepage",
+    isLoggedIn: <?php echo !empty($member['mb_id']) ? 'true' : 'false'; ?>,
+    loginCheckUrl: <?php echo json_encode($homepage_trade_request_login_url, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>,
+    tradeRequestLoginUrl: <?php echo json_encode($homepage_trade_request_login_url, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>,
+    tradeRequestReturnUrl: <?php echo json_encode($homepage_trade_request_return_url, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>,
+    autoOpenOnLoad: <?php echo $homepage_should_open_trade_request_modal ? 'true' : 'false'; ?>,
+    consumeQueryParams: ["trade_request_login", "trade_request_target"],
+    defaultRequestMessage: <?php echo json_encode($homepage_default_trade_request_message, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>,
+    requesterCompany: <?php echo json_encode($homepage_requester_company_data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>,
+    requesterProfile: <?php echo json_encode($homepage_requester_profile_state, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>,
+    target: <?php echo json_encode($homepage_initial_trade_request_target, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>
+};
+
 window.__INDEX_LOGIN_GUARD_CONTEXT = {
     isLoggedIn: <?php echo !empty($member['mb_id']) ? 'true' : 'false'; ?>,
     returnUrl: "/account/trades#received",
@@ -603,6 +752,8 @@ window.__TRADE_CHAT_MODAL_CONTEXT = {
 </script>
 <script src="<?php echo G5_URL; ?>/ko/js/vendor/stream-chat.browser.full-bundle.min.js?ver=<?php echo $stream_chat_vendor_js_ver; ?>"></script>
 <script src="<?php echo $prix_theme_asset_url('js/index.js', $index_js_ver); ?>"></script>
+<script src="<?php echo $prix_root_asset_url('ko/js/favorite.js', $favorite_js_ver); ?>"></script>
+<script src="<?php echo $prix_root_asset_url('ko/js/match-request-modal.js', $match_request_modal_js_ver); ?>"></script>
 <script src="<?php echo $prix_root_asset_url('ko/js/trade_chat_modal.js', G5_JS_VER); ?>"></script>
 
 	</div>

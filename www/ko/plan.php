@@ -209,7 +209,7 @@ if (!function_exists('plan_display_title_en')) {
             <div class="ic"><?= plan_icon_svg('gift') ?></div>
             <div class="txt">
                 <div class="name">지금 충전하면 크레딧 2배!</div>
-                <div class="desc">더블 크레딧 Event · 7월 31일 까지 (신규 가입 시 <?= number_format($signup_bonus) ?> 크레딧 제공)</div>
+                <div class="desc">더블 크레딧 Event · 8월 31일 까지 (신규 가입 시 <?= number_format($signup_bonus) ?> 크레딧 제공)</div>
             </div>
         </div>
 
@@ -260,9 +260,8 @@ if (!function_exists('plan_display_title_en')) {
                     $featured = true;
                 }
                 $request_count = (int)floor($credit_cnt / 10);
-                $analysis_count = (isset($value['open_cnt']) && (int)$value['open_cnt'] > 0)
-                    ? (int)$value['open_cnt']
-                    : (isset($ui['analysis_count']) ? (int)$ui['analysis_count'] : ($credit_cnt * 2));
+                // AI 기업 분석은 크레딧 1개당 1회로, 충전 크레딧과 동일하게 표시한다.
+                $analysis_count = $credit_cnt;
                 $bonus_rate = isset($value['sale']) ? (int)$value['sale'] : 0;
                 $bonus_label = $bonus_rate > 0 ? '+' . number_format($bonus_rate) . '% 보너스' : '-';
                 $base_price = 0.0;

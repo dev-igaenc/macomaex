@@ -65,10 +65,14 @@ if (function_exists('session_regenerate_id')) {
     @session_regenerate_id(true);
 }
 
+// 수동 로그인은 항상 최신 로그인으로 봄
+$login_token = macomaex_issue_member_login_token($mb['mb_id']);
+
 // 회원아이디 세션 생성
 set_session('ss_mb_id', $mb['mb_id']);
 // FLASH XSS 공격에 대응하기 위하여 회원의 고유키를 생성해 놓는다. 관리자에서 검사함 - 110106
 set_session('ss_mb_key', md5($mb['mb_datetime'] . get_real_client_ip() . $_SERVER['HTTP_USER_AGENT']));
+set_session('ss_mb_login_token', $login_token);
 
 // 포인트 체크
 if($config['cf_use_point']) {
@@ -80,6 +84,7 @@ if($config['cf_use_point']) {
 
 // 3.26
 // 아이디 쿠키에 한달간 저장
+// 자동로그인을 체크한 브라우저만 현재 토큰을 기억함
 if (isset($auto_login) && $auto_login) {
     // 3.27
     // 자동로그인 ---------------------------
@@ -87,10 +92,12 @@ if (isset($auto_login) && $auto_login) {
     $key = get_auto_login_key($mb['mb_id'], $mb['mb_password']);
     set_cookie('ck_mb_id', $mb['mb_id'], 86400 * 31);
     set_cookie('ck_auto', $key, 86400 * 31);
+    set_cookie('ck_login_token', $login_token, 86400 * 31);
     // 자동로그인 end ---------------------------
 } else {
     set_cookie('ck_mb_id', '', 0);
     set_cookie('ck_auto', '', 0);
+    set_cookie('ck_login_token', '', 0);
 }
 
 if ($url) {

@@ -15,15 +15,36 @@ function sideMenuOpen() {
     $("html").addClass('hide');
     $(".mMenu").addClass("open")
     $('#sideMenuArea').addClass('open');
+    syncHeaderMenuFocusState();
 };
 
 function sideMenuClose() {
     $("html").removeClass("hide");
     $(".mMenu").removeClass("open")
     $('#sideMenuArea').removeClass('open')
+    syncHeaderMenuFocusState();
+}
+
+// 닫힌 헤더 메뉴는 탭 순서에서 제외하고 열린 메뉴만 포커스 가능하게 유지
+function syncHeaderMenuFocusState() {
+    var sideMenuArea = document.getElementById('sideMenuArea');
+    var legacyMenuArea = document.getElementById('menuArea');
+
+    [sideMenuArea, legacyMenuArea].forEach(function(area) {
+        if (!area) return;
+        var isOpen = area.classList.contains('open');
+        if (isOpen) {
+            area.removeAttribute('inert');
+            area.setAttribute('aria-hidden', 'false');
+            return;
+        }
+        area.setAttribute('inert', '');
+        area.setAttribute('aria-hidden', 'true');
+    });
 }
 
 $(function(){
+    syncHeaderMenuFocusState();
 
 	$("body").on("mouseenter", "#wrap[data-device='pc'] #header:not('.all') #pcMenu>#list>li", function(){// [PC] GNB OVER
 		var idx = $("#pcMenu #list>li:not('.one')").index($(this));
@@ -301,6 +322,7 @@ var one_mo = true;
 $(window).on('throttledresize', function(){
 	window_W = window.innerWidth;
 	window_H = $(window).height();
+	syncHeaderMenuFocusState();
 	WR_Event();
 });
 function WR_Event(){

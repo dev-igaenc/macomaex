@@ -10,6 +10,7 @@
   var REDIRECTING_FLAG = '__AUTH_SESSION_REDIRECTING__';
   var NOTICE_ID = 'auth-session-expired-notice';
   var pollingTimer = null;
+  var redirectReason = '';
 
   function toBoolean(value, fallback) {
     if (typeof value === 'boolean') return value;
@@ -27,6 +28,14 @@
   if (!pollIntervalMs || pollIntervalMs < 5000) pollIntervalMs = 15000;
   if (!redirectDelayMs || redirectDelayMs < 300) redirectDelayMs = 1200;
 
+  function getNoticeMessage(reason) {
+    if (reason === 'duplicate_login') {
+      return '다른 기기에서 로그인되어 세션이 종료되었습니다.<br>로그인 페이지로 이동합니다.';
+    }
+
+    return '세션이 만료되어 로그인 페이지로 이동합니다.';
+  }
+
   function isLoginPage() {
     return window.location.pathname.indexOf(LOGIN_PATH) === 0;
   }
@@ -36,7 +45,7 @@
     return LOGIN_PATH + '?url=' + encodeURIComponent(returnUrl);
   }
 
-  function showSessionExpiredNotice(done) {
+  function showSessionExpiredNotice(reason, done) {
     var host = document.getElementById(NOTICE_ID);
     if (!host) {
       host = document.createElement('div');
@@ -50,13 +59,14 @@
         'justify-content:center',
         'background:rgba(15,23,42,0.45)'
       ].join(';'));
-      host.innerHTML = [
-        '<div role="alert" style="max-width:360px;width:calc(100% - 32px);padding:18px 20px;border-radius:12px;background:#fff;color:#0f172a;text-align:center;box-shadow:0 16px 32px rgba(0,0,0,0.2);font-size:15px;line-height:1.5;">',
-        '세션이 만료되어 로그인 페이지로 이동합니다.',
-        '</div>'
-      ].join('');
       document.body.appendChild(host);
     }
+
+    host.innerHTML = [
+      '<div role="alert" style="max-width:360px;width:calc(100% - 32px);padding:18px 20px;border-radius:12px;background:#fff;color:#0f172a;text-align:center;box-shadow:0 16px 32px rgba(0,0,0,0.2);font-size:15px;line-height:1.6;">',
+      getNoticeMessage(reason),
+      '</div>'
+    ].join('');
 
     window.setTimeout(function () {
       if (typeof done === 'function') done();
@@ -68,17 +78,18 @@
     if (window[REDIRECTING_FLAG]) return;
 
     window[REDIRECTING_FLAG] = true;
+    redirectReason = reason || 'auth_required';
 
     try {
       window.dispatchEvent(new CustomEvent('auth:required', {
         detail: {
-          reason: reason || 'auth_required',
+          reason: redirectReason,
           at: Date.now()
         }
       }));
     } catch (e) {}
 
-    showSessionExpiredNotice(function () {
+    showSessionExpiredNotice(redirectReason, function () {
       window.location.href = buildLoginUrl();
     });
   }
@@ -127,7 +138,27 @@
   function inspectResponseForAuth(response) {
     if (!response) return;
 
+    // 응답 본문을 다시 읽기 위해 clone을 재사용함
+    var cloned = null;
+
+    // 401이면 서버가 로그인 해제를 직접 알린 경우로 봄
     if (response.status === 401) {
+      try {
+        cloned = response.clone();
+      } catch (e) {
+        cloned = null;
+      }
+
+      if (cloned) {
+        cloned.json().then(function (payload) {
+          var reason = payload && payload.reason ? String(payload.reason) : ('http_' + response.status);
+          handleAuthRequired(reason);
+        }).catch(function () {
+          handleAuthRequired('http_' + response.status);
+        });
+        return;
+      }
+
       handleAuthRequired('http_' + response.status);
       return;
     }
@@ -137,7 +168,6 @@
       contentType = String(response.headers.get('content-type') || '').toLowerCase();
     } catch (e) {}
 
-    var cloned = null;
     try {
       cloned = response.clone();
     } catch (e) {
@@ -145,12 +175,13 @@
     }
     if (!cloned) return;
 
+    // JSON 응답이면 로그인 필요 여부를 먼저 확인함
     if (contentType.indexOf('application/json') > -1) {
       cloned.json().then(function (payload) {
-        if (shouldRedirectByJson(payload)) {
-          handleAuthRequired('json_login_required');
-        }
-      }).catch(function () {});
+      if (shouldRedirectByJson(payload)) {
+        handleAuthRequired(payload && payload.reason ? String(payload.reason) : 'json_login_required');
+      }
+    }).catch(function () {});
       return;
     }
 
@@ -166,6 +197,7 @@
   function checkLoginStatus(reason) {
     if (isLoginPage()) return;
 
+    // 주기 확인은 세션 연장으로 취급하지 않음
     var statusUrl = authStatusUrl || DEFAULT_STATUS_URL;
     if (statusUrl.indexOf('http') !== 0 && statusUrl.charAt(0) !== '/') {
       statusUrl = '/' + statusUrl;
@@ -252,7 +284,9 @@
         payload = null;
       }
 
-      if (shouldRedirectByJson(payload) || shouldRedirectByText(responseText)) {
+      if (shouldRedirectByJson(payload)) {
+        handleAuthRequired(payload && payload.reason ? String(payload.reason) : 'jquery_auth_required');
+      } else if (shouldRedirectByText(responseText)) {
         handleAuthRequired('jquery_auth_required');
       }
     });
